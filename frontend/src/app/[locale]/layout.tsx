@@ -1,0 +1,65 @@
+import * as React from "react";
+import { Metadata } from "next";
+import { notFound } from "next/navigation";
+
+import { GoogleAnalytics } from "@next/third-parties/google";
+import { hasLocale } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
+
+import { seoConfig } from "@/config/seo";
+import { siteConfig } from "@/config/site";
+import { env } from "@/env";
+
+import { routing } from "@/i18n/routing";
+
+import { Sidebar } from "@/components/layouts/Sidebar";
+import { MainLayout } from "@/components/layouts/MainLayout";
+import { Toaster } from "@/ui";
+import { Providers } from "@/providers";
+
+import "@/tailwind";
+
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  return {
+    ...seoConfig,
+    alternates: {
+      canonical: `/${locale}`,
+      languages: siteConfig.languages
+    }
+  } satisfies Metadata;
+}
+
+export default async function RootLayout({
+  children,
+  params
+}: Readonly<{
+  children: React.ReactNode;
+  params: Promise<{ locale: string }>;
+}>) {
+  const { locale } = await params;
+
+  if (!hasLocale(routing.locales, locale)) {
+    notFound();
+  }
+
+  setRequestLocale(locale);
+
+  const messages = await getMessages();
+
+  return (
+    <html lang={locale} suppressHydrationWarning>
+      <body
+        className="flex min-h-screen w-full flex-col antialiased bg-[#0B0C0E] text-white font-sans"
+        suppressHydrationWarning
+      >
+        <Providers messages={messages} locale={locale}>
+          {children}
+          <Toaster richColors />
+        </Providers>
+
+        {env.NEXT_PUBLIC_GA_ID && <GoogleAnalytics gaId={env.NEXT_PUBLIC_GA_ID} />}
+      </body>
+    </html>
+  );
+}
