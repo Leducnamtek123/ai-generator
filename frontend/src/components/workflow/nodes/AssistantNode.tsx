@@ -3,6 +3,7 @@ import { BaseNode } from './BaseNode';
 import { Handle, Position } from '@xyflow/react';
 import { Sparkles, Loader2, Play, Copy, RefreshCw, ChevronDown } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
+import { ExecutionMode, NodeStatus, AssistantMode } from '../types';
 
 interface AssistantNodeProps {
     id: string;
@@ -10,24 +11,26 @@ interface AssistantNodeProps {
         label?: string;
         inputText?: string;
         enhancedText?: string;
-        mode?: 'enhance' | 'expand' | 'creative' | 'artistic';
-        status?: 'idle' | 'processing' | 'error' | 'success';
+        mode?: AssistantMode;
+        status?: NodeStatus;
         onDelete?: (id: string) => void;
-        onRun?: (id: string) => void;
+        onRun?: (id: string, mode?: ExecutionMode) => void;
+        onDuplicate?: () => void;
+        onSettings?: () => void;
         onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
     };
     selected?: boolean;
 }
 
 const MODES = [
-    { id: 'enhance', name: 'Enhance', description: 'Improve clarity and detail' },
-    { id: 'expand', name: 'Expand', description: 'Add more descriptive elements' },
-    { id: 'creative', name: 'Creative', description: 'Add artistic interpretations' },
-    { id: 'artistic', name: 'Artistic', description: 'Transform into art style' },
+    { id: AssistantMode.ENHANCE, name: 'Enhance', description: 'Improve clarity and detail' },
+    { id: AssistantMode.EXPAND, name: 'Expand', description: 'Add more descriptive elements' },
+    { id: AssistantMode.CREATIVE, name: 'Creative', description: 'Add artistic interpretations' },
+    { id: AssistantMode.CINEMATIC, name: 'Cinematic', description: 'Transform into cinematic style' },
 ];
 
 export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
-    const [mode, setMode] = useState(data.mode || 'enhance');
+    const [mode, setMode] = useState<AssistantMode>(data.mode || AssistantMode.ENHANCE);
     const [showModeDropdown, setShowModeDropdown] = useState(false);
     const currentMode = MODES.find(m => m.id === mode) || MODES[0];
 
@@ -42,8 +45,12 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
             {selected && (
                 <NodeToolbar
                     nodeId={id}
-                    onRun={() => data.onRun?.(id)}
+                    onRun={() => data.onRun?.(id, ExecutionMode.WORKFLOW)}
+                    onRunLocal={() => data.onRun?.(id, ExecutionMode.LOCAL)}
+                    runDisabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || !data.inputText?.trim()}
                     onDelete={() => data.onDelete?.(id)}
+                    onDuplicate={data.onDuplicate}
+                    onSettings={data.onSettings}
                 />
             )}
 
@@ -111,10 +118,13 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                             )}
                         </div>
                         <div className="bg-gradient-to-br from-amber-900/20 to-orange-900/20 rounded-lg p-3 text-xs text-amber-100/90 min-h-[80px] max-h-[120px] overflow-y-auto border border-amber-500/10">
-                            {data.status === 'processing' ? (
+                            {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                                 <div className="flex items-center gap-2 text-amber-400">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
-                                    <span>Enhancing prompt...</span>
+                                    <div className="relative">
+                                        <div className="absolute inset-0 border border-amber-500/20 rounded-full animate-ping" />
+                                        <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                                    </div>
+                                    <span className="animate-pulse">{data.status === NodeStatus.QUEUED ? 'In Queue...' : 'Enhancing prompt...'}</span>
                                 </div>
                             ) : data.enhancedText ? (
                                 <p className="leading-relaxed">{data.enhancedText}</p>
@@ -131,13 +141,13 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                                 e.stopPropagation();
                                 data.onRun?.(id);
                             }}
-                            disabled={data.status === 'processing' || !data.inputText}
+                            disabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || !data.inputText}
                             className="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm flex items-center justify-center gap-2 transition-all"
                         >
-                            {data.status === 'processing' ? (
+                            {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    Processing...
+                                    {data.status === NodeStatus.QUEUED ? 'Queued...' : 'Processing...'}
                                 </>
                             ) : (
                                 <>

@@ -3,6 +3,7 @@ import { BaseNode } from './BaseNode';
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
 import { Scan, Loader2, Play, Download, ZoomIn, Maximize2, Lock, ArrowUpRight, RefreshCw, Settings } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
+import { ExecutionMode, NodeStatus, UpscaleFactor } from '../types';
 
 interface UpscaleNodeProps {
     id: string;
@@ -10,17 +11,21 @@ interface UpscaleNodeProps {
         label?: string;
         inputUrl?: string;
         previewUrl?: string;
-        scale?: '2x' | '4x';
-        status?: 'idle' | 'processing' | 'error' | 'success';
+        scale?: UpscaleFactor;
+        status?: NodeStatus;
         onDelete?: (id: string) => void;
-        onRun?: (id: string) => void;
+        onRun?: (id: string, mode?: ExecutionMode) => void;
+        onDuplicate?: () => void;
+        onSettings?: () => void;
+        onReplace?: () => void;
+        onReference?: () => void;
         onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
     };
     selected?: boolean;
 }
 
 export function UpscaleNode({ id, data, selected }: UpscaleNodeProps) {
-    const [scale, setScale] = useState<'2x' | '4x'>(data.scale || '2x');
+    const [scale, setScale] = useState<UpscaleFactor>(data.scale || UpscaleFactor.TWO_X);
     const [showFullscreen, setShowFullscreen] = useState(false);
     const updateNodeInternals = useUpdateNodeInternals();
     const [mediaDimensions, setMediaDimensions] = useState<{ width: number, height: number } | null>(null);
@@ -40,20 +45,19 @@ export function UpscaleNode({ id, data, selected }: UpscaleNodeProps) {
         }
     };
 
-    const handleReplace = () => console.log('Replace');
-    const handleReference = () => console.log('Reference');
-    const handleSettings = () => console.log('Settings');
-
     return (
         <>
             {selected && (
                 <NodeToolbar
                     nodeId={id}
-                    onRun={() => data.onRun?.(id)}
+                    onRun={() => data.onRun?.(id, ExecutionMode.WORKFLOW)}
+                    onRunLocal={() => data.onRun?.(id, ExecutionMode.LOCAL)}
+                    runDisabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || !data.inputUrl}
                     onDelete={() => data.onDelete?.(id)}
-                    onReplace={handleReplace}
-                    onReference={handleReference}
-                    onSettings={handleSettings}
+                    onDuplicate={data.onDuplicate}
+                    onReplace={data.onReplace}
+                    onReference={data.onReference}
+                    onSettings={data.onSettings}
                 />
             )}
 
@@ -67,16 +71,23 @@ export function UpscaleNode({ id, data, selected }: UpscaleNodeProps) {
                 <div className="w-[300px] bg-[#0B0C0E]">
                     {/* Preview Area - Adaptive */}
                     <div className="w-full bg-black/40 flex items-center justify-center overflow-hidden relative group min-h-[160px]">
-                        {data.status === 'processing' ? (
-                            <div className="flex flex-col items-center gap-3 py-10">
+                        {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-10 animate-in fade-in duration-300">
                                 <div className="relative">
                                     <div className="w-16 h-16 border-4 border-purple-500/20 rounded-full" />
                                     <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-purple-500 rounded-full animate-spin" />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-3 h-3 bg-purple-500 rounded-full animate-pulse" />
+                                    </div>
                                 </div>
-                                <span className="text-sm text-purple-400 font-medium">Upscaling to {scale}...</span>
-                                <span className="text-[10px] text-white/30">Enhancing details</span>
+                                <span className="mt-4 text-sm text-purple-400 font-bold uppercase tracking-widest animate-pulse">
+                                    {data.status === NodeStatus.QUEUED ? 'Queued' : `Upscaling to ${scale}`}
+                                </span>
+                                <span className="mt-1 text-[10px] text-white/30 italic">AI Enhancement in progress</span>
                             </div>
-                        ) : data.previewUrl ? (
+                        ) : null}
+
+                        {data.previewUrl ? (
                             <>
                                 {/* eslint-disable-next-line @next/next/no-img-element */}
                                 <img
@@ -148,8 +159,8 @@ export function UpscaleNode({ id, data, selected }: UpscaleNodeProps) {
                             <p className="text-[10px] text-white/30 uppercase tracking-wider">Scale Factor</p>
                             <div className="grid grid-cols-2 gap-2">
                                 <button
-                                    onClick={() => setScale('2x')}
-                                    className={`p-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${scale === '2x'
+                                    onClick={() => setScale(UpscaleFactor.TWO_X)}
+                                    className={`p-2.5 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${scale === UpscaleFactor.TWO_X
                                         ? 'bg-purple-600 text-white'
                                         : 'bg-white/5 text-white/60 hover:bg-white/10'
                                         }`}
@@ -173,10 +184,10 @@ export function UpscaleNode({ id, data, selected }: UpscaleNodeProps) {
                                 e.stopPropagation();
                                 data.onRun?.(id);
                             }}
-                            disabled={data.status === 'processing' || !data.inputUrl}
+                            disabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || !data.inputUrl}
                             className="w-full py-3 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-purple-500/20"
                         >
-                            {data.status === 'processing' ? (
+                            {data.status === NodeStatus.PROCESSING ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
                                     Upscaling...

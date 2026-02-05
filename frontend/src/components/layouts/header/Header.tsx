@@ -10,11 +10,14 @@ export const Header = () => {
         variant="morphism"
         className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 border-white/5"
       >
-        <Link href="/dashboard" className="flex items-center gap-2 transition-opacity hover:opacity-80">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-600 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-            <Sparkles className="h-5 w-5 text-white" />
+        <Link href="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+            <img src="/logo.svg" alt="PaintAI Logo" className="h-full w-full object-contain" />
           </div>
-          <span className="text-lg font-bold tracking-tight">AI Suite</span>
+          <div className="flex flex-col">
+            <span className="text-lg font-bold tracking-tight text-white leading-none">PaintAI</span>
+            <span className="text-[10px] text-white/40 font-medium">Your paint, your choice</span>
+          </div>
         </Link>
 
         <div className="flex items-center gap-4">

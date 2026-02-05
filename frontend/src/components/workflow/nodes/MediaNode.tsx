@@ -6,6 +6,7 @@ import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
 import { Upload, X, Plus, Loader2, Link2, FolderOpen } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
+import { NodeStatus } from '../types';
 
 interface MediaNodeProps {
     id: string;
@@ -15,7 +16,7 @@ interface MediaNodeProps {
         mediaUrl?: string;
         mediaName?: string;
         mediaThumbnail?: string;
-        status?: 'idle' | 'uploading' | 'error' | 'success';
+        status?: NodeStatus;
         onDelete?: (id: string) => void;
         onMediaChange?: (id: string, url: string, name: string, thumbnail?: string) => void;
         onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
@@ -42,7 +43,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
     const handleFileSelect = useCallback(async (file: File) => {
         setIsUploading(true);
         const url = URL.createObjectURL(file);
-        let thumbnail = url;
+        const thumbnail = url;
         await new Promise(r => setTimeout(r, 1000));
         data.onMediaChange?.(id, url, file.name, thumbnail);
         setIsUploading(false);

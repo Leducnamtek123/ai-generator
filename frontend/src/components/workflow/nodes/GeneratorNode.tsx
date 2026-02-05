@@ -16,25 +16,30 @@ import {
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { useUpdateNodeInternals } from '@xyflow/react';
+import { ExecutionMode, NodeStatus, ImageModel, AspectRatio, WorkflowNodeType } from '../types';
 
 interface GeneratorNodeProps {
     id: string;
     data: {
         label?: string;
-        model?: string;
+        model?: ImageModel;
         previewUrl?: string;
         count?: number;
-        aspectRatio?: string;
-        status?: 'idle' | 'processing' | 'error' | 'success';
+        aspectRatio?: AspectRatio;
+        status?: NodeStatus;
         prompt?: string;
         inputs?: {
             prompt?: boolean;
             media?: boolean;
         };
         onDelete?: (id: string) => void;
-        onRun?: (id: string, mode?: 'workflow' | 'local') => void;
+        onRun?: (id: string, mode?: ExecutionMode) => void;
         onSettingsChange?: (id: string, settings: any) => void;
         onTextChange?: (id: string, text: string) => void;
+        onDuplicate?: () => void;
+        onSettings?: () => void;
+        onReplace?: () => void;
+        onReference?: () => void;
         onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
@@ -42,11 +47,11 @@ interface GeneratorNodeProps {
 }
 
 const MODELS = [
-    { id: 'seedream', name: 'Seedream 4 4K', badge: 'Fast' },
-    { id: 'flux', name: 'Flux Schnell', badge: 'Popular' },
-    { id: 'imagen3', name: 'Imagen 3', badge: 'Best' },
-    { id: 'midjourney', name: 'Midjourney v6', badge: '' },
-    { id: 'dalle3', name: 'DALL-E 3', badge: '' },
+    { id: ImageModel.SEEDREAM, name: 'Seedream 4 4K', badge: 'Fast' },
+    { id: ImageModel.FLUX, name: 'Flux Schnell', badge: 'Popular' },
+    { id: ImageModel.IMAGEN3, name: 'Imagen 3', badge: 'Best' },
+    { id: ImageModel.MIDJOURNEY, name: 'Midjourney v6', badge: '' },
+    { id: ImageModel.DALLE3, name: 'DALL-E 3', badge: '' },
 ];
 
 const ASPECT_RATIOS = ['1:1', '4:3', '3:4', '16:9', '9:16', '2:3', '3:2'];
@@ -108,8 +113,14 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
             {selected && !data.isPreview && (
                 <NodeToolbar
                     nodeId={id}
-                    onRun={() => data.onRun?.(id)}
+                    onRun={() => data.onRun?.(id, ExecutionMode.WORKFLOW)}
+                    onRunLocal={() => data.onRun?.(id, ExecutionMode.LOCAL)}
+                    runDisabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || (!localPrompt.trim() && !data.inputs?.prompt)}
                     onDelete={() => data.onDelete?.(id)}
+                    onDuplicate={data.onDuplicate}
+                    onSettings={data.onSettings}
+                    onReplace={data.onReplace}
+                    onReference={data.onReference}
                 />
             )}
 
@@ -150,11 +161,19 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                 <div className={cn("relative bg-[#0B0C0E] overflow-hidden", data.isPreview ? "w-[120px]" : "w-[340px]")}>
                     {/* Preview Area */}
                     <div className={cn("w-full bg-[#151619] flex items-center justify-center overflow-hidden relative", data.isPreview ? "min-h-[80px]" : "min-h-[200px]")}>
-                        {data.status === 'processing' ? (
-                            <div className="flex flex-col items-center gap-1 py-4">
-                                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                        {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
+                                <div className="relative w-12 h-12 flex items-center justify-center">
+                                    <div className="absolute inset-0 border-2 border-blue-500/20 rounded-full animate-ping" />
+                                    <Loader2 className="w-6 h-6 text-blue-500 animate-spin relative z-20" />
+                                </div>
+                                <span className="mt-3 text-[10px] font-bold text-blue-400 uppercase tracking-widest animate-pulse">
+                                    {data.status === NodeStatus.QUEUED ? 'In Queue' : 'Generating...'}
+                                </span>
                             </div>
-                        ) : data.previewUrl ? (
+                        ) : null}
+
+                        {data.previewUrl ? (
                             <img
                                 src={data.previewUrl}
                                 alt="Generated"
@@ -191,8 +210,8 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                             {/* Simplified for space - only showing play button and basic model */}
                             <div className="flex-1 truncate text-xs text-white/40">{currentModel.name}</div>
                             <button
-                                onClick={() => data.onRun?.(id, 'local')}
-                                disabled={data.status === 'processing'}
+                                onClick={() => data.onRun?.(id, ExecutionMode.LOCAL)}
+                                disabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || (!localPrompt.trim() && !data.inputs?.prompt)}
                                 className="p-2 bg-blue-500 hover:bg-blue-400 disabled:opacity-50 rounded-full text-white h-8 w-8 flex items-center justify-center transition-all"
                             >
                                 <Play className="w-4 h-4 fill-current" />

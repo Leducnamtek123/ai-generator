@@ -73,12 +73,15 @@ export default function LandingPage() {
           <motion.div
             initial={{ x: -20, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
-            className="flex items-center gap-2"
+            className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
-              <Sparkles className="h-6 w-6" />
+            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-blue-500/20 p-1 bg-white/5 border border-white/10">
+              <img src="/logo.svg" alt="PaintAI Logo" className="w-full h-full object-contain" />
             </div>
-            <span className="text-2xl font-black tracking-tighter uppercase font-mono">FREEP!K</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-black tracking-tighter uppercase leading-none">PaintAI</span>
+              <span className="text-[10px] text-white/40 font-bold uppercase tracking-wider mt-0.5">Your paint, your choice</span>
+            </div>
           </motion.div>
 
           <div className="hidden lg:flex items-center gap-8 text-sm font-bold text-white/40 uppercase tracking-widest">
@@ -115,11 +118,11 @@ export default function LandingPage() {
               <TrendingUp className="w-3 h-3" /> Leading AI Asset Deck
             </motion.div>
             <motion.h1 variants={itemVariants} className="text-6xl md:text-8xl font-black tracking-tighter leading-[0.9]">
-              Create without <br />
-              <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-400 via-cyan-400 to-purple-400">boundaries.</span>
+              Your paint, <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-br from-blue-400 via-cyan-400 to-purple-400">your choice.</span>
             </motion.h1>
             <motion.p variants={itemVariants} className="text-xl text-white/40 max-w-2xl mx-auto font-medium">
-              The world's largest library of high-quality assets powered by state-of-the-art generative AI.
+              You are the artist. AI is your master brush. Co-create stunning assets with the world's most advanced AI creative engine.
             </motion.p>
           </div>
 
@@ -345,7 +348,7 @@ export default function LandingPage() {
             <span className="text-blue-500">Design Game.</span>
           </h2>
           <p className="text-xl text-white/60 max-w-xl mx-auto font-medium">
-            Join 2M+ creators who are building the future with FREEP!K. Get started for free today.
+            Join 2M+ creators who are building the future with PaintAI. Get started for free today.
           </p>
 
           <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -364,9 +367,14 @@ export default function LandingPage() {
       {/* Footer */}
       <footer className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5 opacity-40">
         <div className="flex flex-col md:flex-row justify-between items-center gap-10">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center font-black text-[10px]">N</div>
-            <span className="font-black text-lg tracking-tighter uppercase font-mono">FREEP!K</span>
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-white/5 border border-white/10">
+              <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
+            </div>
+            <div className="flex flex-col">
+              <span className="font-black text-lg tracking-tighter uppercase leading-none">PaintAI</span>
+              <span className="text-[9px] text-white/40 font-bold uppercase tracking-tight">Your paint, your choice</span>
+            </div>
           </div>
           <div className="flex gap-8 text-[10px] font-black uppercase tracking-[0.3em]">
             <span>Terms</span>
@@ -375,7 +383,7 @@ export default function LandingPage() {
             <span>Support</span>
           </div>
           <div className="text-[10px] font-black uppercase tracking-[0.3em]">
-            © 2026 FREEP!K AI. Powered by Dreams.
+            © 2026 PaintAI. Your paint, your choice.
           </div>
         </div>
       </footer>

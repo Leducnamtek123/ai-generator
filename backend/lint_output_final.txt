@@ -1,0 +1,25 @@
+﻿
+> nestjs-boilerplate@1.2.0 lint
+> eslint "{src,apps,libs,test}/**/*.ts"
+
+
+C:\Users\leduc\Documents\ai-generator\backend\src\providers\adapters\leonardo.adapter.ts
+   83:5   error  '_prompt' is defined but never used   @typescript-eslint/no-unused-vars
+   84:5   error  '_options' is defined but never used  @typescript-eslint/no-unused-vars
+   96:5   error  '_options' is defined but never used  @typescript-eslint/no-unused-vars
+  118:39  error  '_style' is defined but never used    @typescript-eslint/no-unused-vars
+
+C:\Users\leduc\Documents\ai-generator\backend\src\providers\adapters\openai.adapter.ts
+  80:5  error  '_prompt' is defined but never used    @typescript-eslint/no-unused-vars
+  81:5  error  '_options' is defined but never used   @typescript-eslint/no-unused-vars
+  92:5  error  '_imageUrl' is defined but never used  @typescript-eslint/no-unused-vars
+  93:5  error  '_options' is defined but never used   @typescript-eslint/no-unused-vars
+
+C:\Users\leduc\Documents\ai-generator\backend\src\templates\templates.service.ts
+  25:60  error  '_userId' is defined but never used  @typescript-eslint/no-unused-vars
+
+C:\Users\leduc\Documents\ai-generator\backend\src\workflows\engine\processors.ts
+  40:5  error  '_context' is defined but never used  @typescript-eslint/no-unused-vars
+
+Γ£û 10 problems (10 errors, 0 warnings)
+

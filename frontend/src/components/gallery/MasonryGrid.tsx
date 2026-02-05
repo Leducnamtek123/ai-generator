@@ -1,9 +1,8 @@
-import React from 'react';
-import { mockGalleryItems, GalleryItem } from '@/lib/mock-data';
+import { GalleryItem } from '@/types/gallery';
 import { cn } from '@/lib/utils';
 import { Heart, Download, Copy } from 'lucide-react';
 
-export function MasonryGrid({ items = mockGalleryItems, className }: { items?: GalleryItem[], className?: string }) {
+export function MasonryGrid({ items, className }: { items: GalleryItem[], className?: string }) {
     return (
         <div className={cn("columns-1 sm:columns-2 md:columns-3 lg:columns-4 gap-4 space-y-4", className)}>
             {items.map((item) => (

@@ -9,10 +9,22 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         async function initMSW() {
             if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-                const { worker } = await import('../mocks/browser');
-                await worker.start({
-                    onUnhandledRequest: 'bypass',
-                });
+                console.log('[MSW] Initializing...');
+                try {
+                    const { worker } = await import('../mocks/browser');
+                    await worker.start({
+                        onUnhandledRequest: 'bypass',
+                        serviceWorker: {
+                            url: '/mockServiceWorker.js'
+                        }
+                    });
+                    console.log('[MSW] Ready');
+                    setIsReady(true);
+                } catch (error) {
+                    console.error('[MSW] Failed to initialize:', error);
+                }
+            } else {
+                setIsReady(true);
             }
         }
 

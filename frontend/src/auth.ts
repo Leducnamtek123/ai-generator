@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
+import Google from "next-auth/providers/google";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
     providers: [
@@ -39,10 +40,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
                 }
             },
         }),
+        Google({
+            clientId: process.env.GOOGLE_CLIENT_ID,
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        }),
     ],
     callbacks: {
-        async jwt({ token, user }) {
-            if (user) {
+        async jwt({ token, user, account }) {
+            if (account && account.provider === "google") {
+                try {
+                    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/google/login`, {
+                        method: "POST",
+                        body: JSON.stringify({ idToken: account.id_token }),
+                        headers: { "Content-Type": "application/json" },
+                    });
+
+                    const data = await res.json();
+
+                    if (res.ok && data.token) {
+                        token.accessToken = data.token;
+                        token.refreshToken = data.refreshToken;
+                        token.user = data.user;
+                    }
+                } catch (error) {
+                    console.error("Google auth exchange error:", error);
+                }
+            } else if (user) {
                 token.accessToken = (user as any).accessToken;
                 token.refreshToken = (user as any).refreshToken;
                 token.user = (user as any).user;

@@ -16,6 +16,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 import { InputNode } from './nodes/InputNode';
 import { ProcessNode } from './nodes/ProcessNode';
@@ -25,11 +26,12 @@ import { GeneratorNode } from './nodes/GeneratorNode';
 import { AssistantNode } from './nodes/AssistantNode';
 import { UpscaleNode } from './nodes/UpscaleNode';
 import { MediaNode } from './nodes/MediaNode';
+import { CommentNode } from './nodes/CommentNode';
 
 import { PropertiesPanel } from './PropertiesPanel';
 import { FloatingToolbar, ToolMode } from './FloatingToolbar';
 import { CanvasEmptyState } from './CanvasEmptyState';
-import { WorkflowNodeType, ConnectionType } from './types';
+import { WorkflowNodeType, ConnectionType, ExecutionMode, NodeStatus, AssistantMode } from './types';
 import { NodeContextMenu, HandleMenu } from './NodeContextMenu';
 import { MediaManagerModal } from './MediaManagerModal';
 import { ImageEditorModal } from './ImageEditorModal';
@@ -43,6 +45,7 @@ const nodeTypes = {
     [WorkflowNodeType.ASSISTANT]: AssistantNode,
     [WorkflowNodeType.UPSCALE]: UpscaleNode,
     [WorkflowNodeType.MEDIA]: MediaNode,
+    [WorkflowNodeType.COMMENT]: CommentNode,
     // Legacy support for basic types
     input: InputNode,
     process: ProcessNode,
@@ -60,9 +63,8 @@ interface HistoryState {
     edges: Edge[];
 }
 
-// Types of node inputs/outputs
 type NodeOutput = {
-    type: 'text' | 'image' | 'video' | 'enhanced_text';
+    type: ConnectionType;
     value: string;
 };
 
@@ -92,7 +94,9 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         setEdges,
         isSaving,
         executeWorkflow,
-        isExecuting
+        isExecuting,
+        executionStatus,
+        executionError
     } = useWorkflowStore();
 
     // Fetch workflow or template on mount
@@ -105,6 +109,13 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             fetchWorkflowByProject(projectId);
         }
     }, [projectId, templateId, workflowId, fetchWorkflowByProject, loadTemplate, fetchWorkflow]);
+
+    // Handle execution errors
+    useEffect(() => {
+        if (executionStatus === 'failed' && executionError) {
+            toast.error(executionError);
+        }
+    }, [executionStatus, executionError]);
 
     const { deleteElements, getNodes, getEdges, zoomIn, zoomOut, fitView, screenToFlowPosition } = useReactFlow();
 
@@ -129,7 +140,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             case 'text':
             case WorkflowNodeType.TEXT:
                 if (node.data.text) {
-                    return { type: 'text', value: node.data.text as string };
+                    return { type: ConnectionType.TEXT, value: node.data.text as string };
                 }
                 break;
 
@@ -138,7 +149,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 if (node.data.mediaUrl) {
                     const isVideo = (node.data.mediaName as string)?.match(/\.(mp4|webm|mov|avi)$/i);
                     return {
-                        type: isVideo ? 'video' : 'image',
+                        type: isVideo ? ConnectionType.VIDEO : ConnectionType.IMAGE,
                         value: node.data.mediaUrl as string
                     };
                 }
@@ -147,27 +158,27 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             case 'generator':
             case WorkflowNodeType.IMAGE_GEN:
                 if (node.data.previewUrl) {
-                    return { type: 'image', value: node.data.previewUrl as string };
+                    return { type: ConnectionType.IMAGE, value: node.data.previewUrl as string };
                 }
                 break;
 
             case WorkflowNodeType.VIDEO_GEN:
                 if (node.data.previewUrl) {
-                    return { type: 'video', value: node.data.previewUrl as string };
+                    return { type: ConnectionType.VIDEO, value: node.data.previewUrl as string };
                 }
                 break;
 
             case 'assistant':
             case WorkflowNodeType.ASSISTANT:
                 if (node.data.enhancedText) {
-                    return { type: 'enhanced_text', value: node.data.enhancedText as string };
+                    return { type: ConnectionType.TEXT, value: node.data.enhancedText as string };
                 }
                 break;
 
             case 'upscale':
             case WorkflowNodeType.UPSCALE:
                 if (node.data.previewUrl) {
-                    return { type: 'image', value: node.data.previewUrl as string };
+                    return { type: ConnectionType.IMAGE, value: node.data.previewUrl as string };
                 }
                 break;
         }
@@ -203,17 +214,17 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             case WorkflowNodeType.IMAGE_GEN:
             case WorkflowNodeType.VIDEO_GEN:
                 // Generators accept text prompts and enhanced text
-                return inputType === 'text' || inputType === 'enhanced_text';
+                return inputType === ConnectionType.TEXT;
 
             case 'assistant':
             case WorkflowNodeType.ASSISTANT:
                 // Assistant accepts text to enhance
-                return inputType === 'text';
+                return inputType === ConnectionType.TEXT;
 
             case 'upscale':
             case WorkflowNodeType.UPSCALE:
                 // Upscaler accepts images
-                return inputType === 'image';
+                return inputType === ConnectionType.IMAGE;
 
             default:
                 return true;
@@ -273,7 +284,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
 
         // Set status to processing
         setNodes((nds: Node[]) =>
-            nds.map((n: Node) => n.id === nodeId ? { ...n, data: { ...n.data, status: 'processing' } } : n)
+            nds.map((n: Node) => n.id === nodeId ? { ...n, data: { ...n.data, status: NodeStatus.PROCESSING } } : n)
         );
 
         // Simulate API delay
@@ -283,53 +294,61 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         setNodes((nds) =>
             nds.map((n) => {
                 if (n.id === nodeId) {
-                    let newData: any = { ...n.data, status: 'success' };
+                    const newData: any = { ...n.data, status: NodeStatus.SUCCESS };
 
                     switch (nodeType) {
                         case 'generator':
                         case WorkflowNodeType.IMAGE_GEN: {
-                            // Get text input from connected nodes
-                            const textInput = inputs.find(i => i.type === 'text' || i.type === 'enhanced_text');
-                            const prompt = textInput?.value || 'random scene';
+                            // Get text input from connected nodes or local data
+                            const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
+                            const prompt = textInput?.value || n.data.text || n.data.prompt || '';
+
+                            if (!prompt && !n.data.previewUrl) {
+                                newData.status = NodeStatus.ERROR;
+                                newData.errorMessage = 'No prompt provided';
+                                break;
+                            }
+
+                            const finalPrompt = (prompt || 'random scene') as string;
 
                             // Use prompt hash for consistent images with same prompt
-                            const seed = prompt.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+                            const seed = finalPrompt.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0);
                             newData.previewUrl = `https://picsum.photos/seed/${seed}-${Date.now()}/512/512`;
-                            newData.usedPrompt = prompt;
+                            newData.usedPrompt = finalPrompt;
                             break;
                         }
 
                         case WorkflowNodeType.VIDEO_GEN: {
-                            const textInput = inputs.find(i => i.type === 'text' || i.type === 'enhanced_text');
-                            const prompt = textInput?.value || 'random video';
-                            const seed = prompt.split('').reduce((a, b) => a + b.charCodeAt(0), 0);
+                            const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
+                            const promptVideo = textInput?.value || n.data.text || n.data.prompt || '';
+                            const finalPromptVideo = (promptVideo || 'random video') as string;
+                            const seed = finalPromptVideo.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0);
                             // For video, we'd use a video API - using image as placeholder
                             newData.previewUrl = `https://picsum.photos/seed/video-${seed}-${Date.now()}/512/512`;
-                            newData.usedPrompt = prompt;
+                            newData.usedPrompt = finalPromptVideo;
                             break;
                         }
 
-                        case 'assistant':
                         case WorkflowNodeType.ASSISTANT: {
                             // Get text input to enhance
-                            const textInput = inputs.find(i => i.type === 'text');
+                            const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
                             const originalText = textInput?.value || 'creative scene';
 
                             // Generate enhanced prompt based on mode
-                            const mode = n.data.mode || 'enhance';
+                            const mode = n.data.mode || AssistantMode.ENHANCE;
                             let enhanced = '';
 
                             switch (mode) {
-                                case 'enhance':
+                                case AssistantMode.ENHANCE:
                                     enhanced = `A stunning, photorealistic ${originalText}. Ultra-detailed, 8K resolution, professional photography, perfect lighting, vibrant colors.`;
                                     break;
-                                case 'expand':
+                                case AssistantMode.EXPAND:
                                     enhanced = `${originalText}, featuring intricate details, rich textures, atmospheric depth, cinematic composition, golden hour lighting, dramatic sky, professional grade.`;
                                     break;
-                                case 'creative':
+                                case AssistantMode.CREATIVE:
                                     enhanced = `An artistic interpretation of ${originalText}, with surreal elements, dreamlike quality, vibrant color palette, imaginative composition, fantasy atmosphere.`;
                                     break;
-                                case 'artistic':
+                                case AssistantMode.PROFESSIONAL:
                                     enhanced = `${originalText} in the style of a masterpiece painting, oil on canvas, Renaissance techniques, chiaroscuro lighting, museum quality, timeless beauty.`;
                                     break;
                                 default:
@@ -457,6 +476,99 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         saveToHistory();
     }, [setNodes, saveToHistory]);
 
+    // ===== NODE ACTION HANDLERS =====
+
+    // Duplicate a node
+    const handleDuplicateNode = useCallback((nodeId: string) => {
+        const nodeToDuplicate = nodes.find(n => n.id === nodeId);
+        if (!nodeToDuplicate) return;
+
+        const newId = Math.random().toString(36).substr(2, 9);
+        const newNode: Node = {
+            ...nodeToDuplicate,
+            id: newId,
+            position: {
+                x: nodeToDuplicate.position.x + 50,
+                y: nodeToDuplicate.position.y + 50,
+            },
+            data: {
+                ...nodeToDuplicate.data,
+                label: `${nodeToDuplicate.data.label || 'Node'} (copy)`,
+                status: NodeStatus.IDLE,
+                previewUrl: undefined, // Don't copy generated content
+            },
+            selected: true,
+        };
+
+        // Deselect original and add new node
+        setNodes((nds) => [
+            ...nds.map(n => ({ ...n, selected: false })),
+            newNode
+        ]);
+        setSelectedNode(newNode);
+        saveToHistory();
+        toast.success('Node duplicated');
+    }, [nodes, setNodes, saveToHistory]);
+
+    // Open properties panel for settings
+    const handleOpenSettings = useCallback((nodeId: string) => {
+        const node = nodes.find(n => n.id === nodeId);
+        if (node) {
+            setSelectedNode(node);
+            // Properties panel will show automatically when a node is selected
+            toast.info('Settings panel opened');
+        }
+    }, [nodes]);
+
+    // Replace media in a node (opens media picker)
+    const [replaceNodeId, setReplaceNodeId] = useState<string | null>(null);
+    const handleReplaceMedia = useCallback((nodeId: string) => {
+        setReplaceNodeId(nodeId);
+        setIsMediaModalOpen(true);
+    }, []);
+
+    // Use node output as reference in another node
+    const handleUseAsReference = useCallback((nodeId: string) => {
+        const sourceNode = nodes.find(n => n.id === nodeId);
+        if (!sourceNode) return;
+
+        // Get the output URL from the source node
+        const outputUrl = sourceNode.data.previewUrl || sourceNode.data.mediaUrl;
+        if (!outputUrl) {
+            toast.warning('No output to reference. Run the node first.');
+            return;
+        }
+
+        // Create a new generator node that references this image
+        const newId = Math.random().toString(36).substr(2, 9);
+        const newNode: Node = {
+            id: newId,
+            type: WorkflowNodeType.IMAGE_GEN,
+            position: {
+                x: sourceNode.position.x + 400,
+                y: sourceNode.position.y,
+            },
+            data: {
+                label: 'Image Generator',
+                status: NodeStatus.IDLE,
+                inputs: { media: true },
+            },
+        };
+
+        // Create edge connecting source to new node
+        const newEdge: Edge = {
+            id: `e${nodeId}-${newId}`,
+            source: nodeId,
+            target: newId,
+            targetHandle: 'media-input',
+        };
+
+        setNodes((nds) => [...nds, newNode]);
+        setEdges((eds) => [...eds, newEdge]);
+        saveToHistory();
+        toast.success('Reference node created');
+    }, [nodes, setNodes, setEdges, saveToHistory]);
+
     // Inject handlers into nodes
     const nodesWithHandlers = nodes.map(node => {
         // Track connected inputs based on handles
@@ -492,7 +604,18 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 onRun: (id?: string, mode?: 'workflow' | 'local') => runWorkflow(id || node.id, mode),
                 onTextChange: handleTextChange,
                 onMediaChange: handleMediaChange,
+                onDuplicate: () => handleDuplicateNode(node.id),
+                onSettings: () => handleOpenSettings(node.id),
+                onReplace: () => handleReplaceMedia(node.id),
+                onReference: () => handleUseAsReference(node.id),
                 inputs, // Pass active inputs info to the node
+                // Comment node specific handlers
+                ...(node.type === WorkflowNodeType.COMMENT && {
+                    onTextChange: handleCommentTextChange,
+                    onColorChange: handleCommentColorChange,
+                    onToggleMinimize: handleCommentToggleMinimize,
+                    onTogglePin: handleCommentTogglePin,
+                }),
                 onHandleClick: (event: any, handleId: string, handleType: 'source' | 'target') => {
                     event.stopPropagation();
                     const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -523,6 +646,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         };
     });
 
+
     const onConnect = useCallback(
         (params: Connection) => {
             // Validate connection - check if target can accept source output type
@@ -532,7 +656,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             if (sourceNode && targetNode) {
                 const sourceOutput = getNodeOutput(sourceNode);
                 if (sourceOutput && !canAcceptInput(targetNode.type, sourceOutput.type)) {
-                    console.warn('Invalid connection: Target cannot accept this input type');
+                    toast.warning('Invalid connection: Target cannot accept this input type');
                     return;
                 }
             }
@@ -569,7 +693,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             position,
             data: {
                 label: nodeLabel,
-                status: 'idle',
+                status: NodeStatus.IDLE,
                 text: type === WorkflowNodeType.TEXT || type === 'text' ? '' : undefined,
                 // If it's upload type, we leave mediaUrl undefined to show upload UI
             },
@@ -579,6 +703,28 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
     }, [setNodes, saveToHistory]);
 
     const handleMediaSelect = useCallback((url: string, name: string, mediaType: 'image' | 'video') => {
+        // If replacing media in an existing node
+        if (replaceNodeId) {
+            setNodes((nds) =>
+                nds.map((n) => n.id === replaceNodeId ? {
+                    ...n,
+                    data: {
+                        ...n.data,
+                        mediaUrl: url,
+                        previewUrl: url, // For generator nodes
+                        mediaName: name,
+                        mediaType: mediaType,
+                        status: NodeStatus.SUCCESS,
+                    }
+                } : n)
+            );
+            setReplaceNodeId(null);
+            saveToHistory();
+            toast.success('Media replaced');
+            return;
+        }
+
+        // Create new media node
         const id = Math.random().toString(36).substr(2, 9);
         const position = {
             x: 500 + Math.random() * 50 - 25,
@@ -591,7 +737,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             position,
             data: {
                 label: 'Media',
-                status: 'success',
+                status: NodeStatus.SUCCESS,
                 mediaUrl: url,
                 mediaName: name,
                 mediaType: mediaType,
@@ -599,7 +745,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         };
         setNodes((nds: Node[]) => nds.concat(newNode));
         saveToHistory();
-    }, [setNodes, saveToHistory]);
+    }, [setNodes, saveToHistory, replaceNodeId]);
 
     // Tool handlers
     const handleToolChange = useCallback((tool: ToolMode) => {
@@ -637,7 +783,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             position,
             data: {
                 label: type,
-                status: 'idle',
+                status: NodeStatus.IDLE,
             },
         };
 
@@ -668,6 +814,73 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
             setEditingImage(imageUrl);
         }
     }, []);
+
+    // Comment node handlers
+    const handleCommentTextChange = useCallback((nodeId: string, text: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, text } } : n
+        ));
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
+    const handleCommentColorChange = useCallback((nodeId: string, color: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, color } } : n
+        ));
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
+    const handleCommentToggleMinimize = useCallback((nodeId: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, isMinimized: !n.data.isMinimized } } : n
+        ));
+    }, [setNodes]);
+
+    const handleCommentTogglePin = useCallback((nodeId: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, isPinned: !n.data.isPinned } } : n
+        ));
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
+    // Create comment at click position
+    const handleCreateComment = useCallback((event: React.MouseEvent) => {
+        const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
+        const id = `comment-${Math.random().toString(36).substr(2, 9)}`;
+
+        const newNode: Node = {
+            id,
+            type: WorkflowNodeType.COMMENT,
+            position,
+            data: {
+                label: 'Comment',
+                status: NodeStatus.IDLE,
+                text: '',
+                author: 'You',
+                timestamp: Date.now(),
+                color: 'yellow',
+                isMinimized: false,
+                isPinned: false,
+            },
+        };
+
+        setNodes((nds) => nds.concat(newNode));
+        saveToHistory();
+        // Switch back to select tool after placing comment
+        setActiveTool('select');
+        toast.success('Comment added');
+    }, [screenToFlowPosition, setNodes, saveToHistory]);
+
+    // Handle pane click - for comment tool, create a comment
+    const handlePaneClick = useCallback((event: React.MouseEvent) => {
+        setHandleMenu(null);
+        setContextMenu(null);
+        setSelectedNode(null);
+
+        if (activeTool === 'comment') {
+            handleCreateComment(event);
+        }
+    }, [activeTool, handleCreateComment]);
 
     return (
         <div className="flex h-full w-full flex-col bg-[#0B0C0E]">
@@ -704,11 +917,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
                         onSelectionChange={onSelectionChange}
-                        onPaneClick={() => {
-                            setHandleMenu(null);
-                            setContextMenu(null);
-                            setSelectedNode(null);
-                        }}
+                        onPaneClick={handlePaneClick}
                         nodeTypes={nodeTypes as any}
                         fitView={nodes.length > 0}
                         className="bg-transparent !h-full"
@@ -723,11 +932,12 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                         zoomOnScroll={activeTool !== 'pan'}
                         onNodeDoubleClick={handleNodeDoubleClick}
                         style={{
-                            cursor: activeTool === 'pan' ? 'grab' : 'default',
+                            cursor: activeTool === 'pan' ? 'grab' : activeTool === 'comment' ? 'crosshair' : 'default',
                             height: '100%',
                             width: '100%'
                         }}
                     >
+
                         <Background color="#222" gap={24} size={1} />
                         <Controls
                             className="!bg-[#1A1B1F] !border-white/10 !fill-white !rounded-xl !shadow-xl"

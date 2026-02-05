@@ -1,4 +1,3 @@
-import { DeepPartial } from '../../../utils/types/deep-partial.type';
 import { NullableType } from '../../../utils/types/nullable.type';
 import { Asset } from '../../domain/asset';
 import { IPaginationOptions } from '../../../utils/types/pagination-options';
@@ -11,6 +10,10 @@ export abstract class AssetRepository {
   abstract findAllWithPagination(
     paginationOptions: IPaginationOptions,
     userId: string,
+  ): Promise<Asset[]>;
+
+  abstract findAllPublicWithPagination(
+    paginationOptions: IPaginationOptions,
   ): Promise<Asset[]>;
 
   abstract findById(id: Asset['id']): Promise<NullableType<Asset>>;

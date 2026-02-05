@@ -10,19 +10,27 @@ import {
   Request,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { CreditsService } from './credits.service';
 
 @ApiTags('Credits')
 @Controller({ path: 'credits', version: '1' })
 export class CreditsController {
-  constructor(private readonly creditsService: CreditsService) { }
+  constructor(private readonly creditsService: CreditsService) {}
 
   @Post()
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   create(@Body() createCreditDto: any, @Request() req: any) {
-    return this.creditsService.create({ ...createCreditDto, userId: req.user.id });
+    return this.creditsService.create({
+      ...createCreditDto,
+      userId: req.user.id,
+    });
   }
 
   @Get()
@@ -46,4 +54,3 @@ export class CreditsController {
     return this.creditsService.getBalance(req.user.id);
   }
 }
-

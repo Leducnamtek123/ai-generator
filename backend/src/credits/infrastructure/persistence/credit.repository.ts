@@ -1,5 +1,3 @@
-import { DeepPartial } from '../../../utils/types/deep-partial.type';
-import { NullableType } from '../../../utils/types/nullable.type';
 import { CreditTransaction } from '../../domain/credit-transaction';
 import { IPaginationOptions } from '../../../utils/types/pagination-options';
 

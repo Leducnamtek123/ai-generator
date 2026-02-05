@@ -28,6 +28,7 @@ import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
+import { ProjectsService } from '../projects/projects.service';
 
 @Injectable()
 export class AuthService {
@@ -37,6 +38,7 @@ export class AuthService {
     private sessionService: SessionService,
     private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
+    private projectsService: ProjectsService,
   ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
@@ -100,6 +102,8 @@ export class AuthService {
       hash,
     });
 
+    await this.ensureDefaultProject(user.id);
+
     return {
       refreshToken,
       token,
@@ -155,6 +159,10 @@ export class AuthService {
       user = await this.usersService.findById(user.id);
     }
 
+    if (user) {
+      await this.ensureDefaultProject(user.id);
+    }
+
     if (!user) {
       throw new UnprocessableEntityException({
         status: HttpStatus.UNPROCESSABLE_ENTITY,
@@ -204,6 +212,8 @@ export class AuthService {
         id: StatusEnum.inactive,
       },
     });
+
+    await this.ensureDefaultProject(user.id);
 
     const hash = await this.jwtService.signAsync(
       {
@@ -589,5 +599,23 @@ export class AuthService {
       refreshToken,
       tokenExpires,
     };
+  }
+
+  private async ensureDefaultProject(userId: User['id']): Promise<void> {
+    try {
+      const projects = await this.projectsService.findAll(userId);
+      if (projects.length === 0) {
+        await this.projectsService.create(
+          {
+            name: 'General',
+            description: 'Default personal workspace',
+          },
+          userId,
+        );
+      }
+    } catch (error) {
+      // Log error but don't block login
+      console.error('Failed to ensure default project:', error);
+    }
   }
 }

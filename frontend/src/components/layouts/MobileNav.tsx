@@ -32,9 +32,13 @@ import {
     INITIAL_PINNED_IDS
 } from './Sidebar';
 
-export function MobileNav() {
+interface MobileNavProps {
+    isOpen: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
     const pathname = usePathname();
-    const [isOpen, setIsOpen] = useState(false);
     const [pinnedIds, setPinnedIds] = useState<string[]>([]);
     const { user } = useAuth();
 
@@ -74,8 +78,8 @@ export function MobileNav() {
 
     // Close on route change
     useEffect(() => {
-        setIsOpen(false);
-    }, [pathname]);
+        onOpenChange(false);
+    }, [pathname, onOpenChange]);
 
     const NavItem = ({ item }: { item: any }) => (
         <Link
@@ -93,53 +97,40 @@ export function MobileNav() {
         </Link>
     );
 
+    if (!user) return null;
+
     return (
         <div className="md:hidden">
-            {/* Mobile Header */}
-            <header className="h-14 bg-[#0B0C0E] border-b border-white/5 flex items-center justify-between px-4 sticky top-0 z-40">
-                <Button
-                    variant="ghost"
-                    size="icon"
-                    className="text-white/60 hover:text-white"
-                    onClick={() => setIsOpen(true)}
-                >
-                    <Menu className="w-6 h-6" />
-                </Button>
-
-                <div className="w-10 flex justify-end">
-                    {/* Avatar or Placeholder */}
-                    <div className="w-7 h-7 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white">
-                        L
-                    </div>
-                </div>
-            </header>
 
             {/* Overlay Menu */}
             {isOpen && (
                 <>
                     <div
                         className="fixed inset-0 bg-black/80 z-[99] backdrop-blur-sm"
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => onOpenChange(false)}
                     />
                     <div
                         className="fixed inset-0 w-full h-full bg-[#0B0C0E] z-[100] flex flex-col overflow-hidden"
                     >
                         {/* Drawer Header */}
-                        <div className="h-14 flex items-center justify-between px-4 border-b border-white/5 shrink-0">
-                            <div className="flex items-center gap-2">
-                                <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-[10px] font-bold text-white uppercase">
-                                    A
-                                </div>
-                                <span className="text-sm font-semibold text-white">FREEP!K</span>
-                            </div>
+                        <div className="flex flex-col items-center justify-center pt-10 pb-6 px-4 border-b border-white/5 shrink-0 relative">
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="text-white/40 hover:text-white"
-                                onClick={() => setIsOpen(false)}
+                                className="text-white/40 hover:text-white absolute top-2 right-2"
+                                onClick={() => onOpenChange(false)}
                             >
                                 <X className="w-5 h-5" />
                             </Button>
+                            <div className="flex flex-col items-center gap-3">
+                                <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center p-1 bg-white/5 border border-white/10 shadow-[0_0_20px_rgba(59,130,246,0.2)]">
+                                    <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
+                                </div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-2xl font-bold text-white tracking-tight">PaintAI</span>
+                                    <span className="text-xs text-white/50 font-medium mt-1">Your paint, your choice</span>
+                                </div>
+                            </div>
                         </div>
 
                         {/* Content */}

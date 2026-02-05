@@ -7,9 +7,7 @@ export abstract class ProjectRepository {
     data: Omit<Project, 'id' | 'createdAt' | 'deletedAt' | 'updatedAt'>,
   ): Promise<Project>;
 
-  abstract findAll(userId: string): Promise<Project[]>;
-  abstract findCommunity(): Promise<Project[]>;
-
+  abstract findAll(userId: string | number): Promise<Project[]>;
 
   abstract findById(id: Project['id']): Promise<NullableType<Project>>;
 

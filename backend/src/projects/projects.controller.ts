@@ -24,7 +24,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 })
 @UseGuards(AuthGuard('jwt'))
 export class ProjectsController {
-  constructor(private readonly projectsService: ProjectsService) { }
+  constructor(private readonly projectsService: ProjectsService) {}
 
   @Post()
   create(@Request() req, @Body() createProjectDto: CreateProjectDto) {
@@ -35,12 +35,6 @@ export class ProjectsController {
   findAll(@Request() req) {
     return this.projectsService.findAll(req.user.id);
   }
-
-  @Get('community')
-  findCommunity() {
-    return this.projectsService.findCommunity();
-  }
-
 
   @Get(':id')
   findOne(@Request() req, @Param('id') id: string) {

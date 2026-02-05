@@ -36,6 +36,17 @@ export class AssetRelationalRepository implements AssetRepository {
     return entities.map((entity) => AssetMapper.toDomain(entity));
   }
 
+  async findAllPublicWithPagination(
+    paginationOptions: IPaginationOptions,
+  ): Promise<Asset[]> {
+    const entities = await this.assetsRepository.find({
+      skip: (paginationOptions.page - 1) * paginationOptions.limit,
+      take: paginationOptions.limit,
+      order: { createdAt: 'DESC' },
+    });
+    return entities.map((entity) => AssetMapper.toDomain(entity));
+  }
+
   async findById(id: string): Promise<NullableType<Asset>> {
     const entity = await this.assetsRepository.findOne({
       where: { id },

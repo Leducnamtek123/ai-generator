@@ -10,7 +10,7 @@
  * 3. API responses should return these exact shapes
  */
 
-import { Type, Image as ImageIcon, Video, Sparkles, Scan, Camera, FileText, Upload, StickyNote, Layers, Smile } from 'lucide-react';
+import { Type, Image as ImageIcon, Video, Sparkles, Scan, Camera, FileText, Upload, StickyNote, Layers, Smile, MessageSquare } from 'lucide-react';
 import React from 'react';
 
 // ============================================
@@ -35,6 +35,7 @@ export enum WorkflowNodeType {
     STICKY_NOTE = 'sticky_note',
     GROUP = 'group',
     STICKER = 'sticker',
+    COMMENT = 'comment',
 }
 
 export enum NodeCategory {
@@ -51,6 +52,107 @@ export enum NodeStatus {
     ERROR = 'error',
     QUEUED = 'queued',
     UPLOADING = 'uploading',
+}
+
+export enum ExecutionMode {
+    WORKFLOW = 'workflow',
+    LOCAL = 'local',
+}
+
+export enum FileMediaType {
+    ANY = 'any',
+    IMAGE = 'image',
+    VIDEO = 'video',
+}
+
+export enum ImageModel {
+    SEEDREAM = 'seedream',
+    FLUX = 'flux',
+    IMAGEN3 = 'imagen3',
+    MIDJOURNEY = 'midjourney',
+    DALLE3 = 'dalle3',
+    STABLE = 'stable',
+}
+
+export enum VideoModel {
+    RUNWAY = 'runway',
+    SORA = 'sora',
+    PIKA = 'pika',
+    KLING = 'kling',
+}
+
+export enum AspectRatio {
+    SQUARE = '1:1',
+    STANDARD = '4:3',
+    PORTRAIT_STANDARD = '3:4',
+    WIDESCREEN = '16:9',
+    PORTRAIT_WIDE = '9:16',
+    PORTRAIT_23 = '2:3',
+    LANDSCAPE_32 = '3:2',
+}
+
+export enum ImageQuality {
+    STANDARD = 'standard',
+    HD = 'hd',
+    FOUR_K = '4k',
+}
+
+export enum VideoDuration {
+    FOUR_S = '4s',
+    EIGHT_S = '8s',
+    SIXTEEN_S = '16s',
+    TWENTY_FOUR_S = '24s',
+}
+
+export enum AssistantMode {
+    ENHANCE = 'enhance',
+    EXPAND = 'expand',
+    CREATIVE = 'creative',
+    PROFESSIONAL = 'professional',
+    CINEMATIC = 'cinematic',
+}
+
+export enum StyleEmphasis {
+    NONE = 'none',
+    PHOTOREALISTIC = 'photorealistic',
+    ARTISTIC = 'artistic',
+    ANIME = 'anime',
+    FANTASY = 'fantasy',
+    SCI_FI = 'sci-fi',
+}
+
+export enum DetailLevel {
+    LOW = 'low',
+    MEDIUM = 'medium',
+    HIGH = 'high',
+}
+
+export enum UpscaleFactor {
+    TWO_X = '2x',
+    FOUR_X = '4x',
+}
+
+export enum UpscaleMode {
+    BALANCED = 'balanced',
+    CREATIVE = 'creative',
+    FAITHFUL = 'faithful',
+}
+
+export enum CameraAngle {
+    FRONT = 'front',
+    SIDE = 'side',
+    TOP = 'top',
+    BOTTOM = 'bottom',
+    THREE_QUARTER = '3/4',
+    CUSTOM = 'custom',
+}
+
+export enum NoteColor {
+    YELLOW = 'yellow',
+    GREEN = 'green',
+    BLUE = 'blue',
+    PINK = 'pink',
+    PURPLE = 'purple',
 }
 
 export enum ConnectionType {
@@ -86,17 +188,17 @@ export interface MediaNodeData extends BaseNodeData {
     mediaUrl?: string;
     mediaName?: string;
     mediaThumbnail?: string;
-    mediaType: 'any' | 'image' | 'video';
+    mediaType: FileMediaType;
     mimeType?: string;
     fileSize?: number;
 }
 
 /** Image Generator Node Data */
 export interface ImageGenNodeData extends BaseNodeData {
-    model: 'seedream' | 'flux' | 'imagen3' | 'midjourney' | 'dalle3' | 'stable';
+    model: ImageModel;
     count: number;
-    aspectRatio: '1:1' | '4:3' | '3:4' | '16:9' | '9:16' | '2:3' | '3:2';
-    quality: 'standard' | 'hd' | '4k';
+    aspectRatio: AspectRatio;
+    quality: ImageQuality;
     negativePrompt?: string;
     seed?: number;
 
@@ -112,9 +214,9 @@ export interface ImageGenNodeData extends BaseNodeData {
 
 /** Video Generator Node Data */
 export interface VideoGenNodeData extends BaseNodeData {
-    model: 'runway' | 'sora' | 'pika' | 'kling';
-    duration: '4s' | '8s' | '16s' | '24s';
-    aspectRatio: '16:9' | '9:16' | '1:1';
+    model: VideoModel;
+    duration: VideoDuration;
+    aspectRatio: AspectRatio;
     fps?: number;
 
     // Input tracking
@@ -129,9 +231,9 @@ export interface VideoGenNodeData extends BaseNodeData {
 
 /** Assistant/Prompt Enhancer Node Data */
 export interface AssistantNodeData extends BaseNodeData {
-    mode: 'enhance' | 'expand' | 'creative' | 'professional' | 'cinematic';
-    styleEmphasis: 'none' | 'photorealistic' | 'artistic' | 'anime' | 'fantasy' | 'sci-fi';
-    detailLevel: 'low' | 'medium' | 'high';
+    mode: AssistantMode;
+    styleEmphasis: StyleEmphasis;
+    detailLevel: DetailLevel;
 
     // Input/Output
     inputText?: string;
@@ -140,8 +242,8 @@ export interface AssistantNodeData extends BaseNodeData {
 
 /** Image Upscaler Node Data */
 export interface UpscaleNodeData extends BaseNodeData {
-    scale: '2x' | '4x';
-    enhanceMode: 'balanced' | 'creative' | 'faithful';
+    scale: UpscaleFactor;
+    enhanceMode: UpscaleMode;
 
     // Input/Output
     inputImageUrl?: string;
@@ -151,7 +253,7 @@ export interface UpscaleNodeData extends BaseNodeData {
 
 /** Camera Angle Node Data */
 export interface CameraNodeData extends BaseNodeData {
-    angle: 'front' | 'side' | 'top' | 'bottom' | '3/4' | 'custom';
+    angle: CameraAngle;
     customRotation?: { x: number; y: number; z: number };
 
     // Input/Output
@@ -162,7 +264,7 @@ export interface CameraNodeData extends BaseNodeData {
 /** Sticky Note Node Data */
 export interface StickyNoteNodeData extends BaseNodeData {
     content: string;
-    color: 'yellow' | 'green' | 'blue' | 'pink' | 'purple';
+    color: NoteColor;
 }
 
 /** Group Node Data */
@@ -170,6 +272,16 @@ export interface GroupNodeData extends BaseNodeData {
     name: string;
     color?: string;
     childNodeIds: string[];
+}
+
+/** Comment Node Data */
+export interface CommentNodeData extends BaseNodeData {
+    text: string;
+    author?: string;
+    timestamp?: number;
+    color: 'yellow' | 'blue' | 'green' | 'pink' | 'purple';
+    isMinimized?: boolean;
+    isPinned?: boolean;
 }
 
 // Union type for all node data
@@ -182,7 +294,8 @@ export type WorkflowNodeData =
     | UpscaleNodeData
     | CameraNodeData
     | StickyNoteNodeData
-    | GroupNodeData;
+    | GroupNodeData
+    | CommentNodeData;
 
 // ============================================
 // CONNECTION INTERFACES
@@ -266,10 +379,10 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
         defaultData: {
             label: 'Image Generator',
             status: NodeStatus.IDLE,
-            model: 'seedream',
+            model: ImageModel.SEEDREAM,
             count: 1,
-            aspectRatio: '1:1',
-            quality: 'hd',
+            aspectRatio: AspectRatio.SQUARE,
+            quality: ImageQuality.HD,
         } as Partial<ImageGenNodeData>,
     },
     [WorkflowNodeType.VIDEO_GEN]: {
@@ -287,9 +400,9 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
         defaultData: {
             label: 'Video Generator',
             status: NodeStatus.IDLE,
-            model: 'runway',
-            duration: '8s',
-            aspectRatio: '16:9',
+            model: VideoModel.RUNWAY,
+            duration: VideoDuration.EIGHT_S,
+            aspectRatio: AspectRatio.WIDESCREEN,
         } as Partial<VideoGenNodeData>,
     },
     [WorkflowNodeType.ASSISTANT]: {
@@ -307,9 +420,9 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
         defaultData: {
             label: 'AI Assistant',
             status: NodeStatus.IDLE,
-            mode: 'enhance',
-            styleEmphasis: 'none',
-            detailLevel: 'medium',
+            mode: AssistantMode.ENHANCE,
+            styleEmphasis: StyleEmphasis.NONE,
+            detailLevel: DetailLevel.MEDIUM,
         } as Partial<AssistantNodeData>,
     },
     [WorkflowNodeType.UPSCALE]: {
@@ -327,8 +440,8 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
         defaultData: {
             label: 'AI Upscaler',
             status: NodeStatus.IDLE,
-            scale: '2x',
-            enhanceMode: 'balanced',
+            scale: UpscaleFactor.TWO_X,
+            enhanceMode: UpscaleMode.BALANCED,
         } as Partial<UpscaleNodeData>,
     },
     [WorkflowNodeType.CAMERA]: {
@@ -346,7 +459,7 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
         defaultData: {
             label: 'Camera Angle',
             status: NodeStatus.IDLE,
-            angle: 'front',
+            angle: CameraAngle.FRONT,
         } as Partial<CameraNodeData>,
     },
     [WorkflowNodeType.STICKY_NOTE]: {
@@ -364,7 +477,7 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
             label: 'Sticky Note',
             status: NodeStatus.IDLE,
             content: '',
-            color: 'yellow',
+            color: NoteColor.YELLOW,
         } as Partial<StickyNoteNodeData>,
     },
     [WorkflowNodeType.GROUP]: {
@@ -401,7 +514,28 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
             status: NodeStatus.IDLE,
         },
     },
+    [WorkflowNodeType.COMMENT]: {
+        type: WorkflowNodeType.COMMENT,
+        label: 'Comment',
+        icon: MessageSquare,
+        category: NodeCategory.UTILITY,
+        description: 'Add comments to your workflow',
+        color: 'text-yellow-400',
+        connections: {
+            accepts: [],
+            outputs: ConnectionType.REFERENCE,
+        },
+        defaultData: {
+            label: 'Comment',
+            status: NodeStatus.IDLE,
+            text: '',
+            color: 'yellow',
+            isMinimized: false,
+            isPinned: false,
+        } as Partial<CommentNodeData>,
+    },
 };
+
 
 // Quick start nodes shown in empty state
 export const QUICK_START_NODES = [

@@ -2,6 +2,10 @@ import React, { useState, useRef, useCallback } from 'react';
 import { X, Upload, Link2, Ghost, Loader2, Image as ImageIcon, Search, Plus } from 'lucide-react';
 import { post } from '@/lib/api';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/ui/dialog';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
 
 
 interface MediaManagerModalProps {
@@ -72,56 +76,51 @@ export function MediaManagerModal({ isOpen, onClose, onSelect }: MediaManagerMod
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-            <div
-                className="w-full max-w-4xl h-[600px] bg-[#0F1014] border border-white/10 rounded-2xl shadow-2xl overflow-hidden flex"
-            >
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-4xl h-[600px] p-0 bg-[#0F1014] border-white/10 shadow-2xl overflow-hidden flex flex-row gap-0">
                 {/* Sidebar */}
                 <div className="w-64 border-r border-white/5 p-4 flex flex-col gap-2 bg-black/20">
                     <h3 className="text-sm font-bold text-white mb-2 px-3">Add Media</h3>
 
-                    <button
+                    <Button
+                        variant={activeTab === 'uploads' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('uploads')}
                         className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left",
+                            "justify-start gap-3 px-3 py-6 rounded-xl text-xs font-medium transition-all h-auto",
                             activeTab === 'uploads' ? "bg-blue-600 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                         )}
                     >
                         <Upload className="w-4 h-4" />
                         Uploads
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
+                        variant={activeTab === 'link' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('link')}
                         className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left",
+                            "justify-start gap-3 px-3 py-6 rounded-xl text-xs font-medium transition-all h-auto",
                             activeTab === 'link' ? "bg-blue-600 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                         )}
                     >
                         <Link2 className="w-4 h-4" />
                         From Link
-                    </button>
+                    </Button>
 
-                    <button
+                    <Button
+                        variant={activeTab === 'history' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('history')}
                         className={cn(
-                            "flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-medium transition-all text-left",
+                            "justify-start gap-3 px-3 py-6 rounded-xl text-xs font-medium transition-all h-auto",
                             activeTab === 'history' ? "bg-blue-600 text-white" : "text-white/60 hover:text-white hover:bg-white/5"
                         )}
                     >
                         <Ghost className="w-4 h-4" />
                         History
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Main Content */}
                 <div className="flex-1 flex flex-col relative">
-                    <button
-                        onClick={onClose}
-                        className="absolute right-4 top-4 p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-full z-10"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
 
                     <div className="flex-1 p-8 overflow-y-auto">
                         {activeTab === 'uploads' && (
@@ -173,14 +172,14 @@ export function MediaManagerModal({ isOpen, onClose, onSelect }: MediaManagerMod
                             <div className="h-full flex flex-col justify-center max-w-md mx-auto">
                                 <h2 className="text-xl font-bold text-white mb-6 text-center">Import from URL</h2>
                                 <div className="space-y-4">
-                                    <input
+                                    <Input
                                         type="url"
                                         placeholder="Paste image/video link here..."
                                         value={urlInput}
                                         onChange={(e) => setUrlInput(e.target.value)}
-                                        className="w-full px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white focus:border-blue-500 focus:outline-none placeholder:text-white/20"
+                                        className="w-full px-4 py-6 bg-white/5 border border-white/10 rounded-xl text-white focus:ring-1 focus:ring-blue-500 placeholder:text-white/20 h-auto"
                                     />
-                                    <button
+                                    <Button
                                         onClick={() => {
                                             if (urlInput) {
                                                 onSelect(urlInput, 'External Link', 'image'); // Default to image
@@ -188,10 +187,10 @@ export function MediaManagerModal({ isOpen, onClose, onSelect }: MediaManagerMod
                                             }
                                         }}
                                         disabled={!urlInput}
-                                        className="w-full py-3 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium rounded-xl transition-colors"
+                                        className="w-full py-6 bg-blue-600 hover:bg-blue-500 text-white font-medium rounded-xl transition-colors h-auto"
                                     >
                                         Import Media
-                                    </button>
+                                    </Button>
                                 </div>
                             </div>
                         )}
@@ -202,10 +201,10 @@ export function MediaManagerModal({ isOpen, onClose, onSelect }: MediaManagerMod
                                     <h2 className="text-xl font-bold text-white">History</h2>
                                     <div className="relative">
                                         <Search className="w-4 h-4 text-white/40 absolute left-3 top-1/2 -translate-y-1/2" />
-                                        <input
+                                        <Input
                                             type="text"
                                             placeholder="Search..."
-                                            className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:outline-none"
+                                            className="pl-9 pr-4 py-2 bg-white/5 border border-white/10 rounded-lg text-xs text-white focus:ring-1 focus:ring-blue-500 h-auto"
                                         />
                                     </div>
                                 </div>
@@ -232,7 +231,7 @@ export function MediaManagerModal({ isOpen, onClose, onSelect }: MediaManagerMod
                         )}
                     </div>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

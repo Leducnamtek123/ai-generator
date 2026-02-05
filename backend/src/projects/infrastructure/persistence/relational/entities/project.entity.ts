@@ -26,9 +26,6 @@ export class ProjectEntity extends EntityRelationalHelper implements Project {
   @Column({ nullable: true })
   thumbnail: string;
 
-  @Column({ default: 'private' })
-  visibility: string;
-
   @CreateDateColumn()
   createdAt: Date;
 

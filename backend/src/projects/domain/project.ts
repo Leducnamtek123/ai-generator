@@ -28,13 +28,6 @@ export class Project {
   })
   thumbnail?: string | null;
 
-  @ApiProperty({
-    type: String,
-    default: 'private',
-  })
-  visibility: string;
-
-
   @ApiProperty()
   createdAt: Date;
 

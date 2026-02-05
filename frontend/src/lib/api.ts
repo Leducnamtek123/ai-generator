@@ -4,7 +4,7 @@ import { getSession } from "next-auth/react";
 
 // FIXME: Set your API base URL and global headers
 export const api = axios.create({
-  baseURL: `${env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/api/v1`,
+  baseURL: `${env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1`,
   timeout: 10_000,
   headers: {
     Accept: "application/json"
@@ -27,7 +27,7 @@ api.interceptors.response.use(
   (err) => {
     if (axios.isAxiosError(err)) return Promise.reject(err);
 
-    return Promise.reject(new AxiosError("Bilinmeyen hata"));
+    return Promise.reject(new AxiosError("Unknown error"));
   }
 );
 

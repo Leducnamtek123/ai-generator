@@ -6,13 +6,8 @@ import { LeonardoAdapter } from './adapters/leonardo.adapter';
 import { OpenAIAdapter } from './adapters/openai.adapter';
 
 @Module({
-    imports: [HttpModule],
-    providers: [
-        ProviderRegistry,
-        N8nAdapter,
-        LeonardoAdapter,
-        OpenAIAdapter,
-    ],
-    exports: [ProviderRegistry],
+  imports: [HttpModule],
+  providers: [ProviderRegistry, N8nAdapter, LeonardoAdapter, OpenAIAdapter],
+  exports: [ProviderRegistry],
 })
-export class ProvidersModule { }
+export class ProvidersModule {}

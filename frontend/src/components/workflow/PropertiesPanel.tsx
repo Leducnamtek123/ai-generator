@@ -2,11 +2,31 @@
 
 import * as React from 'react';
 import { Node } from '@xyflow/react';
+import { cn } from '@/lib/utils';
 import {
     X, Settings2, Sparkles, Image as ImageIcon, Type, Scan, Upload, ArrowRight,
     Play, Loader2, Video, Wand2, Copy, ExternalLink, Download, RefreshCw
 } from 'lucide-react';
 import { useGeneration } from '@/hooks/useGeneration';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+import { toast } from 'sonner';
+import {
+    WorkflowNodeType,
+    NodeStatus,
+    ImageModel,
+    VideoModel,
+    AspectRatio,
+    ImageQuality,
+    VideoDuration,
+    AssistantMode,
+    StyleEmphasis,
+    DetailLevel,
+    UpscaleFactor,
+    UpscaleMode,
+    NoteColor,
+    FileMediaType
+} from './types';
 
 interface PropertiesPanelProps {
     selectedNode: Node | null;
@@ -49,7 +69,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
     const renderContent = (): any => {
         switch (selectedNode.type) {
-            case 'text':
+            case WorkflowNodeType.TEXT:
                 return (
                     <div className="space-y-4">
                         {/* Info Box */}
@@ -71,7 +91,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             <textarea
                                 value={(nodeData.text as string) || ''}
                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('text', e.target.value)}
-                                className="w-full h-32 bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-green-500/50 resize-none font-mono"
+                                className="w-full h-32 bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-green-500/50 resize-none font-sans"
                                 placeholder="Describe what you want to create..."
                             />
                             <div className="flex items-center justify-between">
@@ -91,14 +111,15 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Quick Starters</label>
                             <div className="grid grid-cols-2 gap-2">
-                                {['Portrait photo of a person', 'Beautiful landscape scene', 'Professional product shot', 'Abstract art composition'].map((prompt) => (
-                                    <button
-                                        key={prompt}
-                                        onClick={() => handleChange('text', prompt)}
-                                        className="px-3 py-2 bg-white/5 hover:bg-white/10 rounded-lg text-xs text-white/60 hover:text-white transition-colors text-left"
+                                {['Portrait photo of a person', 'Beautiful landscape scene', 'Professional product shot', 'Abstract art composition'].map((p) => (
+                                    <Button
+                                        key={p}
+                                        variant="outline"
+                                        onClick={() => handleChange('text', p)}
+                                        className="h-auto py-2 bg-white/5 hover:bg-white/10 border-white/10 rounded-lg text-xs text-white/60 hover:text-white transition-colors justify-start text-left whitespace-normal"
                                     >
-                                        {prompt}
-                                    </button>
+                                        {p}
+                                    </Button>
                                 ))}
                             </div>
                         </div>
@@ -108,20 +129,22 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             <label className="text-xs font-medium text-white/60">Style Presets</label>
                             <div className="flex flex-wrap gap-2">
                                 {['Photorealistic', 'Cinematic', 'Anime', 'Digital Art', '3D Render', 'Watercolor'].map((style) => (
-                                    <button
+                                    <Button
                                         key={style}
+                                        variant="ghost"
+                                        size="sm"
                                         onClick={() => handleChange('text', `${(nodeData.text as string) || ''}, ${style.toLowerCase()} style`)}
-                                        className="px-2 py-1 bg-white/5 hover:bg-green-500/20 hover:text-green-400 rounded text-[10px] text-white/60 transition-colors"
+                                        className="h-7 px-2 bg-white/5 hover:bg-green-500/20 hover:text-green-400 rounded text-[10px] text-white/60 transition-colors"
                                     >
                                         {style}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
                     </div>
                 );
 
-            case 'media':
+            case WorkflowNodeType.MEDIA:
                 return (
                     <div className="space-y-4">
                         {/* Info Box */}
@@ -146,23 +169,33 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                                 <div className="p-3 bg-black/20 rounded-lg space-y-2">
                                     <p className="text-xs text-white truncate">{nodeData.mediaName as string}</p>
                                     <div className="flex gap-2">
-                                        <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="flex-1 gap-1 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors"
+                                        >
                                             <ExternalLink className="w-3 h-3" />
                                             Open
-                                        </button>
-                                        <button className="flex-1 flex items-center justify-center gap-1 px-2 py-1.5 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors">
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="flex-1 gap-1 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors"
+                                        >
                                             <Download className="w-3 h-3" />
                                             Download
-                                        </button>
-                                        <button
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
                                             onClick={() => {
                                                 handleChange('mediaUrl', '');
                                                 handleChange('mediaName', '');
                                             }}
-                                            className="flex items-center justify-center gap-1 px-2 py-1.5 bg-red-500/10 hover:bg-red-500/20 rounded text-[10px] text-red-400 transition-colors"
+                                            className="h-8 w-8 bg-red-500/10 hover:bg-red-500/20 rounded text-red-400 transition-colors p-0"
                                         >
                                             <X className="w-3 h-3" />
-                                        </button>
+                                        </Button>
                                     </div>
                                 </div>
                             </div>
@@ -172,17 +205,19 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Media Type Filter</label>
                             <div className="grid grid-cols-3 gap-2">
-                                {['any', 'image', 'video'].map((type) => (
-                                    <button
+                                {[FileMediaType.ANY, FileMediaType.IMAGE, FileMediaType.VIDEO].map((type) => (
+                                    <Button
                                         key={type}
+                                        variant={(nodeData.mediaType || FileMediaType.ANY) === type ? 'default' : 'outline'}
                                         onClick={() => handleChange('mediaType', type)}
-                                        className={`p-2 rounded-lg text-xs font-medium capitalize transition-all ${(nodeData.mediaType || 'any') === type
-                                            ? 'bg-cyan-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                            }`}
+                                        className={cn(
+                                            "h-9 text-xs font-medium capitalize",
+                                            (nodeData.mediaType || FileMediaType.ANY) === type && "bg-cyan-600 hover:bg-cyan-500 border-none",
+                                            (nodeData.mediaType || FileMediaType.ANY) !== type && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                        )}
                                     >
                                         {type}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
@@ -193,19 +228,18 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             <select
                                 value={(nodeData.maxSize as string) || '10mb'}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('maxSize', e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-cyan-500/50"
+                                className="w-full h-10 bg-black/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none"
                             >
-                                <option value="5mb">5 MB</option>
-                                <option value="10mb">10 MB</option>
-                                <option value="25mb">25 MB</option>
-                                <option value="50mb">50 MB</option>
+                                <option value="5mb" className="bg-[#1A1B1F]">5 MB</option>
+                                <option value="10mb" className="bg-[#1A1B1F]">10 MB</option>
+                                <option value="25mb" className="bg-[#1A1B1F]">25 MB</option>
+                                <option value="50mb" className="bg-[#1A1B1F]">50 MB</option>
                             </select>
                         </div>
                     </div>
                 );
 
-            case 'generator':
-            case 'image_gen':
+            case WorkflowNodeType.IMAGE_GEN:
                 return (
                     <div className="space-y-4">
                         {/* Info Box */}
@@ -227,7 +261,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             <select
                                 value={(nodeData.model as string) || 'seedream'}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('model', e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-blue-500/50"
+                                className="w-full h-11 bg-black/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 appearance-none"
                             >
                                 <option value="seedream">Seedream 4 4K ⭐</option>
                                 <option value="flux">Flux Schnell</option>
@@ -243,16 +277,18 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             <label className="text-xs font-medium text-white/60">Aspect Ratio</label>
                             <div className="grid grid-cols-4 gap-2">
                                 {['1:1', '4:3', '16:9', '9:16'].map((ratio) => (
-                                    <button
+                                    <Button
                                         key={ratio}
+                                        variant={(nodeData.aspectRatio || '1:1') === ratio ? 'default' : 'outline'}
                                         onClick={() => handleChange('aspectRatio', ratio)}
-                                        className={`p-2 rounded-lg text-xs font-medium transition-all ${(nodeData.aspectRatio || '1:1') === ratio
-                                            ? 'bg-blue-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                            }`}
+                                        className={cn(
+                                            "h-9 text-xs font-medium",
+                                            (nodeData.aspectRatio || '1:1') === ratio && "bg-blue-600 hover:bg-blue-500 border-none",
+                                            (nodeData.aspectRatio || '1:1') !== ratio && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                        )}
                                     >
                                         {ratio}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
@@ -282,7 +318,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             <textarea
                                 value={(nodeData.negativePrompt as string) || ''}
                                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => handleChange('negativePrompt', e.target.value)}
-                                className="w-full h-20 bg-black/20 border border-white/10 rounded-lg p-3 text-xs text-white focus:outline-none focus:border-blue-500/50 resize-none"
+                                className="w-full h-20 bg-black/20 border border-white/10 rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none"
                                 placeholder="What to avoid in generation..."
                             />
                         </div>
@@ -291,27 +327,28 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
                         {/* Action Buttons */}
                         <div className="space-y-2 pt-2">
-                            <button
+                            <Button
                                 onClick={async () => {
                                     const prompt = (nodeData.inputPrompt as string) || 'A beautiful landscape';
                                     const result = await handleGenerateImage({
                                         prompt,
-                                        model: (nodeData.model as string) || 'seedream',
-                                        aspectRatio: (nodeData.aspectRatio as string) || '1:1',
-                                        quality: (nodeData.quality as 'standard' | 'hd' | '4k') || 'hd',
+                                        model: (nodeData.model as ImageModel) || ImageModel.SEEDREAM,
+                                        aspectRatio: (nodeData.aspectRatio as AspectRatio) || AspectRatio.SQUARE,
+                                        quality: (nodeData.quality as ImageQuality) || ImageQuality.HD,
                                         negativePrompt: nodeData.negativePrompt as string,
                                     });
                                     if (result) {
                                         handleChange('generationId', result.id);
                                         handleChange('status', result.status);
+                                        toast.success('Generation started');
                                     }
                                 }}
                                 disabled={isGenerating}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-xl text-sm font-medium text-white transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full h-11 bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-blue-500/20"
                             >
                                 {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
                                 {isGenerating ? 'Generating...' : 'Generate Image'}
-                            </button>
+                            </Button>
                         </div>
 
                         {/* Last Used Prompt */}
@@ -326,7 +363,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     </div>
                 );
 
-            case 'video_gen':
+            case WorkflowNodeType.VIDEO_GEN:
                 return (
                     <div className="space-y-4">
                         {/* Info Box */}
@@ -346,14 +383,14 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Video Model</label>
                             <select
-                                value={(nodeData.model as string) || 'runway'}
+                                value={(nodeData.model as string) || VideoModel.RUNWAY}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('model', e.target.value)}
-                                className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-purple-500/50"
+                                className="w-full h-11 bg-black/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none"
                             >
-                                <option value="runway">Runway Gen-3 ⭐</option>
-                                <option value="sora">OpenAI Sora</option>
-                                <option value="pika">Pika Labs</option>
-                                <option value="kling">Kling AI</option>
+                                <option value={VideoModel.RUNWAY} className="bg-[#1A1B1F]">Runway Gen-3 ⭐</option>
+                                <option value={VideoModel.SORA} className="bg-[#1A1B1F]">OpenAI Sora</option>
+                                <option value={VideoModel.PIKA} className="bg-[#1A1B1F]">Pika Labs</option>
+                                <option value={VideoModel.KLING} className="bg-[#1A1B1F]">Kling AI</option>
                             </select>
                         </div>
 
@@ -361,17 +398,19 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Duration</label>
                             <div className="grid grid-cols-4 gap-2">
-                                {['4s', '8s', '16s', '24s'].map((duration) => (
-                                    <button
+                                {[VideoDuration.FOUR_S, VideoDuration.EIGHT_S, VideoDuration.SIXTEEN_S, VideoDuration.TWENTY_FOUR_S].map((duration) => (
+                                    <Button
                                         key={duration}
+                                        variant={(nodeData.duration || VideoDuration.EIGHT_S) === duration ? 'default' : 'outline'}
                                         onClick={() => handleChange('duration', duration)}
-                                        className={`p-2 rounded-lg text-xs font-medium transition-all ${(nodeData.duration || '8s') === duration
-                                            ? 'bg-purple-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                            }`}
+                                        className={cn(
+                                            "h-9 text-xs font-medium",
+                                            (nodeData.duration || VideoDuration.EIGHT_S) === duration && "bg-purple-600 hover:bg-purple-500 border-none",
+                                            (nodeData.duration || VideoDuration.EIGHT_S) !== duration && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                        )}
                                     >
                                         {duration}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
@@ -380,17 +419,19 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Aspect Ratio</label>
                             <div className="grid grid-cols-3 gap-2">
-                                {['16:9', '9:16', '1:1'].map((ratio) => (
-                                    <button
+                                {[AspectRatio.WIDESCREEN, AspectRatio.PORTRAIT_WIDE, AspectRatio.SQUARE].map((ratio) => (
+                                    <Button
                                         key={ratio}
+                                        variant={(nodeData.aspectRatio || AspectRatio.WIDESCREEN) === ratio ? 'default' : 'outline'}
                                         onClick={() => handleChange('aspectRatio', ratio)}
-                                        className={`p-2 rounded-lg text-xs font-medium transition-all ${(nodeData.aspectRatio || '16:9') === ratio
-                                            ? 'bg-purple-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                            }`}
+                                        className={cn(
+                                            "h-9 text-xs font-medium",
+                                            (nodeData.aspectRatio || AspectRatio.WIDESCREEN) === ratio && "bg-purple-600 hover:bg-purple-500 border-none",
+                                            (nodeData.aspectRatio || AspectRatio.WIDESCREEN) !== ratio && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                        )}
                                     >
                                         {ratio}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
@@ -404,9 +445,9 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                                     const prompt = (nodeData.inputPrompt as string) || 'A cinematic scene';
                                     const result = await handleGenerateVideo({
                                         prompt,
-                                        model: (nodeData.model as string) || 'runway',
-                                        duration: (nodeData.duration as string) || '8s',
-                                        aspectRatio: (nodeData.aspectRatio as string) || '16:9',
+                                        model: (nodeData.model as VideoModel) || VideoModel.RUNWAY,
+                                        duration: (nodeData.duration as VideoDuration) || VideoDuration.EIGHT_S,
+                                        aspectRatio: (nodeData.aspectRatio as AspectRatio) || AspectRatio.WIDESCREEN,
                                         startImageUrl: nodeData.startImageUrl as string,
                                         endImageUrl: nodeData.endImageUrl as string,
                                     });
@@ -425,7 +466,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     </div>
                 );
 
-            case 'upscale':
+            case WorkflowNodeType.UPSCALE:
                 return (
                     <div className="space-y-4">
                         {/* Info Box */}
@@ -459,30 +500,33 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             </div>
                         )}
 
-                        {/* Scale Factor */}
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Scale Factor</label>
                             <div className="grid grid-cols-2 gap-2">
-                                <button
-                                    onClick={() => handleChange('scale', '2x')}
-                                    className={`p-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${(nodeData.scale || '2x') === '2x'
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                        }`}
+                                <Button
+                                    variant={(nodeData.scale || UpscaleFactor.TWO_X) === UpscaleFactor.TWO_X ? 'default' : 'outline'}
+                                    onClick={() => handleChange('scale', UpscaleFactor.TWO_X)}
+                                    className={cn(
+                                        "h-12 text-sm font-medium gap-2",
+                                        (nodeData.scale || UpscaleFactor.TWO_X) === UpscaleFactor.TWO_X && "bg-indigo-600 hover:bg-indigo-500 border-none",
+                                        (nodeData.scale || UpscaleFactor.TWO_X) !== UpscaleFactor.TWO_X && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                    )}
                                 >
                                     <Scan className="w-4 h-4" />
                                     2x
-                                </button>
-                                <button
-                                    onClick={() => handleChange('scale', '4x')}
-                                    className={`p-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 ${(nodeData.scale) === '4x'
-                                        ? 'bg-indigo-600 text-white'
-                                        : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                        }`}
+                                </Button>
+                                <Button
+                                    variant={nodeData.scale === UpscaleFactor.FOUR_X ? 'default' : 'outline'}
+                                    onClick={() => handleChange('scale', UpscaleFactor.FOUR_X)}
+                                    className={cn(
+                                        "h-12 text-sm font-medium gap-2",
+                                        nodeData.scale === UpscaleFactor.FOUR_X && "bg-indigo-600 hover:bg-indigo-500 border-none",
+                                        nodeData.scale !== UpscaleFactor.FOUR_X && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                    )}
                                 >
                                     <Scan className="w-4 h-4" />
                                     4x Pro
-                                </button>
+                                </Button>
                             </div>
                         </div>
 
@@ -490,13 +534,13 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Enhancement Mode</label>
                             <select
-                                value={(nodeData.enhanceMode as string) || 'balanced'}
+                                value={(nodeData.enhanceMode as string) || UpscaleMode.BALANCED}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('enhanceMode', e.target.value)}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
                             >
-                                <option value="balanced">Balanced</option>
-                                <option value="creative">Creative (Add Details)</option>
-                                <option value="faithful">Faithful (Preserve Original)</option>
+                                <option value={UpscaleMode.BALANCED}>Balanced</option>
+                                <option value={UpscaleMode.CREATIVE}>Creative (Add Details)</option>
+                                <option value={UpscaleMode.FAITHFUL}>Faithful (Preserve Original)</option>
                             </select>
                         </div>
 
@@ -504,32 +548,33 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
                         {/* Action Button */}
                         <div className="space-y-2 pt-2">
-                            <button
+                            <Button
                                 onClick={async () => {
                                     const imageUrl = (nodeData.inputImageUrl as string) || (nodeData.previewUrl as string);
                                     if (!imageUrl) return;
-                                    const scale = (nodeData.scale as string) === '4x' ? 4 : 2;
+                                    const scale = (nodeData.scale as string) === UpscaleFactor.FOUR_X ? 4 : 2;
                                     const result = await handleUpscaleImage({
                                         imageUrl,
                                         scale: scale as 2 | 4,
-                                        enhanceMode: (nodeData.enhanceMode as 'balanced' | 'creative' | 'faithful') || 'balanced',
+                                        enhanceMode: (nodeData.enhanceMode as UpscaleMode) || UpscaleMode.BALANCED,
                                     });
                                     if (result) {
                                         handleChange('generationId', result.id);
                                         handleChange('status', result.status);
+                                        toast.success('Upscaling started');
                                     }
                                 }}
                                 disabled={isGenerating}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl text-sm font-medium text-white transition-all shadow-lg shadow-indigo-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full h-11 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-indigo-500/20"
                             >
                                 {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Scan className="w-4 h-4" />}
                                 {isGenerating ? 'Upscaling...' : `Upscale ${(nodeData.scale as string) || '2x'}`}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 );
 
-            case 'assistant':
+            case WorkflowNodeType.ASSISTANT:
                 return (
                     <div className="space-y-4">
                         {/* Info Box */}
@@ -549,52 +594,54 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Enhancement Mode</label>
                             <select
-                                value={(nodeData.mode as string) || 'enhance'}
+                                value={(nodeData.mode as string) || AssistantMode.ENHANCE}
                                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleChange('mode', e.target.value)}
                                 className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-500/50"
                             >
-                                <option value="enhance">Enhance - Improve clarity & detail</option>
-                                <option value="expand">Expand - Add creative details</option>
-                                <option value="creative">Creative - Artistic interpretation</option>
-                                <option value="professional">Professional - Commercial quality</option>
-                                <option value="cinematic">Cinematic - Film-like descriptions</option>
+                                <option value={AssistantMode.ENHANCE}>Enhance - Improve clarity & detail</option>
+                                <option value={AssistantMode.EXPAND}>Expand - Add creative details</option>
+                                <option value={AssistantMode.CREATIVE}>Creative - Artistic interpretation</option>
+                                <option value={AssistantMode.PROFESSIONAL}>Professional - Commercial quality</option>
+                                <option value={AssistantMode.CINEMATIC}>Cinematic - Film-like descriptions</option>
                             </select>
                         </div>
 
-                        {/* Style Emphasis */}
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Style Emphasis</label>
                             <div className="flex flex-wrap gap-2">
-                                {['None', 'Photorealistic', 'Artistic', 'Anime', 'Fantasy', 'Sci-Fi'].map((style) => (
-                                    <button
+                                {[StyleEmphasis.NONE, StyleEmphasis.PHOTOREALISTIC, StyleEmphasis.ARTISTIC, StyleEmphasis.ANIME, StyleEmphasis.FANTASY, StyleEmphasis.SCI_FI].map((style) => (
+                                    <Button
                                         key={style}
-                                        onClick={() => handleChange('styleEmphasis', style.toLowerCase())}
-                                        className={`px-2 py-1 rounded text-[10px] font-medium transition-all ${(nodeData.styleEmphasis || 'none') === style.toLowerCase()
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                            }`}
+                                        variant={(nodeData.styleEmphasis || StyleEmphasis.NONE) === style ? 'default' : 'outline'}
+                                        onClick={() => handleChange('styleEmphasis', style)}
+                                        className={cn(
+                                            "h-7 px-2 text-[10px] font-medium transition-all",
+                                            (nodeData.styleEmphasis || StyleEmphasis.NONE) === style && "bg-emerald-600 hover:bg-emerald-500 border-none",
+                                            (nodeData.styleEmphasis || StyleEmphasis.NONE) !== style && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                        )}
                                     >
                                         {style}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
 
-                        {/* Detail Level */}
                         <div className="space-y-2">
                             <label className="text-xs font-medium text-white/60">Detail Level</label>
                             <div className="grid grid-cols-3 gap-2">
-                                {['low', 'medium', 'high'].map((level) => (
-                                    <button
+                                {[DetailLevel.LOW, DetailLevel.MEDIUM, DetailLevel.HIGH].map((level) => (
+                                    <Button
                                         key={level}
+                                        variant={(nodeData.detailLevel || DetailLevel.MEDIUM) === level ? 'default' : 'outline'}
                                         onClick={() => handleChange('detailLevel', level)}
-                                        className={`p-2 rounded-lg text-xs font-medium capitalize transition-all ${(nodeData.detailLevel || 'medium') === level
-                                            ? 'bg-emerald-600 text-white'
-                                            : 'bg-white/5 text-white/60 hover:bg-white/10'
-                                            }`}
+                                        className={cn(
+                                            "h-9 text-xs font-medium capitalize",
+                                            (nodeData.detailLevel || DetailLevel.MEDIUM) === level && "bg-emerald-600 hover:bg-emerald-500 border-none",
+                                            (nodeData.detailLevel || DetailLevel.MEDIUM) !== level && "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                        )}
                                     >
                                         {level}
-                                    </button>
+                                    </Button>
                                 ))}
                             </div>
                         </div>
@@ -622,24 +669,25 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
                         {/* Action Button */}
                         <div className="space-y-2 pt-2">
-                            <button
+                            <Button
                                 onClick={async () => {
                                     const prompt = (nodeData.inputPrompt as string);
                                     if (!prompt) return;
                                     const enhanced = await handleEnhancePrompt({
                                         prompt,
-                                        style: (nodeData.styleEmphasis as string) || 'photorealistic',
+                                        style: (nodeData.styleEmphasis as StyleEmphasis) || StyleEmphasis.PHOTOREALISTIC,
                                     });
                                     if (enhanced) {
                                         handleChange('enhancedText', enhanced);
+                                        toast.success('Prompt enhanced');
                                     }
                                 }}
                                 disabled={isGenerating}
-                                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 rounded-xl text-sm font-medium text-white transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full h-11 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-emerald-500/20"
                             >
                                 {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
                                 {isGenerating ? 'Enhancing...' : 'Enhance Prompt'}
-                            </button>
+                            </Button>
                         </div>
                     </div>
                 );
@@ -657,26 +705,24 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
     const getIcon = () => {
         switch (selectedNode.type) {
-            case 'text': return <Type className="w-4 h-4 text-green-400" />;
-            case 'media': return <Upload className="w-4 h-4 text-cyan-400" />;
-            case 'generator':
-            case 'image_gen': return <ImageIcon className="w-4 h-4 text-blue-400" />;
-            case 'video_gen': return <Video className="w-4 h-4 text-purple-400" />;
-            case 'assistant': return <Sparkles className="w-4 h-4 text-emerald-400" />;
-            case 'upscale': return <Scan className="w-4 h-4 text-indigo-400" />;
+            case WorkflowNodeType.TEXT: return <Type className="w-4 h-4 text-green-400" />;
+            case WorkflowNodeType.MEDIA: return <Upload className="w-4 h-4 text-cyan-400" />;
+            case WorkflowNodeType.IMAGE_GEN: return <ImageIcon className="w-4 h-4 text-blue-400" />;
+            case WorkflowNodeType.VIDEO_GEN: return <Video className="w-4 h-4 text-purple-400" />;
+            case WorkflowNodeType.ASSISTANT: return <Sparkles className="w-4 h-4 text-emerald-400" />;
+            case WorkflowNodeType.UPSCALE: return <Scan className="w-4 h-4 text-indigo-400" />;
             default: return <Settings2 className="w-4 h-4 text-white/60" />;
         }
     };
 
     const getTitle = () => {
         switch (selectedNode.type) {
-            case 'text': return 'Text Prompt';
-            case 'media': return 'Media Upload';
-            case 'generator':
-            case 'image_gen': return 'Image Generator';
-            case 'video_gen': return 'Video Generator';
-            case 'assistant': return 'AI Assistant';
-            case 'upscale': return 'AI Upscaler';
+            case WorkflowNodeType.TEXT: return 'Text Prompt';
+            case WorkflowNodeType.MEDIA: return 'Media Upload';
+            case WorkflowNodeType.IMAGE_GEN: return 'Image Generator';
+            case WorkflowNodeType.VIDEO_GEN: return 'Video Generator';
+            case WorkflowNodeType.ASSISTANT: return 'AI Assistant';
+            case WorkflowNodeType.UPSCALE: return 'AI Upscaler';
             default: return 'Properties';
         }
     };
@@ -689,12 +735,14 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     {getIcon() as any}
                     <span className="font-semibold text-sm text-white">{getTitle()}</span>
                 </div>
-                <button
+                <Button
+                    variant="ghost"
+                    size="icon"
                     onClick={onClose}
-                    className="p-1.5 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+                    className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/5 rounded-lg"
                 >
                     <X className="w-4 h-4" />
-                </button>
+                </Button>
             </div>
 
             {/* Content */}

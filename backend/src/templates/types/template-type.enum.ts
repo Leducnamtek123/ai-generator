@@ -1,0 +1,15 @@
+export enum TemplateTypeEnum {
+  IMAGE_GENERATOR = 'image-generator',
+  VIDEO_GENERATOR = 'video-generator',
+  AI_ASSISTANT = 'ai-assistant',
+  WORKFLOW_EDITOR = 'workflow-editor',
+  DESIGN_EDITOR = 'design-editor',
+  IMAGE_UPSCALER = 'image-upscaler',
+  VIDEO_UPSCALER = 'video-upscaler',
+  VOICE_GENERATOR = 'voice-generator',
+  MUSIC_GENERATOR = 'music-generator',
+  SOUND_EFFECT_GENERATOR = 'sfx-generator',
+  ICON_GENERATOR = 'icon-generator',
+  MOCKUP_GENERATOR = 'mockup-generator',
+  BG_REMOVER = 'bg-remover',
+}

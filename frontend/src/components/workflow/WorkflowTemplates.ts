@@ -1,4 +1,5 @@
 import { Node, Edge } from '@xyflow/react';
+import { NodeStatus, ImageModel, WorkflowNodeType } from './types';
 
 export const templates = [
     {
@@ -8,14 +9,14 @@ export const templates = [
         nodes: [
             {
                 id: '1',
-                type: 'text',
-                data: { label: 'Prompt', text: 'A futuristic city with flying cars, neon lights, 8k resolution' },
+                type: WorkflowNodeType.TEXT,
+                data: { label: 'Prompt', text: 'A futuristic city with flying cars, neon lights, 8k resolution', status: NodeStatus.IDLE },
                 position: { x: 50, y: 150 }
             },
             {
                 id: '2',
-                type: 'generator',
-                data: { label: 'Flux Generator', model: 'flux', status: 'idle' },
+                type: WorkflowNodeType.IMAGE_GEN,
+                data: { label: 'Flux Generator', model: ImageModel.FLUX, status: NodeStatus.IDLE },
                 position: { x: 450, y: 100 }
             },
         ] as Node[],
@@ -30,26 +31,26 @@ export const templates = [
         nodes: [
             {
                 id: '1',
-                type: 'text',
-                data: { label: 'Raw Idea', text: 'Cyberpunk street food vendor' },
+                type: WorkflowNodeType.TEXT,
+                data: { label: 'Raw Idea', text: 'Cyberpunk street food vendor', status: NodeStatus.IDLE },
                 position: { x: 50, y: 150 }
             },
             {
                 id: '2',
-                type: 'assistant',
-                data: { label: 'Prompt Enhancer', status: 'idle' },
+                type: WorkflowNodeType.ASSISTANT,
+                data: { label: 'Prompt Enhancer', status: NodeStatus.IDLE },
                 position: { x: 350, y: 150 }
             },
             {
                 id: '3',
-                type: 'generator',
-                data: { label: 'Midjourney Node', model: 'midjourney', status: 'idle' },
+                type: WorkflowNodeType.IMAGE_GEN,
+                data: { label: 'Midjourney Node', model: ImageModel.MIDJOURNEY, status: NodeStatus.IDLE },
                 position: { x: 650, y: 150 }
             },
             {
                 id: '4',
-                type: 'upscale',
-                data: { label: 'Magnific Upscale', status: 'idle' },
+                type: WorkflowNodeType.UPSCALE,
+                data: { label: 'Magnific Upscale', status: NodeStatus.IDLE },
                 position: { x: 1000, y: 150 }
             },
         ] as Node[],

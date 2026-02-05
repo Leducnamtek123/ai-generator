@@ -46,7 +46,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
         if (newId) {
             setShowCreateModal(false);
             setWorkflowName('');
-            router.push(`/workflow?workflowId=${newId}&projectId=${projectId}`);
+            router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
         }
     };
 
@@ -187,7 +187,7 @@ function StudioCard({ workflow, projectId }: { workflow: Workflow; projectId: st
     const router = useRouter();
     return (
         <div
-            onClick={() => router.push(`/workflow?workflowId=${workflow.id}&projectId=${projectId}`)}
+            onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`)}
             className="group cursor-pointer"
         >
             <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#151619] border border-white/5 group-hover:border-white/20 transition-all relative">

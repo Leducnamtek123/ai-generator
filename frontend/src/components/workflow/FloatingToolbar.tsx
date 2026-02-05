@@ -129,14 +129,6 @@ export function FloatingToolbar({
         onToolChange?.(tool);
     };
 
-    // Define the nodes that can be added, including the new 'Upload' and 'Media' types
-    const availableNodes = [
-        { type: WorkflowNodeType.TEXT, icon: Type, label: 'Text' },
-        { type: 'upload', icon: Upload, label: 'Upload' },
-        { type: WorkflowNodeType.MEDIA, icon: FolderOpen, label: 'Media' },
-        { type: WorkflowNodeType.IMAGE_GEN, icon: ImageIcon, label: 'Image Gen' },
-    ];
-
     return (
         <>
             <div className="absolute left-6 top-6 flex flex-col gap-3 z-50">
@@ -235,36 +227,6 @@ export function FloatingToolbar({
                     />
                 </div>
 
-                {/* Run Controls */}
-                <div className="flex flex-col p-2 rounded-2xl border border-white/10 bg-[#1A1B1F]/95 backdrop-blur-sm shadow-xl w-14 items-center gap-1.5">
-                    <button
-                        onClick={onRun}
-                        disabled={isExecuting}
-                        className={cn(
-                            "w-9 h-9 flex items-center justify-center rounded-xl transition-all shadow-[0_0_15px_rgba(59,130,246,0.2)] hover:shadow-[0_0_20px_rgba(59,130,246,0.4)] hover:scale-105",
-                            isExecuting
-                                ? "bg-blue-500/20 text-blue-300 cursor-not-allowed"
-                                : "bg-blue-600 text-white hover:bg-blue-500"
-                        )}
-                    >
-                        {isExecuting ? (
-                            <RotateCw className="w-5 h-5 animate-spin" />
-                        ) : (
-                            <Play className="w-5 h-5 fill-current" />
-                        )}
-                    </button>
-                </div>
-
-                {/* Status Indicator */}
-                <div className="flex flex-col p-2 rounded-2xl border border-white/10 bg-[#1A1B1F]/95 backdrop-blur-sm shadow-xl w-14 items-center gap-1.5">
-                    <div className="w-9 h-9 flex items-center justify-center rounded-xl bg-white/5 border border-white/5">
-                        {isSaving ? (
-                            <RotateCw className="w-5 h-5 text-blue-400 animate-spin" />
-                        ) : (
-                            <div className="w-2.5 h-2.5 rounded-full bg-green-500" />
-                        )}
-                    </div>
-                </div>
             </div>
 
             <ShortcutsModal isOpen={isShortcutsOpen} onClose={() => setIsShortcutsOpen(false)} />

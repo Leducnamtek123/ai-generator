@@ -30,6 +30,12 @@ export class Workflow {
 
   @ApiProperty({
     type: String,
+    default: 'private',
+  })
+  visibility: string;
+
+  @ApiProperty({
+    type: String,
   })
   projectId: string;
 

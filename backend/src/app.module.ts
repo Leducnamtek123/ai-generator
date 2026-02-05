@@ -32,14 +32,14 @@ import { DatabaseConfig } from './database/config/database-config.type';
 const infrastructureDatabaseModule = (databaseConfig() as DatabaseConfig)
   .isDocumentDatabase
   ? MongooseModule.forRootAsync({
-    useClass: MongooseConfigService,
-  })
+      useClass: MongooseConfigService,
+    })
   : TypeOrmModule.forRootAsync({
-    useClass: TypeOrmConfigService,
-    dataSourceFactory: async (options: DataSourceOptions) => {
-      return new DataSource(options).initialize();
-    },
-  });
+      useClass: TypeOrmConfigService,
+      dataSourceFactory: async (options: DataSourceOptions) => {
+        return new DataSource(options).initialize();
+      },
+    });
 // </database-block>
 
 import { ProjectsModule } from './projects/projects.module';
@@ -113,4 +113,4 @@ import { TemplatesModule } from './templates/templates.module';
     TemplatesModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

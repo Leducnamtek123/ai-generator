@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { cn } from '@/lib/utils';
 import { Trash2 } from 'lucide-react';
+import { NodeStatus } from '../types';
 
 interface BaseNodeProps {
     id: string;
@@ -9,7 +10,7 @@ interface BaseNodeProps {
     selected?: boolean;
     onDelete?: (id: string) => void;
     onTitleChange?: (newTitle: string) => void;
-    status?: 'idle' | 'processing' | 'error' | 'success' | 'uploading';
+    status?: NodeStatus;
     isPreview?: boolean;
 }
 

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { Sparkles, Plus, Copy, Edit, Image, FolderInput, MoreHorizontal, ChevronDown } from 'lucide-react';
+import { Sparkles, Plus, Copy, Edit, Image, FolderInput, MoreHorizontal, ChevronDown, Menu } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/ui/button';
 import { UserMenu } from './header/UserMenu';
@@ -28,9 +28,9 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
-export function MainLayout({ children }: { children: React.ReactNode }) {
+export function MainLayout({ children, onMenuClick }: { children: React.ReactNode, onMenuClick?: () => void }) {
     const pathname = usePathname();
-    const isWorkflow = pathname === '/workflow';
+    const isWorkflow = pathname === '/creator/workflow-editor';
     const { user, isLoading } = useAuth();
     const router = useRouter();
     const { workflow, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
@@ -59,14 +59,14 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
         // User wants "New Space" option.
         // Let's create a NEW untitled space immediately
         createWorkflow({ name: 'Untitled Studio' }).then(id => {
-            if (id) router.push(`/workflow?workflowId=${id}`);
+            if (id) router.push(`/creator/workflow-editor?workflowId=${id}`);
         });
     };
 
     const handleDuplicate = async () => {
         if (workflow?.id) {
             const newId = await duplicateWorkflow(workflow.id);
-            if (newId) router.push(`/workflow?workflowId=${newId}`);
+            if (newId) router.push(`/creator/workflow-editor?workflowId=${newId}`);
         }
     };
 
@@ -148,17 +148,25 @@ export function MainLayout({ children }: { children: React.ReactNode }) {
     return (
         <div className="flex h-full w-full bg-[#0B0C0E] text-white">
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="h-14 flex items-center px-6 border-b border-white/5 bg-[#0B0C0E] shrink-0 z-50">
-                    <div className="flex items-center gap-4 text-xs font-medium">
+                <header className="h-14 flex items-center px-4 md:px-6 border-b border-white/5 bg-[#0B0C0E] shrink-0 z-50">
+                    <div className="flex items-center gap-2 md:gap-4 text-xs font-medium">
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="md:hidden h-8 w-8 text-white/60 hover:text-white"
+                            onClick={onMenuClick}
+                        >
+                            <Menu className="w-5 h-5" />
+                        </Button>
                         {getBreadcrumbs()}
                     </div>
 
                     <div className="ml-auto flex items-center gap-4">
-                        <Button variant="ghost" size="sm" className="h-8 gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/5 px-3 rounded-lg text-xs font-semibold">
+                        <Button variant="ghost" size="sm" className="hidden sm:flex h-8 gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/5 px-3 rounded-lg text-xs font-semibold">
                             <Sparkles className="w-3.5 h-3.5 text-blue-400" />
                             Share
                         </Button>
-                        <div className="h-4 w-px bg-white/10" />
+                        <div className="hidden sm:block h-4 w-px bg-white/10" />
                         <UserMenu />
                     </div>
                 </header>

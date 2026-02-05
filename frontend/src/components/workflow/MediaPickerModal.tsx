@@ -8,6 +8,11 @@ import {
 import { workflowApi } from './services/workflowApi';
 import { MediaItem, MediaFolder } from './types';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/ui/dialog';
+import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
+
 
 interface MediaPickerModalProps {
     isOpen: boolean;
@@ -74,11 +79,11 @@ export function MediaPickerModal({
 
         // Validate file type
         if (mediaType === 'image' && !file.type.startsWith('image/')) {
-            alert('Please select an image file');
+            toast.error('Please select an image file');
             return;
         }
         if (mediaType === 'video' && !file.type.startsWith('video/')) {
-            alert('Please select a video file');
+            toast.error('Please select a video file');
             return;
         }
 
@@ -132,25 +137,11 @@ export function MediaPickerModal({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center">
-            {/* Backdrop */}
-            <div
-                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
-                onClick={onClose}
-            />
-
-            {/* Modal */}
-            <div className="relative w-full max-w-4xl h-[600px] bg-[#151619] rounded-2xl border border-white/10 shadow-2xl flex flex-col overflow-hidden">
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-                    <h2 className="text-lg font-semibold text-white">Add media</h2>
-                    <button
-                        onClick={onClose}
-                        className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                    >
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-4xl h-[600px] p-0 bg-[#151619] border-white/10 shadow-2xl flex flex-col overflow-hidden gap-0">
+                <DialogHeader className="px-6 py-4 border-b border-white/10 space-y-0">
+                    <DialogTitle className="text-lg font-semibold text-white">Add media</DialogTitle>
+                </DialogHeader>
 
                 {/* Content */}
                 <div className="flex flex-1 overflow-hidden">
@@ -200,12 +191,11 @@ export function MediaPickerModal({
                             </div>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                                <input
-                                    type="text"
+                                <Input
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                     placeholder="Search..."
-                                    className="w-48 pl-9 pr-3 py-1.5 bg-black/20 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20"
+                                    className="w-48 pl-9 pr-3 py-1 bg-black/20 border border-white/10 rounded-lg text-sm text-white placeholder:text-white/30 focus:ring-1 focus:ring-white/20 h-auto"
                                 />
                             </div>
                             <button className="p-2 text-white/40 hover:text-white hover:bg-white/5 rounded-lg transition-colors">
@@ -334,15 +324,15 @@ export function MediaPickerModal({
                     </div>
                 </div>
 
-                {/* Footer */}
                 <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/10">
-                    <button
+                    <Button
+                        variant="ghost"
                         onClick={onClose}
-                        className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors"
+                        className="text-white/60 hover:text-white hover:bg-white/5"
                     >
                         Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                         onClick={() => {
                             if (selectedItem) {
                                 onSelect(selectedItem);
@@ -351,16 +341,16 @@ export function MediaPickerModal({
                         }}
                         disabled={!selectedItem}
                         className={cn(
-                            "px-6 py-2 rounded-lg text-sm font-medium transition-all",
+                            "px-6",
                             selectedItem
-                                ? "bg-cyan-600 text-white hover:bg-cyan-500"
-                                : "bg-white/10 text-white/30 cursor-not-allowed"
+                                ? "bg-cyan-600 text-white hover:bg-cyan-50"
+                                : "bg-white/10 text-white/30"
                         )}
                     >
                         Add media
-                    </button>
+                    </Button>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }

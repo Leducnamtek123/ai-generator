@@ -25,7 +25,6 @@ export class ProjectEntity extends EntityRelationalHelper {
   @Column({ default: 'private' })
   visibility: string; // 'private', 'public'
 
-
   @CreateDateColumn()
   createdAt: Date;
 

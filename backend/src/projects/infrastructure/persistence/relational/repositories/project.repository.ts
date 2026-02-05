@@ -12,7 +12,7 @@ export class ProjectsRelationalRepository implements ProjectRepository {
   constructor(
     @InjectRepository(ProjectEntity)
     private readonly projectsRepository: Repository<ProjectEntity>,
-  ) { }
+  ) {}
 
   async create(data: Project): Promise<Project> {
     const persistenceModel = ProjectMapper.toPersistence(data);
@@ -22,20 +22,12 @@ export class ProjectsRelationalRepository implements ProjectRepository {
     return ProjectMapper.toDomain(newEntity);
   }
 
-  async findAll(userId: string): Promise<Project[]> {
+  async findAll(userId: string | number): Promise<Project[]> {
     const entities = await this.projectsRepository.find({
-      where: { userId },
+      where: { userId: String(userId) },
     });
     return entities.map((entity) => ProjectMapper.toDomain(entity));
   }
-
-  async findCommunity(): Promise<Project[]> {
-    const entities = await this.projectsRepository.find({
-      where: { visibility: 'public' },
-    });
-    return entities.map((entity) => ProjectMapper.toDomain(entity));
-  }
-
 
   async findById(id: string): Promise<NullableType<Project>> {
     const entity = await this.projectsRepository.findOne({

@@ -8,6 +8,7 @@ export interface Workflow {
     projectId: string;
     nodes: Node[];
     edges: Edge[];
+    visibility: 'private' | 'public';
     previewUrl?: string; // Optional URL for workflow preview image
     createdAt: Date;
     updatedAt: Date;
@@ -25,6 +26,7 @@ interface WorkflowState {
     workflows: Workflow[];
 
     fetchWorkflows: () => Promise<void>;
+    fetchCommunityWorkflows: () => Promise<void>;
     fetchWorkflow: (id: string) => Promise<void>;
     fetchWorkflowByProject: (projectId: string) => Promise<void>;
     fetchWorkflowsByProject: (projectId: string) => Promise<void>;
@@ -32,6 +34,7 @@ interface WorkflowState {
     createWorkflow: (payload: { name: string; projectId?: string; nodes?: Node[]; edges?: Edge[] }) => Promise<string | null>;
     duplicateWorkflow: (id: string) => Promise<string | null>;
     updateWorkflow: (id: string, payload: Partial<Workflow>) => Promise<void>;
+    deleteWorkflow: (id: string) => Promise<void>;
     saveWorkflow: () => Promise<void>;
 
     // Actions
@@ -50,6 +53,7 @@ interface WorkflowState {
     isExecuting: boolean;
     executionStatus: 'idle' | 'running' | 'completed' | 'failed';
     lastExecutionResult: any;
+    executionError: string | null;
     executeWorkflow: () => Promise<void>;
 }
 
@@ -64,12 +68,13 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     isExecuting: false,
     executionStatus: 'idle',
     lastExecutionResult: null,
+    executionError: null,
 
     executeWorkflow: async () => {
         const { workflow, nodes, edges } = get();
         if (!workflow) return;
 
-        set({ isExecuting: true, executionStatus: 'running', lastExecutionResult: null });
+        set({ isExecuting: true, executionStatus: 'running', lastExecutionResult: null, executionError: null });
 
         try {
             // Include current graph state in execution request
@@ -77,10 +82,19 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                 graph: { nodes, edges }
             });
 
-            set({
-                executionStatus: 'completed',
-                lastExecutionResult: result
-            });
+            // If it's queued (new background system), we set status to running and start polling
+            if (result.status === 'queued') {
+                set({
+                    executionStatus: 'running',
+                    isExecuting: true,
+                    lastExecutionResult: result
+                });
+            } else {
+                set({
+                    executionStatus: 'completed',
+                    lastExecutionResult: result
+                });
+            }
 
             // Update nodes with execution results
             if (result && result.nodeStates) {
@@ -110,12 +124,57 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                 }));
             }
 
-            // TODO: In a real app, we would poll here or listen to WS for node-by-node updates
-            // For now, we assume immediate return or handled via polling elsewhere
+            // Start polling for updates if execution is still running or queued
+            if (result.status === 'queued' || result.status === 'RUNNING' || result.status === 'idle') {
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const updatedWorkflow = await apiGet<Workflow>(`/workflows/${workflow.id}`);
+
+                        // Update nodes with latest statuses
+                        set((state) => ({
+                            nodes: state.nodes.map(node => {
+                                const backendNode = updatedWorkflow.nodes?.find(n => n.id === node.id);
+                                if (backendNode) {
+                                    return {
+                                        ...node,
+                                        data: {
+                                            ...node.data,
+                                            status: backendNode.data?.status || node.data.status,
+                                            previewUrl: backendNode.data?.previewUrl || node.data.previewUrl,
+                                            errorMessage: backendNode.data?.errorMessage
+                                        }
+                                    };
+                                }
+                                return node;
+                            })
+                        }));
+
+                        // Stop polling if completed or failed
+                        // We might need to check the global status from the API specifically
+                        // For now, if all generation nodes are not 'running'/'pending'/'processing'/'queued'
+                        const isStillRunning = updatedWorkflow.nodes?.some(n =>
+                            n.data?.status === 'running' ||
+                            n.data?.status === 'pending' ||
+                            n.data?.status === 'processing' ||
+                            n.data?.status === 'queued'
+                        );
+
+                        if (!isStillRunning) {
+                            clearInterval(pollInterval);
+                            set({ isExecuting: false, executionStatus: 'completed' }); // Or failed if any have error
+                        }
+                    } catch (pollError) {
+                        console.error('Polling failed', pollError);
+                        clearInterval(pollInterval);
+                        set({ isExecuting: false, executionStatus: 'failed' });
+                    }
+                }, 3000); // Poll every 3 seconds
+            }
 
         } catch (error) {
             console.error('Workflow execution failed', error);
-            set({ executionStatus: 'failed' });
+            const errorMessage = (error as any)?.response?.data?.message || (error as any)?.message || 'Execution failed';
+            set({ executionStatus: 'failed', executionError: errorMessage });
         } finally {
             set({ isExecuting: false });
         }
@@ -137,33 +196,47 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         }
     },
 
+    fetchCommunityWorkflows: async () => {
+        set({ isLoading: true });
+        try {
+            const data = await apiGet<Workflow[]>('/workflows/community');
+            if (Array.isArray(data)) {
+                set({ workflows: data });
+            }
+        } catch (error) {
+            console.error('Failed to fetch community workflows', error);
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
     createWorkflow: async (payload) => {
         set({ isLoading: true });
         try {
-            // If projectId is not provided, we might need a default or optional handling in backend?
-            // For now, let's assume projectId is optional in DTO if we modify it, 
-            // OR we pass a dummy/default project if required. 
-            // Wait, WorkflowEntity REQUIRES projectId.
-            // But we want "Creative Studios" to be standalone?
-            // The user said "Project is like a workspace". 
-            // Maybe we should allow creating a workflow WITHOUT a specific project ID if the backend supports it?
-            // Or auto-create a "General" project?
-            // Let's stick to requiring projectId for now, OR find a way to get a default project.
-            // User: "project is like workspace".
-            // I'll update the backend to make projectId optional later if needed.
-            // usage: createWorkflow({ name: 'My Studio', projectId: '...' })
-            // If the user is in "Creative Studio" root, do they have a selected project? 
-            // Maybe we can list PROJECTS in the dropdown?
-            // OR just hardcode a default "Personal Workspace" ID?
-            // Actually, for now, I'll pass userId if backend supports it.
-            // Backend CreateWorkflowDto requires `projectId`.
-            // I will MODIFY the backend to make `projectId` optional, 
-            // or automatically assign to a default "Personal" project for the user.
+            let projectId = payload.projectId;
 
-            // For this step, I'll just implement the frontend call.
+            // If no projectId provided, try to use the first available project
+            if (!projectId) {
+                try {
+                    const { useProjectStore } = await import('./project-store');
+                    const projectState = useProjectStore.getState();
+
+                    if (projectState.projects.length === 0) {
+                        await projectState.fetchProjects();
+                    }
+
+                    const projects = useProjectStore.getState().projects;
+                    if (projects.length > 0) {
+                        projectId = projects[0].id;
+                    }
+                } catch (e) {
+                    console.error('Failed to auto-fetch project ID', e);
+                }
+            }
+
             const newWorkflow = await apiPost<Workflow>('/workflows', {
                 ...payload,
-                projectId: payload.projectId || '00000000-0000-0000-0000-000000000000', // Temporary hack or needs backend fix
+                projectId: projectId || '00000000-0000-0000-0000-000000000000', // Final fallback
                 nodes: payload.nodes || [],
                 edges: payload.edges || []
             });
@@ -297,6 +370,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             console.error('Failed to update workflow:', error);
         }
     },
+    deleteWorkflow: async (id: string) => {
+        try {
+            const { del: apiDel } = await import('@/lib/api');
+            await apiDel(`/workflows/${id}`);
+
+            set((state) => ({
+                workflows: state.workflows.filter(w => w.id !== id)
+            }));
+        } catch (error) {
+            console.error('Failed to delete workflow:', error);
+        }
+    },
 
     saveWorkflow: async () => {
         const { workflow, nodes, edges } = get();
@@ -348,7 +433,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     },
     setNodes: (nodes) => {
         if (typeof nodes === 'function') {
-            set({ nodes: (nodes as Function)(get().nodes) });
+            set({ nodes: (nodes as (nodes: Node[]) => Node[])(get().nodes) });
         } else {
             set({ nodes });
         }
@@ -356,7 +441,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     },
     setEdges: (edges) => {
         if (typeof edges === 'function') {
-            set({ edges: (edges as Function)(get().edges) });
+            set({ edges: (edges as (edges: Edge[]) => Edge[])(get().edges) });
         } else {
             set({ edges });
         }

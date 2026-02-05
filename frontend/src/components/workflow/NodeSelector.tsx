@@ -5,6 +5,8 @@ import { Search, ChevronDown, Upload } from 'lucide-react';
 import { NODE_CONFIG, NodeCategory, WorkflowNodeType, MAIN_NODES, UTILITY_NODES } from './types';
 import { cn } from '@/lib/utils';
 
+import { Input } from '@/ui/input';
+
 interface NodeSelectorProps {
     onSelect: (type: WorkflowNodeType, label: string) => void;
     onClose: () => void;
@@ -49,24 +51,25 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
     }, [mainNodes]);
 
     return (
-        <div className="w-[280px] bg-[#1A1B1F] rounded-xl border border-white/10 shadow-2xl overflow-hidden flex flex-col text-white origin-top-left absolute left-14 top-0 z-50">
+        <div className="w-[320px] bg-[#1A1B1F]/95 backdrop-blur-md rounded-2xl border border-white/10 shadow-2xl overflow-hidden flex flex-col text-white origin-top-left absolute left-14 top-0 z-[100]">
             {/* Header with Close Button */}
-            <div className="flex items-center justify-between px-3 py-2 border-b border-white/5 bg-[#151619]">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/5 bg-white/5">
+                <span className="text-xs font-semibold text-white/40 uppercase tracking-widest">Add Node</span>
                 <button
                     onClick={onClose}
-                    className="p-1.5 rounded-md hover:bg-white/10 transition-colors text-white/60 hover:text-white"
+                    className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-white/60 hover:text-white"
                 >
                     <ChevronDown className="w-4 h-4 rotate-90" />
                 </button>
             </div>
 
             {/* Search */}
-            <div className="p-3 border-b border-white/5 bg-[#151619]">
+            <div className="p-4 border-b border-white/5">
                 <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                    <input
-                        className="w-full bg-[#0B0C0E] border border-white/5 rounded-md py-1.5 pl-9 pr-3 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/20 transition-colors"
-                        placeholder="Search"
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
+                    <Input
+                        className="w-full bg-black/20 border-white/10 rounded-xl py-2 pl-10 pr-4 text-sm text-white placeholder:text-white/20 focus:ring-1 focus:ring-blue-500/50 h-10"
+                        placeholder="Search nodes..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                         autoFocus

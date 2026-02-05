@@ -12,8 +12,6 @@ import { env } from "@/env";
 
 import { routing } from "@/i18n/routing";
 
-import { Sidebar } from "@/components/layouts/Sidebar";
-import { MainLayout } from "@/components/layouts/MainLayout";
 import { Toaster } from "@/ui";
 import { Providers } from "@/providers";
 

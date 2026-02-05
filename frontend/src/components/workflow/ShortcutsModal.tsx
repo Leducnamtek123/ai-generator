@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Keyboard, Settings, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/ui/dialog';
 
 // Simple Tab Interface
 type Tab = 'general' | 'shortcuts';
@@ -17,52 +18,50 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 backdrop-blur-sm">
-            <div className="w-[800px] h-[600px] bg-[#0B0C0E] border border-white/10 rounded-2xl shadow-2xl flex overflow-hidden">
-
+        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+            <DialogContent className="max-w-[800px] h-[600px] p-0 bg-[#0B0C0E] border-white/10 shadow-2xl overflow-hidden flex flex-row gap-0">
                 {/* Sidebar */}
                 <div className="w-64 border-r border-white/5 bg-[#151619] p-4 flex flex-col gap-2">
-                    <button
+                    <Button
+                        variant={activeTab === 'general' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('general')}
                         className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                            "justify-start gap-3 px-4 py-6 rounded-lg text-sm font-medium transition-colors",
                             activeTab === 'general' ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
                         )}
                     >
                         <Settings className="w-4 h-4" />
                         General
-                    </button>
-                    <button
+                    </Button>
+                    <Button
+                        variant={activeTab === 'shortcuts' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('shortcuts')}
                         className={cn(
-                            "flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-medium transition-colors",
+                            "justify-start gap-3 px-4 py-6 rounded-lg text-sm font-medium transition-colors",
                             activeTab === 'shortcuts' ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
                         )}
                     >
                         <Keyboard className="w-4 h-4" />
                         Shortcuts
-                    </button>
+                    </Button>
                 </div>
 
                 {/* Content */}
                 <div className="flex-1 flex flex-col bg-[#0B0C0E]">
                     {/* Header */}
-                    <div className="h-16 border-b border-white/5 flex items-center justify-between px-8">
-                        <h2 className="text-lg font-semibold text-white">
+                    <DialogHeader className="h-16 border-b border-white/5 flex flex-row items-center justify-between px-8 space-y-0">
+                        <DialogTitle className="text-lg font-semibold text-white">
                             {activeTab === 'general' ? 'General' : 'Shortcuts'}
-                        </h2>
-                        <button onClick={onClose} className="p-2 text-white/40 hover:text-white hover:bg-white/10 rounded-full transition-colors">
-                            <X className="w-5 h-5" />
-                        </button>
-                    </div>
+                        </DialogTitle>
+                    </DialogHeader>
 
                     {/* Scroll Area */}
                     <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
                         {activeTab === 'general' ? <GeneralSettings /> : <ShortcutsList />}
                     </div>
                 </div>
-            </div>
-        </div>
+            </DialogContent>
+        </Dialog>
     );
 }
 

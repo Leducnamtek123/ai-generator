@@ -1,5 +1,4 @@
-import { MasonryGrid } from '@/components/gallery/MasonryGrid';
-import { mockGalleryItems } from '@/lib/mock-data';
+import { InspirationGallery } from '@/components/gallery/InspirationGallery';
 import { Search, Filter } from 'lucide-react';
 
 export default function CommunityPage() {
@@ -27,7 +26,9 @@ export default function CommunityPage() {
                 </div>
 
                 {/* Gallery */}
-                <MasonryGrid items={[...mockGalleryItems, ...mockGalleryItems]} className="pb-20" />
+                <div className="pb-20">
+                    <InspirationGallery />
+                </div>
             </div>
         </div>
     );

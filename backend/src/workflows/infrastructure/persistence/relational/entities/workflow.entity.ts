@@ -26,6 +26,9 @@ export class WorkflowEntity extends EntityRelationalHelper implements Workflow {
   @Column({ type: 'jsonb', default: [] })
   edges: any;
 
+  @Column({ default: 'private' })
+  visibility: string;
+
   @ManyToOne(() => ProjectEntity, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'projectId' })
   project: ProjectEntity;

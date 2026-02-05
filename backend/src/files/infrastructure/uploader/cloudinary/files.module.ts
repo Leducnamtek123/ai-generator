@@ -1,7 +1,7 @@
 import {
-    HttpStatus,
-    Module,
-    UnprocessableEntityException,
+  HttpStatus,
+  Module,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { FilesCloudinaryController } from './files.controller';
 import { MulterModule } from '@nestjs/platform-express';
@@ -19,61 +19,65 @@ import databaseConfig from '../../../../database/config/database.config';
 
 // <database-block>
 const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
-    .isDocumentDatabase
-    ? DocumentFilePersistenceModule
-    : RelationalFilePersistenceModule;
+  .isDocumentDatabase
+  ? DocumentFilePersistenceModule
+  : RelationalFilePersistenceModule;
 // </database-block>
 
 @Module({
-    imports: [
-        infrastructurePersistenceModule,
-        MulterModule.registerAsync({
-            imports: [ConfigModule],
-            inject: [ConfigService],
-            useFactory: (configService: ConfigService<AllConfigType>) => {
-                cloudinary.config({
-                    cloud_name: configService.get('file.cloudinaryCloudName', { infer: true }),
-                    api_key: configService.get('file.cloudinaryApiKey', { infer: true }),
-                    api_secret: configService.get('file.cloudinaryApiSecret', { infer: true }),
-                });
+  imports: [
+    infrastructurePersistenceModule,
+    MulterModule.registerAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<AllConfigType>) => {
+        cloudinary.config({
+          cloud_name: configService.get('file.cloudinaryCloudName', {
+            infer: true,
+          }),
+          api_key: configService.get('file.cloudinaryApiKey', { infer: true }),
+          api_secret: configService.get('file.cloudinaryApiSecret', {
+            infer: true,
+          }),
+        });
 
-                const storage = new CloudinaryStorage({
-                    cloudinary: cloudinary,
-                    params: {
-                        folder: 'ai-generator',
-                        allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
-                        public_id: (req, file) => {
-                            const name = file.originalname.split('.')[0];
-                            return `${name}-${Date.now()}`;
-                        }
-                    } as any,
-                });
-
-                return {
-                    fileFilter: (request, file, callback) => {
-                        if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
-                            return callback(
-                                new UnprocessableEntityException({
-                                    status: HttpStatus.UNPROCESSABLE_ENTITY,
-                                    errors: {
-                                        file: `cantUploadFileType`,
-                                    },
-                                }),
-                                false,
-                            );
-                        }
-                        callback(null, true);
-                    },
-                    storage,
-                    limits: {
-                        fileSize: configService.get('file.maxFileSize', { infer: true }),
-                    },
-                };
+        const storage = new CloudinaryStorage({
+          cloudinary: cloudinary,
+          params: {
+            folder: 'ai-generator',
+            allowed_formats: ['jpg', 'png', 'jpeg', 'gif'],
+            public_id: (req, file) => {
+              const name = file.originalname.split('.')[0];
+              return `${name}-${Date.now()}`;
             },
-        }),
-    ],
-    controllers: [FilesCloudinaryController],
-    providers: [FilesCloudinaryService],
-    exports: [FilesCloudinaryService],
+          } as any,
+        });
+
+        return {
+          fileFilter: (request, file, callback) => {
+            if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+              return callback(
+                new UnprocessableEntityException({
+                  status: HttpStatus.UNPROCESSABLE_ENTITY,
+                  errors: {
+                    file: `cantUploadFileType`,
+                  },
+                }),
+                false,
+              );
+            }
+            callback(null, true);
+          },
+          storage,
+          limits: {
+            fileSize: configService.get('file.maxFileSize', { infer: true }),
+          },
+        };
+      },
+    }),
+  ],
+  controllers: [FilesCloudinaryController],
+  providers: [FilesCloudinaryService],
+  exports: [FilesCloudinaryService],
 })
-export class FilesCloudinaryModule { }
+export class FilesCloudinaryModule {}

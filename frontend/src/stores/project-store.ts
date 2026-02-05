@@ -6,7 +6,7 @@ export interface Project {
     name: string;
     description?: string;
     userId: string;
-    visibility: 'private' | 'public';
+
     thumbnail?: string;
     createdAt: Date;
     updatedAt: Date;
@@ -19,8 +19,8 @@ interface ProjectState {
 
     fetchProjects: () => Promise<void>;
     fetchProject: (id: string) => Promise<void>;
-    createProject: (payload: { name: string; description?: string; visibility?: 'private' | 'public' }) => Promise<string | null>;
-    updateProject: (id: string, payload: { name?: string; description?: string; visibility?: 'private' | 'public' }) => Promise<void>;
+    createProject: (payload: { name: string; description?: string }) => Promise<string | null>;
+    updateProject: (id: string, payload: { name?: string; description?: string }) => Promise<void>;
     deleteProject: (id: string) => Promise<void>;
 }
 

@@ -38,9 +38,9 @@ export const navItems = [
 ];
 
 export const pinnedItems = [
-    { icon: ImageIcon, label: 'Image Generator', href: '/studio' },
-    { icon: Video, label: 'Video Generator', href: '/video' },
-    { icon: Sparkles, label: 'Assistant', href: '/assistant' },
+    { icon: ImageIcon, label: 'Image Generator', href: '/creator/image-generator' },
+    { icon: Video, label: 'Video Generator', href: '/creator/video-generator' },
+    { icon: Sparkles, label: 'Assistant', href: '/creator/ai-assistant' },
     { icon: LayoutGrid, label: 'Creative Studio', href: '/creative-studio', isNew: true },
 ];
 
@@ -49,33 +49,34 @@ export const bottomItems = [
     { icon: Clock, label: 'History', href: '/history' },
 ];
 
-// Comprehensive Tools Data with Icons
+// Comprehensive Tools Data with Icons - SEO-friendly /creator/ routes
 export const ALL_TOOLS_LIST = [
-    { id: 'image-gen', label: 'Image Generator', href: '/studio', icon: ImageIcon, category: 'image' },
-    { id: 'image-editor', label: 'Image Editor', href: '/editor', icon: ImageIcon, category: 'image' },
-    { id: 'image-upscaler', label: 'Image Upscaler', href: '/upscaler', icon: ImageIcon, category: 'image' },
-    { id: 'image-extender', label: 'Image Extender', href: '/extender', icon: ImageIcon, category: 'image' },
-    { id: 'variations', label: 'Variations', href: '/variations', icon: Sparkles, category: 'image', isNew: true },
-    { id: 'assistant', label: 'Assistant', href: '/assistant', icon: Sparkles, category: 'image' },
+    { id: 'image-gen', label: 'Image Generator', href: '/creator/image-generator', icon: ImageIcon, category: 'image' },
+    { id: 'image-editor', label: 'Image Editor', href: '/creator/image-editor', icon: ImageIcon, category: 'image' },
+    { id: 'image-upscaler', label: 'Image Upscaler', href: '/creator/image-upscaler', icon: ImageIcon, category: 'image' },
+    { id: 'image-extender', label: 'Image Extender', href: '/creator/image-extender', icon: ImageIcon, category: 'image' },
+    { id: 'variations', label: 'Variations', href: '/creator/variations', icon: Sparkles, category: 'image', isNew: true },
+    { id: 'assistant', label: 'Assistant', href: '/creator/ai-assistant', icon: Sparkles, category: 'image' },
 
-    { id: 'video-gen', label: 'Video Generator', href: '/video', icon: Video, category: 'video' },
-    { id: 'video-editor', label: 'Video Project Editor', href: '/video-editor', icon: Video, category: 'video' },
-    { id: 'clip-editor', label: 'Clip Editor', href: '/clip-editor', icon: Video, category: 'video' },
-    { id: 'video-upscaler', label: 'Video Upscaler', href: '/video-upscaler', icon: Video, category: 'video' },
-    { id: 'lip-sync', label: 'Lip Sync', href: '/lip-sync', icon: Video, category: 'video' },
+    { id: 'video-gen', label: 'Video Generator', href: '/creator/video-generator', icon: Video, category: 'video' },
+    { id: 'video-editor', label: 'Video Project Editor', href: '/creator/video-editor', icon: Video, category: 'video' },
+    { id: 'clip-editor', label: 'Clip Editor', href: '/creator/clip-editor', icon: Video, category: 'video' },
+    { id: 'video-upscaler', label: 'Video Upscaler', href: '/creator/video-upscaler', icon: Video, category: 'video' },
+    { id: 'lip-sync', label: 'Lip Sync', href: '/creator/lip-sync', icon: Video, category: 'video' },
 
-    { id: 'voice-gen', label: 'Voice Generator', href: '/voice', icon: Mic, category: 'audio' },
-    { id: 'sfx-gen', label: 'Sound Effect Generator', href: '/sfx', icon: Mic, category: 'audio' },
-    { id: 'music-gen', label: 'Music Generator', href: '/music', icon: Mic, category: 'audio' },
+    { id: 'voice-gen', label: 'Voice Generator', href: '/creator/voice-generator', icon: Mic, category: 'audio' },
+    { id: 'sfx-gen', label: 'Sound Effect Generator', href: '/creator/sfx-generator', icon: Mic, category: 'audio' },
+    { id: 'music-gen', label: 'Music Generator', href: '/creator/music-generator', icon: Mic, category: 'audio' },
 
     { id: 'creative-studio', label: 'Creative Studio', href: '/creative-studio', icon: LayoutGrid, category: 'others', isNew: true },
-    { id: 'design-editor', label: 'Design Editor', href: '/design', icon: LayoutGrid, category: 'others' },
-    { id: 'mockup-gen', label: 'Mockup Generator', href: '/mockup', icon: LayoutGrid, category: 'others' },
-    { id: 'icon-gen', label: 'Icon Generator', href: '/icons', icon: LayoutGrid, category: 'others' },
-    { id: 'bg-remover', label: 'Background Remover', href: '/bg-remover', icon: LayoutGrid, category: 'others' },
-    { id: 'skin-enhancer', label: 'Skin Enhancer', href: '/skin', icon: Sparkles, category: 'others' },
-    { id: 'camera-change', label: 'Change Camera', href: '/camera', icon: Video, category: 'others', isNew: true },
-    { id: 'sketch-to-image', label: 'Sketch to Image', href: '/sketch', icon: ImageIcon, category: 'others' },
+    { id: 'workflow-editor', label: 'Workflow Editor', href: '/creator/workflow-editor', icon: LayoutGrid, category: 'others', isNew: true },
+    { id: 'design-editor', label: 'Design Editor', href: '/creator/design-editor', icon: LayoutGrid, category: 'others' },
+    { id: 'mockup-gen', label: 'Mockup Generator', href: '/creator/mockup-generator', icon: LayoutGrid, category: 'others' },
+    { id: 'icon-gen', label: 'Icon Generator', href: '/creator/icon-generator', icon: LayoutGrid, category: 'others' },
+    { id: 'bg-remover', label: 'Background Remover', href: '/creator/bg-remover', icon: LayoutGrid, category: 'others' },
+    { id: 'skin-enhancer', label: 'Skin Enhancer', href: '/creator/skin-enhancer', icon: Sparkles, category: 'others' },
+    { id: 'camera-change', label: 'Change Camera', href: '/creator/camera-change', icon: Video, category: 'others', isNew: true },
+    { id: 'sketch-to-image', label: 'Sketch to Image', href: '/creator/sketch-to-image', icon: ImageIcon, category: 'others' },
 ];
 
 export const INITIAL_PINNED_IDS = ['image-gen', 'video-gen', 'assistant', 'creative-studio'];
@@ -421,12 +422,15 @@ export function Sidebar() {
                     isCollapsed ? "justify-center px-2" : "px-4"
                 )}>
                     {!isCollapsed ? (
-                        <div className="flex items-center w-full gap-2">
+                        <div className="flex items-center w-full gap-2 group">
                             <div className="flex items-center gap-2 flex-1">
-                                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-cyan-400 flex items-center justify-center text-xs font-bold text-white uppercase">
-                                    A
+                                <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center p-0.5 bg-white/5 border border-white/10 group-hover:border-white/20 transition-colors">
+                                    <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
                                 </div>
-                                <span className="text-sm font-semibold text-white">FREEP!K</span>
+                                <div className="flex flex-col">
+                                    <span className="text-sm font-bold text-white tracking-tight leading-tight">PaintAI</span>
+                                    <span className="text-[9px] text-white/40 font-medium">Your paint, your choice</span>
+                                </div>
                             </div>
                             <Button
                                 variant="ghost"
@@ -440,8 +444,8 @@ export function Sidebar() {
                     ) : (
                         isTablet ? (
                             <div className="w-10 h-10 flex items-center justify-center">
-                                <div className="w-6 h-6 rounded bg-red-500 flex items-center justify-center text-[10px] font-bold text-white shadow-sm">
-                                    P
+                                <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-white/5 border border-white/10">
+                                    <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
                                 </div>
                             </div>
                         ) : (
@@ -449,7 +453,7 @@ export function Sidebar() {
                                 className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-white/5 transition-colors text-white/60 hover:text-white"
                                 onClick={() => setIsCollapsed(false)}
                             >
-                                <PanelLeft className="w-5 h-5" />
+                                <img src="/logo.svg" alt="Logo" className="w-6 h-6 object-contain" />
                             </button>
                         )
                     )}
@@ -510,7 +514,7 @@ export function Sidebar() {
                     </div>
                 </div>
 
-                {/* Footer / Plan / User */}
+                {/* Footer / Plan */}
                 <div className={cn("border-t border-white/5 shrink-0", isCollapsed ? "p-2" : "p-3")}>
                     {/* Credit Balance */}
                     {!isCollapsed && (
@@ -520,12 +524,12 @@ export function Sidebar() {
                     )}
 
                     {!isCollapsed ? (
-                        <div className="rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 p-4 border border-orange-500/20 space-y-2 mb-3">
+                        <div className="rounded-xl bg-gradient-to-br from-orange-500/10 to-amber-500/10 p-4 border border-orange-500/20 space-y-2">
                             <h4 className="text-sm font-bold bg-gradient-to-r from-orange-400 to-amber-400 bg-clip-text text-transparent">Get a plan</h4>
                             <p className="text-[11px] text-white/50">Unlock more features</p>
                         </div>
                     ) : (
-                        <div className="flex justify-center mb-3">
+                        <div className="flex justify-center">
                             <TooltipProvider delayDuration={0}>
                                 <Tooltip>
                                     <TooltipTrigger asChild>
@@ -540,44 +544,6 @@ export function Sidebar() {
                             </TooltipProvider>
                         </div>
                     )}
-
-                    <div className={cn("flex items-center", isCollapsed ? "flex-col gap-3" : "justify-between")}>
-                        {/* User */}
-                        <TooltipProvider delayDuration={0}>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <button className="flex items-center gap-2 hover:bg-white/5 rounded-lg p-2 transition-colors text-left group">
-                                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-[10px] font-bold text-white group-hover:ring-2 ring-white/10 transition-all">
-                                            L
-                                        </div>
-                                        {!isCollapsed && (
-                                            <span className="text-sm font-medium text-white">Leduc</span>
-                                        )}
-                                    </button>
-                                </TooltipTrigger>
-                                {isCollapsed && (
-                                    <TooltipContent side="right" className="bg-[#1A1B1F] border-white/10 text-white">
-                                        Leduc
-                                    </TooltipContent>
-                                )}
-                            </Tooltip>
-                        </TooltipProvider>
-
-                        {isCollapsed ? (
-                            <button className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors">
-                                <MoreHorizontal className="w-5 h-5" />
-                            </button>
-                        ) : (
-                            <div className="flex gap-1">
-                                <button className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors">
-                                    <Globe className="w-4 h-4" />
-                                </button>
-                                <button className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors">
-                                    <MoreHorizontal className="w-4 h-4" />
-                                </button>
-                            </div>
-                        )}
-                    </div>
                 </div>
             </aside>
             {

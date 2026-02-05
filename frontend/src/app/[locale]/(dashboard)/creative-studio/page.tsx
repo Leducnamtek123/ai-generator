@@ -43,7 +43,7 @@ const tabs = [
 
 export default function CreativeStudioPage() {
     const router = useRouter();
-    const { workflows, fetchWorkflows, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
+    const { workflows, fetchWorkflows, createWorkflow, duplicateWorkflow, updateWorkflow, deleteWorkflow } = useWorkflowStore();
     const [activeTab, setActiveTab] = useState('my');
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [workflowName, setWorkflowName] = useState('');
@@ -69,7 +69,7 @@ export default function CreativeStudioPage() {
         if (newId) {
             setShowCreateModal(false);
             setWorkflowName('');
-            router.push(`/workflow?workflowId=${newId}`);
+            router.push(`/creator/workflow-editor?workflowId=${newId}`);
         }
     };
 
@@ -94,10 +94,13 @@ export default function CreativeStudioPage() {
         }
     };
 
-    // TODO: Implement Delete if store supports it. For now assuming we just hide or need delete method.
-    // Store doesn't have deleteWorkflow explicitly in recent edits?
-    // I'll check store again or just omit Delete for now, or assume it exists/add it.
-    // Let's add delete to store if missing.
+    const handleDelete = async (e: React.MouseEvent, id: string) => {
+        e.stopPropagation();
+        if (window.confirm("Are you sure you want to delete this studio? This action cannot be undone.")) {
+            await deleteWorkflow(id);
+        }
+    };
+
 
     return (
         <div className="min-h-screen bg-[#0B0C0E] text-white p-6">
@@ -117,10 +120,10 @@ export default function CreativeStudioPage() {
                 </div>
 
                 {/* Right Visual / Gradient */}
-                <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-purple-900/40 via-blue-900/20 to-transparent">
+                <div className="absolute right-0 top-0 bottom-0 w-1/2 bg-gradient-to-l from-blue-900/40 via-cyan-900/20 to-transparent">
                     <div className="absolute right-0 top-0 h-full w-full opacity-50 mix-blend-screen">
-                        <div className="absolute right-[-10%] top-[-50%] w-[500px] h-[500px] bg-purple-600/30 rounded-full blur-[100px]" />
-                        <div className="absolute right-[20%] bottom-[-20%] w-[300px] h-[300px] bg-blue-500/20 rounded-full blur-[80px]" />
+                        <div className="absolute right-[-10%] top-[-50%] w-[500px] h-[500px] bg-blue-600/30 rounded-full blur-[100px]" />
+                        <div className="absolute right-[20%] bottom-[-20%] w-[300px] h-[300px] bg-cyan-500/20 rounded-full blur-[80px]" />
                     </div>
                     <div className="absolute right-12 top-1/2 -translate-y-1/2 text-right">
                         <h2 className="text-5xl font-bold text-white tracking-tighter opacity-90 drop-shadow-lg">
@@ -181,7 +184,7 @@ export default function CreativeStudioPage() {
                     <div key={workflow.id} className="group cursor-pointer">
                         {/* Card Image */}
                         <div
-                            onClick={() => router.push(`/workflow?workflowId=${workflow.id}`)}
+                            onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}`)}
                             className="aspect-[4/3] bg-[#151619] rounded-xl overflow-hidden border border-white/5 group-hover:border-white/20 transition-all relative mb-3"
                         >
                             {/* Preview Logic */}
@@ -231,7 +234,7 @@ export default function CreativeStudioPage() {
                                             <Copy className="w-4 h-4 mr-2" /> Duplicate
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator className="bg-white/5" />
-                                        <DropdownMenuItem className="hover:bg-red-500/10 text-red-400 cursor-pointer">
+                                        <DropdownMenuItem onClick={(e) => handleDelete(e, workflow.id)} className="hover:bg-red-500/10 text-red-400 cursor-pointer">
                                             <Trash2 className="w-4 h-4 mr-2" /> Delete
                                         </DropdownMenuItem>
                                     </DropdownMenuContent>

@@ -12,6 +12,7 @@ const withBundleAnalyzer = bundleAnalyzer({
 const nextConfig: NextConfig = {
   reactCompiler: true,
   htmlLimitedBots: /.*/,
+
   turbopack: {
     rules: {
       "*.svg": {

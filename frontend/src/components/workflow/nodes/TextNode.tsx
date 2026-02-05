@@ -4,16 +4,20 @@ import { Handle, Position } from '@xyflow/react';
 import { Copy, Wand2, Loader2 } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
+import { ExecutionMode, NodeStatus } from '../types';
 
 interface TextNodeProps {
     id: string;
     data: {
         label?: string;
         text?: string;
-        status?: 'idle' | 'processing' | 'error' | 'success';
+        status?: NodeStatus;
         onDelete?: (id: string) => void;
         onTextChange?: (id: string, text: string) => void;
         onEnhance?: (id: string) => void;
+        onRun?: (id: string, mode?: ExecutionMode) => void;
+        onDuplicate?: () => void;
+        onSettings?: () => void;
         onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
@@ -50,7 +54,12 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
             {selected && !data.isPreview && (
                 <NodeToolbar
                     nodeId={id}
+                    onRun={() => data.onRun?.(id, ExecutionMode.WORKFLOW)}
+                    onRunLocal={() => data.onRun?.(id, ExecutionMode.LOCAL)}
+                    runDisabled={data.status === NodeStatus.PROCESSING || !localText.trim()}
                     onDelete={() => data.onDelete?.(id)}
+                    onDuplicate={data.onDuplicate}
+                    onSettings={data.onSettings}
                 />
             )}
 

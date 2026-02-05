@@ -1,12 +1,12 @@
 import { Search, Image as ImageIcon, Video, Sparkles, LayoutGrid, Wand2, Music, Box } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { MasonryGrid } from '@/components/gallery/MasonryGrid';
 import { ToolCard } from '@/components/dashboard/ToolCard';
-import { mockGalleryItems } from '@/lib/mock-data';
+import { TemplateGallery } from '@/components/gallery/TemplateGallery';
+import { TemplateExplorerModal } from '@/components/gallery/TemplateExplorerModal';
 
 export default function DashboardPage() {
     return (
-        <div className="min-h-screen bg-[#0B0C0E] text-white">
+        <div className="min-h-screen bg-[#0B0C0E] text-white pt-20"> {/* added pt-20 for header spacing if needed, checking sidebar layout */}
             {/* Hero / Search Section */}
             <section className="pt-8 pb-12 px-8 max-w-[1600px] mx-auto">
                 <div className="flex items-center justify-between mb-8">
@@ -17,13 +17,13 @@ export default function DashboardPage() {
                 {/* Main Tools Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-12 animate-in fade-in duration-700">
                     <ToolCard icon={Search} label="Find assets" href="/stock" />
-                    <ToolCard icon={LayoutGrid} label="Spaces" href="/workflow" isNew color="text-blue-400" />
-                    <ToolCard icon={ImageIcon} label="Image Gen" href="/studio" color="text-purple-400" />
-                    <ToolCard icon={Video} label="Video Gen" href="/video" color="text-red-400" />
-                    <ToolCard icon={Wand2} label="Editor" href="/editor" />
-                    <ToolCard icon={Sparkles} label="Upscaler" href="/upscale" color="text-green-400" />
+                    <ToolCard icon={LayoutGrid} label="Spaces" href="/creator/workflow-editor" isNew color="text-blue-400" />
+                    <ToolCard icon={ImageIcon} label="Image Gen" href="/creator/image-generator" color="text-purple-400" />
+                    <ToolCard icon={Video} label="Video Gen" href="/creator/video-generator" color="text-red-400" />
+                    <ToolCard icon={Wand2} label="Editor" href="/creator/image-editor" />
+                    <ToolCard icon={Sparkles} label="Upscaler" href="/creator/image-upscaler" color="text-green-400" />
                     <ToolCard icon={Box} label="3D Models" href="/stock" />
-                    <ToolCard icon={Music} label="Audio" href="/audio" />
+                    <ToolCard icon={Music} label="Audio" href="/creator/music-generator" />
                 </div>
 
                 {/* Recent Creations (Mock) */}
@@ -50,17 +50,27 @@ export default function DashboardPage() {
                 {/* Inspiration Gallery */}
                 <div className="animate-in fade-in duration-1000">
                     <div className="flex items-center justify-between mb-6">
-                        <h2 className="text-lg font-semibold">Get Inspired</h2>
-                        <div className="flex gap-2">
-                            {['Templates', 'Community', 'Tutorials'].map(tag => (
-                                <button key={tag} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors">
-                                    {tag}
-                                </button>
-                            ))}
+                        <div className="flex items-center gap-4">
+                            <h2 className="text-lg font-semibold">Get Inspired</h2>
+                            <div className="flex gap-2">
+                                {['Templates', 'Community', 'Tutorials'].map(tag => (
+                                    <button key={tag} className="px-3 py-1.5 rounded-full bg-white/5 border border-white/5 text-xs text-white/70 hover:bg-white/10 hover:text-white transition-colors">
+                                        {tag}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
 
-                    <MasonryGrid items={mockGalleryItems} />
+                    <TemplateGallery hidePagination />
+
+                    <div className="flex justify-center pt-8">
+                        <TemplateExplorerModal>
+                            <Button variant="outline" className="bg-transparent border-white/10 text-white/60 hover:text-white hover:bg-white/5 hover:border-white/20 min-w-[200px]">
+                                Explore all templates
+                            </Button>
+                        </TemplateExplorerModal>
+                    </div>
                 </div>
             </section>
         </div>

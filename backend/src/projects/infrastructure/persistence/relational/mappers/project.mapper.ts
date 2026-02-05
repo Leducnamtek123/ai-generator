@@ -9,7 +9,7 @@ export class ProjectMapper {
     domainEntity.description = raw.description;
     domainEntity.userId = raw.userId;
     domainEntity.thumbnail = raw.thumbnail;
-    domainEntity.visibility = raw.visibility;
+
     domainEntity.createdAt = raw.createdAt;
     domainEntity.updatedAt = raw.updatedAt;
     domainEntity.deletedAt = raw.deletedAt;
@@ -26,7 +26,7 @@ export class ProjectMapper {
     persistenceEntity.description = domainEntity.description || '';
     persistenceEntity.userId = domainEntity.userId;
     persistenceEntity.thumbnail = domainEntity.thumbnail || '';
-    persistenceEntity.visibility = domainEntity.visibility;
+
     persistenceEntity.createdAt = domainEntity.createdAt;
     persistenceEntity.updatedAt = domainEntity.updatedAt;
     persistenceEntity.deletedAt = domainEntity.deletedAt;

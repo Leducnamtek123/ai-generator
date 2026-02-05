@@ -4,10 +4,11 @@ import * as React from 'react';
 import { BaseNode } from './BaseNode';
 import { Cpu } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
+import { NodeStatus } from '../types';
 
 export function ProcessNode({ id, data, selected }: any) {
     const { deleteElements } = useReactFlow();
-    const status = data.status || 'idle';
+    const status = data.status || NodeStatus.IDLE;
 
     const handleDelete = () => {
         deleteElements({ nodes: [{ id }] });
@@ -21,7 +22,7 @@ export function ProcessNode({ id, data, selected }: any) {
                     <span className="text-sm font-medium">{data.label || 'AI Model'}</span>
                 </div>
 
-                {status === 'processing' && (
+                {status === NodeStatus.PROCESSING && (
                     <div className="w-full space-y-1">
                         <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
                             <div

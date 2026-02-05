@@ -5,6 +5,8 @@ import { cn } from '@/lib/utils';
 interface NodeToolbarProps {
     nodeId: string;
     onRun?: () => void;
+    onRunLocal?: () => void;
+    runDisabled?: boolean;
     onDelete?: () => void;
     onReference?: () => void;
     onReplace?: () => void;
@@ -12,12 +14,18 @@ interface NodeToolbarProps {
     onDuplicate?: () => void;
 }
 
-export function NodeToolbar({ nodeId, onRun, onDelete, onDuplicate, onReference, onReplace, onSettings }: NodeToolbarProps) {
+export function NodeToolbar({ nodeId, onRun, onRunLocal, runDisabled, onDelete, onDuplicate, onReference, onReplace, onSettings }: NodeToolbarProps) {
     return (
         <div className="absolute -top-14 left-0 flex items-center gap-1 p-1 bg-[#1A1B1F] border border-white/10 rounded-xl shadow-xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 scale-90 origin-bottom-left">
             {onRun && (
-                <ToolbarButton onClick={onRun} tooltip="Run">
+                <ToolbarButton onClick={onRun} tooltip="Run Workflow" disabled={runDisabled}>
                     <Play className="w-4 h-4 fill-white" />
+                </ToolbarButton>
+            )}
+
+            {onRunLocal && (
+                <ToolbarButton onClick={onRunLocal} tooltip="Run Local" disabled={runDisabled}>
+                    <RefreshCw className="w-4 h-4" />
                 </ToolbarButton>
             )}
 
@@ -54,12 +62,13 @@ export function NodeToolbar({ nodeId, onRun, onDelete, onDuplicate, onReference,
     );
 }
 
-function ToolbarButton({ children, onClick, className, tooltip }: { children: React.ReactNode, onClick?: () => void, className?: string, tooltip?: string }) {
+function ToolbarButton({ children, onClick, className, tooltip, disabled }: { children: React.ReactNode, onClick?: () => void, className?: string, tooltip?: string, disabled?: boolean }) {
     return (
         <button
             onClick={onClick}
+            disabled={disabled}
             className={cn(
-                "p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors relative group",
+                "p-2 rounded-md text-white/70 hover:text-white hover:bg-white/10 transition-colors relative group disabled:opacity-30 disabled:cursor-not-allowed",
                 className
             )}
         >

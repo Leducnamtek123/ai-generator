@@ -23,6 +23,10 @@ export class AssetsService {
     );
   }
 
+  findAllPublic(paginationOptions: IPaginationOptions) {
+    return this.assetRepository.findAllPublicWithPagination(paginationOptions);
+  }
+
   findOne(id: string) {
     return this.assetRepository.findById(id);
   }

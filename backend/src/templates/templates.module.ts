@@ -6,10 +6,8 @@ import { TemplateRepository } from './infrastructure/persistence/relational/temp
 import { TemplateEntity } from './infrastructure/persistence/relational/entities/template.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([TemplateEntity])
-  ],
+  imports: [TypeOrmModule.forFeature([TemplateEntity])],
   controllers: [TemplatesController],
-  providers: [TemplatesService, TemplateRepository]
+  providers: [TemplatesService, TemplateRepository],
 })
-export class TemplatesModule { }
+export class TemplatesModule {}

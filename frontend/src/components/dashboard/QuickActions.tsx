@@ -7,10 +7,10 @@ import { Link } from '@/i18n/navigation';
 
 export function QuickActions() {
     const actions = [
-        { title: 'Create Image', icon: Camera, color: 'text-blue-400', href: '/studio' },
-        { title: 'New Video', icon: Video, color: 'text-purple-400', href: '/studio' },
-        { title: 'Workflow Canvas', icon: Layers, color: 'text-emerald-400', href: '/workflow' },
-        { title: 'Magic Upscale', icon: Wand2, color: 'text-amber-400', href: '/studio' },
+        { title: 'Create Image', icon: Camera, color: 'text-blue-400', href: '/creator/image-generator' },
+        { title: 'New Video', icon: Video, color: 'text-purple-400', href: '/creator/video-generator' },
+        { title: 'Workflow Canvas', icon: Layers, color: 'text-emerald-400', href: '/creator/workflow-editor' },
+        { title: 'Magic Upscale', icon: Wand2, color: 'text-amber-400', href: '/creator/image-upscaler' },
     ];
 
     return (
