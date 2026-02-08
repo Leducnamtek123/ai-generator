@@ -39,8 +39,7 @@ export default function ProjectsPage() {
 
         const newId = await createProject({
             name: projectName,
-            description: projectDesc,
-            visibility: 'private'
+            description: projectDesc
         });
 
         if (newId) {

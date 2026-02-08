@@ -9,7 +9,12 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: (await import(`../messages/${locale}.json`)).default,
-    timeZone: "Europe/Istanbul"
+    messages: {
+      ...(await import(`../messages/${locale}/common.json`)).default,
+      ...(await import(`../messages/${locale}/auth.json`)).default,
+      ...(await import(`../messages/${locale}/user.json`)).default,
+      ...(await import(`../messages/${locale}/features.json`)).default,
+    },
+    timeZone: "Asia/Ho_Chi_Minh"
   };
 });

@@ -26,6 +26,7 @@ interface FloatingToolbarProps {
     isSaving?: boolean;
     onRun?: () => void;
     isExecuting?: boolean;
+    onOpenComments?: () => void;
 }
 
 export function FloatingToolbar({
@@ -41,7 +42,8 @@ export function FloatingToolbar({
     canRedo = false,
     isSaving = false,
     onRun,
-    isExecuting = false
+    isExecuting = false,
+    onOpenComments
 }: FloatingToolbarProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
@@ -174,10 +176,16 @@ export function FloatingToolbar({
                     {/* Comment Tool */}
                     <ToolbarButton
                         icon={<MessageSquare className="w-5 h-5" />}
-                        label="Comment (C)"
+                        label="Add Comment (C)"
                         active={currentTool === 'comment'}
                         onClick={() => handleToolChange('comment')}
                         shortcut="C"
+                    />
+
+                    <ToolbarButton
+                        icon={<Sparkles className="w-5 h-5 text-blue-400" />}
+                        label="Open Reviews"
+                        onClick={onOpenComments}
                     />
 
                     <div className="w-6 h-px bg-white/10 my-1" />

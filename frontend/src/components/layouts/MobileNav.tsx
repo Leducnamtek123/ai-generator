@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
+// import { LocaleSwitcher, ThemeSwitcher } from '@/widgets';
 
 import {
     navItems,
@@ -182,12 +183,7 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                                 <Button variant="ghost" size="icon" className="hover:text-white hover:bg-white/5">
                                     <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px] font-bold">?</div>
                                 </Button>
-                                <Button variant="ghost" size="icon" className="hover:text-white hover:bg-white/5">
-                                    <Globe className="w-5 h-5" />
-                                </Button>
-                                <Button variant="ghost" size="icon" className="hover:text-white hover:bg-white/5">
-                                    <Clock className="w-5 h-5" />
-                                </Button>
+                                {/* Theme & Locale switchers removed as they are in UserMenu */}
                                 <Button variant="ghost" size="icon" className="hover:text-white hover:bg-white/5 relative">
                                     <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">&bull;</div>
                                     <div className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-[#151619]" />

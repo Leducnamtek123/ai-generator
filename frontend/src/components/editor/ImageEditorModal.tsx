@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { X, Undo2, Redo2, Trash2, Maximize2, MoveHorizontal, Settings2, ArrowUp, Eraser, PenLine, Paperclip, ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
-import { GalleryItem } from '@/lib/mock-data';
+import { GalleryItem } from '@/types/gallery';
 
 interface ImageEditorModalProps {
     isOpen: boolean;

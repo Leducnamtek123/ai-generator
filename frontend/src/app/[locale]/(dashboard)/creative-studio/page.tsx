@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Plus,
     Search,
@@ -9,11 +9,13 @@ import {
     Users,
     LayoutGrid,
     MoreHorizontal,
-    MonitorPlay,
     Copy,
     Edit,
-    Trash2
+    Trash2,
+    Image,
+    Loader2
 } from 'lucide-react';
+import { post } from '@/lib/api';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import { useWorkflowStore, Workflow } from '@/stores/workflow-store';
@@ -52,6 +54,7 @@ export default function CreativeStudioPage() {
     const [showRenameModal, setShowRenameModal] = useState(false);
     const [editingWorkflow, setEditingWorkflow] = useState<Workflow | null>(null);
     const [newName, setNewName] = useState('');
+    const [uploadingWorkflowId, setUploadingWorkflowId] = useState<string | null>(null);
 
     useEffect(() => {
         fetchWorkflows();
@@ -98,6 +101,42 @@ export default function CreativeStudioPage() {
         e.stopPropagation();
         if (window.confirm("Are you sure you want to delete this studio? This action cannot be undone.")) {
             await deleteWorkflow(id);
+        }
+    };
+
+    const handleUploadInit = (e: React.MouseEvent, id: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        setUploadingWorkflowId(id);
+        // Trigger file input
+        document.getElementById('thumbnail-upload')?.click();
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file || !uploadingWorkflowId) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            // Upload file
+            const response = await post<{ file: { path: string } }>('/files/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            if (response?.file?.path) {
+                // Update workflow with new preview URL
+                await updateWorkflow(uploadingWorkflowId, { previewUrl: response.file.path });
+            }
+        } catch (error) {
+            console.error('Failed to upload thumbnail', error);
+        } finally {
+            // Reset
+            e.target.value = '';
+            setUploadingWorkflowId(null);
         }
     };
 
@@ -187,6 +226,15 @@ export default function CreativeStudioPage() {
                             onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}`)}
                             className="aspect-[4/3] bg-[#151619] rounded-xl overflow-hidden border border-white/5 group-hover:border-white/20 transition-all relative mb-3"
                         >
+                            {/* Loading Overlay */}
+                            {uploadingWorkflowId === workflow.id && (
+                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                                    <div className="flex flex-col items-center gap-2">
+                                        <Loader2 className="w-6 h-6 text-white animate-spin" />
+                                        <span className="text-xs text-white/80 font-medium">Uploading...</span>
+                                    </div>
+                                </div>
+                            )}
                             {/* Preview Logic */}
                             {workflow.previewUrl ? (
                                 <img
@@ -232,6 +280,9 @@ export default function CreativeStudioPage() {
                                         </DropdownMenuItem>
                                         <DropdownMenuItem onClick={(e) => handleDuplicate(e, workflow.id)} className="hover:bg-white/5 cursor-pointer">
                                             <Copy className="w-4 h-4 mr-2" /> Duplicate
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => handleUploadInit(e, workflow.id)} className="hover:bg-white/5 cursor-pointer">
+                                            <Image className="w-4 h-4 mr-2" /> Upload image
                                         </DropdownMenuItem>
                                         <DropdownMenuSeparator className="bg-white/5" />
                                         <DropdownMenuItem onClick={(e) => handleDelete(e, workflow.id)} className="hover:bg-red-500/10 text-red-400 cursor-pointer">
@@ -303,6 +354,15 @@ export default function CreativeStudioPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            {/* Hidden File Input for Thumbnail Upload */}
+            <input
+                type="file"
+                id="thumbnail-upload"
+                className="hidden"
+                accept="image/*"
+                onChange={handleFileChange}
+            />
         </div>
     );
 }

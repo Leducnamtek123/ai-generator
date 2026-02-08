@@ -1,0 +1,13 @@
+{
+    "UserList": {
+        "title": "User List",
+        "description": "A list of users",
+        "error": "Error",
+        "loading": "Loading...",
+        "id": "ID",
+        "name": "Name",
+        "email": "Email",
+        "searchPlaceholder": "Search users...",
+        "noResults": "No results."
+    }
+}

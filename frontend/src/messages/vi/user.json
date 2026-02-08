@@ -1,0 +1,13 @@
+{
+    "UserList": {
+        "title": "Danh sách người dùng",
+        "description": "Danh sách người dùng",
+        "error": "Lỗi",
+        "loading": "Đang tải...",
+        "id": "ID",
+        "name": "Tên",
+        "email": "Email",
+        "searchPlaceholder": "Tìm kiếm người dùng...",
+        "noResults": "Không có kết quả."
+    }
+}

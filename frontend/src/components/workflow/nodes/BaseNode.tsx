@@ -12,9 +12,14 @@ interface BaseNodeProps {
     onTitleChange?: (newTitle: string) => void;
     status?: NodeStatus;
     isPreview?: boolean;
+    headerActions?: React.ReactNode;
+    sideActions?: React.ReactNode;
 }
 
-export const BaseNode = memo(({ id, title, children, selected, onDelete, status, onTitleChange, isPreview }: BaseNodeProps) => {
+export const BaseNode = memo(({
+    id, title, children, selected, onDelete, status,
+    onTitleChange, isPreview, headerActions, sideActions
+}: BaseNodeProps) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [editTitle, setEditTitle] = React.useState(title);
     const inputRef = React.useRef<HTMLInputElement>(null);
@@ -34,24 +39,42 @@ export const BaseNode = memo(({ id, title, children, selected, onDelete, status,
         <div className="relative group">
             {/* Minimal Title - Floating above */}
             {!isPreview && (
-                <div className="absolute -top-6 left-0 flex items-center gap-2 px-1 z-10">
-                    {isEditing ? (
-                        <input
-                            ref={inputRef}
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            onBlur={handleTitleSubmit}
-                            onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
-                            className="bg-black/50 border border-blue-500/50 rounded px-1 py-0.5 text-[10px] text-white outline-none w-32"
-                        />
-                    ) : (
-                        <span
-                            onDoubleClick={() => setIsEditing(true)}
-                            className={cn(
-                                "text-[10px] font-medium transition-colors cursor-text select-none",
-                                selected ? "text-blue-400" : "text-white/50 group-hover:text-white/70"
-                            )}>{title}</span>
-                    )}
+                <div className="absolute -top-7 left-0 flex items-center justify-between w-full px-1 z-10">
+                    <div className="flex items-center gap-2">
+                        {isEditing ? (
+                            <input
+                                ref={inputRef}
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                onBlur={handleTitleSubmit}
+                                onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
+                                className="bg-black/50 border border-blue-500/50 rounded px-1 py-0.5 text-[10px] text-white outline-none w-32"
+                            />
+                        ) : (
+                            <span
+                                onDoubleClick={() => setIsEditing(true)}
+                                className={cn(
+                                    "text-[10px] font-medium transition-colors cursor-text select-none",
+                                    selected ? "text-blue-400" : "text-white/50 group-hover:text-white/70"
+                                )}>{title}</span>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Top Toolbar (Appears on selection) */}
+            {selected && !isPreview && headerActions && (
+                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in zoom-in-95 duration-200">
+                    <div className="bg-[#1A1B1F] border border-white/10 rounded-xl px-1.5 py-1 flex items-center gap-0.5 shadow-2xl shadow-black/50">
+                        {headerActions}
+                    </div>
+                </div>
+            )}
+
+            {/* Side Mini Icons */}
+            {!isPreview && sideActions && (
+                <div className="absolute top-0 -right-8 flex flex-col gap-1 z-10">
+                    {sideActions}
                 </div>
             )}
 
@@ -59,15 +82,13 @@ export const BaseNode = memo(({ id, title, children, selected, onDelete, status,
             <div
                 className={cn(
                     "rounded-[18px] border-2 transition-all duration-200 overflow-hidden",
-                    "bg-[#1A1B1F] shadow-xl",
-                    selected && !isPreview ? "border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]" : "border-transparent",
+                    "bg-[#1A1B1F] shadow-xl relative",
+                    selected && !isPreview ? "border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]" : "border-white/5",
                     !isPreview && "hover:border-white/10"
                 )}
             >
                 {children}
             </div>
-
-            {/* Selection Ring (Optional separate element if border isn't enough) */}
         </div>
     );
 });

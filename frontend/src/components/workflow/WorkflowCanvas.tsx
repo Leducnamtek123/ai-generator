@@ -35,6 +35,8 @@ import { WorkflowNodeType, ConnectionType, ExecutionMode, NodeStatus, AssistantM
 import { NodeContextMenu, HandleMenu } from './NodeContextMenu';
 import { MediaManagerModal } from './MediaManagerModal';
 import { ImageEditorModal } from './ImageEditorModal';
+import { VideoEditorModal } from './VideoEditorModal';
+import { CommentsPanel } from './CommentsPanel';
 
 // ... imports
 import { useWorkflowStore } from '@/stores/workflow-store';
@@ -129,6 +131,15 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
     // Menu state
     const [handleMenu, setHandleMenu] = useState<HandleMenuState | null>(null);
     const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null);
+
+    // Editor & Panel states
+    const [isImageEditorOpen, setIsImageEditorOpen] = useState(false);
+    const [editingImageUrl, setEditingImageUrl] = useState('');
+
+    const [isVideoEditorOpen, setIsVideoEditorOpen] = useState(false);
+    const [editingVideoUrl, setEditingVideoUrl] = useState('');
+
+    const [isCommentsPanelOpen, setIsCommentsPanelOpen] = useState(false);
 
     // ===== NODE CONNECTION LOGIC =====
 
@@ -609,6 +620,18 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 onReplace: () => handleReplaceMedia(node.id),
                 onReference: () => handleUseAsReference(node.id),
                 inputs, // Pass active inputs info to the node
+
+                // Editor handlers
+                onOpenImageEditor: (url: string) => {
+                    setEditingImageUrl(url);
+                    setIsImageEditorOpen(true);
+                },
+                onOpenVideoEditor: (url: string) => {
+                    setEditingVideoUrl(url);
+                    setIsVideoEditorOpen(true);
+                },
+                onOpenComments: () => setIsCommentsPanelOpen(true),
+
                 // Comment node specific handlers
                 ...(node.type === WorkflowNodeType.COMMENT && {
                     onTextChange: handleCommentTextChange,
@@ -616,6 +639,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                     onToggleMinimize: handleCommentToggleMinimize,
                     onTogglePin: handleCommentTogglePin,
                 }),
+
                 onHandleClick: (event: any, handleId: string, handleType: 'source' | 'target') => {
                     event.stopPropagation();
                     const rect = (event.target as HTMLElement).getBoundingClientRect();
@@ -899,6 +923,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                     isSaving={isSaving}
                     onRun={executeWorkflow}
                     isExecuting={isExecuting}
+                    onOpenComments={() => setIsCommentsPanelOpen(true)}
                 />
 
                 {/* Show empty state when no nodes - render ABOVE ReactFlow */}
@@ -956,6 +981,12 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                     />
                 </div>
 
+                {/* Comments Panel */}
+                <CommentsPanel
+                    isOpen={isCommentsPanelOpen}
+                    onClose={() => setIsCommentsPanelOpen(false)}
+                />
+
                 {/* Context Menus */}
                 {handleMenu && (
                     <HandleMenu
@@ -984,14 +1015,15 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 />
 
                 <ImageEditorModal
-                    isOpen={!!editingImage}
-                    imageUrl={editingImage || ''}
-                    onClose={() => setEditingImage(null)}
-                    onSave={(newUrl) => {
-                        console.log("Saved new url", newUrl);
-                        setEditingImage(null);
-                        // Here we would update the node data with newUrl
-                    }}
+                    isOpen={isImageEditorOpen}
+                    imageUrl={editingImageUrl}
+                    onClose={() => setIsImageEditorOpen(false)}
+                />
+
+                <VideoEditorModal
+                    isOpen={isVideoEditorOpen}
+                    videoUrl={editingVideoUrl}
+                    onClose={() => setIsVideoEditorOpen(false)}
                 />
             </div>
         </div>

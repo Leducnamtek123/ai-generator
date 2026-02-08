@@ -30,6 +30,7 @@ import {
     HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { CreditBadge } from '@/components/common/CreditBadge';
+// import { LocaleSwitcher, ThemeSwitcher } from '@/widgets';
 
 export const navItems = [
     { icon: Home, label: 'Home', href: '/dashboard' },
@@ -520,6 +521,17 @@ export function Sidebar() {
                     {!isCollapsed && (
                         <div className="mb-3">
                             <CreditBadge className="w-full justify-center" />
+                        </div>
+                    )}
+
+                    {/* Theme & Language Switchers */}
+                    {!isCollapsed ? (
+                        <div className="flex items-center gap-2 mb-3">
+                            {/* Switchers removed as they are in UserMenu */}
+                        </div>
+                    ) : (
+                        <div className="flex flex-col items-center gap-2 mb-3">
+                            {/* Switchers removed as they are in UserMenu */}
                         </div>
                     )}
 

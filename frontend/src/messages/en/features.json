@@ -1,0 +1,30 @@
+{
+    "Features": {
+        "title": "Features",
+        "description": "Core technologies and best practices included out of the box.",
+        "appRouter": {
+            "title": "Next.js App Router",
+            "description": "Built on Next.js 16 App Router with file-based routing and server-first patterns for performance and simplicity."
+        },
+        "typeSafety": {
+            "title": "TypeScript & Type-Safe Env",
+            "description": "First-class TypeScript across the stack plus runtime-validated environment variables (Zod, @t3-oss/env-nextjs) for safer code and deployments."
+        },
+        "query": {
+            "title": "TanStack Query",
+            "description": "Smart caching, background revalidation, and devtools for reliable, reactive data flows—ready out of the box."
+        },
+        "i18n": {
+            "title": "Internationalization (i18n)",
+            "description": "Locale-aware routing and messages with next-intl, plus a built-in Locale Switcher for global-ready apps."
+        },
+        "forms": {
+            "title": "React Hook Form & Zod",
+            "description": "Type-safe schemas, accessible inputs, and high-performance forms."
+        },
+        "ui": {
+            "title": "Tailwind CSS & shadcn/ui",
+            "description": "Accessible, composable UI primitives built with Tailwind CSS and shadcn/ui for rapid development and consistent design."
+        }
+    }
+}

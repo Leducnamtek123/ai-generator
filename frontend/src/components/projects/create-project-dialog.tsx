@@ -45,7 +45,7 @@ export function CreateProjectDialog({ children }: { children?: React.ReactNode }
     });
 
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
-        const id = await createProject(values.name, values.description || '');
+        const id = await createProject({ name: values.name, description: values.description || '' });
         if (id) {
             setOpen(false);
             reset();

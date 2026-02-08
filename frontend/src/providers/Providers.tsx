@@ -20,9 +20,9 @@ export function Providers({
       <IntlProvider messages={messages} locale={locale}>
         <SessionProvider>
           <AuthProvider>
-            <MSWProvider>
-              <QueryProvider>{children}</QueryProvider>
-            </MSWProvider>
+            {/* <MSWProvider> */}
+            <QueryProvider>{children}</QueryProvider>
+            {/* </MSWProvider> */}
           </AuthProvider>
         </SessionProvider>
       </IntlProvider>

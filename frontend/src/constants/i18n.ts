@@ -1,7 +1,7 @@
 // FIXME: Customize supported locales (labels, tags, flags) and default locale
 export const LOCALES = {
-  tr: { label: "Türkçe", tag: "tr-TR", flag: "🇹🇷" },
-  en: { label: "English", tag: "en-US", flag: "🇬🇧" }
+  en: { label: "English", tag: "en-US", flag: "EN" },
+  vi: { label: "Tiếng Việt", tag: "vi-VN", flag: "🇻🇳" }
 } as const;
 
 export type LocaleCode = keyof typeof LOCALES;

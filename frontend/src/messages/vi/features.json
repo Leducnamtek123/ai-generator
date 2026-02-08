@@ -1,0 +1,30 @@
+{
+    "Features": {
+        "title": "Tính năng",
+        "description": "Các công nghệ cốt lõi và các phương pháp tốt nhất đi kèm sẵn.",
+        "appRouter": {
+            "title": "Next.js App Router",
+            "description": "Được xây dựng trên Next.js 16 App Router với định tuyến dựa trên file và các mẫu ưu tiên phía server cho hiệu suất và sự đơn giản."
+        },
+        "typeSafety": {
+            "title": "TypeScript & Môi trường An toàn Kiểu",
+            "description": "TypeScript cấp một xuyên suốt stack cùng với các biến môi trường được xác thực runtime (Zod, @t3-oss/env-nextjs) giúp mã nguồn và triển khai an toàn hơn."
+        },
+        "query": {
+            "title": "TanStack Query",
+            "description": "Bộ đệm thông minh, xác thực lại nền và công cụ phát triển cho các luồng dữ liệu phản hồi, đáng tin cậy—sẵn sàng sử dụng ngay."
+        },
+        "i18n": {
+            "title": "Quốc tế hóa (i18n)",
+            "description": "Định tuyến và thông báo nhận biết ngôn ngữ với next-intl, cùng với Trình chuyển đổi ngôn ngữ tích hợp sẵn cho các ứng dụng sẵn sàng ra toàn cầu."
+        },
+        "forms": {
+            "title": "React Hook Form & Zod",
+            "description": "Schema an toàn kiểu, đầu vào dễ tiếp cận và các form hiệu suất cao."
+        },
+        "ui": {
+            "title": "Tailwind CSS & shadcn/ui",
+            "description": "Các bộ UI cơ bản dễ tiếp cận, dễ lắp ghép được xây dựng bằng Tailwind CSS và shadcn/ui để phát triển nhanh chóng và thiết kế nhất quán."
+        }
+    }
+}

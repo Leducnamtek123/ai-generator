@@ -15,6 +15,10 @@ import {
     Sparkles,
     Users
 } from 'lucide-react';
+import { useTheme } from 'next-themes';
+import { useLocale } from 'next-intl';
+import { useRouter, usePathname } from '@/i18n/navigation';
+import { LOCALES, LocaleCode } from '@/constants/i18n';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -35,6 +39,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export function UserMenu() {
     const { user, logout } = useAuth();
+    const { setTheme, theme: currentTheme } = useTheme();
+    const locale = useLocale();
+    const router = useRouter();
+    const pathname = usePathname();
 
     if (!user) return null;
 
@@ -116,14 +124,27 @@ export function UserMenu() {
                                     <span className="text-sm font-medium">Language</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-white/30">English</span>
+                                    <span className="text-xs text-white/30">
+                                        {(LOCALES as any)[locale]?.label || locale}
+                                    </span>
                                     <ChevronRight className="w-3 h-3 text-white/20" />
                                 </div>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuPortal>
                                 <DropdownMenuSubContent className="bg-[#1A1B1F] border-white/10 text-white min-w-[120px] rounded-lg shadow-xl">
-                                    <DropdownMenuItem className="px-3 py-2 text-sm hover:bg-white/5 cursor-pointer">English</DropdownMenuItem>
-                                    <DropdownMenuItem className="px-3 py-2 text-sm hover:bg-white/5 cursor-pointer">Tiếng Việt</DropdownMenuItem>
+                                    {Object.entries(LOCALES).map(([code, info]) => (
+                                        <DropdownMenuItem
+                                            key={code}
+                                            className={cn(
+                                                "px-3 py-2 text-sm hover:bg-white/5 cursor-pointer",
+                                                locale === code && "bg-white/5 text-blue-400 font-medium"
+                                            )}
+                                            onClick={() => router.replace(pathname, { locale: code as any })}
+                                        >
+                                            <span className="mr-2">{info.flag}</span>
+                                            {info.label}
+                                        </DropdownMenuItem>
+                                    ))}
                                 </DropdownMenuSubContent>
                             </DropdownMenuPortal>
                         </DropdownMenuSub>
@@ -135,15 +156,30 @@ export function UserMenu() {
                                     <span className="text-sm font-medium">Theme</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
-                                    <span className="text-xs text-white/30">Dark</span>
+                                    <span className="text-xs text-white/30 capitalize">{currentTheme}</span>
                                     <ChevronRight className="w-3 h-3 text-white/20" />
                                 </div>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuPortal>
                                 <DropdownMenuSubContent className="bg-[#1A1B1F] border-white/10 text-white min-w-[120px] rounded-lg shadow-xl">
-                                    <DropdownMenuItem className="px-3 py-2 text-sm hover:bg-white/5 cursor-pointer">Dark</DropdownMenuItem>
-                                    <DropdownMenuItem className="px-3 py-2 text-sm hover:bg-white/5 cursor-pointer">Light</DropdownMenuItem>
-                                    <DropdownMenuItem className="px-3 py-2 text-sm hover:bg-white/5 cursor-pointer">System</DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => setTheme('dark')}
+                                        className={cn("px-3 py-2 text-sm hover:bg-white/5 cursor-pointer", currentTheme === 'dark' && "bg-white/5 text-blue-400 font-medium")}
+                                    >
+                                        Dark
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => setTheme('light')}
+                                        className={cn("px-3 py-2 text-sm hover:bg-white/5 cursor-pointer", currentTheme === 'light' && "bg-white/5 text-blue-400 font-medium")}
+                                    >
+                                        Light
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                        onClick={() => setTheme('system')}
+                                        className={cn("px-3 py-2 text-sm hover:bg-white/5 cursor-pointer", currentTheme === 'system' && "bg-white/5 text-blue-400 font-medium")}
+                                    >
+                                        System
+                                    </DropdownMenuItem>
                                 </DropdownMenuSubContent>
                             </DropdownMenuPortal>
                         </DropdownMenuSub>

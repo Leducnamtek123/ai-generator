@@ -177,7 +177,8 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                             <img
                                 src={data.previewUrl}
                                 alt="Generated"
-                                className="w-full h-auto block object-cover"
+                                className="w-full h-auto block object-cover cursor-pointer hover:ring-2 hover:ring-blue-500/50 transition-all"
+                                onClick={() => (data as any).onOpenImageEditor?.(data.previewUrl)}
                                 onLoad={handleMediaLoad}
                             />
                         ) : (

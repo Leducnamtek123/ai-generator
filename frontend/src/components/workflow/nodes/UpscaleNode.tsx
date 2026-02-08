@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
-import { Scan, Loader2, Play, Download, ZoomIn, Maximize2, Lock, ArrowUpRight, RefreshCw, Settings } from 'lucide-react';
+import { Scan, Loader2, Play, Download, ZoomIn, Maximize2, Lock, ArrowUpRight, RefreshCw, Settings, Wand2 } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { ExecutionMode, NodeStatus, UpscaleFactor } from '../types';
 
@@ -99,6 +99,13 @@ export function UpscaleNode({ id, data, selected }: UpscaleNodeProps) {
 
                                 {/* Overlay Actions */}
                                 <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                    <button
+                                        onClick={() => (data as any).onOpenImageEditor?.(data.previewUrl)}
+                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                                        title="Edit Image"
+                                    >
+                                        <Wand2 className="w-5 h-5" />
+                                    </button>
                                     <button
                                         onClick={handleDownload}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"

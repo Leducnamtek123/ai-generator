@@ -1,0 +1,14 @@
+{
+    "Dashboard": {
+        "title": "Nizam - Next.js 16 Boilerplate",
+        "description": "Boilerplate mã nguồn mở cho các ứng dụng Next.js hiện đại, sử dụng <react>React</react>, <typescript>TypeScript</typescript>, <tailwind>Tailwind CSS</tailwind>, và <tanstack>TanStack Query</tanstack>. Bao gồm các thành phần, hook và tiện ích có thể tái sử dụng để tăng tốc độ phát triển.",
+        "starOnGithub": "Gắn sao trên Github",
+        "deployToVercel": "Triển khai lên Vercel",
+        "useTemplate": "Sử dụng Template",
+        "projectBy": "Dự án bởi"
+    },
+    "Showcase": {
+        "title": "Trình diễn",
+        "description": "Bản trình diễn các tính năng của dự án."
+    }
+}
