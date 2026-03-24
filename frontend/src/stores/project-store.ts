@@ -8,6 +8,7 @@ export interface Project {
     userId: string;
 
     thumbnail?: string;
+    content?: any;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -16,8 +17,9 @@ interface ProjectState {
     projects: Project[];
     currentProject: Project | null;
     isLoading: boolean;
+    hasNextPage: boolean;
 
-    fetchProjects: () => Promise<void>;
+    fetchProjects: (params?: { page?: number; limit?: number; filters?: any; sort?: any }) => Promise<void>;
     fetchProject: (id: string) => Promise<void>;
     createProject: (payload: { name: string; description?: string }) => Promise<string | null>;
     updateProject: (id: string, payload: { name?: string; description?: string }) => Promise<void>;
@@ -28,13 +30,27 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
     projects: [],
     currentProject: null,
     isLoading: false,
+    hasNextPage: false,
 
-    fetchProjects: async () => {
+    fetchProjects: async (params = {}) => {
         set({ isLoading: true });
         try {
-            const data = await apiGet<Project[]>('/projects');
-            if (Array.isArray(data)) {
-                set({ projects: data });
+            const queryParams = new URLSearchParams();
+            if (params.page) queryParams.append('page', params.page.toString());
+            if (params.limit) queryParams.append('limit', params.limit.toString());
+            if (params.filters) queryParams.append('filters', JSON.stringify(params.filters));
+            if (params.sort) queryParams.append('sort', JSON.stringify(params.sort));
+
+            const queryString = queryParams.toString();
+            const url = `/projects${queryString ? `?${queryString}` : ''}`;
+
+            const response = await apiGet<{ data: Project[]; hasNextPage: boolean }>(url);
+
+            if (response && Array.isArray(response.data)) {
+                set({
+                    projects: response.data,
+                    hasNextPage: response.hasNextPage
+                });
             }
         } catch (error) {
             console.error('Failed to fetch projects', error);

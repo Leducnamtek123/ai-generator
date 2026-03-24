@@ -131,18 +131,18 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                     position={Position.Left}
                     id="prompt-input"
                     className={cn(
-                        "!w-8 !h-8 !border-2 !border-[#0B0C0E] !bg-[#1A1B1F] !rounded-full !relative !left-0 !top-0 !flex !items-center !justify-center !transition-colors !opacity-100",
+                        "!w-8 !h-8 !border-2 !border-background !bg-card !rounded-full !relative !left-0 !top-0 !flex !items-center !justify-center !transition-colors !opacity-100",
                         data.inputs?.prompt ? "!bg-blue-500 !border-blue-500/20" : "hover:!bg-blue-500/20"
                     )}
                 >
-                    <Type className={cn("w-4 h-4", data.inputs?.prompt ? "text-white" : "text-white/40")} />
+                    <Type className={cn("w-4 h-4", data.inputs?.prompt ? "text-white" : "text-muted-foreground")} />
                 </Handle>
                 <Handle
                     type="target"
                     position={Position.Left}
                     id="media-input"
                     className={cn(
-                        "!w-8 !h-8 !border-2 !border-[#0B0C0E] !bg-[#1A1B1F] !rounded-full !relative !left-0 !top-0 !flex !items-center !justify-center !transition-colors !opacity-100",
+                        "!w-8 !h-8 !border-2 !border-background !bg-card !rounded-full !relative !left-0 !top-0 !flex !items-center !justify-center !transition-colors !opacity-100",
                         data.inputs?.media ? "!bg-green-500 !border-green-500/20" : "hover:!bg-green-500/20"
                     )}
                 >
@@ -158,9 +158,9 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                 onDelete={data.onDelete}
                 isPreview={data.isPreview}
             >
-                <div className={cn("relative bg-[#0B0C0E] overflow-hidden", data.isPreview ? "w-[120px]" : "w-[340px]")}>
+                <div className={cn("relative bg-muted/30 overflow-hidden", data.isPreview ? "w-[120px]" : "w-[340px]")}>
                     {/* Preview Area */}
-                    <div className={cn("w-full bg-[#151619] flex items-center justify-center overflow-hidden relative", data.isPreview ? "min-h-[80px]" : "min-h-[200px]")}>
+                    <div className={cn("w-full bg-background flex items-center justify-center overflow-hidden relative", data.isPreview ? "min-h-[80px]" : "min-h-[200px]")}>
                         {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px] z-10">
                                 <div className="relative w-12 h-12 flex items-center justify-center">
@@ -207,9 +207,9 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
 
                     {!data.isPreview && (
                         /* Bottom Control Bar */
-                        <div className="p-3 bg-[#1A1B1F] border-t border-white/5 flex items-center gap-2">
+                        <div className="p-3 bg-card border-t border-border flex items-center gap-2">
                             {/* Simplified for space - only showing play button and basic model */}
-                            <div className="flex-1 truncate text-xs text-white/40">{currentModel.name}</div>
+                            <div className="flex-1 truncate text-xs text-muted-foreground">{currentModel.name}</div>
                             <button
                                 onClick={() => data.onRun?.(id, ExecutionMode.LOCAL)}
                                 disabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || (!localPrompt.trim() && !data.inputs?.prompt)}
@@ -224,7 +224,7 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                 <Handle
                     type="source"
                     position={Position.Right}
-                    className={cn("!w-3 !h-3 !border-2 !border-[#0B0C0E] !bg-white/50 z-50 transform translate-x-1.5", data.isPreview && "scale-50 opacity-0")}
+                    className={cn("!w-3 !h-3 !border-2 !border-background !bg-foreground/50 z-50 transform translate-x-1.5", data.isPreview && "scale-50 opacity-0")}
                 />
             </BaseNode>
 

@@ -6,6 +6,12 @@ import { ProjectRepository } from '../../project.repository';
 import { Project } from '../../../../domain/project';
 import { ProjectMapper } from '../mappers/project.mapper';
 import { NullableType } from '../../../../../utils/types/nullable.type';
+import { IPaginationOptions } from '../../../../../utils/types/pagination-options';
+import {
+  FilterProjectDto,
+  SortProjectDto,
+} from '../../../../dto/query-project.dto';
+import { FindOptionsWhere, ILike } from 'typeorm';
 
 @Injectable()
 export class ProjectsRelationalRepository implements ProjectRepository {
@@ -26,6 +32,41 @@ export class ProjectsRelationalRepository implements ProjectRepository {
     const entities = await this.projectsRepository.find({
       where: { userId: String(userId) },
     });
+    return entities.map((entity) => ProjectMapper.toDomain(entity));
+  }
+
+  async findManyWithPagination({
+    userId,
+    filterOptions,
+    sortOptions,
+    paginationOptions,
+  }: {
+    userId: string | number;
+    filterOptions?: FilterProjectDto | null;
+    sortOptions?: SortProjectDto[] | null;
+    paginationOptions: IPaginationOptions;
+  }): Promise<Project[]> {
+    const where: FindOptionsWhere<ProjectEntity> = {
+      userId: String(userId),
+    };
+
+    if (filterOptions?.name) {
+      where.name = ILike(`%${filterOptions.name}%`);
+    }
+
+    const entities = await this.projectsRepository.find({
+      skip: (paginationOptions.page - 1) * paginationOptions.limit,
+      take: paginationOptions.limit,
+      where: where,
+      order: sortOptions?.reduce(
+        (accumulator, sort) => ({
+          ...accumulator,
+          [sort.orderBy]: sort.order,
+        }),
+        {},
+      ),
+    });
+
     return entities.map((entity) => ProjectMapper.toDomain(entity));
   }
 

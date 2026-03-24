@@ -29,7 +29,7 @@ import { TemplateEntity } from './infrastructure/persistence/relational/entities
   version: '1',
 })
 export class TemplatesController {
-  constructor(private readonly templatesService: TemplatesService) { }
+  constructor(private readonly templatesService: TemplatesService) {}
 
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
@@ -76,7 +76,7 @@ export class TemplatesController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('type') type?: string,
-    @Query('mode') mode?: string,
+    @Query('mode') _mode?: string,
   ): Promise<InfinityPaginationResponseDto<TemplateEntity>> {
     if (limit > 50) {
       limit = 50;

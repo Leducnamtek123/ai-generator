@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { useTemplates } from '@/hooks/useTemplates';
-import { Loader2, Sparkles } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { TemplateCard } from './TemplateCard';
 
@@ -29,14 +29,14 @@ export function TemplateGallery({ hidePagination = false }: TemplateGalleryProps
     if (isLoading) {
         return (
             <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-white/30" />
+                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
             </div>
         );
     }
 
     if (error) {
         return (
-            <div className="text-center py-12 text-red-400">
+            <div className="text-center py-12 text-destructive">
                 Error loading templates: {error}
             </div>
         );
@@ -44,7 +44,7 @@ export function TemplateGallery({ hidePagination = false }: TemplateGalleryProps
 
     if (templates.length === 0) {
         return (
-            <div className="text-center py-12 text-white/40">
+            <div className="text-center py-12 text-muted-foreground">
                 No templates found. Check back later!
             </div>
         );
@@ -66,17 +66,15 @@ export function TemplateGallery({ hidePagination = false }: TemplateGalleryProps
                         size="sm"
                         onClick={handlePrevPage}
                         disabled={currentPage === 1}
-                        className="text-white/60 hover:text-white disabled:opacity-30"
                     >
                         Previous
                     </Button>
-                    <span className="text-sm text-white/40">Page {currentPage}</span>
+                    <span className="text-sm text-muted-foreground">Page {currentPage}</span>
                     <Button
                         variant="ghost"
                         size="sm"
                         onClick={handleNextPage}
                         disabled={!hasNextPage}
-                        className="text-white/60 hover:text-white disabled:opacity-30"
                     >
                         Next
                     </Button>

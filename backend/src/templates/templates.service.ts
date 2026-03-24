@@ -10,7 +10,7 @@ import { IPaginationOptions } from '../utils/types/pagination-options';
 
 @Injectable()
 export class TemplatesService {
-  constructor(private readonly templateRepository: TemplateRepository) { }
+  constructor(private readonly templateRepository: TemplateRepository) {}
 
   create(createTemplateDto: CreateTemplateDto, userId: string) {
     return this.templateRepository.create({

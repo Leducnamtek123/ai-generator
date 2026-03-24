@@ -43,7 +43,13 @@ export class FilesCloudinaryController {
       },
     },
   })
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(
+    FileInterceptor('file', {
+      limits: {
+        fileSize: 50 * 1024 * 1024, // 50MB
+      },
+    }),
+  )
   async uploadFile(
     @UploadedFile() file: Express.Multer.File,
   ): Promise<FileResponseDto> {

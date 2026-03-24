@@ -26,6 +26,9 @@ export class ProjectEntity extends EntityRelationalHelper implements Project {
   @Column({ nullable: true })
   thumbnail: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  content: any;
+
   @CreateDateColumn()
   createdAt: Date;
 

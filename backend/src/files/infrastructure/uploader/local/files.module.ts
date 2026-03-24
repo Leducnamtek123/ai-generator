@@ -44,7 +44,6 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
                 false,
               );
             }
-
             callback(null, true);
           },
           storage: diskStorage({

@@ -122,7 +122,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
             <div
                 className={cn(
                     "group relative cursor-pointer transition-all duration-200",
-                    selected && "ring-2 ring-white/50"
+                    selected && "ring-2 ring-foreground/50"
                 )}
                 onDoubleClick={() => commentData.onToggleMinimize?.(id)}
             >
@@ -144,7 +144,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                             styles.border,
                             "border backdrop-blur-md"
                         )}>
-                            <p className="text-white/80 line-clamp-3">{localText}</p>
+                            <p className="text-foreground/80 line-clamp-3">{localText}</p>
                         </div>
                     </div>
                 )}
@@ -152,14 +152,14 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 {/* Expand button */}
                 <button
                     onClick={() => commentData.onToggleMinimize?.(id)}
-                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-[#1A1B1F] border border-white/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-popover border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                    <ChevronDown className="w-3 h-3 text-white/60" />
+                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
                 </button>
 
                 {isPinned && (
                     <div className="absolute -top-1 -right-1">
-                        <Pin className="w-3 h-3 text-white" />
+                        <Pin className="w-3 h-3 text-foreground" />
                     </div>
                 )}
             </div>
@@ -174,7 +174,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 styles.bg,
                 styles.border,
                 "border backdrop-blur-md",
-                selected && "ring-2 ring-white/50 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
+                selected && "ring-2 ring-foreground/50 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
             )}
         >
             {/* Header */}
@@ -183,14 +183,14 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 styles.header
             )}>
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-white/80" />
+                    <div className="w-6 h-6 rounded-full bg-background/20 flex items-center justify-center">
+                        <User className="w-3.5 h-3.5 text-foreground/80" />
                     </div>
                     <div>
-                        <p className="text-xs font-medium text-white/90">
+                        <p className="text-xs font-medium text-foreground/90">
                             {commentData.author || 'You'}
                         </p>
-                        <p className="text-[10px] text-white/50">
+                        <p className="text-[10px] text-foreground/50">
                             {formatTimestamp(commentData.timestamp)}
                         </p>
                     </div>
@@ -200,22 +200,22 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                     {/* Minimize button */}
                     <button
                         onClick={() => commentData.onToggleMinimize?.(id)}
-                        className="p-1 rounded hover:bg-white/10 transition-colors"
+                        className="p-1 rounded hover:bg-background/10 transition-colors"
                     >
-                        <ChevronUp className="w-4 h-4 text-white/60" />
+                        <ChevronUp className="w-4 h-4 text-foreground/60" />
                     </button>
 
                     {/* Menu */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="p-1 rounded hover:bg-white/10 transition-colors">
-                                <MoreHorizontal className="w-4 h-4 text-white/60" />
+                            <button className="p-1 rounded hover:bg-background/10 transition-colors">
+                                <MoreHorizontal className="w-4 h-4 text-foreground/60" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-40 bg-[#1A1B1F] border-white/10">
+                        <DropdownMenuContent align="end" className="w-40 bg-popover border-border">
                             <DropdownMenuItem
                                 onClick={() => commentData.onTogglePin?.(id)}
-                                className="text-white/70 hover:text-white hover:bg-white/5"
+                                className="text-foreground/70 hover:text-foreground hover:bg-accent"
                             >
                                 {isPinned ? (
                                     <><PinOff className="w-4 h-4 mr-2" /> Unpin</>
@@ -223,10 +223,10 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                                     <><Pin className="w-4 h-4 mr-2" /> Pin</>
                                 )}
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/5" />
+                            <DropdownMenuSeparator className="bg-border" />
                             {/* Color options */}
                             <div className="px-2 py-1.5">
-                                <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1.5">Color</p>
+                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Color</p>
                                 <div className="flex gap-1">
                                     {(Object.keys(colorStyles) as Array<keyof typeof colorStyles>).map((c) => (
                                         <button
@@ -241,7 +241,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                                     ))}
                                 </div>
                             </div>
-                            <DropdownMenuSeparator className="bg-white/5" />
+                            <DropdownMenuSeparator className="bg-border" />
                             <DropdownMenuItem
                                 onClick={commentData.onDelete}
                                 className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
@@ -263,7 +263,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
                         placeholder="Add a comment..."
-                        className="w-full min-h-[60px] bg-transparent text-sm text-white/90 placeholder:text-white/30 resize-none focus:outline-none"
+                        className="w-full min-h-[60px] bg-transparent text-sm text-foreground/90 placeholder:text-foreground/30 resize-none focus:outline-none"
                     />
                 ) : (
                     <div
@@ -271,9 +271,9 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         className="min-h-[40px] cursor-text"
                     >
                         {localText ? (
-                            <p className="text-sm text-white/80 whitespace-pre-wrap">{localText}</p>
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{localText}</p>
                         ) : (
-                            <p className="text-sm text-white/30 italic">Click to add a comment...</p>
+                            <p className="text-sm text-muted-foreground italic">Click to add a comment...</p>
                         )}
                     </div>
                 )}
@@ -290,7 +290,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
 
             {/* Editing indicator */}
             {isEditing && (
-                <div className="absolute bottom-1 right-2 text-[10px] text-white/30">
+                <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground">
                     Ctrl+Enter to save • Esc to cancel
                 </div>
             )}

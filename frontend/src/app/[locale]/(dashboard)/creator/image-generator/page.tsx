@@ -3,22 +3,18 @@
 import { useState, useEffect } from 'react';
 import {
     ChevronDown,
-    Plus,
-    Upload,
     Sparkles,
-    User,
-    Globe,
-    Image as ImageIcon,
     Bookmark,
     Grid3X3,
     Search,
-    ArrowRight,
     Loader2
 } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
+import { useCreditStore } from '@/stores/credit-store';
 
 // Mock template data (kept for UI completeness)
 const mockTemplates = {
@@ -51,92 +47,90 @@ export default function StudioPage() {
 
     const { generateImage, isGenerating, currentGeneration, error } = useGenerationStore();
     const { templates, fetchTemplates } = useTemplateStore();
+    const { balance, fetchBalance } = useCreditStore();
 
     useEffect(() => {
         fetchTemplates();
-    }, [fetchTemplates]);
+        fetchBalance();
+    }, [fetchTemplates, fetchBalance]);
 
-    const handleGenerate = () => {
+    const handleGenerate = async () => {
         if (!prompt.trim()) return;
-        generateImage({
+        await generateImage({
             prompt,
             model: selectedModel,
             aspectRatio: '1:1', // Default
         });
+        // Refresh balance after generation (approximate timing)
+        setTimeout(() => fetchBalance(), 1000);
+        setTimeout(() => fetchBalance(), 3000);
     };
 
     const displayTemplates = templates.length > 0 ? templates : mockTemplates.new;
 
     return (
-        <div className="min-h-screen bg-[#0B0C0E] text-white flex">
+        <div className="min-h-screen bg-background text-foreground flex">
             {/* Left Control Panel */}
-            <div className="w-80 border-r border-white/5 flex flex-col shrink-0">
+            <div className="w-80 border-r border-border flex flex-col shrink-0">
                 {/* Tabs */}
-                <div className="flex border-b border-white/5">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={cn(
-                                "flex-1 py-3 text-sm font-medium transition-colors border-b-2 -mb-px",
-                                activeTab === tab
-                                    ? "text-white border-white"
-                                    : "text-white/40 border-transparent hover:text-white/60"
-                            )}
-                        >
-                            {tab}
-                        </button>
-                    ))}
+                {/* Header - Aligned height h-14 */}
+                <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
+                    <h2 className="font-bold text-muted-foreground">Image Generator</h2>
+                    <div className="flex items-center gap-2 text-xs font-medium bg-secondary/50 px-3 py-1.5 rounded-full ring-1 ring-border" title="Your Credit Balance">
+                        <Sparkles className="w-3 h-3 text-primary" />
+                        <span>{balance !== null ? balance : '...'} Credits</span>
+                    </div>
                 </div>
 
                 {/* Control Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
                     {/* Browse Templates Button */}
-                    <button className="flex items-center justify-between w-full px-4 py-3 bg-[#151619] rounded-xl border border-white/5 hover:border-white/10 transition-colors group">
+                    <button className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group">
                         <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-orange-500/20 to-pink-500/20 flex items-center justify-center">
-                                <Grid3X3 className="w-5 h-5 text-orange-400" />
+                            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-chart-3/20 to-chart-2/20 flex items-center justify-center">
+                                <Grid3X3 className="w-5 h-5 text-chart-3" />
                             </div>
                             <span className="text-sm font-medium">Browse templates</span>
                         </div>
-                        <Bookmark className="w-4 h-4 text-white/40 group-hover:text-white transition-colors" />
+                        <Bookmark className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
                     </button>
 
                     {/* MODEL */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Model</h4>
-                        <button className="flex items-center justify-between w-full px-4 py-3 bg-[#151619] rounded-xl border border-white/5 hover:border-white/10 transition-colors">
+                        <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Model</h4>
+                        <button className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors">
                             <div className="flex items-center gap-3">
-                                <Sparkles className="w-5 h-5 text-white/60" />
+                                <Sparkles className="w-5 h-5 text-muted-foreground" />
                                 <span className="text-sm capitalize">{selectedModel}</span>
                             </div>
-                            <ChevronDown className="w-4 h-4 text-white/40" />
+                            <ChevronDown className="w-4 h-4 text-muted-foreground" />
                         </button>
                     </div>
 
                     {/* PROMPT */}
                     <div className="space-y-3 flex-1 flex flex-col">
-                        <h4 className="text-[10px] font-medium text-white/40 uppercase tracking-wider">Prompt</h4>
-                        <div className="bg-[#151619] rounded-xl border border-white/5 p-2 flex-1">
+                        <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Prompt</h4>
+                        <div className="bg-card rounded-xl border border-border p-2 flex-1">
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
                                 placeholder="Describe what you want to create..."
-                                className="w-full h-40 bg-transparent text-sm text-white placeholder:text-white/20 resize-none focus:outline-none p-2"
+                                className="w-full h-40 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
                     </div>
                 </div>
 
                 {/* Generate Button */}
-                <div className="p-4 border-t border-white/5">
+                <div className="p-4 border-t border-border space-y-3">
+                    <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
+                        <span>Cost:</span>
+                        <span className="font-medium text-foreground">1 Credit</span>
+                    </div>
                     <Button
                         onClick={handleGenerate}
-                        disabled={isGenerating || !prompt.trim()}
-                        className={cn(
-                            "w-full h-12 text-white font-semibold rounded-xl gap-2 transition-all",
-                            isGenerating ? "bg-blue-600/50 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                        )}
+                        disabled={isGenerating || !prompt.trim() || (balance !== null && balance < 1)}
+                        className="w-full h-12 font-semibold rounded-xl gap-2"
                     >
                         {isGenerating ? (
                             <>
@@ -151,18 +145,21 @@ export default function StudioPage() {
                         )}
                     </Button>
                     {error && (
-                        <p className="mt-2 text-xs text-red-500 text-center">{error}</p>
+                        <p className="mt-2 text-xs text-destructive text-center">{error}</p>
+                    )}
+                    {balance !== null && balance < 1 && (
+                        <p className="mt-2 text-xs text-destructive text-center">Insufficient credits</p>
                     )}
                 </div>
             </div>
 
             {/* Main Content Grid */}
-            <div className="flex-1 overflow-y-auto bg-[#0B0C0E]">
+            <div className="flex-1 overflow-y-auto bg-background">
                 {/* Generation Result View */}
                 {currentGeneration && (
                     <div className="p-6 pb-0">
                         <h2 className="text-lg font-semibold mb-4">Current Generation</h2>
-                        <div className="w-full aspect-[16/9] bg-[#151619] rounded-2xl border border-white/10 flex items-center justify-center relative overflow-hidden group">
+                        <div className="w-full aspect-[16/9] bg-card rounded-2xl border border-border flex items-center justify-center relative overflow-hidden group">
                             {currentGeneration.status === 'completed' && currentGeneration.resultUrl ? (
                                 // eslint-disable-next-line @next/next/no-img-element
                                 <img
@@ -173,10 +170,10 @@ export default function StudioPage() {
                             ) : (
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="relative">
-                                        <div className="w-16 h-16 rounded-full border-4 border-white/10 border-t-blue-500 animate-spin" />
-                                        <Sparkles className="w-6 h-6 text-white/40 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                        <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                        <Sparkles className="w-6 h-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                     </div>
-                                    <p className="text-white/40 animate-pulse">
+                                    <p className="text-muted-foreground animate-pulse">
                                         {currentGeneration.status === 'pending' ? 'Queued...' : 'Processing...'}
                                     </p>
                                 </div>
@@ -190,8 +187,8 @@ export default function StudioPage() {
                     </div>
                 )}
 
-                {/* Content Header (Visible below result or if no result) */}
-                <div className="sticky top-0 z-10 bg-[#0B0C0E]/80 backdrop-blur-md px-6 py-4 flex items-center justify-between border-b border-white/5">
+                {/* Content Header */}
+                <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md px-6 h-14 flex items-center justify-between border-b border-border">
                     <div className="flex items-center gap-1">
                         {contentTabs.map((tab) => (
                             <button
@@ -200,8 +197,8 @@ export default function StudioPage() {
                                 className={cn(
                                     "px-4 py-2 text-sm font-medium rounded-full transition-colors flex items-center gap-2",
                                     activeContentTab === tab
-                                        ? "bg-white/10 text-white"
-                                        : "text-white/40 hover:text-white/60"
+                                        ? "bg-accent text-accent-foreground"
+                                        : "text-muted-foreground hover:text-foreground"
                                 )}
                             >
                                 {tab}
@@ -211,11 +208,11 @@ export default function StudioPage() {
 
                     <div className="flex items-center gap-3">
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/40" />
-                            <input
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input
                                 type="text"
                                 placeholder="Search templates"
-                                className="w-56 h-9 pl-10 pr-4 bg-[#151619] border border-white/5 rounded-lg text-sm text-white placeholder:text-white/40 focus:outline-none focus:border-white/20"
+                                className="w-56 h-9 pl-10 pr-4"
                             />
                         </div>
                     </div>
@@ -255,7 +252,7 @@ export default function StudioPage() {
 function TemplateCard({ template, onClick }: { template: { id: string; title: string; thumbnail: string }, onClick?: () => void }) {
     return (
         <div className="group cursor-pointer" onClick={onClick}>
-            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-[#151619] border border-white/5 group-hover:border-white/20 transition-all relative">
+            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={template.thumbnail}
@@ -265,7 +262,7 @@ function TemplateCard({ template, onClick }: { template: { id: string; title: st
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
-            <p className="mt-2 text-xs text-white/60 group-hover:text-white transition-colors line-clamp-1">
+            <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
                 {template.title}
             </p>
         </div>

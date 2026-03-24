@@ -11,6 +11,7 @@ export class WorkflowMapper {
     domainEntity.edges = raw.edges;
     domainEntity.projectId = raw.projectId;
     domainEntity.visibility = raw.visibility;
+    domainEntity.previewUrl = raw.previewUrl;
     if (raw.project) {
       domainEntity.project = ProjectMapper.toDomain(raw.project);
     }
@@ -31,6 +32,7 @@ export class WorkflowMapper {
     persistenceEntity.edges = domainEntity.edges || [];
     persistenceEntity.projectId = domainEntity.projectId;
     persistenceEntity.visibility = domainEntity.visibility;
+    persistenceEntity.previewUrl = domainEntity.previewUrl || undefined;
     persistenceEntity.createdAt = domainEntity.createdAt;
     persistenceEntity.updatedAt = domainEntity.updatedAt;
     persistenceEntity.deletedAt = domainEntity.deletedAt;

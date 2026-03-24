@@ -48,7 +48,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className="flex min-h-screen w-full flex-col antialiased bg-[#0B0C0E] text-white font-sans"
+        className="flex min-h-screen w-full flex-col antialiased bg-background text-foreground font-sans"
         suppressHydrationWarning
       >
         <Providers messages={messages} locale={locale}>

@@ -15,6 +15,7 @@ import { GeneratorNode } from './nodes/GeneratorNode';
 import { AssistantNode } from './nodes/AssistantNode';
 import { UpscaleNode } from './nodes/UpscaleNode';
 import { MediaNode } from './nodes/MediaNode';
+import { useTheme } from 'next-themes';
 
 const nodeTypes = {
     [WorkflowNodeType.TEXT]: TextNode,
@@ -24,9 +25,9 @@ const nodeTypes = {
     [WorkflowNodeType.UPSCALE]: UpscaleNode,
     [WorkflowNodeType.MEDIA]: MediaNode,
     // Add fallback/basic types if needed
-    input: (props: any) => <div className="p-2 border rounded bg-[#1A1B1F] text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
-    process: (props: any) => <div className="p-2 border rounded bg-[#1A1B1F] text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
-    output: (props: any) => <div className="p-2 border rounded bg-[#1A1B1F] text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
+    input: (props: any) => <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
+    process: (props: any) => <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
+    output: (props: any) => <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
 };
 
 interface WorkflowMiniPreviewProps {
@@ -35,6 +36,8 @@ interface WorkflowMiniPreviewProps {
 }
 
 function WorkflowMiniPreviewContent({ nodes, edges }: WorkflowMiniPreviewProps) {
+    const { theme: currentTheme } = useTheme();
+
     // Inject preview mode flag into node data so nodes can omit complex UI elements (like buttons/controls)
     const nodesWithPreviewMode = useMemo(() =>
         nodes.map(node => ({
@@ -54,7 +57,7 @@ function WorkflowMiniPreviewContent({ nodes, edges }: WorkflowMiniPreviewProps) 
             fitView
             fitViewOptions={{ padding: 0.2 }}
             className="bg-transparent pointer-events-none"
-            colorMode="dark"
+            colorMode={currentTheme === 'dark' ? 'dark' : 'light'}
             proOptions={{ hideAttribution: true }}
             nodesDraggable={false}
             nodesConnectable={false}
@@ -63,7 +66,7 @@ function WorkflowMiniPreviewContent({ nodes, edges }: WorkflowMiniPreviewProps) 
             zoomOnScroll={false}
             zoomOnDoubleClick={false}
         >
-            <Background color="#222" gap={24} size={1} />
+            <Background color={currentTheme === 'dark' ? '#333' : '#ddd'} gap={24} size={1} />
         </ReactFlow>
     );
 }

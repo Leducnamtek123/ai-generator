@@ -52,6 +52,9 @@ import { GenerationsModule } from './generations/generations.module';
 import { QueuesModule } from './queues/queues.module';
 import { TemplatesModule } from './templates/templates.module';
 
+import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { APP_GUARD } from '@nestjs/core';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -111,6 +114,18 @@ import { TemplatesModule } from './templates/templates.module';
     GenerationsModule,
     QueuesModule,
     TemplatesModule,
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 100,
+      },
+    ]),
+  ],
+  providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
   ],
 })
 export class AppModule {}

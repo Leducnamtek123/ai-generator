@@ -52,6 +52,7 @@
   "dependencies": {
     "@aws-sdk/client-s3": "3.864.0",
     "@aws-sdk/s3-request-presigner": "3.864.0",
+    "@casl/ability": "^6.8.0",
     "@nestjs/axios": "^4.0.1",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "11.1.6",
@@ -62,6 +63,7 @@
     "@nestjs/passport": "11.0.5",
     "@nestjs/platform-express": "11.1.6",
     "@nestjs/swagger": "11.2.0",
+    "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "11.0.0",
     "@types/multer-s3": "3.0.3",
     "@types/prompts": "2.4.9",

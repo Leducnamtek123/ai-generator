@@ -71,12 +71,12 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                 onDelete={data.onDelete}
                 isPreview={data.isPreview}
             >
-                <div className={cn("bg-[#151619] p-3 rounded-b-xl border-t border-white/5", data.isPreview ? "w-[120px] p-1" : "w-[320px]")}>
+                <div className={cn("bg-background p-3 rounded-b-xl border-t border-border", data.isPreview ? "w-[120px] p-1" : "w-[320px]")}>
                     <div className="relative">
                         <textarea
                             ref={textareaRef}
                             className={cn(
-                                "w-full bg-[#0B0C0E] border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-blue-500/50 resize-none font-mono placeholder:text-white/20",
+                                "w-full bg-muted/50 border border-border rounded-lg p-3 text-sm text-foreground focus:outline-none focus:border-primary/50 resize-none font-mono placeholder:text-muted-foreground",
                                 data.isPreview ? "h-12 p-1 text-[8px] overflow-hidden" : "h-32"
                             )}
                             placeholder="Type your prompt here..."
@@ -140,7 +140,7 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                                                 setLocalText(templates[template] || template);
                                                 data.onTextChange?.(id, templates[template] || template);
                                             }}
-                                            className="px-2 py-1 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/50 hover:text-white transition-colors"
+                                            className="px-2 py-1 bg-accent/50 hover:bg-accent rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors"
                                         >
                                             {template}
                                         </button>
@@ -156,9 +156,9 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                     position={Position.Right}
                     id="output"
                     onClick={(e) => data.onHandleClick?.(e, 'output', 'source')}
-                    className="!h-3 !w-3 !border-2 !border-[#0B0C0E] !bg-green-500 z-50 transform translate-x-1.5 cursor-pointer hover:!bg-green-400"
+                    className="!h-3 !w-3 !border-2 !border-background !bg-green-500 z-50 transform translate-x-1.5 cursor-pointer hover:!bg-green-400"
                 />
-            </BaseNode>
+            </BaseNode >
         </>
     );
 }

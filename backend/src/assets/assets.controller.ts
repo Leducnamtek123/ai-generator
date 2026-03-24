@@ -24,7 +24,7 @@ import { Asset } from './domain/asset';
   version: '1',
 })
 export class AssetsController {
-  constructor(private readonly assetsService: AssetsService) { }
+  constructor(private readonly assetsService: AssetsService) {}
 
   @Post()
   create(@Body() createAssetDto: any) {
@@ -50,7 +50,10 @@ export class AssetsController {
       assets = await this.assetsService.findAllPublic({ page, limit });
     } else {
       // Mock user ID for now, filtering by this ID implies only getting this user's assets
-      assets = await this.assetsService.findAll({ page, limit }, 'temp-user-id');
+      assets = await this.assetsService.findAll(
+        { page, limit },
+        'temp-user-id',
+      );
     }
 
     return infinityPagination(assets, { page, limit });

@@ -22,17 +22,17 @@ export function CreditBadge({ className, showIcon = true }: CreditBadgeProps) {
     return (
         <div
             className={cn(
-                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gradient-to-r from-amber-500/10 to-yellow-500/10 border border-amber-500/20',
+                'flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-pricing/10 border border-pricing/20',
                 className
             )}
         >
             {showIcon && (
-                <Coins className="w-4 h-4 text-amber-400" />
+                <Coins className="w-4 h-4 text-pricing" />
             )}
             {isLoading ? (
-                <Loader2 className="w-3 h-3 animate-spin text-amber-400" />
+                <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
             ) : (
-                <span className="text-sm font-semibold text-amber-300">
+                <span className="text-sm font-semibold text-pricing">
                     {formatBalance(balance)}
                 </span>
             )}

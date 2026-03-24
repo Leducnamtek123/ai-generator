@@ -65,22 +65,94 @@ export class GenerateVideoDto {
   endImageUrl?: string;
 }
 
+import {
+  UpscaleMode,
+  UpscaleModel,
+  UpscaleScale,
+  UpscaleOptimization,
+  UpscaleEngine,
+} from '../generations.constants';
+
 export class UpscaleImageDto {
   @ApiProperty({ description: 'URL of the image to upscale' })
   @IsString()
   imageUrl: string;
 
-  @ApiPropertyOptional({ enum: [2, 4], default: 2 })
-  @IsOptional()
-  @IsNumber()
-  @Min(2)
-  @Max(4)
-  scale?: 2 | 4;
-
-  @ApiPropertyOptional({ enum: ['balanced', 'creative', 'faithful'] })
+  @ApiPropertyOptional({ enum: UpscaleMode, default: UpscaleMode.CREATIVE })
   @IsOptional()
   @IsString()
-  enhanceMode?: 'balanced' | 'creative' | 'faithful';
+  mode?: UpscaleMode;
+
+  @ApiPropertyOptional({ enum: UpscaleModel, default: UpscaleModel.MAGNIFIC })
+  @IsOptional()
+  @IsString()
+  model?: UpscaleModel;
+
+  @ApiPropertyOptional({ enum: UpscaleScale, default: UpscaleScale.X2 })
+  @IsOptional()
+  @IsNumber()
+  scale?: UpscaleScale;
+
+  @ApiPropertyOptional({
+    enum: UpscaleOptimization,
+    default: UpscaleOptimization.STANDARD_ULTRA,
+  })
+  @IsOptional()
+  @IsString()
+  optimization?: UpscaleOptimization;
+
+  @ApiPropertyOptional({
+    description: 'Creativity level',
+    minimum: -10,
+    maximum: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(-10)
+  @Max(10)
+  creativity?: number;
+
+  @ApiPropertyOptional({ description: 'HDR level', minimum: 0, maximum: 10 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  hdr?: number;
+
+  @ApiPropertyOptional({
+    description: 'Resemblance level',
+    minimum: 0,
+    maximum: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  resemblance?: number;
+
+  @ApiPropertyOptional({
+    description: 'Fractality level',
+    minimum: 0,
+    maximum: 10,
+  })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(10)
+  fractality?: number;
+
+  @ApiPropertyOptional({
+    enum: UpscaleEngine,
+    default: UpscaleEngine.AUTOMATIC,
+  })
+  @IsOptional()
+  @IsString()
+  engine?: UpscaleEngine;
+
+  @ApiPropertyOptional({ description: 'Guidance prompt' })
+  @IsOptional()
+  @IsString()
+  prompt?: string;
 }
 
 export class EnhancePromptDto {

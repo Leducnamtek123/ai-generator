@@ -17,9 +17,26 @@ export interface VideoOptions {
   endImageUrl?: string;
 }
 
+import {
+  UpscaleMode,
+  UpscaleModel,
+  UpscaleScale,
+  UpscaleOptimization,
+  UpscaleEngine,
+} from '../generations/generations.constants';
+
 export interface UpscaleOptions {
-  scale: 2 | 4;
-  enhanceMode?: 'balanced' | 'creative' | 'faithful';
+  scale: UpscaleScale;
+  mode?: UpscaleMode;
+  enhanceMode?: UpscaleMode;
+  model?: UpscaleModel;
+  optimization?: UpscaleOptimization;
+  creativity?: number;
+  hdr?: number;
+  resemblance?: number;
+  fractality?: number;
+  engine?: UpscaleEngine;
+  prompt?: string;
 }
 
 export interface GenerationResult {

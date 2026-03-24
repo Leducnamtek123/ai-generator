@@ -8,13 +8,22 @@ import {
   Delete,
   UseGuards,
   Request,
+  Query,
+  HttpCode,
+  HttpStatus,
 } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto } from './dto/create-project.dto';
 import { UpdateProjectDto } from './dto/update-project.dto';
 import { AuthGuard } from '@nestjs/passport';
-
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
+import {
+  InfinityPaginationResponse,
+  InfinityPaginationResponseDto,
+} from '../utils/dto/infinity-pagination-response.dto';
+import { QueryProjectDto } from './dto/query-project.dto';
+import { Project } from './domain/project';
+import { infinityPagination } from '../utils/infinity-pagination';
 
 @ApiBearerAuth()
 @ApiTags('Projects')
@@ -31,9 +40,33 @@ export class ProjectsController {
     return this.projectsService.create(createProjectDto, req.user.id);
   }
 
+  @ApiOkResponse({
+    type: InfinityPaginationResponse(Project),
+  })
   @Get()
-  findAll(@Request() req) {
-    return this.projectsService.findAll(req.user.id);
+  @HttpCode(HttpStatus.OK)
+  async findAll(
+    @Request() req,
+    @Query() query: QueryProjectDto,
+  ): Promise<InfinityPaginationResponseDto<Project>> {
+    const page = query?.page ?? 1;
+    let limit = query?.limit ?? 10;
+    if (limit > 50) {
+      limit = 50;
+    }
+
+    return infinityPagination(
+      await this.projectsService.findManyWithPagination({
+        userId: req.user.id,
+        filterOptions: query?.filters,
+        sortOptions: query?.sort,
+        paginationOptions: {
+          page,
+          limit,
+        },
+      }),
+      { page, limit },
+    );
   }
 
   @Get(':id')

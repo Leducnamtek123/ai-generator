@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { Sparkles, Plus, Copy, Edit, Image, FolderInput, MoreHorizontal, ChevronDown, Menu } from 'lucide-react';
+import { Share2, Sparkles, Plus, Copy, Edit, Image, FolderInput, ChevronDown, Menu } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/ui/button';
 import { UserMenu } from './header/UserMenu';
@@ -24,7 +24,6 @@ import {
     DialogFooter,
     DialogHeader,
     DialogTitle,
-    DialogTrigger,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 
@@ -35,11 +34,9 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const router = useRouter();
     const { workflow, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
 
-    // Modal States
     const [isRenameOpen, setIsRenameOpen] = React.useState(false);
     const [newName, setNewName] = React.useState('');
 
-    // Protected Routes Check (excluding home and auth)
     const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register';
 
     React.useEffect(() => {
@@ -48,16 +45,13 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         }
     }, [user, isLoading, pathname, router, isPublicRoute]);
 
-    if (isLoading) return <div className="h-screen w-full bg-[#0B0C0E] flex items-center justify-center"><Sparkles className="w-8 h-8 animate-pulse text-blue-500" /></div>;
+    if (isLoading) return <div className="h-screen w-full bg-background flex items-center justify-center"><Sparkles className="w-8 h-8 animate-pulse text-primary" /></div>;
 
     if (!user && isPublicRoute) {
-        return <div className="w-full bg-[#0B0C0E]">{children}</div>;
+        return <div className="w-full bg-background">{children}</div>;
     }
 
     const handleCreateNew = () => {
-        router.push('/creative-studio'); // Or open a modal? Let's go to studio for now or create directly?
-        // User wants "New Space" option.
-        // Let's create a NEW untitled space immediately
         createWorkflow({ name: 'Untitled Studio' }).then(id => {
             if (id) router.push(`/creator/workflow-editor?workflowId=${id}`);
         });
@@ -82,47 +76,37 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         }
     };
 
-    // Breadcrumb Logic
     const getBreadcrumbs = () => {
+        // Handle specific route for Workflow Editor
         if (isWorkflow) {
             return (
                 <div className="flex items-center gap-2">
-                    <Link href="/dashboard" className="text-white/40 hover:text-white transition-colors">Personal</Link>
-                    <span className="text-white/20">/</span>
-                    <Link href="/creative-studio" className="text-white/40 hover:text-white transition-colors">Creative Studio</Link>
-                    <span className="text-white/20">/</span>
-
-                    {/* Workflow Name Dropdown */}
+                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <span className="text-muted-foreground">/</span>
+                    <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
+                    <span className="text-muted-foreground">/</span>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="flex items-center gap-2 hover:bg-white/5 px-2 py-1 rounded-md transition-colors outline-none">
-                                <span className="text-white font-medium text-xs">
+                            <button className="flex items-center gap-2 hover:bg-accent px-2 py-1 rounded-md transition-colors outline-none">
+                                <span className="text-foreground font-medium text-xs">
                                     {workflow?.name || 'Untitled Studio'}
                                 </span>
-                                <ChevronDown className="w-3 h-3 text-white/40" />
+                                <ChevronDown className="w-3 h-3 text-muted-foreground" />
                             </button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="start" className="w-56 bg-[#1A1B1F] border-white/10 text-white">
-                            <DropdownMenuItem onClick={handleCreateNew} className="hover:bg-white/5 cursor-pointer focus:bg-white/5 focus:text-white">
+                        <DropdownMenuContent align="start" className="w-56">
+                            <DropdownMenuItem onClick={handleCreateNew}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 <span>New Space</span>
                             </DropdownMenuItem>
-                            <DropdownMenuSeparator className="bg-white/5" />
-                            <DropdownMenuItem onClick={handleDuplicate} className="hover:bg-white/5 cursor-pointer focus:bg-white/5 focus:text-white">
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={handleDuplicate}>
                                 <Copy className="w-4 h-4 mr-2" />
                                 <span>Duplicate space</span>
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={handleRenameOpen} className="hover:bg-white/5 cursor-pointer focus:bg-white/5 focus:text-white">
+                            <DropdownMenuItem onClick={handleRenameOpen}>
                                 <Edit className="w-4 h-4 mr-2" />
                                 <span>Rename</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-white/5 cursor-pointer focus:bg-white/5 focus:text-white" disabled>
-                                <Image className="w-4 h-4 mr-2" />
-                                <span>Change cover (Soon)</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="hover:bg-white/5 cursor-pointer focus:bg-white/5 focus:text-white" disabled>
-                                <FolderInput className="w-4 h-4 mr-2" />
-                                <span>Move to folder (Soon)</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -130,13 +114,54 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             );
         }
 
+        // Handle other Creator tools
+        if (pathname.startsWith('/creator/')) {
+            const toolName = pathname.split('/').pop()?.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()) || 'Tool';
+            // Special case fixes for nice naming
+            const formatName = (name: string) => {
+                const map: { [key: string]: string } = {
+                    'image-generator': 'Image Generator',
+                    'video-generator': 'Video Generator',
+                    'image-editor': 'Image Editor',
+                    'image-upscaler': 'Image Upscaler',
+                    'music-generator': 'Music Generator',
+                    // Add others as needed
+                };
+                return map[name.toLowerCase().replace(/ /g, '-')] || name;
+            };
+
+            const displayName = formatName(toolName);
+
+            return (
+                <div className="flex items-center gap-2 text-xs">
+                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <span className="text-muted-foreground">/</span>
+                    <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-foreground font-medium">{displayName}</span>
+                </div>
+            );
+        }
+
+        // Handle Creator root page
+        if (pathname === '/creator') {
+            return (
+                <div className="flex items-center gap-2 text-xs">
+                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-foreground font-medium">Creator</span>
+                </div>
+            );
+        }
+
+        // Default / Dashboard
         return (
             <div className="flex items-center gap-2">
-                <Link href="/dashboard" className="text-white/40 hover:text-white transition-colors">Personal</Link>
+                <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
                 {pathname !== '/dashboard' && pathname !== '/' && (
                     <>
-                        <span className="text-white/20">/</span>
-                        <Link href={pathname as any} className="text-white font-medium hover:text-white transition-colors">
+                        <span className="text-muted-foreground">/</span>
+                        <Link href={pathname as any} className="text-foreground font-medium hover:text-foreground transition-colors">
                             {pathname === '/creative-studio' ? 'Creative Studio' : (pathname.replace(/^\//, '').split('/')[0].charAt(0).toUpperCase() + pathname.replace(/^\//, '').split('/')[0].slice(1))}
                         </Link>
                     </>
@@ -146,14 +171,14 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     };
 
     return (
-        <div className="flex h-full w-full bg-[#0B0C0E] text-white">
+        <div className="flex h-full w-full bg-background text-foreground">
             <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-                <header className="h-14 flex items-center px-4 md:px-6 border-b border-white/5 bg-[#0B0C0E] shrink-0 z-50">
+                <header className="h-14 flex items-center px-4 md:px-6 border-b border-border bg-background shrink-0 z-50">
                     <div className="flex items-center gap-2 md:gap-4 text-xs font-medium">
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="md:hidden h-8 w-8 text-white/60 hover:text-white"
+                            className="md:hidden h-8 w-8"
                             onClick={onMenuClick}
                         >
                             <Menu className="w-5 h-5" />
@@ -161,12 +186,12 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                         {getBreadcrumbs()}
                     </div>
 
-                    <div className="ml-auto flex items-center gap-4">
-                        <Button variant="ghost" size="sm" className="hidden sm:flex h-8 gap-2 bg-white/5 hover:bg-white/10 text-white border border-white/5 px-3 rounded-lg text-xs font-semibold">
-                            <Sparkles className="w-3.5 h-3.5 text-blue-400" />
+                    <div className="ml-auto flex items-center gap-2">
+                        <Button variant="secondary" size="sm" className="hidden sm:flex h-8 gap-2">
+                            <Share2 className="w-3.5 h-3.5" />
                             Share
                         </Button>
-                        <div className="hidden sm:block h-4 w-px bg-white/10" />
+                        <div className="hidden sm:block h-4 w-px bg-border" />
                         <UserMenu />
                     </div>
                 </header>
@@ -178,12 +203,11 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                     {children}
                 </div>
 
-                {/* Rename Dialog */}
                 <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-                    <DialogContent className="bg-[#1A1B1F] border-white/10 text-white sm:max-w-md">
+                    <DialogContent className="sm:max-w-md">
                         <DialogHeader>
                             <DialogTitle>Rename Space</DialogTitle>
-                            <DialogDescription className="text-white/50">
+                            <DialogDescription>
                                 Enter a new name for your space.
                             </DialogDescription>
                         </DialogHeader>
@@ -193,7 +217,6 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                     id="link"
                                     value={newName}
                                     onChange={(e) => setNewName(e.target.value)}
-                                    className="bg-[#0B0C0E] border-white/10 text-white"
                                 />
                             </div>
                         </div>

@@ -25,6 +25,8 @@ import {
   GenerationCallbackDto,
 } from './dto/generate.dto';
 
+import { Throttle } from '@nestjs/throttler';
+
 @ApiTags('Generations')
 @Controller({ path: 'generations', version: '1' })
 export class GenerationsController {
@@ -42,6 +44,7 @@ export class GenerationsController {
   @Post('image')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate an image from text prompt' })
   @ApiResponse({ status: 201, description: 'Generation started' })
   async generateImage(@Body() dto: GenerateImageDto, @Request() req: any) {
@@ -51,6 +54,7 @@ export class GenerationsController {
   @Post('video')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate a video from text prompt' })
   @ApiResponse({ status: 201, description: 'Generation started' })
   async generateVideo(@Body() dto: GenerateVideoDto, @Request() req: any) {
@@ -60,6 +64,7 @@ export class GenerationsController {
   @Post('upscale')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Upscale an existing image' })
   @ApiResponse({ status: 201, description: 'Upscale started' })
   async upscaleImage(@Body() dto: UpscaleImageDto, @Request() req: any) {

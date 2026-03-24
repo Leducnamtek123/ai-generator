@@ -6,7 +6,7 @@ import "@/tailwind";
 export default function NotFound() {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body suppressHydrationWarning className="bg-[#0B0C0E] text-white antialiased overflow-hidden selection:bg-blue-500/30">
+      <body suppressHydrationWarning className="bg-background text-foreground antialiased overflow-hidden">
         <NotFoundUI />
       </body>
     </html>

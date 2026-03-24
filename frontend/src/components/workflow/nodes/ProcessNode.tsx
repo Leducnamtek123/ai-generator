@@ -24,13 +24,13 @@ export function ProcessNode({ id, data, selected }: any) {
 
                 {status === NodeStatus.PROCESSING && (
                     <div className="w-full space-y-1">
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-accent">
                             <div
                                 className="h-full bg-blue-500 transition-all duration-300"
                                 style={{ width: `${data.progress || 45}%` }}
                             />
                         </div>
-                        <p className="text-center text-[10px] text-white/40">Generating...</p>
+                        <p className="text-center text-[10px] text-muted-foreground">Generating...</p>
                     </div>
                 )}
             </div>

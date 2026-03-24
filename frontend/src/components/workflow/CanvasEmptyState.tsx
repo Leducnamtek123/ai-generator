@@ -48,11 +48,15 @@ function ParticlesBackground() {
         const animate = () => {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+            // Detect theme from document body/classList
+            const isDark = document.documentElement.classList.contains('dark');
+            const particleColor = isDark ? '255, 255, 255' : '0, 0, 0';
+
             // Draw particles
             particles.forEach((particle) => {
                 ctx.beginPath();
                 ctx.arc(particle.x, particle.y, particle.size, 0, Math.PI * 2);
-                ctx.fillStyle = `rgba(255, 255, 255, ${particle.opacity})`;
+                ctx.fillStyle = `rgba(${particleColor}, ${particle.opacity})`;
                 ctx.fill();
 
                 // Update position
@@ -77,7 +81,7 @@ function ParticlesBackground() {
                         ctx.beginPath();
                         ctx.moveTo(p1.x, p1.y);
                         ctx.lineTo(p2.x, p2.y);
-                        ctx.strokeStyle = `rgba(255, 255, 255, ${0.03 * (1 - distance / 150)})`;
+                        ctx.strokeStyle = `rgba(${particleColor}, ${0.03 * (1 - distance / 150)})`;
                         ctx.lineWidth = 0.5;
                         ctx.stroke();
                     }
@@ -105,42 +109,40 @@ function ParticlesBackground() {
 
 export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
     return (
-        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-[#0B0C0E] overflow-hidden">
+        <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none bg-background overflow-hidden transition-colors duration-300">
             {/* Animated particles background */}
             <ParticlesBackground />
 
             {/* Decorative curved dashed lines */}
             <svg
-                className="absolute inset-0 w-full h-full pointer-events-none opacity-20"
+                className="absolute inset-0 w-full h-full pointer-events-none opacity-[0.15] dark:opacity-20"
                 xmlns="http://www.w3.org/2000/svg"
             >
                 <defs>
                     <pattern id="dots" x="0" y="0" width="20" height="20" patternUnits="userSpaceOnUse">
-                        <circle cx="2" cy="2" r="1" fill="rgba(255,255,255,0.1)" />
+                        <circle cx="2" cy="2" r="1" className="fill-foreground/10" />
                     </pattern>
                 </defs>
                 {/* Curved path top */}
                 <path
                     d="M 100 50 Q 400 150, 700 80 T 1200 100"
-                    stroke="rgba(255,255,255,0.1)"
+                    className="stroke-foreground/20 animate-dash"
                     strokeWidth="1"
                     strokeDasharray="8 8"
                     fill="none"
-                    className="animate-dash"
                 />
                 {/* Curved path bottom */}
                 <path
                     d="M 50 400 Q 350 500, 650 420 T 1150 480"
-                    stroke="rgba(255,255,255,0.1)"
+                    className="stroke-foreground/20 animate-dash"
                     strokeWidth="1"
                     strokeDasharray="8 8"
                     fill="none"
-                    className="animate-dash"
                 />
                 {/* Curved path right */}
                 <path
                     d="M 900 100 Q 1000 300, 950 500 T 1100 700"
-                    stroke="rgba(255,255,255,0.08)"
+                    className="stroke-foreground/10"
                     strokeWidth="1"
                     strokeDasharray="6 6"
                     fill="none"
@@ -150,10 +152,10 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
             {/* Main content */}
             <div className="pointer-events-auto text-center space-y-10 max-w-4xl px-6 relative z-10">
                 <div className="space-y-3">
-                    <h1 className="text-3xl md:text-4xl font-semibold text-white tracking-tight">
+                    <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">
                         Your workflow is ready
                     </h1>
-                    <p className="text-white/40 text-base md:text-lg">
+                    <p className="text-muted-foreground text-base md:text-lg">
                         Choose your first node and start creating
                     </p>
                 </div>
@@ -165,15 +167,15 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                         const Icon = config.icon;
 
                         // Color mapping for each node type
-                        const colorClasses: Record<string, { bg: string; border: string; iconBg: string }> = {
-                            media: { bg: 'bg-[#1A1B1F]', border: 'border-white/10', iconBg: 'bg-white/10' },
-                            text: { bg: 'bg-[#1A1B1F]', border: 'border-green-500/20', iconBg: 'bg-green-500/10' },
-                            image_gen: { bg: 'bg-[#1A1B1F]', border: 'border-blue-500/20', iconBg: 'bg-blue-500/10' },
-                            video_gen: { bg: 'bg-[#1A1B1F]', border: 'border-green-500/20', iconBg: 'bg-green-500/10' },
-                            assistant: { bg: 'bg-[#1A1B1F]', border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/10' },
+                        const colorStyles: Record<string, { bg: string; border: string; iconBg: string }> = {
+                            media: { bg: 'bg-card', border: 'border-border', iconBg: 'bg-muted' },
+                            text: { bg: 'bg-card', border: 'border-green-500/20', iconBg: 'bg-green-500/10' },
+                            image_gen: { bg: 'bg-card', border: 'border-blue-500/20', iconBg: 'bg-blue-500/10' },
+                            video_gen: { bg: 'bg-card', border: 'border-green-500/20', iconBg: 'bg-green-500/10' },
+                            assistant: { bg: 'bg-card', border: 'border-emerald-500/20', iconBg: 'bg-emerald-500/10' },
                         };
 
-                        const colors = colorClasses[type] || colorClasses.media;
+                        const colors = colorStyles[type] || colorStyles.media;
 
                         return (
                             <button
@@ -181,22 +183,22 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                                 onClick={() => onAddNode(config.type, config.label)}
                                 className={cn(
                                     "flex flex-col items-center justify-center gap-3 w-28 md:w-32 h-28 md:h-32",
-                                    "rounded-xl border transition-all duration-200",
-                                    "hover:shadow-lg hover:shadow-black/20",
+                                    "rounded-xl border transition-all duration-200 shadow-sm",
+                                    "hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/20",
                                     "active:scale-95 group",
                                     colors.bg,
                                     colors.border,
-                                    "hover:border-white/20"
+                                    "hover:border-primary/20"
                                 )}
                             >
                                 <div className={cn(
                                     "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
                                     colors.iconBg,
-                                    "group-hover:bg-white/10"
+                                    "group-hover:bg-primary/10"
                                 )}>
-                                    <Icon className={cn("w-5 h-5", config.color)} />
+                                    <Icon className={cn("w-5 h-5", config.color.replace('text-white', 'text-foreground'))} />
                                 </div>
-                                <span className="text-xs md:text-sm font-medium text-white/80 group-hover:text-white transition-colors">
+                                <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                                     {config.label}
                                 </span>
                             </button>
@@ -205,8 +207,8 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                 </div>
 
                 {/* Keyboard shortcut hint */}
-                <p className="text-xs text-white/20">
-                    Press <kbd className="px-1.5 py-0.5 bg-white/5 rounded text-white/40 font-mono">+</kbd> or click the toolbar to add nodes
+                <p className="text-xs text-muted-foreground/40">
+                    Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-mono inline-block">+</kbd> or click the toolbar to add nodes
                 </p>
             </div>
         </div>

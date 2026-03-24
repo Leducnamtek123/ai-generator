@@ -12,6 +12,7 @@
 
 import { Type, Image as ImageIcon, Video, Sparkles, Scan, Camera, FileText, Upload, StickyNote, Layers, Smile, MessageSquare } from 'lucide-react';
 import React from 'react';
+export type { MediaItem, MediaFolder, MediaLibraryResponse } from '@/types/media';
 
 // ============================================
 // ENUMS - Match these with backend enums
@@ -128,14 +129,30 @@ export enum DetailLevel {
 }
 
 export enum UpscaleFactor {
-    TWO_X = '2x',
-    FOUR_X = '4x',
+    TWO_X = 2,
+    FOUR_X = 4,
+    EIGHT_X = 8,
+    SIXTEEN_X = 16,
 }
 
 export enum UpscaleMode {
-    BALANCED = 'balanced',
     CREATIVE = 'creative',
-    FAITHFUL = 'faithful',
+    PRECISION = 'precision',
+}
+
+export enum UpscaleModel {
+    MAGNIFIC_V2 = 'magnific_v2',
+    SUPIR = 'supir',
+    REAL_ESRGAN = 'real_esrgan',
+    SWINIR = 'swinir',
+}
+
+export enum UpscalePreset {
+    BALANCED = 'balanced',
+    CINEMATIC = 'cinematic',
+    PORTRAIT = 'portrait',
+    LANDSCAPE = 'landscape',
+    FANTASY = 'fantasy',
 }
 
 export enum CameraAngle {
@@ -244,6 +261,10 @@ export interface AssistantNodeData extends BaseNodeData {
 export interface UpscaleNodeData extends BaseNodeData {
     scale: UpscaleFactor;
     enhanceMode: UpscaleMode;
+    model: UpscaleModel;
+    preset: UpscalePreset;
+    sharpness: number; // 0-100
+    grain: number; // 0-100
 
     // Input/Output
     inputImageUrl?: string;
@@ -441,7 +462,11 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
             label: 'AI Upscaler',
             status: NodeStatus.IDLE,
             scale: UpscaleFactor.TWO_X,
-            enhanceMode: UpscaleMode.BALANCED,
+            enhanceMode: UpscaleMode.CREATIVE,
+            model: UpscaleModel.MAGNIFIC_V2,
+            preset: UpscalePreset.BALANCED,
+            sharpness: 20,
+            grain: 10,
         } as Partial<UpscaleNodeData>,
     },
     [WorkflowNodeType.CAMERA]: {
@@ -609,6 +634,10 @@ export interface UpscaleImageRequest {
     inputImageUrl: string;
     scale: UpscaleNodeData['scale'];
     enhanceMode: UpscaleNodeData['enhanceMode'];
+    model: UpscaleNodeData['model'];
+    preset: UpscaleNodeData['preset'];
+    sharpness: UpscaleNodeData['sharpness'];
+    grain: UpscaleNodeData['grain'];
 }
 
 /** Generic generation result from backend */
@@ -650,35 +679,4 @@ export interface SerializedEdge {
     targetHandle?: string;
 }
 
-// ============================================
-// MEDIA LIBRARY TYPES (for media picker)
-// ============================================
 
-export interface MediaItem {
-    id: string;
-    url: string;
-    thumbnailUrl: string;
-    name: string;
-    type: 'image' | 'video';
-    mimeType: string;
-    size: number;
-    width?: number;
-    height?: number;
-    duration?: number;  // for videos
-    createdAt: string;
-    folder?: string;
-}
-
-export interface MediaFolder {
-    id: string;
-    name: string;
-    icon: 'favorites' | 'history' | 'uploads' | 'downloads' | 'folder';
-    count: number;
-}
-
-export interface MediaLibraryResponse {
-    items: MediaItem[];
-    folders: MediaFolder[];
-    totalCount: number;
-    hasMore: boolean;
-}

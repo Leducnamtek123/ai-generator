@@ -42,6 +42,8 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
               infer: true,
             }),
           },
+          endpoint: configService.get('file.awsS3Endpoint', { infer: true }),
+          forcePathStyle: true,
         });
 
         return {
@@ -87,4 +89,4 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
   providers: [FilesS3Service],
   exports: [FilesS3Service],
 })
-export class FilesS3Module {}
+export class FilesS3Module { }

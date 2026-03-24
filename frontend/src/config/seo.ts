@@ -3,7 +3,9 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/config/site";
 
 export const seoConfig: Metadata = {
-  metadataBase: new URL(siteConfig.url),
+  metadataBase: siteConfig.url
+    ? new URL(siteConfig.url.startsWith('http') ? siteConfig.url : `http://${siteConfig.url}`)
+    : undefined,
   title: {
     default: siteConfig.name,
     template: `%s | ${siteConfig.name}`

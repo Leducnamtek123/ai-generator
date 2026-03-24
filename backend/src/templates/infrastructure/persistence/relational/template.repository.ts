@@ -10,7 +10,7 @@ export class TemplateRepository {
   constructor(
     @InjectRepository(TemplateEntity)
     private readonly itemsRepository: Repository<TemplateEntity>,
-  ) { }
+  ) {}
 
   async create(
     data: CreateTemplateDto & { authorId: string },

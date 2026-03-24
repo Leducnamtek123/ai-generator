@@ -70,7 +70,7 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
           },
           storage,
           limits: {
-            fileSize: configService.get('file.maxFileSize', { infer: true }),
+            fileSize: 50 * 1024 * 1024, // 50MB Hardcoded
           },
         };
       },

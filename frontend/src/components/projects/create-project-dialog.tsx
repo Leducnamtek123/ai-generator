@@ -63,31 +63,31 @@ export function CreateProjectDialog({ children }: { children?: React.ReactNode }
                     </Button>
                 )}
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[425px] bg-[#1A1D21] border-white/10 text-white">
+            <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
                     <DialogTitle>Create Project</DialogTitle>
-                    <DialogDescription className="text-white/60">
+                    <DialogDescription>
                         Create a new project to organize your creative assets.
                     </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleSubmit(onSubmit)} className="grid gap-4 py-4">
                     <div className="grid gap-2">
-                        <Label htmlFor="name" className="text-white">Name</Label>
+                        <Label htmlFor="name">Name</Label>
                         <Input
                             id="name"
-                            className="bg-black/20 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-blue-500/50"
+                            size="md"
                             placeholder="My Awesome Project"
                             {...register('name')}
                         />
                         {errors.name && (
-                            <span className="text-xs text-red-400">{errors.name.message}</span>
+                            <span className="text-xs text-destructive">{errors.name.message}</span>
                         )}
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="description" className="text-white">Description</Label>
+                        <Label htmlFor="description">Description</Label>
                         <Input
                             id="description"
-                            className="bg-black/20 border-white/10 text-white placeholder:text-white/20 focus-visible:ring-blue-500/50"
+                            size="md"
                             placeholder="Optional description"
                             {...register('description')}
                         />
@@ -96,7 +96,6 @@ export function CreateProjectDialog({ children }: { children?: React.ReactNode }
                         <Button
                             type="submit"
                             disabled={isLoading}
-                            className="bg-blue-600 hover:bg-blue-700 text-white"
                         >
                             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             Create Project

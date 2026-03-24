@@ -39,6 +39,12 @@ export class Workflow {
   })
   projectId: string;
 
+  @ApiProperty({
+    type: String,
+    nullable: true,
+  })
+  previewUrl?: string | null;
+
   @ApiProperty()
   createdAt: Date;
 

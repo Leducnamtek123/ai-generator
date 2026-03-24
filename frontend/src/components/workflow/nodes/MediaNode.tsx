@@ -3,7 +3,8 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { BaseNode } from './BaseNode';
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
-import { Upload, X, Plus, Loader2, Link2, FolderOpen, Wand2 } from 'lucide-react';
+import { Upload, Plus, Loader2, Wand2 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { NodeStatus } from '../types';
@@ -74,13 +75,13 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
         <div className="flex flex-col gap-1.5 py-2">
             <div className={cn(
                 "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
-                isVideo ? "bg-white/5 text-white/40" : "bg-blue-500/20 text-blue-400"
+                isVideo ? "bg-white/5 text-muted-foreground" : "bg-blue-500/20 text-blue-400"
             )}>
                 <Upload className="w-3.5 h-3.5" />
             </div>
             <div className={cn(
                 "w-6 h-6 rounded-md flex items-center justify-center transition-colors",
-                isVideo ? "bg-green-500/20 text-green-400" : "bg-white/5 text-white/40"
+                isVideo ? "bg-green-500/20 text-green-400" : "bg-white/5 text-muted-foreground"
             )}>
                 <Plus className="w-3.5 h-3.5" />
             </div>
@@ -108,7 +109,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                 <div
                     onClick={handleMediaClick}
                     className={cn(
-                        "bg-[#151619] border-t border-white/5 relative group cursor-pointer",
+                        "relative group cursor-pointer",
                         data.isPreview ? "w-[120px] min-h-[60px]" : "w-[300px] min-h-[100px]"
                     )}
                 >
@@ -134,19 +135,24 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                             )}
 
                             {/* Hover Edit Overlay */}
-                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                <div className="bg-white/10 backdrop-blur-md rounded-full px-4 py-2 border border-white/20 flex items-center gap-2">
-                                    <Wand2 className="w-4 h-4 text-white" />
-                                    <span className="text-xs font-medium text-white">Edit {isVideo ? 'Clip' : 'Image'}</span>
-                                </div>
+                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    className="gap-2 bg-background/20 backdrop-blur-sm border-white/20 text-white hover:bg-background/40"
+                                    onClick={handleMediaClick}
+                                >
+                                    <Wand2 className="w-4 h-4" />
+                                    Edit {isVideo ? 'Clip' : 'Image'}
+                                </Button>
                             </div>
                         </div>
                     ) : (
-                        <div className={cn("aspect-video w-full flex flex-col items-center justify-center p-4 bg-black/20", data.isPreview && "p-2")}>
+                        <div className={cn("aspect-video w-full flex flex-col items-center justify-center p-4 bg-muted/50 border-2 border-dashed border-transparent hover:border-primary/50 transition-colors", data.isPreview && "p-2")}>
                             {isUploading ? (
-                                <Loader2 className="w-4 h-4 text-blue-500 animate-spin" />
+                                <Loader2 className="w-4 h-4 text-primary animate-spin" />
                             ) : (
-                                <Upload className={cn("text-white/20", data.isPreview ? "w-4 h-4" : "w-8 h-8")} />
+                                <Upload className={cn("text-muted-foreground", data.isPreview ? "w-4 h-4" : "w-8 h-8")} />
                             )}
                         </div>
                     )}
@@ -156,11 +162,11 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                     type="source"
                     position={Position.Right}
                     onClick={(e) => data.onHandleClick?.(e, 'media-output', 'source')}
-                    className={cn("!h-3 !w-3 !border-2 !border-[#0B0C0E] !bg-cyan-500 z-50 transform translate-x-1.5", data.isPreview && "scale-50 opacity-0")}
+                    className={cn("!h-3 !w-3 !border-2 !border-background !bg-cyan-500 z-50 transform translate-x-1.5", data.isPreview && "scale-50 opacity-0")}
                 >
                     {/* Handle Icon indicator */}
                     <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                        {isVideo ? <Plus className="w-3 h-3 text-white/40" /> : <Upload className="w-3 h-3 text-white/40" />}
+                        {isVideo ? <Plus className="w-3 h-3 text-muted-foreground" /> : <Upload className="w-3 h-3 text-muted-foreground" />}
                     </div>
                 </Handle>
             </BaseNode>

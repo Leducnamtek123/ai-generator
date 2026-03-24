@@ -7,10 +7,10 @@ import { Link } from '@/i18n/navigation';
 
 export function QuickActions() {
     const actions = [
-        { title: 'Create Image', icon: Camera, color: 'text-blue-400', href: '/creator/image-generator' },
-        { title: 'New Video', icon: Video, color: 'text-purple-400', href: '/creator/video-generator' },
-        { title: 'Workflow Canvas', icon: Layers, color: 'text-emerald-400', href: '/creator/workflow-editor' },
-        { title: 'Magic Upscale', icon: Wand2, color: 'text-amber-400', href: '/creator/image-upscaler' },
+        { title: 'Create Image', icon: Camera, color: 'text-chart-1', href: '/creator/image-generator' },
+        { title: 'New Video', icon: Video, color: 'text-chart-2', href: '/creator/video-generator' },
+        { title: 'Workflow Canvas', icon: Layers, color: 'text-chart-4', href: '/creator/workflow-editor' },
+        { title: 'Magic Upscale', icon: Wand2, color: 'text-chart-5', href: '/creator/image-upscaler' },
     ];
 
     return (
@@ -19,14 +19,14 @@ export function QuickActions() {
                 <Link key={action.title} href={action.href as any} className="block group">
                     <GlassCard
                         variant="default"
-                        className="group flex h-full cursor-pointer items-center gap-4 border-white/5 bg-white/5 py-4 transition-all hover:bg-white/10 hover:border-blue-500/30 hover:shadow-[0_0_20px_rgba(59,130,246,0.1)]"
+                        className="group flex h-full cursor-pointer items-center gap-4 border-border bg-card py-4 transition-all hover:bg-accent hover:border-primary/30 hover:shadow-lg"
                     >
-                        <div className={`rounded-lg bg-white/5 p-3 ${action.color} transition-transform group-hover:scale-110`}>
+                        <div className={`rounded-lg bg-muted p-3 ${action.color} transition-transform group-hover:scale-110`}>
                             <action.icon className="h-5 w-5" />
                         </div>
                         <div className="flex flex-col">
                             <span className="text-sm font-semibold">{action.title}</span>
-                            <span className="text-[10px] text-white/40">Quick Start</span>
+                            <span className="text-[10px] text-muted-foreground">Quick Start</span>
                         </div>
                     </GlassCard>
                 </Link>

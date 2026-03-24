@@ -10,7 +10,7 @@ export const normalizeLocale = (loc?: string): LocaleCode => {
 
 export const DATEFNS_LOCALES: Partial<Record<LocaleCode, Locale>> = {
   en: enUS,
-  tr
+  vi: vv
 };
 
 export const getDateFnsLocale = (code?: string): Locale => {

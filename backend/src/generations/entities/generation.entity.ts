@@ -40,6 +40,12 @@ export class GenerationEntity extends EntityRelationalHelper {
   @Column({ nullable: true, type: 'text' })
   error: string;
 
+  @Column({ type: 'float', default: 0 })
+  cost: number;
+
+  @Column({ type: 'float', nullable: true })
+  providerCost: number;
+
   @Column({ type: 'jsonb', nullable: true })
   metadata: Record<string, any>;
 

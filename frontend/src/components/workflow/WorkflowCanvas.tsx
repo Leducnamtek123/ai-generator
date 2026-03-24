@@ -13,7 +13,9 @@ import {
     ReactFlowProvider,
     OnSelectionChangeParams,
     SelectionMode,
+    BackgroundVariant,
 } from '@xyflow/react';
+import { useTheme } from 'next-themes';
 import '@xyflow/react/dist/style.css';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -27,13 +29,19 @@ import { AssistantNode } from './nodes/AssistantNode';
 import { UpscaleNode } from './nodes/UpscaleNode';
 import { MediaNode } from './nodes/MediaNode';
 import { CommentNode } from './nodes/CommentNode';
+import { VideoNode } from './nodes/VideoNode';
+import { CameraNode } from './nodes/CameraNode';
+import { StickyNoteNode } from './nodes/StickyNoteNode';
+import { StickerNode } from './nodes/StickerNode';
+import { GroupNode } from './nodes/GroupNode';
 
 import { PropertiesPanel } from './PropertiesPanel';
 import { FloatingToolbar, ToolMode } from './FloatingToolbar';
 import { CanvasEmptyState } from './CanvasEmptyState';
 import { WorkflowNodeType, ConnectionType, ExecutionMode, NodeStatus, AssistantMode } from './types';
 import { NodeContextMenu, HandleMenu } from './NodeContextMenu';
-import { MediaManagerModal } from './MediaManagerModal';
+import { MediaPickerModal } from '@/components/common/MediaPickerModal';
+import { MediaItem } from '@/types/media';
 import { ImageEditorModal } from './ImageEditorModal';
 import { VideoEditorModal } from './VideoEditorModal';
 import { CommentsPanel } from './CommentsPanel';
@@ -43,11 +51,15 @@ import { useWorkflowStore } from '@/stores/workflow-store';
 const nodeTypes = {
     [WorkflowNodeType.TEXT]: TextNode,
     [WorkflowNodeType.IMAGE_GEN]: GeneratorNode,
-    [WorkflowNodeType.VIDEO_GEN]: GeneratorNode,
+    [WorkflowNodeType.VIDEO_GEN]: VideoNode,
     [WorkflowNodeType.ASSISTANT]: AssistantNode,
     [WorkflowNodeType.UPSCALE]: UpscaleNode,
     [WorkflowNodeType.MEDIA]: MediaNode,
     [WorkflowNodeType.COMMENT]: CommentNode,
+    [WorkflowNodeType.CAMERA]: CameraNode,
+    [WorkflowNodeType.STICKY_NOTE]: StickyNoteNode,
+    [WorkflowNodeType.STICKER]: StickerNode,
+    [WorkflowNodeType.GROUP]: GroupNode,
     // Legacy support for basic types
     input: InputNode,
     process: ProcessNode,
@@ -86,6 +98,7 @@ interface ContextMenuState {
 }
 
 function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCanvasProps) {
+    const { theme: currentTheme } = useTheme();
     const {
         nodes, edges,
         onNodesChange, onEdgesChange,
@@ -448,7 +461,15 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         setNodes((nds) =>
             nds.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, text } } : n)
         );
-    }, [setNodes]);
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
+    const handleSettingsChange = useCallback((nodeId: string, settings: any) => {
+        setNodes((nds) =>
+            nds.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, ...settings } } : n)
+        );
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
 
     const handleMediaChange = useCallback((nodeId: string, url: string, name: string, thumbnail?: string) => {
         setNodes((nds) =>
@@ -580,6 +601,34 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         toast.success('Reference node created');
     }, [nodes, setNodes, setEdges, saveToHistory]);
 
+    // Comment node handlers - must be defined before nodesWithHandlers
+    const handleCommentTextChange = useCallback((nodeId: string, text: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, text } } : n
+        ));
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
+    const handleCommentColorChange = useCallback((nodeId: string, color: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, color } } : n
+        ));
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
+    const handleCommentToggleMinimize = useCallback((nodeId: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, isMinimized: !n.data.isMinimized } } : n
+        ));
+    }, [setNodes]);
+
+    const handleCommentTogglePin = useCallback((nodeId: string) => {
+        setNodes((nds) => nds.map((n) =>
+            n.id === nodeId ? { ...n, data: { ...n.data, isPinned: !n.data.isPinned } } : n
+        ));
+        saveToHistory();
+    }, [setNodes, saveToHistory]);
+
     // Inject handlers into nodes
     const nodesWithHandlers = nodes.map(node => {
         // Track connected inputs based on handles
@@ -615,6 +664,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 onRun: (id?: string, mode?: 'workflow' | 'local') => runWorkflow(id || node.id, mode),
                 onTextChange: handleTextChange,
                 onMediaChange: handleMediaChange,
+                onSettingsChange: handleSettingsChange,
                 onDuplicate: () => handleDuplicateNode(node.id),
                 onSettings: () => handleOpenSettings(node.id),
                 onReplace: () => handleReplaceMedia(node.id),
@@ -726,7 +776,8 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         saveToHistory();
     }, [setNodes, saveToHistory]);
 
-    const handleMediaSelect = useCallback((url: string, name: string, mediaType: 'image' | 'video') => {
+    const handleMediaSelect = useCallback((media: MediaItem) => {
+        const { url, name, type } = media;
         // If replacing media in an existing node
         if (replaceNodeId) {
             setNodes((nds) =>
@@ -737,7 +788,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                         mediaUrl: url,
                         previewUrl: url, // For generator nodes
                         mediaName: name,
-                        mediaType: mediaType,
+                        mediaType: type,
                         status: NodeStatus.SUCCESS,
                     }
                 } : n)
@@ -764,7 +815,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 status: NodeStatus.SUCCESS,
                 mediaUrl: url,
                 mediaName: name,
-                mediaType: mediaType,
+                mediaType: type,
             },
         };
         setNodes((nds: Node[]) => nds.concat(newNode));
@@ -839,34 +890,6 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
         }
     }, []);
 
-    // Comment node handlers
-    const handleCommentTextChange = useCallback((nodeId: string, text: string) => {
-        setNodes((nds) => nds.map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, text } } : n
-        ));
-        saveToHistory();
-    }, [setNodes, saveToHistory]);
-
-    const handleCommentColorChange = useCallback((nodeId: string, color: string) => {
-        setNodes((nds) => nds.map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, color } } : n
-        ));
-        saveToHistory();
-    }, [setNodes, saveToHistory]);
-
-    const handleCommentToggleMinimize = useCallback((nodeId: string) => {
-        setNodes((nds) => nds.map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, isMinimized: !n.data.isMinimized } } : n
-        ));
-    }, [setNodes]);
-
-    const handleCommentTogglePin = useCallback((nodeId: string) => {
-        setNodes((nds) => nds.map((n) =>
-            n.id === nodeId ? { ...n, data: { ...n.data, isPinned: !n.data.isPinned } } : n
-        ));
-        saveToHistory();
-    }, [setNodes, saveToHistory]);
-
     // Create comment at click position
     const handleCreateComment = useCallback((event: React.MouseEvent) => {
         const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -934,7 +957,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 )}
 
                 {/* ReactFlow always rendered but with lower z-index */}
-                <div className={cn("h-full w-full", nodes.length === 0 ? 'opacity-0 pointer-events-none' : '')}>
+                <div className={cn("h-full w-full bg-background transition-colors duration-300", nodes.length === 0 ? 'opacity-0 pointer-events-none' : '')}>
                     <ReactFlow
                         nodes={nodesWithHandlers}
                         edges={edges}
@@ -946,7 +969,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                         nodeTypes={nodeTypes as any}
                         fitView={nodes.length > 0}
                         className="bg-transparent !h-full"
-                        colorMode="dark"
+                        colorMode={currentTheme === 'dark' ? 'dark' : 'light'}
                         maxZoom={2}
                         minZoom={0.2}
                         proOptions={{ hideAttribution: true }}
@@ -963,9 +986,14 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                         }}
                     >
 
-                        <Background color="#222" gap={24} size={1} />
+                        <Background
+                            color={currentTheme === 'dark' ? '#333' : '#ddd'}
+                            gap={24}
+                            size={1}
+                            variant={BackgroundVariant.Dots}
+                        />
                         <Controls
-                            className="!bg-[#1A1B1F] !border-white/10 !fill-white !rounded-xl !shadow-xl"
+                            className="!bg-card !border-border !fill-foreground !rounded-xl !shadow-xl"
                             showInteractive={false}
                             showZoom={false}
                             showFitView={false}
@@ -1008,7 +1036,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 )}
 
                 {/* Media Manager Modal */}
-                <MediaManagerModal
+                <MediaPickerModal
                     isOpen={isMediaModalOpen}
                     onClose={() => setIsMediaModalOpen(false)}
                     onSelect={handleMediaSelect}

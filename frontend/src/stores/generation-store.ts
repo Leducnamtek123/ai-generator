@@ -20,6 +20,7 @@ interface GenerationState {
     error: string | null;
 
     generateImage: (params: { prompt: string; model?: string; aspectRatio?: string; seed?: number }) => Promise<void>;
+    upscaleImage: (params: { imageUrl: string; scale?: number; creativity?: number; hdr?: number; resemblance?: number }) => Promise<void>;
     pollStatus: (id: string) => Promise<void>;
     reset: () => void;
 }
@@ -45,6 +46,23 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
         } catch (error: any) {
             console.error('Generation failed', error);
             set({ isGenerating: false, error: error.message || 'Failed to start generation' });
+        }
+    },
+
+    upscaleImage: async (params) => {
+        set({ isGenerating: true, error: null, currentGeneration: null });
+        try {
+            const generation = await apiPost<Generation>('/generations/upscale', params);
+            set({ currentGeneration: generation });
+
+            if (generation.status === 'pending' || generation.status === 'processing') {
+                get().pollStatus(generation.id);
+            } else {
+                set({ isGenerating: false });
+            }
+        } catch (error: any) {
+            console.error('Upscale failed', error);
+            set({ isGenerating: false, error: error.message || 'Failed to start upscale' });
         }
     },
 

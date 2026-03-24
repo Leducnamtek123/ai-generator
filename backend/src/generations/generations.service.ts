@@ -93,6 +93,7 @@ export class GenerationsService {
       status: 'pending',
       prompt: dto.prompt,
       model: dto.model,
+      cost: cost,
       metadata: {
         provider: provider.name,
         aspectRatio: dto.aspectRatio,
@@ -171,6 +172,7 @@ export class GenerationsService {
       status: 'pending',
       prompt: dto.prompt,
       model: dto.model,
+      cost: cost,
       metadata: {
         provider: provider.name,
         duration: dto.duration,
@@ -238,11 +240,20 @@ export class GenerationsService {
       type: 'upscale',
       status: 'pending',
       prompt: 'Upscale',
+      cost: cost,
       metadata: {
         provider: provider.name,
         sourceUrl: dto.imageUrl,
         scale: dto.scale,
-        enhanceMode: dto.enhanceMode,
+        mode: dto.mode,
+        model: dto.model,
+        optimization: dto.optimization,
+        creativity: dto.creativity,
+        hdr: dto.hdr,
+        resemblance: dto.resemblance,
+        fractality: dto.fractality,
+        engine: dto.engine,
+        prompt: dto.prompt,
       },
     });
     await this.generationsRepository.save(generation);
@@ -250,7 +261,15 @@ export class GenerationsService {
     try {
       const result = await provider.upscaleImage(dto.imageUrl, {
         scale: dto.scale || 2,
-        enhanceMode: dto.enhanceMode,
+        mode: dto.mode,
+        model: dto.model,
+        optimization: dto.optimization,
+        creativity: dto.creativity,
+        hdr: dto.hdr,
+        resemblance: dto.resemblance,
+        fractality: dto.fractality,
+        engine: dto.engine,
+        prompt: dto.prompt,
       });
 
       generation.status = result.status;

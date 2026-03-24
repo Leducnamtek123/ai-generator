@@ -12,4 +12,7 @@ export class CreateProjectDto {
   @IsOptional()
   @IsString()
   thumbnail?: string;
+
+  @IsOptional()
+  content?: any;
 }

@@ -20,12 +20,12 @@ export function InputNode({ id, data, selected }: any) {
     return (
         <BaseNode id={id} title="Input Node" selected={selected} onDelete={handleDelete}>
             <div className="space-y-2">
-                <label className="text-[10px] text-white/40">Prompt / Input</label>
+                <label className="text-[10px] text-muted-foreground">Prompt / Input</label>
                 <Input
                     placeholder="Enter prompt..."
                     value={data.label}
                     onChange={handleChange}
-                    className="h-8 border-white/5 bg-white/5 text-xs focus:ring-blue-500/50"
+                    className="h-8 border-border bg-background text-xs focus:ring-blue-500/50"
                 />
             </div>
         </BaseNode>

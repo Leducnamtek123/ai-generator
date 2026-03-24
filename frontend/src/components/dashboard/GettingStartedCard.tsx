@@ -10,10 +10,10 @@ interface GettingStartedCardProps {
     fullWidth?: boolean;
 }
 
-export function GettingStartedCard({ title, description, image, color = "bg-white", fullWidth }: GettingStartedCardProps) {
+export function GettingStartedCard({ title, description, image, color = "bg-card", fullWidth }: GettingStartedCardProps) {
     return (
         <div className={cn(
-            "group relative rounded-2xl overflow-hidden cursor-pointer border border-white/5",
+            "group relative rounded-2xl overflow-hidden cursor-pointer border border-border",
             fullWidth ? "col-span-2 aspect-[2/1]" : "aspect-[16/9]"
         )}>
             {/* Background Image */}
@@ -29,7 +29,7 @@ export function GettingStartedCard({ title, description, image, color = "bg-whit
 
             {/* Content */}
             <div className="absolute inset-0 p-6 flex flex-col justify-end items-start">
-                <div className="bg-white/10 backdrop-blur-md rounded-full w-12 h-12 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <div className="bg-foreground/10 backdrop-blur-md rounded-full w-12 h-12 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                     <Play className="w-5 h-5 fill-white text-white ml-1" />
                 </div>
 

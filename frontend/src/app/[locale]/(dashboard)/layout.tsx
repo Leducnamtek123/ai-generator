@@ -15,12 +15,12 @@ export default function DashboardLayout({
 
     return (
         <ProtectedRoute>
-            <div className="flex w-full h-screen flex-col md:flex-row bg-[#0B0C0E] overflow-hidden">
+            <div className="flex w-full h-screen flex-col md:flex-row bg-background overflow-hidden">
                 <MobileNav
                     isOpen={isMobileMenuOpen}
                     onOpenChange={setIsMobileMenuOpen}
                 />
-                <div className="hidden md:block h-full border-r border-white/5">
+                <div className="hidden md:block h-full border-r border-border">
                     <Sidebar />
                 </div>
                 <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">

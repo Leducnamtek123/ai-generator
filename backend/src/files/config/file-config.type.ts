@@ -11,6 +11,7 @@ export type FileConfig = {
   secretAccessKey?: string;
   awsDefaultS3Bucket?: string;
   awsS3Region?: string;
+  awsS3Endpoint?: string;
   maxFileSize: number;
   cloudinaryCloudName?: string;
   cloudinaryApiKey?: string;

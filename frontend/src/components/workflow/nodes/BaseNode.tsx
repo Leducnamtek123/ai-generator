@@ -1,6 +1,6 @@
 import React, { memo } from 'react';
 import { cn } from '@/lib/utils';
-import { Trash2 } from 'lucide-react';
+import { Card } from '@/components/ui/card';
 import { NodeStatus } from '../types';
 
 interface BaseNodeProps {
@@ -48,14 +48,14 @@ export const BaseNode = memo(({
                                 onChange={(e) => setEditTitle(e.target.value)}
                                 onBlur={handleTitleSubmit}
                                 onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
-                                className="bg-black/50 border border-blue-500/50 rounded px-1 py-0.5 text-[10px] text-white outline-none w-32"
+                                className="bg-background border border-input rounded px-2 py-0.5 text-[10px] text-foreground outline-none w-32 focus:ring-1 focus:ring-ring"
                             />
                         ) : (
                             <span
                                 onDoubleClick={() => setIsEditing(true)}
                                 className={cn(
                                     "text-[10px] font-medium transition-colors cursor-text select-none",
-                                    selected ? "text-blue-400" : "text-white/50 group-hover:text-white/70"
+                                    selected ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                                 )}>{title}</span>
                         )}
                     </div>
@@ -65,7 +65,7 @@ export const BaseNode = memo(({
             {/* Top Toolbar (Appears on selection) */}
             {selected && !isPreview && headerActions && (
                 <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in zoom-in-95 duration-200">
-                    <div className="bg-[#1A1B1F] border border-white/10 rounded-xl px-1.5 py-1 flex items-center gap-0.5 shadow-2xl shadow-black/50">
+                    <div className="bg-popover border border-border rounded-xl px-1.5 py-1 flex items-center gap-0.5 shadow-xl shadow-black/10">
                         {headerActions}
                     </div>
                 </div>
@@ -79,16 +79,16 @@ export const BaseNode = memo(({
             )}
 
             {/* Main Content Card */}
-            <div
+            <Card
                 className={cn(
-                    "rounded-[18px] border-2 transition-all duration-200 overflow-hidden",
-                    "bg-[#1A1B1F] shadow-xl relative",
-                    selected && !isPreview ? "border-blue-500 shadow-[0_0_0_4px_rgba(59,130,246,0.1)]" : "border-white/5",
-                    !isPreview && "hover:border-white/10"
+                    "rounded-xl transition-all duration-200 overflow-hidden",
+                    "bg-card shadow-sm relative",
+                    selected && !isPreview ? "border-primary shadow-[0_0_0_4px_rgba(59,130,246,0.1)]" : "border-border/50",
+                    !isPreview && "hover:border-border"
                 )}
             >
                 {children}
-            </div>
+            </Card>
         </div>
     );
 });

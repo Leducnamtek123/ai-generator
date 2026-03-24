@@ -4,20 +4,17 @@ import { useRouter } from '@/i18n/navigation';
 import { useState, useEffect, use } from 'react';
 import {
     Plus,
-    Search,
-    User,
-    Users,
     ArrowLeft,
-    Film,
     Image as ImageIcon,
-    LayoutGrid,
     MoreHorizontal,
     MonitorPlay
 } from 'lucide-react';
 import { Button } from '@/ui/button';
+import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
 import { useWorkflowStore, Workflow } from '@/stores/workflow-store';
 import { useProjectStore } from '@/stores/project-store';
+import { CreateWorkflowDialog } from '@/components/projects/create-workflow-dialog';
 
 export default function ProjectDetailsPage({ params }: { params: Promise<{ projectId: string }> }) {
     const router = useRouter();
@@ -51,35 +48,34 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     };
 
     return (
-        <div className="min-h-screen bg-[#0B0C0E] text-white">
+        <div className="min-h-screen bg-background text-foreground">
             {/* Header */}
-            <div className="border-b border-white/5 bg-[#0B0C0E]/50 backdrop-blur-xl sticky top-0 z-20">
+            <div className="border-b border-border bg-background/50 backdrop-blur-xl sticky top-0 z-20">
                 <div className="px-8 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
                             onClick={() => router.push('/projects')}
-                            className="p-2 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                            className="p-2 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </button>
                         <div>
-                            <h1 className="text-xl font-semibold text-white">
+                            <h1 className="text-xl font-semibold">
                                 {currentProject?.name || 'Loading details...'}
                             </h1>
-                            <p className="text-xs text-white/40">
+                            <p className="text-xs text-muted-foreground">
                                 {currentProject?.description || 'Project Workspace'}
                             </p>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <Button
-                            onClick={() => setShowCreateModal(true)}
-                            className="bg-white text-black hover:bg-white/90 gap-2 rounded-full px-5"
-                        >
-                            <Plus className="w-4 h-4" />
-                            New Workflow
-                        </Button>
+                        <CreateWorkflowDialog onCreate={async (name) => {
+                            const newId = await createWorkflow({ name, projectId });
+                            if (newId) {
+                                router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
+                            }
+                        }} isLoading={isLoading} />
                     </div>
                 </div>
 
@@ -90,8 +86,8 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                         className={cn(
                             "py-3 text-sm font-medium border-b-2 transition-colors",
                             activeTab === 'studios'
-                                ? "border-white text-white"
-                                : "border-transparent text-white/40 hover:text-white/60"
+                                ? "border-foreground text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground/70"
                         )}
                     >
                         Workflows
@@ -101,8 +97,8 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                         className={cn(
                             "py-3 text-sm font-medium border-b-2 transition-colors",
                             activeTab === 'assets'
-                                ? "border-white text-white"
-                                : "border-transparent text-white/40 hover:text-white/60"
+                                ? "border-foreground text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground/70"
                         )}
                     >
                         Assets (Media)
@@ -112,8 +108,8 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                         className={cn(
                             "py-3 text-sm font-medium border-b-2 transition-colors",
                             activeTab === 'settings'
-                                ? "border-white text-white"
-                                : "border-transparent text-white/40 hover:text-white/60"
+                                ? "border-foreground text-foreground"
+                                : "border-transparent text-muted-foreground hover:text-foreground/70"
                         )}
                     >
                         <MoreHorizontal className="w-4 h-4" />
@@ -126,16 +122,22 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                 {activeTab === 'studios' && (
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {workflows.length === 0 ? (
-                            <div className="col-span-full text-center py-20 text-white/40 border border-dashed border-white/10 rounded-2xl">
+                            <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
                                 <MonitorPlay className="w-12 h-12 mx-auto mb-4 opacity-20" />
                                 <p>No workflows in this project yet.</p>
-                                <Button
-                                    variant="link"
-                                    className="text-white mt-2"
-                                    onClick={() => setShowCreateModal(true)}
-                                >
-                                    Create your first workflow
-                                </Button>
+                                <CreateWorkflowDialog onCreate={async (name) => {
+                                    const newId = await createWorkflow({ name, projectId });
+                                    if (newId) {
+                                        router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
+                                    }
+                                }} isLoading={isLoading}>
+                                    <Button
+                                        variant="link"
+                                        className="mt-2"
+                                    >
+                                        Create your first workflow
+                                    </Button>
+                                </CreateWorkflowDialog>
                             </div>
                         ) : (
                             workflows.map((workflow) => (
@@ -146,39 +148,12 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                 )}
 
                 {activeTab === 'assets' && (
-                    <div className="text-center py-20 text-white/40">
+                    <div className="text-center py-20 text-muted-foreground">
                         <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
                         <p>Asset management coming soon.</p>
                     </div>
                 )}
             </div>
-
-            {/* Create Modal */}
-            {showCreateModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
-                    <div className="relative w-full max-w-md bg-[#151619] rounded-2xl border border-white/10 p-6 shadow-2xl">
-                        <h2 className="text-xl font-bold text-white mb-4">Create New Workflow</h2>
-                        <div className="mb-6">
-                            <label className="block text-xs font-medium text-white/40 uppercase tracking-wider mb-2">
-                                Workflow Name
-                            </label>
-                            <input
-                                type="text"
-                                value={workflowName}
-                                onChange={(e) => setWorkflowName(e.target.value)}
-                                placeholder="Untitled Workflow"
-                                className="w-full h-10 px-3 bg-[#0B0C0E] border border-white/10 rounded-lg text-white placeholder:text-white/30 focus:outline-none focus:border-white/30"
-                                autoFocus
-                            />
-                        </div>
-                        <div className="flex justify-end gap-3">
-                            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                            <Button onClick={handleCreateWorkflow} disabled={!workflowName.trim()}>Create</Button>
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
@@ -190,24 +165,24 @@ function StudioCard({ workflow, projectId }: { workflow: Workflow; projectId: st
             onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`)}
             className="group cursor-pointer"
         >
-            <div className="aspect-[4/3] rounded-xl overflow-hidden bg-[#151619] border border-white/5 group-hover:border-white/20 transition-all relative">
+            <div className="aspect-[4/3] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                     src={workflow.previewUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop'}
                     alt={workflow.name}
                     className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
-                    <span className="text-xs font-medium text-white px-2 py-1 bg-white/10 rounded-full backdrop-blur-md">
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
+                    <span className="text-xs font-medium text-foreground px-2 py-1 bg-background/80 rounded-full backdrop-blur-md">
                         Open Editor
                     </span>
                 </div>
             </div>
             <div className="mt-3">
-                <p className="text-sm text-white/80 font-medium group-hover:text-white transition-colors">{workflow.name}</p>
+                <p className="text-sm font-medium group-hover:text-foreground transition-colors">{workflow.name}</p>
                 <div className="flex items-center gap-2 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500/50"></span>
-                    <p className="text-xs text-white/40">{new Date(workflow.updatedAt).toLocaleDateString()}</p>
+                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"></span>
+                    <p className="text-xs text-muted-foreground">{new Date(workflow.updatedAt).toLocaleDateString()}</p>
                 </div>
             </div>
         </div>

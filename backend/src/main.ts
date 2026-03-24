@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { json, urlencoded } from 'express';
 import {
   ClassSerializerInterceptor,
   ValidationPipe,
@@ -35,6 +36,11 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
   app.useGlobalPipes(new ValidationPipe(validationOptions));
+
+  // Increase body limit
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ extended: true, limit: '50mb' }));
+
   app.useGlobalInterceptors(
     // ResolvePromisesInterceptor is used to resolve promises in responses because class-transformer can't do it
     // https://github.com/typestack/class-transformer/issues/549
