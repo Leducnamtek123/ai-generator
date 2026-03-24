@@ -12,7 +12,8 @@ export default auth((req) => {
     req.nextUrl.pathname.includes('/dashboard') ||
     req.nextUrl.pathname.includes('/workflow') ||
     req.nextUrl.pathname.includes('/studio') ||
-    req.nextUrl.pathname.includes('/projects'); // specific match
+    req.nextUrl.pathname.includes('/projects') ||
+    req.nextUrl.pathname.includes('/orgs'); // SaaS org routes
 
   // Define auth routes to redirect away from if logged in
   const isAuthRoute =
@@ -34,4 +35,3 @@ export const config = {
   // Matcher ignoring common static files and api routes
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };
-

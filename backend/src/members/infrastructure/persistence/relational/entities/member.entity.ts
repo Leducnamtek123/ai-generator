@@ -9,8 +9,8 @@ import {
   JoinColumn,
   Unique,
 } from 'typeorm';
-import { EntityRelationalHelper } from '../../../../utils/relational-entity-helper';
-import { OrganizationEntity } from '../../../../organizations/infrastructure/persistence/relational/entities/organization.entity';
+import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
+import { OrganizationEntity } from '../../../../../organizations/infrastructure/persistence/relational/entities/organization.entity';
 
 export enum OrgRoleEnum {
   ADMIN = 'ADMIN',
@@ -37,7 +37,7 @@ export class MemberEntity extends EntityRelationalHelper {
   })
   role: OrgRoleEnum;
 
-  @ManyToOne(() => OrganizationEntity, (org) => org.members, {
+  @ManyToOne(() => OrganizationEntity, 'members', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'organization_id' })

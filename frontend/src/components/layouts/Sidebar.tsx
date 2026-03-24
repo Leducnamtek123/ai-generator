@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
+import { OrgSwitcher } from '@/components/saas/OrgSwitcher';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
     HoverCard,
@@ -435,18 +436,10 @@ export function Sidebar() {
                     )}
                 </div>
 
-                {/* Personal Workspace Selector */}
-                {!isCollapsed && (
-                    <div className="px-3 py-3 border-b border-sidebar-border">
-                        <button className="flex items-center gap-2 text-sm text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent px-2 py-2 rounded-lg transition-colors w-full text-left">
-                            <div className="w-5 h-5 rounded bg-destructive flex items-center justify-center text-[9px] font-bold text-destructive-foreground">
-                                P
-                            </div>
-                            <span className="flex-1">Personal</span>
-                            <ChevronDown className="w-3 h-3 text-sidebar-foreground/40" />
-                        </button>
-                    </div>
-                )}
+                {/* Organization Switcher */}
+                <div className={cn("border-b border-sidebar-border", isCollapsed ? "py-2 px-1" : "px-3 py-3")}>
+                    <OrgSwitcher isCollapsed={isCollapsed} />
+                </div>
 
                 <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-1 scrollbar-hide">
                     {/* Main Nav */}

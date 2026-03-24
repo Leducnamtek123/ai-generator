@@ -55,6 +55,12 @@ import { TemplatesModule } from './templates/templates.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
+import { OrganizationsModule } from './organizations/organizations.module';
+import { MembersModule } from './members/members.module';
+import { InvitesModule } from './invites/invites.module';
+import { BillingModule } from './billing/billing.module';
+import { PermissionsModule } from './permissions/permissions.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -114,6 +120,11 @@ import { APP_GUARD } from '@nestjs/core';
     GenerationsModule,
     QueuesModule,
     TemplatesModule,
+    OrganizationsModule,
+    MembersModule,
+    InvitesModule,
+    BillingModule,
+    PermissionsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

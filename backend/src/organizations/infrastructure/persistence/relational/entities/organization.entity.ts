@@ -3,15 +3,11 @@ import {
   CreateDateColumn,
   Entity,
   Index,
-  ManyToOne,
   OneToMany,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
-  JoinColumn,
 } from 'typeorm';
-import { EntityRelationalHelper } from '../../../../utils/relational-entity-helper';
-import { MemberEntity } from '../../../../members/infrastructure/persistence/relational/entities/member.entity';
-import { InviteEntity } from '../../../../invites/infrastructure/persistence/relational/entities/invite.entity';
+import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 
 @Entity({ name: 'organization' })
 export class OrganizationEntity extends EntityRelationalHelper {
@@ -43,11 +39,17 @@ export class OrganizationEntity extends EntityRelationalHelper {
   @Column({ name: 'owner_id' })
   ownerId: number;
 
-  @OneToMany(() => MemberEntity, (member) => member.organization)
-  members: MemberEntity[];
+  @OneToMany(
+    'MemberEntity',
+    (member: any) => member.organization,
+  )
+  members: any[];
 
-  @OneToMany(() => InviteEntity, (invite) => invite.organization)
-  invites: InviteEntity[];
+  @OneToMany(
+    'InviteEntity',
+    (invite: any) => invite.organization,
+  )
+  invites: any[];
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

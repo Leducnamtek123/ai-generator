@@ -8,9 +8,9 @@ import {
   JoinColumn,
   Unique,
 } from 'typeorm';
-import { EntityRelationalHelper } from '../../../../utils/relational-entity-helper';
-import { OrganizationEntity } from '../../../../organizations/infrastructure/persistence/relational/entities/organization.entity';
-import { OrgRoleEnum } from '../../../../members/infrastructure/persistence/relational/entities/member.entity';
+import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
+import { OrganizationEntity } from '../../../../../organizations/infrastructure/persistence/relational/entities/organization.entity';
+import { OrgRoleEnum } from '../../../../../members/infrastructure/persistence/relational/entities/member.entity';
 
 @Entity({ name: 'invite' })
 @Unique(['organizationId', 'email'])
@@ -35,7 +35,7 @@ export class InviteEntity extends EntityRelationalHelper {
   })
   role: OrgRoleEnum;
 
-  @ManyToOne(() => OrganizationEntity, (org) => org.invites, {
+  @ManyToOne(() => OrganizationEntity, 'invites', {
     onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'organization_id' })

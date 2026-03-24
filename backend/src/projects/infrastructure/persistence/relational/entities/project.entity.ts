@@ -3,11 +3,14 @@ import {
   CreateDateColumn,
   DeleteDateColumn,
   Entity,
+  ManyToOne,
+  JoinColumn,
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 import { Project } from '../../../../domain/project';
+import { OrganizationEntity } from '../../../../../organizations/infrastructure/persistence/relational/entities/organization.entity';
 
 @Entity({ name: 'project' })
 export class ProjectEntity extends EntityRelationalHelper implements Project {
@@ -28,6 +31,16 @@ export class ProjectEntity extends EntityRelationalHelper implements Project {
 
   @Column({ type: 'jsonb', nullable: true })
   content: any;
+
+  @Column({ name: 'organization_id', nullable: true })
+  organizationId: string;
+
+  @Column({ name: 'owner_member_id', nullable: true })
+  ownerMemberId: string;
+
+  @ManyToOne(() => OrganizationEntity, { onDelete: 'SET NULL', nullable: true })
+  @JoinColumn({ name: 'organization_id' })
+  organization: OrganizationEntity;
 
   @CreateDateColumn()
   createdAt: Date;

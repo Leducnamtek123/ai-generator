@@ -1,6 +1,6 @@
 import { Invite } from '../../../../domain/invite';
 import { InviteEntity } from '../entities/invite.entity';
-import { OrgRole } from '../../../.././../members/domain/member';
+import { OrgRole } from '../../../../../members/domain/member';
 
 export class InviteMapper {
   static toDomain(raw: InviteEntity): Invite {
