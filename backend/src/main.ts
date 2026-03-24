@@ -20,7 +20,7 @@ async function bootstrap() {
   const configService = app.get(ConfigService<AllConfigType>);
 
   app.enableCors({
-    origin: configService.getOrThrow('app.frontendDomain', { infer: true }),
+    origin: configService.get('app.frontendDomain', { infer: true }) || '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });

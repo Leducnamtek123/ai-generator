@@ -1,12 +1,10 @@
 {
-  "name": "nizam",
+  "name": "ai-generator-frontend",
   "version": "16.0.0",
   "private": true,
-  "description": "Production-ready Next.js 16+ starter built with Tailwind CSS 4 and TypeScript.",
+  "description": "AI Generator - Frontend application built with Next.js 16, Tailwind CSS 4 and TypeScript.",
   "author": {
-    "name": "Ömer Gülçiçek",
-    "email": "iletisim@omergulcicek.com",
-    "url": "https://omergulcicek.com"
+    "name": "AI Generator Team"
   },
   "engines": {
     "node": ">=22.x"
@@ -75,7 +73,8 @@
     "usehooks-ts": "^3.1.1",
     "webpack": "^5.102.1",
     "zod": "^4.1.12",
-    "zustand": "^5.0.11"
+    "zustand": "^5.0.11",
+    "@xyflow/react": "^12.10.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.1.0",
@@ -89,7 +88,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@xyflow/react": "^12.10.0",
+
     "babel-plugin-react-compiler": "1.0.0",
     "commitizen": "^4.3.0",
     "cross-env": "^10.1.0",
@@ -115,11 +114,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/omergulcicek/nizam.git"
+    "url": "https://github.com/leduc/ai-generator.git"
   },
-  "homepage": "https://github.com/omergulcicek/nizam",
+  "homepage": "https://github.com/leduc/ai-generator",
   "bugs": {
-    "url": "https://github.com/omergulcicek/nizam/issues"
+    "url": "https://github.com/leduc/ai-generator/issues"
   },
   "license": "MIT",
   "keywords": [

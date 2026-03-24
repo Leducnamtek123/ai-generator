@@ -1,7 +1,7 @@
 import { MediaItem, MediaLibraryResponse } from '@/types/media';
+import { api } from '@/lib/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' || true;
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
 
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -68,16 +68,19 @@ export const mediaApi = {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`${API_BASE_URL}/media/upload`, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
+        try {
+            const response = await api.post<MediaItem>('/media/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total && onProgress) {
+                        onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+                    }
+                },
+            });
+            return response.data;
+        } catch {
             return null;
         }
-
-        return response.json();
     },
 
     async getMediaLibrary(folder?: string, page = 1): Promise<MediaLibraryResponse> {
@@ -96,10 +99,13 @@ export const mediaApi = {
             };
         }
 
-        const response = await fetch(`${API_BASE_URL}/media/library?folder=${folder || ''}&page=${page}`);
-        if (!response.ok) {
+        try {
+            const response = await api.get<MediaLibraryResponse>('/media/library', {
+                params: { folder: folder || '', page },
+            });
+            return response.data;
+        } catch {
             return { items: [], folders: [], totalCount: 0, hasMore: false };
         }
-        return response.json();
     },
 };

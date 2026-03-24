@@ -1,7 +1,7 @@
 {
-  "name": "nestjs-boilerplate",
+  "name": "ai-generator-backend",
   "version": "1.2.0",
-  "description": "",
+  "description": "AI Generator - Backend API built with NestJS, TypeORM and PostgreSQL.",
   "author": "",
   "private": true,
   "license": "MIT",
@@ -157,8 +157,8 @@
     "testEnvironment": "node"
   },
   "engines": {
-    "node": ">=16.0.0",
-    "npm": ">=8.0.0"
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
   },
   "release-it": {
     "git": {

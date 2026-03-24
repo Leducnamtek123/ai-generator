@@ -10,7 +10,7 @@
  * 3. API responses should return these exact shapes
  */
 
-import { Type, Image as ImageIcon, Video, Sparkles, Scan, Camera, FileText, Upload, StickyNote, Layers, Smile, MessageSquare } from 'lucide-react';
+import { Type, Image as ImageIcon, Video, Sparkles, Scan, Camera, Upload, StickyNote, Layers, Smile, MessageSquare } from 'lucide-react';
 import React from 'react';
 export type { MediaItem, MediaFolder, MediaLibraryResponse } from '@/types/media';
 
@@ -136,8 +136,9 @@ export enum UpscaleFactor {
 }
 
 export enum UpscaleMode {
+    BALANCED = 'balanced',
     CREATIVE = 'creative',
-    PRECISION = 'precision',
+    FAITHFUL = 'faithful',
 }
 
 export enum UpscaleModel {

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { orgApi, type Organization } from '@/services/orgApi';
+import { useCallback, useState } from 'react';
+import { orgApi } from '@/services/orgApi';
 import { memberApi } from '@/services/memberApi';
 import { projectApi, type Project } from '@/services/projectApi';
 import { inviteApi, type Invite } from '@/services/inviteApi';
@@ -30,7 +30,7 @@ export function useOrganization(orgSlug?: string) {
       const orgs = await orgApi.list();
       setOrganizations(orgs);
       return orgs;
-    } catch (err) {
+    } catch {
       setError('Failed to load organizations');
       return [];
     } finally {
@@ -59,14 +59,13 @@ export function useOrganization(orgSlug?: string) {
   }, [slug]);
 
   const loadProjects = useCallback(async (): Promise<Project[]> => {
-    if (!slug) return [];
     try {
-      const data = await projectApi.list(slug);
-      return data.projects || [];
+      const data = await projectApi.list();
+      return data.data || [];
     } catch {
       return [];
     }
-  }, [slug]);
+  }, []);
 
   const loadInvites = useCallback(async (): Promise<Invite[]> => {
     if (!slug) return [];

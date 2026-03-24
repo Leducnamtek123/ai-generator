@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, addEdge, Connection } from '@xyflow/react';
-import { get as apiGet, post as apiPost, patch as apiPatch } from '@/lib/api';
+import { get as apiGet, post as apiPost, patch as apiPatch, del as apiDel } from '@/lib/api';
 
 export interface Workflow {
     id: string;
@@ -46,13 +46,17 @@ interface WorkflowState {
 
     // Internal
     isSaving: boolean;
-    saveTimeout: NodeJS.Timeout | null;
+    saveTimeout: ReturnType<typeof setTimeout> | null;
     triggerAutoSave: () => void;
+
+    // Polling cleanup
+    pollingInterval: ReturnType<typeof setInterval> | null;
+    stopPolling: () => void;
 
     // Execution
     isExecuting: boolean;
     executionStatus: 'idle' | 'running' | 'completed' | 'failed';
-    lastExecutionResult: any;
+    lastExecutionResult: Record<string, unknown> | null;
     executionError: string | null;
     executeWorkflow: () => Promise<void>;
 }
@@ -70,15 +74,29 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     lastExecutionResult: null,
     executionError: null,
 
+    // Polling
+    pollingInterval: null,
+
+    stopPolling: () => {
+        const { pollingInterval } = get();
+        if (pollingInterval) {
+            clearInterval(pollingInterval);
+            set({ pollingInterval: null });
+        }
+    },
+
     executeWorkflow: async () => {
         const { workflow, nodes, edges } = get();
         if (!workflow) return;
+
+        // Cleanup any existing polling
+        get().stopPolling();
 
         set({ isExecuting: true, executionStatus: 'running', lastExecutionResult: null, executionError: null });
 
         try {
             // Include current graph state in execution request
-            const result = await apiPost<any>(`/workflows/${workflow.id}/execute`, {
+            const result = await apiPost<Record<string, unknown>>(`/workflows/${workflow.id}/execute`, {
                 graph: { nodes, edges }
             });
 
@@ -98,13 +116,10 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
             // Update nodes with execution results
             if (result && result.nodeStates) {
-                const nodeStates = result.nodeStates; // Map of nodeId -> state
+                const nodeStates = result.nodeStates as Record<string, Record<string, unknown>>;
                 set((state) => ({
                     nodes: state.nodes.map(node => {
-                        // The map keys might be object keys if it's JSON over wire
-                        // Assuming result.nodeStates is an object/map from backend
-                        // If it's a Map serialized to JSON, it might be an object
-                        const nodeState = nodeStates[node.id] || (nodeStates instanceof Map ? nodeStates.get(node.id) : undefined);
+                        const nodeState = nodeStates[node.id];
 
                         if (nodeState) {
                             return {
@@ -115,7 +130,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                                         nodeState.status === 'failed' ? 'error' :
                                             nodeState.status === 'running' ? 'processing' : 'idle',
                                     // Update output data if present
-                                    ...nodeState.output
+                                    ...(typeof nodeState.output === 'object' && nodeState.output !== null ? nodeState.output as Record<string, unknown> : {})
                                 }
                             };
                         }
@@ -126,7 +141,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
             // Start polling for updates if execution is still running or queued
             if (result.status === 'queued' || result.status === 'RUNNING' || result.status === 'idle') {
-                const pollInterval = setInterval(async () => {
+                const intervalId = setInterval(async () => {
                     try {
                         const updatedWorkflow = await apiGet<Workflow>(`/workflows/${workflow.id}`);
 
@@ -149,9 +164,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                             })
                         }));
 
-                        // Stop polling if completed or failed
-                        // We might need to check the global status from the API specifically
-                        // For now, if all generation nodes are not 'running'/'pending'/'processing'/'queued'
+                        // Stop polling if all nodes are done
                         const isStillRunning = updatedWorkflow.nodes?.some(n =>
                             n.data?.status === 'running' ||
                             n.data?.status === 'pending' ||
@@ -160,23 +173,22 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                         );
 
                         if (!isStillRunning) {
-                            clearInterval(pollInterval);
-                            set({ isExecuting: false, executionStatus: 'completed' }); // Or failed if any have error
+                            get().stopPolling();
+                            set({ isExecuting: false, executionStatus: 'completed' });
                         }
-                    } catch (pollError) {
-                        console.error('Polling failed', pollError);
-                        clearInterval(pollInterval);
+                    } catch {
+                        get().stopPolling();
                         set({ isExecuting: false, executionStatus: 'failed' });
                     }
-                }, 3000); // Poll every 3 seconds
+                }, 3000);
+
+                set({ pollingInterval: intervalId });
             }
 
-        } catch (error) {
-            console.error('Workflow execution failed', error);
-            const errorMessage = (error as any)?.response?.data?.message || (error as any)?.message || 'Execution failed';
-            set({ executionStatus: 'failed', executionError: errorMessage });
-        } finally {
-            set({ isExecuting: false });
+        } catch (error: unknown) {
+            const axiosErr = error as { response?: { data?: { message?: string } }; message?: string };
+            const errorMessage = axiosErr?.response?.data?.message || axiosErr?.message || 'Execution failed';
+            set({ isExecuting: false, executionStatus: 'failed', executionError: errorMessage });
         }
     },
 
@@ -234,11 +246,15 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                 }
             }
 
+            if (!projectId) {
+                throw new Error('No project available. Please create a project first.');
+            }
+
             const newWorkflow = await apiPost<Workflow>('/workflows', {
                 ...payload,
-                projectId: projectId || '00000000-0000-0000-0000-000000000000', // Final fallback
+                projectId,
                 nodes: payload.nodes || [],
-                edges: payload.edges || []
+                edges: payload.edges || [],
             });
 
             // Refresh list
@@ -326,7 +342,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     loadTemplate: async (templateId) => {
         set({ isLoading: true });
         try {
-            const template = await apiGet<any>(`/templates/${templateId}`);
+            const template = await apiGet<{ content?: { nodes?: Node[]; edges?: Edge[] } }>(`/templates/${templateId}`);
             if (template && template.content) {
                 set({
                     workflow: null,
@@ -372,7 +388,6 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
     },
     deleteWorkflow: async (id: string) => {
         try {
-            const { del: apiDel } = await import('@/lib/api');
             await apiDel(`/workflows/${id}`);
 
             set((state) => ({
@@ -397,7 +412,7 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         }
     },
 
-    saveTimeout: null as NodeJS.Timeout | null,
+    saveTimeout: null as ReturnType<typeof setTimeout> | null,
     isSaving: false,
 
     triggerAutoSave: () => {

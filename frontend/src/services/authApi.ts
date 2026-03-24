@@ -1,4 +1,4 @@
-import api from "./api";
+import { api } from "@/lib/api";
 
 // Matches: POST /auth/email/login
 export const authApi = {

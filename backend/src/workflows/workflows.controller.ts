@@ -30,13 +30,11 @@ export class WorkflowsController {
 
   @Post()
   create(@Body() createWorkflowDto: CreateWorkflowDto) {
-    console.log('Creating workflow:', createWorkflowDto);
     return this.workflowsService.create(createWorkflowDto);
   }
 
   @Get()
   findAll(@Request() req, @Query('projectId') projectId: string) {
-    console.log('Finding workflows for project:', projectId);
     if (projectId) {
       return this.workflowsService.findByProject(projectId, req.user.id);
     }
@@ -59,12 +57,6 @@ export class WorkflowsController {
     @Param('id') id: string,
     @Body() updateWorkflowDto: UpdateWorkflowDto,
   ) {
-    console.log(
-      'Updating workflow:',
-      id,
-      'Payload keys:',
-      Object.keys(updateWorkflowDto),
-    );
     return this.workflowsService.update(id, req.user.id, updateWorkflowDto);
   }
 

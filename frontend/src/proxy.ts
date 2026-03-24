@@ -4,21 +4,23 @@ import { routing } from "@/i18n/routing";
 
 const intlMiddleware = createMiddleware(routing);
 
+// Match protected/auth route segments accounting for locale prefixes (e.g. /en/dashboard)
+const PROTECTED_SEGMENTS = ['/dashboard', '/workflow', '/studio', '/projects', '/orgs'];
+const AUTH_SEGMENTS = ['/sign-in', '/sign-up'];
+
+function matchesSegment(pathname: string, segments: string[]): boolean {
+  return segments.some((seg) => {
+    // Match /segment or /locale/segment (e.g. /en/dashboard, /dashboard/settings)
+    const pattern = new RegExp(`(^|/[a-z]{2})${seg}(/|$)`);
+    return pattern.test(pathname);
+  });
+}
+
 export default auth((req) => {
   const isLoggedIn = !!req.auth;
 
-  // Define protected routes
-  const isDashboardRoute =
-    req.nextUrl.pathname.includes('/dashboard') ||
-    req.nextUrl.pathname.includes('/workflow') ||
-    req.nextUrl.pathname.includes('/studio') ||
-    req.nextUrl.pathname.includes('/projects') ||
-    req.nextUrl.pathname.includes('/orgs'); // SaaS org routes
-
-  // Define auth routes to redirect away from if logged in
-  const isAuthRoute =
-    req.nextUrl.pathname.includes('/sign-in') ||
-    req.nextUrl.pathname.includes('/sign-up');
+  const isDashboardRoute = matchesSegment(req.nextUrl.pathname, PROTECTED_SEGMENTS);
+  const isAuthRoute = matchesSegment(req.nextUrl.pathname, AUTH_SEGMENTS);
 
   if (isDashboardRoute && !isLoggedIn) {
     return Response.redirect(new URL('/sign-in', req.nextUrl));

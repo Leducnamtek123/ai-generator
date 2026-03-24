@@ -1,5 +1,5 @@
 import type { Locale } from "date-fns";
-import { enUS, tr } from "date-fns/locale";
+import { enUS, vi } from "date-fns/locale";
 
 import { DEFAULT_LOCALE, LOCALES, type LocaleCode } from "@/constants/i18n";
 
@@ -10,7 +10,7 @@ export const normalizeLocale = (loc?: string): LocaleCode => {
 
 export const DATEFNS_LOCALES: Partial<Record<LocaleCode, Locale>> = {
   en: enUS,
-  vi: vv
+  vi: vi
 };
 
 export const getDateFnsLocale = (code?: string): Locale => {
