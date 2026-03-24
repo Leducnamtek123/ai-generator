@@ -187,3 +187,175 @@ export class GenerationCallbackDto {
   @IsString()
   error?: string;
 }
+
+// ======== Audio Generation DTOs ========
+
+export class GenerateMusicDto {
+  @ApiProperty({ description: 'Text description of the music to generate' })
+  @IsString()
+  prompt: string;
+
+  @ApiPropertyOptional({ enum: ['pop', 'rock', 'electronic', 'classical', 'jazz', 'ambient', 'cinematic', 'lofi', 'hiphop', 'rnb', 'country', 'reggae'] })
+  @IsOptional()
+  @IsString()
+  genre?: string;
+
+  @ApiPropertyOptional({ description: 'Mood tags', type: [String] })
+  @IsOptional()
+  moods?: string[];
+
+  @ApiPropertyOptional({ description: 'Instrument tags', type: [String] })
+  @IsOptional()
+  instruments?: string[];
+
+  @ApiPropertyOptional({ description: 'Duration in seconds', minimum: 15, maximum: 180 })
+  @IsOptional()
+  @IsNumber()
+  @Min(15)
+  @Max(180)
+  duration?: number;
+
+  @ApiPropertyOptional({ description: 'Tempo in BPM', minimum: 60, maximum: 200 })
+  @IsOptional()
+  @IsNumber()
+  @Min(60)
+  @Max(200)
+  tempo?: number;
+}
+
+export class GenerateSfxDto {
+  @ApiProperty({ description: 'Text description of the sound effect' })
+  @IsString()
+  prompt: string;
+
+  @ApiPropertyOptional({ enum: ['nature', 'urban', 'mechanical', 'digital', 'human', 'musical', 'weather', 'scifi'] })
+  @IsOptional()
+  @IsString()
+  category?: string;
+
+  @ApiPropertyOptional({ description: 'Duration in seconds', minimum: 0.5, maximum: 30 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.5)
+  @Max(30)
+  duration?: number;
+}
+
+export class GenerateVoiceDto {
+  @ApiProperty({ description: 'Text to speak or voice description' })
+  @IsString()
+  text: string;
+
+  @ApiPropertyOptional({ enum: ['tts', 'clone'] })
+  @IsOptional()
+  @IsString()
+  mode?: 'tts' | 'clone';
+
+  @ApiPropertyOptional({ description: 'Voice ID from library' })
+  @IsOptional()
+  @IsString()
+  voiceId?: string;
+
+  @ApiPropertyOptional({ description: 'Language code' })
+  @IsOptional()
+  @IsString()
+  language?: string;
+
+  @ApiPropertyOptional({ description: 'Emotion', enum: ['neutral', 'happy', 'sad', 'angry', 'excited', 'calm'] })
+  @IsOptional()
+  @IsString()
+  emotion?: string;
+
+  @ApiPropertyOptional({ description: 'Speech speed', minimum: 0.5, maximum: 2.0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0.5)
+  @Max(2.0)
+  speed?: number;
+}
+
+// ======== Video Processing DTOs ========
+
+export class LipSyncDto {
+  @ApiProperty({ description: 'URL of the source video' })
+  @IsString()
+  videoUrl: string;
+
+  @ApiProperty({ description: 'URL of the audio track' })
+  @IsString()
+  audioUrl: string;
+
+  @ApiPropertyOptional({ enum: ['full', 'lips-only', 'expressive'] })
+  @IsOptional()
+  @IsString()
+  syncMode?: string;
+
+  @ApiPropertyOptional({ description: 'Sync accuracy', minimum: 50, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(50)
+  @Max(100)
+  accuracy?: number;
+
+  @ApiPropertyOptional({ description: 'Motion smoothing', minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  smoothing?: number;
+}
+
+export class UpscaleVideoDto {
+  @ApiProperty({ description: 'URL of the source video' })
+  @IsString()
+  videoUrl: string;
+
+  @ApiPropertyOptional({ enum: ['720p', '1080p', '2k', '4k'] })
+  @IsOptional()
+  @IsString()
+  targetResolution?: string;
+
+  @ApiPropertyOptional({ enum: ['fast', 'balanced', 'quality'] })
+  @IsOptional()
+  @IsString()
+  model?: string;
+
+  @ApiPropertyOptional({ description: 'Denoise level', minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  denoise?: number;
+
+  @ApiPropertyOptional({ description: 'Sharpen level', minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  sharpen?: number;
+
+  @ApiPropertyOptional({ description: 'Enable FPS boosting to 60fps' })
+  @IsOptional()
+  fpsBoost?: boolean;
+}
+
+// ======== Image Processing DTOs ========
+
+export class RemoveBackgroundDto {
+  @ApiProperty({ description: 'URL of the image' })
+  @IsString()
+  imageUrl: string;
+
+  @ApiPropertyOptional({ enum: ['auto', 'person', 'product', 'animal'] })
+  @IsOptional()
+  @IsString()
+  mode?: string;
+
+  @ApiPropertyOptional({ description: 'Edge refinement level', minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  edgeRefinement?: number;
+}
+

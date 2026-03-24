@@ -139,6 +139,7 @@ export enum UpscaleMode {
     BALANCED = 'balanced',
     CREATIVE = 'creative',
     FAITHFUL = 'faithful',
+    PRECISION = 'precision',
 }
 
 export enum UpscaleModel {

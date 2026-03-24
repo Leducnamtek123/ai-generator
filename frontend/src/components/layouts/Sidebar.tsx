@@ -46,6 +46,7 @@ export const pinnedItems = [
 export const bottomItems = [
     { icon: Box, label: 'Projects', href: '/projects' },
     { icon: Clock, label: 'History', href: '/history' },
+    { icon: LayoutGrid, label: 'Settings', href: '/settings' },
 ];
 
 export const ALL_TOOLS_LIST = [

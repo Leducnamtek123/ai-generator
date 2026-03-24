@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { Share2, Sparkles, Plus, Copy, Edit, Image, FolderInput, ChevronDown, Menu } from 'lucide-react';
+import { Share2, Sparkles, Plus, Copy, Edit, Image, FolderInput, ChevronDown, Menu, Bell } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/ui/button';
 import { UserMenu } from './header/UserMenu';
@@ -191,7 +191,56 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                             <Share2 className="w-3.5 h-3.5" />
                             Share
                         </Button>
-                        <div className="hidden sm:block h-4 w-px bg-border" />
+                        <div className="hidden sm:block h-4 w-px bg-border mx-1" />
+
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+                                    <Bell className="w-4 h-4 text-muted-foreground" />
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-80 p-0">
+                                <div className="p-3 border-b border-border flex items-center justify-between">
+                                    <h3 className="font-semibold text-sm">Notifications</h3>
+                                    <button className="text-xs text-muted-foreground hover:text-foreground">Mark all as read</button>
+                                </div>
+                                <div className="max-h-[300px] overflow-y-auto">
+                                    <div className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 opacity-60">
+                                        <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">
+                                            <Sparkles className="w-4 h-4" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium leading-tight">Image generated successfully</p>
+                                            <p className="text-xs text-muted-foreground">Your 4 images for "Cyberpunk city" are ready.</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 px-3 py-3">
+                                        <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
+                                            <Image className="w-4 h-4" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium leading-tight">Welcome to PaintAI</p>
+                                            <p className="text-xs text-muted-foreground">Thanks for joining! You have 100 free credits to get started.</p>
+                                        </div>
+                                    </div>
+                                    <div className="p-3 hover:bg-muted/50 cursor-pointer flex gap-3 px-3 py-3 opacity-60">
+                                        <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
+                                            <Bell className="w-4 h-4" />
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-sm font-medium leading-tight">Video generation failed</p>
+                                            <p className="text-xs text-muted-foreground">Error generating "Lip sync for Avatar". Credits refunded.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div className="p-2 border-t border-border">
+                                    <Button variant="ghost" className="w-full text-xs h-8">View all notifications</Button>
+                                </div>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+
+                        <div className="hidden sm:block h-4 w-px bg-border mx-1" />
                         <UserMenu />
                     </div>
                 </header>

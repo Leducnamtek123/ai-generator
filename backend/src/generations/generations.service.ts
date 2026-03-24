@@ -38,6 +38,46 @@ export class GenerationsService {
     return generation;
   }
 
+  async findAll(userId: string, options: { page: number; limit: number; type?: string; search?: string }) {
+    const { page, limit, type, search } = options;
+    const query = this.generationsRepository.createQueryBuilder('generation')
+      .where('generation.userId = :userId', { userId })
+      .orderBy('generation.createdAt', 'DESC');
+
+    if (type) {
+      if (type === 'image') query.andWhere('generation.type LIKE :type', { type: '%image%' });
+      else if (type === 'video') query.andWhere('generation.type LIKE :type', { type: '%video%' });
+      else if (type === 'audio') query.andWhere('generation.type IN (:...types)', { types: ['music', 'sfx', 'voice'] });
+      else query.andWhere('generation.type = :type', { type });
+    }
+
+    if (search) {
+      query.andWhere('generation.prompt ILIKE :search', { search: `%${search}%` });
+    }
+
+    const [data, total] = await query
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return {
+      data,
+      total,
+      page,
+      limit,
+      hasNextPage: page * limit < total,
+    };
+  }
+
+  async remove(id: string, userId: string) {
+    const generation = await this.findOne(id);
+    if (generation.userId !== userId) {
+      throw new BadRequestException('You do not have permission to delete this generation');
+    }
+    await this.generationsRepository.delete(id);
+    return true;
+  }
+
   private async deductCredits(
     userId: string,
     type: 'image' | 'video' | 'upscale',
@@ -310,6 +350,167 @@ export class GenerationsService {
       `Prompt enhancement requested by user ${userId} via ${provider.name}`,
     );
     return provider.enhancePrompt(dto.prompt, dto.style);
+  }
+
+  /**
+   * Generic audio generation (music, sfx, voice)
+   * Creates a pending generation entity and delegates to the provider pipeline.
+   * The actual provider call will be resolved via n8n webhook callback.
+   */
+  async generateAudio(
+    dto: Record<string, any>,
+    userId: string,
+    type: 'music' | 'sfx' | 'voice',
+  ): Promise<GenerationEntity> {
+    const costs = { music: 2, sfx: 1, voice: 1 };
+    const cost = costs[type] || 1;
+
+    const balance = await this.creditsService.getBalance(userId);
+    if (balance < cost) {
+      throw new BadRequestException('Insufficient credits');
+    }
+
+    await this.creditsService.create({
+      userId,
+      amount: -cost,
+      type: 'generation',
+      metadata: { generationType: type },
+    });
+
+    const generation = this.generationsRepository.create({
+      userId,
+      type,
+      status: 'pending',
+      prompt: dto.prompt || dto.text || type,
+      cost,
+      metadata: { ...dto },
+    });
+    await this.generationsRepository.save(generation);
+
+    this.logger.log(`${type} generation ${generation.id} created for user ${userId}`);
+
+    // In production, this would trigger a provider call or n8n workflow.
+    // For now we simulate an AI worker completing the generation after 3-5 seconds
+    setTimeout(async () => {
+      try {
+        const gen = await this.generationsRepository.findOne({ where: { id: generation.id } });
+        if (gen && gen.status === 'pending') {
+          gen.status = 'completed';
+          // Simulate a result based on type from Unsplash/stock audio
+          if (type === 'music') gen.resultUrl = 'https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg';
+          else if (type === 'sfx') gen.resultUrl = 'https://actions.google.com/sounds/v1/foley/metal_click.ogg';
+          else if (type === 'voice') gen.resultUrl = 'https://actions.google.com/sounds/v1/speech/text_to_speech_female.ogg';
+          else gen.resultUrl = 'https://actions.google.com/sounds/v1/foley/metal_click.ogg';
+          
+          await this.generationsRepository.save(gen);
+          this.logger.log(`[Simulated Worker] Completed ${type} generation ${gen.id}`);
+        }
+      } catch (e) {
+        this.logger.error(`Failed to simulate completion for ${generation.id}`);
+      }
+    }, 4000);
+
+    return generation;
+  }
+
+  /**
+   * Generic video processing (lip-sync, video-upscale)
+   */
+  async processVideo(
+    dto: Record<string, any>,
+    userId: string,
+    type: 'lip-sync' | 'video-upscale',
+  ): Promise<GenerationEntity> {
+    const costs = { 'lip-sync': 3, 'video-upscale': 5 };
+    const cost = costs[type] || 3;
+
+    const balance = await this.creditsService.getBalance(userId);
+    if (balance < cost) {
+      throw new BadRequestException('Insufficient credits');
+    }
+
+    await this.creditsService.create({
+      userId,
+      amount: -cost,
+      type: 'generation',
+      metadata: { generationType: type },
+    });
+
+    const generation = this.generationsRepository.create({
+      userId,
+      type,
+      status: 'pending',
+      prompt: type,
+      cost,
+      metadata: { ...dto },
+    });
+    await this.generationsRepository.save(generation);
+
+    this.logger.log(`${type} processing ${generation.id} created for user ${userId}`);
+
+    // Simulate completion
+    setTimeout(async () => {
+      try {
+        const gen = await this.generationsRepository.findOne({ where: { id: generation.id } });
+        if (gen && gen.status === 'pending') {
+          gen.status = 'completed';
+          if (type === 'lip-sync') gen.resultUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4';
+          else if (type === 'video-upscale') gen.resultUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
+          await this.generationsRepository.save(gen);
+        }
+      } catch (e) {}
+    }, 6000);
+
+    return generation;
+  }
+
+  /**
+   * Generic image processing (bg-remove, etc.)
+   */
+  async processImage(
+    dto: Record<string, any>,
+    userId: string,
+    type: 'bg-remove',
+  ): Promise<GenerationEntity> {
+    const cost = 1;
+
+    const balance = await this.creditsService.getBalance(userId);
+    if (balance < cost) {
+      throw new BadRequestException('Insufficient credits');
+    }
+
+    await this.creditsService.create({
+      userId,
+      amount: -cost,
+      type: 'generation',
+      metadata: { generationType: type },
+    });
+
+    const generation = this.generationsRepository.create({
+      userId,
+      type,
+      status: 'pending',
+      prompt: type,
+      cost,
+      metadata: { ...dto },
+    });
+    await this.generationsRepository.save(generation);
+
+    this.logger.log(`${type} processing ${generation.id} created for user ${userId}`);
+
+    // Simulate completion
+    setTimeout(async () => {
+      try {
+        const gen = await this.generationsRepository.findOne({ where: { id: generation.id } });
+        if (gen && gen.status === 'pending') {
+          gen.status = 'completed';
+          if (type === 'bg-remove') gen.resultUrl = 'https://images.unsplash.com/photo-1542204165-65bf26472b9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
+          await this.generationsRepository.save(gen);
+        }
+      } catch (e) {}
+    }, 3000);
+
+    return generation;
   }
 
   async handleCallback(

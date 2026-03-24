@@ -63,7 +63,7 @@ export default registerAs<FileConfig>('file', () => {
     awsDefaultS3Bucket: process.env.AWS_DEFAULT_S3_BUCKET,
     awsS3Region: process.env.AWS_S3_REGION,
     awsS3Endpoint: process.env.AWS_S3_ENDPOINT,
-    maxFileSize: 52428800, // 50mb
+    maxFileSize: parseInt(process.env.MAX_FILE_SIZE || '524288000', 10), // 500mb default
     cloudinaryCloudName: process.env.CLOUDINARY_CLOUD_NAME,
     cloudinaryApiKey: process.env.CLOUDINARY_API_KEY,
     cloudinaryApiSecret: process.env.CLOUDINARY_API_SECRET,

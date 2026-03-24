@@ -4,5 +4,6 @@ export interface GalleryItem {
     prompt: string;
     author: string;
     likes: number;
+    isLiked?: boolean;
     aspectRatio: string;
 }

@@ -48,7 +48,7 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
 
         return {
           fileFilter: (request, file, callback) => {
-            if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/i)) {
+            if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp|svg|mp4|mov|avi|webm|mkv|mp3|wav|ogg|aac|flac|m4a)$/i)) {
               return callback(
                 new UnprocessableEntityException({
                   status: HttpStatus.UNPROCESSABLE_ENTITY,
