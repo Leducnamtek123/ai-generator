@@ -7,7 +7,7 @@ export class MemberMapper {
     domain.id = raw.id;
     domain.userId = raw.userId;
     domain.organizationId = raw.organizationId;
-    domain.role = raw.role as OrgRole;
+    domain.role = raw.role as unknown as OrgRole;
     domain.createdAt = raw.createdAt;
     domain.updatedAt = raw.updatedAt;
     return domain;

@@ -9,7 +9,7 @@ export class InviteMapper {
     domain.authorId = raw.authorId;
     domain.organizationId = raw.organizationId;
     domain.email = raw.email;
-    domain.role = raw.role as OrgRole;
+    domain.role = raw.role as unknown as OrgRole;
     domain.createdAt = raw.createdAt;
     return domain;
   }

@@ -51,6 +51,43 @@ services:
       exit 0;
       "
 
+  # Backend (NestJS API)
+  backend:
+    container_name: ai-generator-backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8000:3001"
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_HOST=postgres
+      - WORKER_HOST=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - AWS_S3_ENDPOINT=http://minio:9000
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  # Frontend (Next.js Website)
+  frontend:
+    container_name: ai-generator-frontend
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./frontend/.env
+    # Note: Next.js bakes NEXT_PUBLIC_* env vars at build time, 
+    # so they are captured during the build phase from frontend/.env
+    depends_on:
+      - backend
+
 volumes:
   postgres-data:
   minio-data:
