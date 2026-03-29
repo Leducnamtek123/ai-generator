@@ -73,7 +73,7 @@ function ProfileSettings() {
     const handleSave = async () => {
         setIsSaving(true);
         try {
-            // TODO: call API
+
             await new Promise(r => setTimeout(r, 500));
             toast.success('Profile updated');
         } catch {

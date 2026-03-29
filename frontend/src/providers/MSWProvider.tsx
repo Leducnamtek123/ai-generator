@@ -9,7 +9,7 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
     useEffect(() => {
         async function initMSW() {
             if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
-                console.log('[MSW] Initializing...');
+
                 try {
                     const { worker } = await import('../mocks/browser');
                     await worker.start({
@@ -18,7 +18,7 @@ export function MSWProvider({ children }: { children: React.ReactNode }) {
                             url: '/mockServiceWorker.js'
                         }
                     });
-                    console.log('[MSW] Ready');
+
                     setIsReady(true);
                 } catch (error) {
                     console.error('[MSW] Failed to initialize:', error);

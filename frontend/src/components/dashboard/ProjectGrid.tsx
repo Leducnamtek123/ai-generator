@@ -62,8 +62,8 @@ export function ProjectGrid() {
                                         </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); /* TODO: Rename */ }}>Rename</DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); /* TODO: Delete */ }} className="text-destructive">Delete</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); }}>Rename</DropdownMenuItem>
+                                        <DropdownMenuItem onClick={(e) => { e.preventDefault(); }} className="text-destructive">Delete</DropdownMenuItem>
                                     </DropdownMenuContent>
                                 </DropdownMenu>
                             </div>

@@ -17,7 +17,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     useEffect(() => {
         if (mounted && status !== "loading") {
             if (!session) {
-                console.log('Redirecting to sign-in...');
+
                 router.push('/sign-in');
             }
         }

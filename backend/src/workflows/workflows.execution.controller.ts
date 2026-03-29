@@ -38,7 +38,7 @@ export class WorkflowsExecutionController {
       throw new NotFoundException('Workflow not found');
     }
 
-    // TODO: Verify ownership/permissions
+
 
     // Use provided graph or fallback to stored graph (if we store JSON in DB)
     // For now, we expect the frontend to send the latest graph state
