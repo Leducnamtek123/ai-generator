@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { Zap, Download, Sparkles, Loader2, Play, Pause, Volume2, Clock, Folder } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -48,9 +48,23 @@ export default function SfxGeneratorPage() {
             category: selectedCategory || undefined,
             duration: parseFloat(duration),
         });
-        setResults(mockResults);
         setIsGenerating(false);
     };
+
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResults([{
+                id: currentGeneration.id,
+                name: prompt.slice(0, 30),
+                duration: duration,
+                category: selectedCategory || 'Custom',
+            }]);
+            setIsGenerating(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsGenerating(false);
+        }
+    }, [currentGeneration]);
 
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">

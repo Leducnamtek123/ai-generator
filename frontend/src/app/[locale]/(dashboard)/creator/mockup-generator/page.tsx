@@ -43,7 +43,7 @@ export default function MockupGeneratorPage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [results, setResults] = useState<string[]>([]);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { startGeneration } = useGenerationStore();
+    const { mockupGenerator } = useGenerationStore();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -53,11 +53,12 @@ export default function MockupGeneratorPage() {
     const handleGenerate = async () => {
         if (!uploadedImage) return;
         setIsGenerating(true);
-        await startGeneration('/generations/image', {
+        await mockupGenerator({
+            designUrl: uploadedImage,
+            template: selectedCategory,
             prompt: `${selectedDevice} mockup in ${selectedScene} scene`,
-            imageUrl: uploadedImage,
+            scene: selectedScene,
         });
-        setResults(mockResults);
         setIsGenerating(false);
     };
 

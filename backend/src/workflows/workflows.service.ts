@@ -16,7 +16,7 @@ export class WorkflowsService {
     @InjectQueue(WORKFLOW_QUEUE) private workflowQueue: Queue,
   ) {}
 
-  create(createWorkflowDto: CreateWorkflowDto) {
+  create(createWorkflowDto: CreateWorkflowDto, userId?: string | number) {
     const clonedPayload = {
       name: createWorkflowDto.name,
       nodes: createWorkflowDto.nodes,
@@ -24,6 +24,7 @@ export class WorkflowsService {
       projectId: createWorkflowDto.projectId,
       previewUrl: createWorkflowDto.previewUrl,
       visibility: createWorkflowDto.visibility || 'private',
+      userId: userId ? String(userId) : undefined,
     };
     return this.workflowRepository.create(clonedPayload as any);
   }

@@ -51,7 +51,7 @@ services:
       exit 0;
       "
 
-  # Backend (NestJS API)
+  # Backend (NestJS API) - Core Engine with direct AI provider integration
   backend:
     container_name: ai-generator-backend
     build:
@@ -59,7 +59,7 @@ services:
       dockerfile: Dockerfile
     restart: unless-stopped
     ports:
-      - "8000:3001"
+      - "8000:8000"
     env_file:
       - ./backend/.env
     environment:
@@ -83,8 +83,6 @@ services:
       - "3000:3000"
     env_file:
       - ./frontend/.env
-    # Note: Next.js bakes NEXT_PUBLIC_* env vars at build time, 
-    # so they are captured during the build phase from frontend/.env
     depends_on:
       - backend
 

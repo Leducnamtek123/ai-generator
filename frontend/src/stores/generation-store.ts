@@ -37,6 +37,13 @@ interface GenerationState {
 
     // Image processing actions
     removeBackground: (params: { imageUrl: string; mode?: string; edgeRefinement?: number }) => Promise<void>;
+    sketchToImage: (params: { prompt: string; sketchUrl: string; style?: string; fidelity?: number }) => Promise<void>;
+    imageVariations: (params: { imageUrl: string; prompt?: string; strength?: number; count?: number }) => Promise<void>;
+    cameraChange: (params: { imageUrl: string; movement?: string; angle?: number; prompt?: string }) => Promise<void>;
+    iconGenerator: (params: { prompt: string; style?: string; size?: string; color?: string; backgroundColor?: string }) => Promise<void>;
+    imageExtend: (params: { imageUrl: string; direction?: string; pixels?: number; prompt?: string }) => Promise<void>;
+    mockupGenerator: (params: { designUrl: string; template?: string; prompt?: string; scene?: string }) => Promise<void>;
+    skinEnhance: (params: { imageUrl: string; level?: number; mode?: string; preserveDetails?: boolean }) => Promise<void>;
 
     // Generic action for any endpoint
     startGeneration: (endpoint: string, params: Record<string, any>) => Promise<void>;
@@ -87,6 +94,13 @@ const voiceAction = createGenerationAction('/generations/voice');
 const lipSyncAction = createGenerationAction('/generations/lip-sync');
 const videoUpscaleAction = createGenerationAction('/generations/video-upscale');
 const bgRemoveAction = createGenerationAction('/generations/bg-remove');
+const sketchToImageAction = createGenerationAction('/generations/sketch-to-image');
+const variationsAction = createGenerationAction('/generations/variations');
+const cameraChangeAction = createGenerationAction('/generations/camera-change');
+const iconGenAction = createGenerationAction('/generations/icon-gen');
+const imageExtendAction = createGenerationAction('/generations/image-extend');
+const mockupAction = createGenerationAction('/generations/mockup');
+const skinEnhanceAction = createGenerationAction('/generations/skin-enhance');
 
 export const useGenerationStore = create<GenerationState>((set, get) => ({
     currentGeneration: null,
@@ -109,6 +123,13 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
 
     // Image processing
     removeBackground: (params) => bgRemoveAction(params, set, get),
+    sketchToImage: (params) => sketchToImageAction(params, set, get),
+    imageVariations: (params) => variationsAction(params, set, get),
+    cameraChange: (params) => cameraChangeAction(params, set, get),
+    iconGenerator: (params) => iconGenAction(params, set, get),
+    imageExtend: (params) => imageExtendAction(params, set, get),
+    mockupGenerator: (params) => mockupAction(params, set, get),
+    skinEnhance: (params) => skinEnhanceAction(params, set, get),
 
     // Generic
     startGeneration: async (endpoint, params) => {

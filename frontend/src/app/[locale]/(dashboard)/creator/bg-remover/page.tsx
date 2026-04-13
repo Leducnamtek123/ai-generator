@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
     Eraser,
@@ -61,15 +61,26 @@ export default function BgRemoverPage() {
         }
     };
 
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResultImage(currentGeneration.resultUrl);
+            setIsProcessing(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsProcessing(false);
+        }
+    }, [currentGeneration]);
+
     const handleRemoveBg = async () => {
         if (!uploadedImage) return;
         setIsProcessing(true);
+        setResultImage(null);
         await removeBackground({
             imageUrl: uploadedImage,
             mode: qualityMode === 'fast' ? 'auto' : qualityMode === 'quality' ? 'person' : 'auto',
             edgeRefinement: edgeRefinement ? 80 : 20,
         });
-        setResultImage(uploadedImage);
+        // Result will come through currentGeneration.resultUrl via polling
         setIsProcessing(false);
     };
 

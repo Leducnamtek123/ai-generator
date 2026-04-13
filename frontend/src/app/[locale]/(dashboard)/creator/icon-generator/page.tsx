@@ -68,15 +68,17 @@ export default function IconGeneratorPage() {
     const [cornerRadius, setCornerRadius] = useState(20);
     const [isGenerating, setIsGenerating] = useState(false);
     const [results, setResults] = useState<string[]>([]);
-    const { startGeneration } = useGenerationStore();
+    const { iconGenerator } = useGenerationStore();
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
         setIsGenerating(true);
-        await startGeneration('/generations/image', {
-            prompt: `${selectedStyle} icon: ${prompt}, ${selectedShape} shape, ${selectedSize}`,
+        await iconGenerator({
+            prompt,
+            style: selectedStyle,
+            size: selectedSize.split('x')[0],
+            color: colorPalettes.find(p => p.id === selectedPalette)?.colors[0],
         });
-        setResults(mockResults);
         setIsGenerating(false);
     };
 

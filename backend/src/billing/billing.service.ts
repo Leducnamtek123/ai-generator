@@ -1,15 +1,8 @@
 import {
-  Controller,
   ForbiddenException,
-  Get,
   Injectable,
   NotFoundException,
-  Param,
-  Request,
-  UseGuards,
 } from '@nestjs/common';
-import { AuthGuard } from '@nestjs/passport';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { MemberRepository } from '../members/infrastructure/persistence/member.repository';
 import { OrganizationRepository } from '../organizations/infrastructure/persistence/organization.repository';
 import { defineAbilityFor, OrgAction } from '../permissions/permissions';
@@ -52,18 +45,5 @@ export class BillingService {
       },
       total: billableMembers.length * 10,
     };
-  }
-}
-
-@ApiBearerAuth()
-@ApiTags('Billing')
-@Controller({ path: 'orgs/:orgSlug/billing', version: '1' })
-@UseGuards(AuthGuard('jwt'))
-export class BillingController {
-  constructor(private readonly billingService: BillingService) {}
-
-  @Get()
-  getBilling(@Request() req, @Param('orgSlug') orgSlug: string) {
-    return this.billingService.getBilling(orgSlug, req.user.id);
   }
 }

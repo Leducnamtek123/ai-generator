@@ -29,8 +29,8 @@ export class WorkflowsController {
   constructor(private readonly workflowsService: WorkflowsService) {}
 
   @Post()
-  create(@Body() createWorkflowDto: CreateWorkflowDto) {
-    return this.workflowsService.create(createWorkflowDto);
+  create(@Body() createWorkflowDto: CreateWorkflowDto, @Request() req) {
+    return this.workflowsService.create(createWorkflowDto, req.user.id);
   }
 
   @Get()

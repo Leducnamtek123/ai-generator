@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
     Camera,
@@ -65,7 +65,7 @@ export default function CameraChangePage() {
     const [dof, setDof] = useState(0);
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { startGeneration } = useGenerationStore();
+    const { cameraChange, currentGeneration } = useGenerationStore();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -75,14 +75,25 @@ export default function CameraChangePage() {
         }
     };
 
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResultImage(currentGeneration.resultUrl);
+            setIsProcessing(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsProcessing(false);
+        }
+    }, [currentGeneration]);
+
     const handleProcess = async () => {
         if (!uploadedImage) return;
         setIsProcessing(true);
-        await startGeneration('/generations/image', {
-            prompt: `Camera angle change to ${selectedAngle}, focal length ${focalLength}`,
+        await cameraChange({
             imageUrl: uploadedImage,
+            movement: selectedAngle,
+            angle: rotation,
+            prompt: `Camera angle: ${selectedAngle}, focal length: ${focalLength}, tilt: ${tilt}°, zoom: ${zoom}%`,
         });
-        setResultImage(uploadedImage);
         setIsProcessing(false);
     };
 

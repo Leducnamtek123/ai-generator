@@ -49,8 +49,8 @@ async function bootstrap() {
   );
 
   const options = new DocumentBuilder()
-    .setTitle('API')
-    .setDescription('API docs')
+    .setTitle('AI Generator API')
+    .setDescription('AI Generator - Image, Video, Audio & Workflow Generation Platform')
     .setVersion('1.0')
     .addBearerAuth()
     .addGlobalParameters({

@@ -359,3 +359,161 @@ export class RemoveBackgroundDto {
   edgeRefinement?: number;
 }
 
+export class SketchToImageDto {
+  @ApiProperty({ description: 'Text prompt describing the desired image' })
+  @IsString()
+  prompt: string;
+
+  @ApiProperty({ description: 'Base64 or URL of the sketch image' })
+  @IsString()
+  sketchUrl: string;
+
+  @ApiPropertyOptional({ enum: ['photorealistic', 'anime', 'oil-painting', 'watercolor', 'pencil'] })
+  @IsOptional()
+  @IsString()
+  style?: string;
+
+  @ApiPropertyOptional({ description: 'How closely to follow the sketch (0-100)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  fidelity?: number;
+}
+
+export class ImageVariationsDto {
+  @ApiProperty({ description: 'URL of the source image' })
+  @IsString()
+  imageUrl: string;
+
+  @ApiPropertyOptional({ description: 'Text guidance for variations' })
+  @IsOptional()
+  @IsString()
+  prompt?: string;
+
+  @ApiPropertyOptional({ description: 'Variation strength (0-100)' })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  strength?: number;
+
+  @ApiPropertyOptional({ description: 'Number of variations', minimum: 1, maximum: 4 })
+  @IsOptional()
+  @IsNumber()
+  @Min(1)
+  @Max(4)
+  count?: number;
+}
+
+export class CameraChangeDto {
+  @ApiProperty({ description: 'URL of the source image' })
+  @IsString()
+  imageUrl: string;
+
+  @ApiPropertyOptional({ enum: ['orbit-left', 'orbit-right', 'zoom-in', 'zoom-out', 'pan-up', 'pan-down', 'tilt'] })
+  @IsOptional()
+  @IsString()
+  movement?: string;
+
+  @ApiPropertyOptional({ description: 'Camera angle change degree' })
+  @IsOptional()
+  @IsNumber()
+  angle?: number;
+
+  @ApiPropertyOptional({ description: 'Text prompt for additional guidance' })
+  @IsOptional()
+  @IsString()
+  prompt?: string;
+}
+
+export class IconGeneratorDto {
+  @ApiProperty({ description: 'Text description of the icon' })
+  @IsString()
+  prompt: string;
+
+  @ApiPropertyOptional({ enum: ['flat', '3d', 'outline', 'filled', 'gradient', 'glassmorphism'] })
+  @IsOptional()
+  @IsString()
+  style?: string;
+
+  @ApiPropertyOptional({ enum: ['64', '128', '256', '512', '1024'] })
+  @IsOptional()
+  @IsString()
+  size?: string;
+
+  @ApiPropertyOptional({ description: 'Primary color hex' })
+  @IsOptional()
+  @IsString()
+  color?: string;
+
+  @ApiPropertyOptional({ description: 'Background color hex or transparent' })
+  @IsOptional()
+  @IsString()
+  backgroundColor?: string;
+}
+
+export class ImageExtendDto {
+  @ApiProperty({ description: 'URL of the source image' })
+  @IsString()
+  imageUrl: string;
+
+  @ApiPropertyOptional({ enum: ['left', 'right', 'up', 'down', 'all'] })
+  @IsOptional()
+  @IsString()
+  direction?: string;
+
+  @ApiPropertyOptional({ description: 'How many pixels to extend' })
+  @IsOptional()
+  @IsNumber()
+  pixels?: number;
+
+  @ApiPropertyOptional({ description: 'Text prompt for outpainting guidance' })
+  @IsOptional()
+  @IsString()
+  prompt?: string;
+}
+
+export class MockupGeneratorDto {
+  @ApiProperty({ description: 'URL of the design image to place on mockup' })
+  @IsString()
+  designUrl: string;
+
+  @ApiPropertyOptional({ enum: ['phone', 'laptop', 'tablet', 'tshirt', 'mug', 'poster', 'book', 'card'] })
+  @IsOptional()
+  @IsString()
+  template?: string;
+
+  @ApiPropertyOptional({ description: 'Text prompt for background/scene' })
+  @IsOptional()
+  @IsString()
+  prompt?: string;
+
+  @ApiPropertyOptional({ description: 'Mockup scene style' })
+  @IsOptional()
+  @IsString()
+  scene?: string;
+}
+
+export class SkinEnhanceDto {
+  @ApiProperty({ description: 'URL of the portrait image' })
+  @IsString()
+  imageUrl: string;
+
+  @ApiPropertyOptional({ description: 'Enhancement level (0-100)', minimum: 0, maximum: 100 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  @Max(100)
+  level?: number;
+
+  @ApiPropertyOptional({ enum: ['natural', 'smooth', 'glamour', 'studio'] })
+  @IsOptional()
+  @IsString()
+  mode?: string;
+
+  @ApiPropertyOptional({ description: 'Preserve freckles/moles' })
+  @IsOptional()
+  preserveDetails?: boolean;
+}
+

@@ -37,7 +37,7 @@ export default function VariationsPage() {
     const [results, setResults] = useState<string[]>([]);
     const [selectedResult, setSelectedResult] = useState<number | null>(null);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { startGeneration } = useGenerationStore();
+    const { imageVariations, currentGeneration } = useGenerationStore();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -47,11 +47,12 @@ export default function VariationsPage() {
     const handleGenerate = async () => {
         if (!uploadedImage) return;
         setIsGenerating(true);
-        await startGeneration('/generations/image', {
-            prompt: prompt || `Generate ${variationType} variations`,
+        await imageVariations({
             imageUrl: uploadedImage,
+            prompt: prompt || `Generate ${variationType} variations`,
+            strength,
+            count,
         });
-        setResults(mockVariations.slice(0, count));
         setIsGenerating(false);
     };
 

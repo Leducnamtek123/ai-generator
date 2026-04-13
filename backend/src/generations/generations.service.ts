@@ -16,6 +16,7 @@ import {
   UpscaleImageDto,
   EnhancePromptDto,
 } from './dto/generate.dto';
+
 @Injectable()
 export class GenerationsService {
   private readonly logger = new Logger(GenerationsService.name);
@@ -80,14 +81,27 @@ export class GenerationsService {
 
   private async deductCredits(
     userId: string,
-    type: 'image' | 'video' | 'upscale',
+    type: string,
   ) {
-    const costs = {
+    const costs: Record<string, number> = {
       image: 1,
       video: 5,
       upscale: 1,
+      music: 2,
+      sfx: 1,
+      voice: 1,
+      'lip-sync': 3,
+      'video-upscale': 5,
+      'bg-remove': 1,
+      'sketch-to-image': 1,
+      'variations': 1,
+      'camera-change': 1,
+      'icon-gen': 1,
+      'image-extend': 1,
+      'mockup': 1,
+      'skin-enhance': 1,
     };
-    const cost = costs[type] || 0;
+    const cost = costs[type] || 1;
 
     const balance = await this.creditsService.getBalance(userId);
     if (balance < cost) {
@@ -113,6 +127,36 @@ export class GenerationsService {
       metadata: { reason: 'generation_failed', generationType: type },
     });
   }
+
+  private async saveAsset(generation: GenerationEntity, projectId?: string) {
+    if (!generation.resultUrl) return;
+
+    // Map generation type to asset type
+    const assetTypeMap: Record<string, 'image' | 'video' | 'audio'> = {
+      image: 'image', upscale: 'image', 'bg-remove': 'image',
+      'sketch-to-image': 'image', variations: 'image', 'camera-change': 'image',
+      'icon-gen': 'image', 'image-extend': 'image', mockup: 'image', 'skin-enhance': 'image',
+      video: 'video', 'lip-sync': 'video', 'video-upscale': 'video',
+      music: 'audio', sfx: 'audio', voice: 'audio',
+    };
+
+    try {
+      await this.assetsService.create({
+        type: (assetTypeMap[generation.type] || 'image') as any,
+        url: generation.resultUrl,
+        userId: generation.userId,
+        projectId,
+        metadata: { generationId: generation.id, ...generation.metadata },
+      });
+      this.logger.log(`Auto-saved asset for generation ${generation.id}`);
+    } catch (err: any) {
+      this.logger.error(
+        `Failed to save asset for generation ${generation.id}: ${err.message}`,
+      );
+    }
+  }
+
+  // ==================== Image Generation ====================
 
   async generateImage(
     dto: GenerateImageDto,
@@ -144,8 +188,27 @@ export class GenerationsService {
     });
     await this.generationsRepository.save(generation);
 
+    // 2. Dispatch to provider (async, non-blocking)
+    this.executeImageGeneration(generation, dto, provider, userId, cost, projectId)
+      .catch((error) => {
+        this.logger.error(`Image generation ${generation.id} failed: ${error.message}`);
+      });
+
+    return generation;
+  }
+
+  private async executeImageGeneration(
+    generation: GenerationEntity,
+    dto: GenerateImageDto,
+    provider: any,
+    userId: string,
+    cost: number,
+    projectId?: string,
+  ): Promise<void> {
     try {
-      // 2. Call Provider
+      generation.status = 'processing';
+      await this.generationsRepository.save(generation);
+
       const result = await provider.generateImage(dto.prompt, {
         model: dto.model,
         aspectRatio: dto.aspectRatio,
@@ -154,45 +217,23 @@ export class GenerationsService {
         seed: dto.seed,
       });
 
-      // 3. Update Entity with result (Sync) or Provider ID (Async)
-      generation.status = result.status;
+      generation.status = result.status || 'completed';
       if (result.resultUrl) generation.resultUrl = result.resultUrl;
       if (result.metadata)
         generation.metadata = { ...generation.metadata, ...result.metadata };
 
-      // If the provider returned an ID (Async), we might want to store it in metadata if our ID is different
-      // But usually we just track our ID.
-
       await this.generationsRepository.save(generation);
-
-      // Auto-save as asset
-      if (generation.resultUrl) {
-        try {
-          await this.assetsService.create({
-            type: generation.type as any,
-            url: generation.resultUrl,
-            userId: generation.userId,
-            projectId,
-            metadata: { generationId: generation.id, ...generation.metadata },
-          });
-        } catch (err) {
-          this.logger.error(
-            `Failed to save asset for generation ${generation.id}: ${err.message}`,
-          );
-        }
-      }
-
-      return generation;
-    } catch (error) {
-      console.error(error); // Keep log
+      await this.saveAsset(generation, projectId);
+    } catch (error: any) {
       this.logger.error(`Generation failed: ${error.message}`);
       generation.status = 'failed';
       generation.error = error.message;
       await this.generationsRepository.save(generation);
       await this.refundCredits(userId, cost, 'image');
-      throw error;
     }
   }
+
+  // ==================== Video Generation ====================
 
   async generateVideo(
     dto: GenerateVideoDto,
@@ -222,7 +263,27 @@ export class GenerationsService {
     });
     await this.generationsRepository.save(generation);
 
+    // Async execution
+    this.executeVideoGeneration(generation, dto, provider, userId, cost, projectId)
+      .catch((error) => {
+        this.logger.error(`Video generation ${generation.id} failed: ${error.message}`);
+      });
+
+    return generation;
+  }
+
+  private async executeVideoGeneration(
+    generation: GenerationEntity,
+    dto: GenerateVideoDto,
+    provider: any,
+    userId: string,
+    cost: number,
+    projectId?: string,
+  ): Promise<void> {
     try {
+      generation.status = 'processing';
+      await this.generationsRepository.save(generation);
+
       const result = await provider.generateVideo(dto.prompt, {
         model: dto.model,
         duration: dto.duration,
@@ -231,39 +292,22 @@ export class GenerationsService {
         endImageUrl: dto.endImageUrl,
       });
 
-      generation.status = result.status;
+      generation.status = result.status || 'completed';
       if (result.resultUrl) generation.resultUrl = result.resultUrl;
       if (result.metadata)
         generation.metadata = { ...generation.metadata, ...result.metadata };
 
       await this.generationsRepository.save(generation);
-
-      // Auto-save as asset
-      if (generation.resultUrl) {
-        try {
-          await this.assetsService.create({
-            type: generation.type as any,
-            url: generation.resultUrl,
-            userId: generation.userId,
-            projectId,
-            metadata: { generationId: generation.id, ...generation.metadata },
-          });
-        } catch (err) {
-          this.logger.error(
-            `Failed to save asset for generation ${generation.id}: ${err.message}`,
-          );
-        }
-      }
-
-      return generation;
-    } catch (error) {
+      await this.saveAsset(generation, projectId);
+    } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.generationsRepository.save(generation);
       await this.refundCredits(userId, cost, 'video');
-      throw error;
     }
   }
+
+  // ==================== Upscale ====================
 
   async upscaleImage(
     dto: UpscaleImageDto,
@@ -298,7 +342,27 @@ export class GenerationsService {
     });
     await this.generationsRepository.save(generation);
 
+    // Async execution
+    this.executeUpscale(generation, dto, provider, userId, cost, projectId)
+      .catch((error) => {
+        this.logger.error(`Upscale ${generation.id} failed: ${error.message}`);
+      });
+
+    return generation;
+  }
+
+  private async executeUpscale(
+    generation: GenerationEntity,
+    dto: UpscaleImageDto,
+    provider: any,
+    userId: string,
+    cost: number,
+    projectId?: string,
+  ): Promise<void> {
     try {
+      generation.status = 'processing';
+      await this.generationsRepository.save(generation);
+
       const result = await provider.upscaleImage(dto.imageUrl, {
         scale: dto.scale || 2,
         mode: dto.mode,
@@ -312,37 +376,20 @@ export class GenerationsService {
         prompt: dto.prompt,
       });
 
-      generation.status = result.status;
+      generation.status = result.status || 'completed';
       if (result.resultUrl) generation.resultUrl = result.resultUrl;
 
       await this.generationsRepository.save(generation);
-
-      // Auto-save as asset
-      if (generation.resultUrl) {
-        try {
-          await this.assetsService.create({
-            type: 'image', // upscale result is image
-            url: generation.resultUrl,
-            userId: generation.userId,
-            projectId,
-            metadata: { generationId: generation.id, ...generation.metadata },
-          });
-        } catch (err) {
-          this.logger.error(
-            `Failed to save asset for generation ${generation.id}: ${err.message}`,
-          );
-        }
-      }
-
-      return generation;
-    } catch (error) {
+      await this.saveAsset(generation, projectId);
+    } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.generationsRepository.save(generation);
       await this.refundCredits(userId, cost, 'upscale');
-      throw error;
     }
   }
+
+  // ==================== Prompt Enhancement ====================
 
   async enhancePrompt(dto: EnhancePromptDto, userId: string): Promise<string> {
     const provider = this.providerRegistry.getPromptEnhancerProvider();
@@ -352,30 +399,20 @@ export class GenerationsService {
     return provider.enhancePrompt(dto.prompt, dto.style);
   }
 
+  // ==================== Audio Generation ====================
+
   /**
-   * Generic audio generation (music, sfx, voice)
-   * Creates a pending generation entity and delegates to the provider pipeline.
-   * The actual provider call will be resolved via n8n webhook callback.
+   * Generate audio (music, sfx, voice) - Direct provider call, no n8n
    */
   async generateAudio(
     dto: Record<string, any>,
     userId: string,
     type: 'music' | 'sfx' | 'voice',
   ): Promise<GenerationEntity> {
-    const costs = { music: 2, sfx: 1, voice: 1 };
-    const cost = costs[type] || 1;
+    const provider = this.providerRegistry.getAudioProvider(type);
+    this.logger.log(`${type} generation requested by user ${userId} via ${provider.name}`);
 
-    const balance = await this.creditsService.getBalance(userId);
-    if (balance < cost) {
-      throw new BadRequestException('Insufficient credits');
-    }
-
-    await this.creditsService.create({
-      userId,
-      amount: -cost,
-      type: 'generation',
-      metadata: { generationType: type },
-    });
+    const cost = await this.deductCredits(userId, type);
 
     const generation = this.generationsRepository.create({
       userId,
@@ -383,135 +420,197 @@ export class GenerationsService {
       status: 'pending',
       prompt: dto.prompt || dto.text || type,
       cost,
-      metadata: { ...dto },
+      metadata: { ...dto, provider: provider.name },
     });
     await this.generationsRepository.save(generation);
 
-    this.logger.log(`${type} generation ${generation.id} created for user ${userId}`);
-
-    // In production, this would trigger a provider call or n8n workflow.
-    // For now we simulate an AI worker completing the generation after 3-5 seconds
-    setTimeout(async () => {
-      try {
-        const gen = await this.generationsRepository.findOne({ where: { id: generation.id } });
-        if (gen && gen.status === 'pending') {
-          gen.status = 'completed';
-          // Simulate a result based on type from Unsplash/stock audio
-          if (type === 'music') gen.resultUrl = 'https://actions.google.com/sounds/v1/alarms/digital_watch_alarm_long.ogg';
-          else if (type === 'sfx') gen.resultUrl = 'https://actions.google.com/sounds/v1/foley/metal_click.ogg';
-          else if (type === 'voice') gen.resultUrl = 'https://actions.google.com/sounds/v1/speech/text_to_speech_female.ogg';
-          else gen.resultUrl = 'https://actions.google.com/sounds/v1/foley/metal_click.ogg';
-          
-          await this.generationsRepository.save(gen);
-          this.logger.log(`[Simulated Worker] Completed ${type} generation ${gen.id}`);
-        }
-      } catch (e) {
-        this.logger.error(`Failed to simulate completion for ${generation.id}`);
-      }
-    }, 4000);
+    // Async execution via provider
+    this.executeAudioGeneration(generation, dto, provider, type, userId, cost)
+      .catch((error) => {
+        this.logger.error(`${type} generation ${generation.id} failed: ${error.message}`);
+      });
 
     return generation;
   }
 
+  private async executeAudioGeneration(
+    generation: GenerationEntity,
+    dto: Record<string, any>,
+    provider: any,
+    type: 'music' | 'sfx' | 'voice',
+    userId: string,
+    cost: number,
+  ): Promise<void> {
+    try {
+      generation.status = 'processing';
+      await this.generationsRepository.save(generation);
+
+      const result = await provider.generateAudio(
+        dto.prompt || dto.text || type,
+        type,
+        {
+          model: dto.model,
+          duration: dto.duration,
+          voice: dto.voice,
+          language: dto.language,
+          format: dto.format,
+        },
+      );
+
+      generation.status = result.status || 'completed';
+      if (result.resultUrl) generation.resultUrl = result.resultUrl;
+      if (result.metadata)
+        generation.metadata = { ...generation.metadata, ...result.metadata };
+
+      await this.generationsRepository.save(generation);
+      await this.saveAsset(generation);
+    } catch (error: any) {
+      this.logger.error(`${type} generation failed: ${error.message}`);
+      generation.status = 'failed';
+      generation.error = error.message;
+      await this.generationsRepository.save(generation);
+      await this.refundCredits(userId, cost, type);
+    }
+  }
+
+  // ==================== Video Processing ====================
+
   /**
-   * Generic video processing (lip-sync, video-upscale)
+   * Process video (lip-sync, video-upscale) - Direct provider call
    */
   async processVideo(
     dto: Record<string, any>,
     userId: string,
     type: 'lip-sync' | 'video-upscale',
   ): Promise<GenerationEntity> {
-    const costs = { 'lip-sync': 3, 'video-upscale': 5 };
-    const cost = costs[type] || 3;
+    const provider = this.providerRegistry.getProvider('replicate'); // Replicate handles these
+    this.logger.log(`${type} processing requested by user ${userId} via ${provider.name}`);
 
-    const balance = await this.creditsService.getBalance(userId);
-    if (balance < cost) {
-      throw new BadRequestException('Insufficient credits');
-    }
-
-    await this.creditsService.create({
-      userId,
-      amount: -cost,
-      type: 'generation',
-      metadata: { generationType: type },
-    });
+    const cost = await this.deductCredits(userId, type);
 
     const generation = this.generationsRepository.create({
       userId,
       type,
       status: 'pending',
-      prompt: type,
+      prompt: dto.prompt || type,
       cost,
-      metadata: { ...dto },
+      metadata: { ...dto, provider: provider.name },
     });
     await this.generationsRepository.save(generation);
 
-    this.logger.log(`${type} processing ${generation.id} created for user ${userId}`);
-
-    // Simulate completion
-    setTimeout(async () => {
-      try {
-        const gen = await this.generationsRepository.findOne({ where: { id: generation.id } });
-        if (gen && gen.status === 'pending') {
-          gen.status = 'completed';
-          if (type === 'lip-sync') gen.resultUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4';
-          else if (type === 'video-upscale') gen.resultUrl = 'https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4';
-          await this.generationsRepository.save(gen);
-        }
-      } catch (e) {}
-    }, 6000);
+    // Async execution
+    this.executeVideoProcessing(generation, dto, provider, type, userId, cost)
+      .catch((error) => {
+        this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`);
+      });
 
     return generation;
   }
 
+  private async executeVideoProcessing(
+    generation: GenerationEntity,
+    dto: Record<string, any>,
+    provider: any,
+    type: string,
+    userId: string,
+    cost: number,
+  ): Promise<void> {
+    try {
+      generation.status = 'processing';
+      await this.generationsRepository.save(generation);
+
+      const result = await provider.processImage({
+        type,
+        imageUrl: dto.videoUrl || dto.imageUrl,
+        prompt: dto.prompt,
+        ...dto,
+      });
+
+      generation.status = result.status || 'completed';
+      if (result.resultUrl) generation.resultUrl = result.resultUrl;
+      if (result.metadata)
+        generation.metadata = { ...generation.metadata, ...result.metadata };
+
+      await this.generationsRepository.save(generation);
+      await this.saveAsset(generation);
+    } catch (error: any) {
+      generation.status = 'failed';
+      generation.error = error.message;
+      await this.generationsRepository.save(generation);
+      await this.refundCredits(userId, cost, type);
+    }
+  }
+
+  // ==================== Image Processing ====================
+
   /**
-   * Generic image processing (bg-remove, etc.)
+   * Process image (bg-remove, sketch-to-image, variations, etc.) - Direct provider call
    */
   async processImage(
     dto: Record<string, any>,
     userId: string,
-    type: 'bg-remove',
+    type: string,
   ): Promise<GenerationEntity> {
-    const cost = 1;
+    const provider = this.providerRegistry.getImageProcessingProvider(type);
+    this.logger.log(`${type} processing requested by user ${userId} via ${provider.name}`);
 
-    const balance = await this.creditsService.getBalance(userId);
-    if (balance < cost) {
-      throw new BadRequestException('Insufficient credits');
-    }
-
-    await this.creditsService.create({
-      userId,
-      amount: -cost,
-      type: 'generation',
-      metadata: { generationType: type },
-    });
+    const cost = await this.deductCredits(userId, type);
 
     const generation = this.generationsRepository.create({
       userId,
       type,
       status: 'pending',
-      prompt: type,
+      prompt: dto.prompt || type,
       cost,
-      metadata: { ...dto },
+      metadata: { ...dto, provider: provider.name },
     });
     await this.generationsRepository.save(generation);
 
-    this.logger.log(`${type} processing ${generation.id} created for user ${userId}`);
-
-    // Simulate completion
-    setTimeout(async () => {
-      try {
-        const gen = await this.generationsRepository.findOne({ where: { id: generation.id } });
-        if (gen && gen.status === 'pending') {
-          gen.status = 'completed';
-          if (type === 'bg-remove') gen.resultUrl = 'https://images.unsplash.com/photo-1542204165-65bf26472b9b?ixlib=rb-4.0.3&auto=format&fit=crop&w=500&q=80';
-          await this.generationsRepository.save(gen);
-        }
-      } catch (e) {}
-    }, 3000);
+    // Async execution
+    this.executeImageProcessing(generation, dto, provider, type, userId, cost)
+      .catch((error) => {
+        this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`);
+      });
 
     return generation;
   }
+
+  private async executeImageProcessing(
+    generation: GenerationEntity,
+    dto: Record<string, any>,
+    provider: any,
+    type: string,
+    userId: string,
+    cost: number,
+  ): Promise<void> {
+    try {
+      generation.status = 'processing';
+      await this.generationsRepository.save(generation);
+
+      const result = await provider.processImage({
+        type,
+        imageUrl: dto.imageUrl,
+        prompt: dto.prompt,
+        strength: dto.strength,
+        ...dto,
+      });
+
+      generation.status = result.status || 'completed';
+      if (result.resultUrl) generation.resultUrl = result.resultUrl;
+      if (result.metadata)
+        generation.metadata = { ...generation.metadata, ...result.metadata };
+
+      await this.generationsRepository.save(generation);
+      await this.saveAsset(generation);
+    } catch (error: any) {
+      generation.status = 'failed';
+      generation.error = error.message;
+      await this.generationsRepository.save(generation);
+      await this.refundCredits(userId, cost, type);
+    }
+  }
+
+  // ==================== Callback (kept for backward compat) ====================
 
   async handleCallback(
     id: string,
@@ -526,7 +625,7 @@ export class GenerationsService {
     });
     if (!generation) {
       this.logger.warn(`Generation ${id} not found during callback`);
-      return; // Or throw
+      return;
     }
 
     generation.status = status;
@@ -534,5 +633,15 @@ export class GenerationsService {
     if (error) generation.error = error;
 
     await this.generationsRepository.save(generation);
+
+    // Auto-save asset on successful completion
+    if (status === 'completed' && resultUrl) {
+      await this.saveAsset(generation);
+    }
+
+    // Refund credits on failure
+    if (status === 'failed' && generation.cost) {
+      await this.refundCredits(generation.userId, generation.cost, generation.type);
+    }
   }
 }

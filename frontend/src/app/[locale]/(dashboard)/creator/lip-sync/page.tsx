@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { Mic, Upload, Download, Sparkles, Loader2, Play, Pause, Video, Volume2, Folder, FileAudio } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -47,6 +47,7 @@ export default function LipSyncPage() {
     const handleProcess = async () => {
         if (!videoFile || !audioFile) return;
         setIsProcessing(true);
+        setResultVideo(null);
         await lipSync({
             videoUrl: videoFile,
             audioUrl: audioFile,
@@ -54,9 +55,19 @@ export default function LipSyncPage() {
             accuracy,
             smoothing,
         });
-        setResultVideo(videoFile);
+        // Result will come through currentGeneration.resultUrl via polling
         setIsProcessing(false);
     };
+
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResultVideo(currentGeneration.resultUrl);
+            setIsProcessing(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsProcessing(false);
+        }
+    }, [currentGeneration]);
 
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">

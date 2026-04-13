@@ -2,11 +2,10 @@ import { Injectable, Logger } from '@nestjs/common';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import {
-  AIProvider,
+  BaseProvider,
   GenerationResult,
   ImageOptions,
-  VideoOptions,
-  UpscaleOptions,
+  ProviderCapability,
 } from '../provider.interface';
 
 const OPENAI_API_BASE = 'https://api.openai.com/v1';
@@ -17,20 +16,27 @@ import { AllConfigType } from '../../config/config.type';
  * OpenAI Direct API Adapter (DALL-E 3, GPT-4 for prompts)
  */
 @Injectable()
-export class OpenAIAdapter implements AIProvider {
+export class OpenAIAdapter extends BaseProvider {
   readonly name = 'openai';
+  readonly capabilities: ProviderCapability[] = [
+    'image-generation',
+    'prompt-enhance',
+  ];
+
   private readonly logger = new Logger(OpenAIAdapter.name);
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService<AllConfigType>,
-  ) {}
+  ) {
+    super();
+  }
 
   private getApiKey(): string {
     const apiKey = this.configService.get(
-      'providers.imageGeneration.openai.apiKey',
+      'providers.openai.apiKey',
       { infer: true },
-    );
+    ) as string | undefined;
     if (!apiKey) {
       throw new Error('OPENAI_API_KEY is not configured');
     }
@@ -52,13 +58,13 @@ export class OpenAIAdapter implements AIProvider {
       const response = await this.httpService.axiosRef.post(
         `${OPENAI_API_BASE}/images/generations`,
         {
-          model: 'dall-e-3',
+          model: options?.model || 'dall-e-3',
           prompt,
           size: this.getSizeFromRatio(options?.aspectRatio || '1:1'),
           quality: options?.quality === '4k' ? 'hd' : 'standard',
           n: 1,
         },
-        { headers: this.getHeaders() },
+        { headers: this.getHeaders(), timeout: 120000 },
       );
 
       const imageUrl = response.data?.data?.[0]?.url;
@@ -68,36 +74,12 @@ export class OpenAIAdapter implements AIProvider {
         id: crypto.randomUUID(),
         status: 'completed',
         resultUrl: imageUrl,
-        metadata: { provider: 'openai', model: 'dall-e-3' },
+        metadata: { provider: 'openai', model: options?.model || 'dall-e-3' },
       };
     } catch (error) {
       this.logger.error('OpenAI image generation failed', error);
       throw error;
     }
-  }
-
-  async generateVideo(
-    _prompt: string,
-    _options?: VideoOptions,
-  ): Promise<GenerationResult> {
-    // Sora is not publicly available via API yet
-    return Promise.reject(
-      new Error(
-        'OpenAI Sora is not available via public API. Use n8n or Runway.',
-      ),
-    );
-  }
-
-  async upscaleImage(
-    _imageUrl: string,
-    _options?: UpscaleOptions,
-  ): Promise<GenerationResult> {
-    // OpenAI doesn't have upscaling
-    return Promise.reject(
-      new Error(
-        'OpenAI does not support image upscaling. Use n8n or Replicate.',
-      ),
-    );
   }
 
   async enhancePrompt(prompt: string, style?: string): Promise<string> {
@@ -118,7 +100,7 @@ export class OpenAIAdapter implements AIProvider {
           ],
           max_tokens: 300,
         },
-        { headers: this.getHeaders() },
+        { headers: this.getHeaders(), timeout: 30000 },
       );
 
       const enhanced = response.data?.choices?.[0]?.message?.content;

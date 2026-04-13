@@ -52,7 +52,7 @@ export default function SketchToImagePage() {
     const [isGenerating, setIsGenerating] = useState(false);
     const [generatedImage, setGeneratedImage] = useState<string | null>(null);
     const [canvasInitialized, setCanvasInitialized] = useState(false);
-    const { startGeneration } = useGenerationStore();
+    const { sketchToImage, isGenerating: storeGenerating, currentGeneration, error } = useGenerationStore();
 
     const initCanvas = useCallback(() => {
         const canvas = canvasRef.current;
@@ -72,6 +72,13 @@ export default function SketchToImagePage() {
     useEffect(() => {
         initCanvas();
     }, [initCanvas]);
+
+    // Watch for completed generation
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setGeneratedImage(currentGeneration.resultUrl);
+        }
+    }, [currentGeneration]);
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
@@ -125,12 +132,14 @@ export default function SketchToImagePage() {
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
-        setIsGenerating(true);
-        await startGeneration('/generations/image', {
-            prompt: `Sketch to image: ${prompt}, style: ${selectedStyle}`,
+        const canvas = canvasRef.current;
+        const sketchUrl = canvas ? canvas.toDataURL('image/png') : '';
+        await sketchToImage({
+            prompt,
+            sketchUrl,
+            style: selectedStyle,
+            fidelity: strength,
         });
-        setGeneratedImage('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=800&auto=format&fit=crop');
-        setIsGenerating(false);
     };
 
     return (

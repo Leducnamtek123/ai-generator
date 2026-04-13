@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { get as apiGet } from '@/lib/api';
+import { get as apiGet, post as apiPost } from '@/lib/api';
+import { toast } from 'sonner';
 
 interface CreditState {
     balance: number | null;
@@ -7,7 +8,7 @@ interface CreditState {
     error: string | null;
 
     fetchBalance: () => Promise<void>;
-    // Optimistic update or manual deduction if needed, though usually we strictly sync with backend
+    topUp: (amount: number, paymentRef?: string) => Promise<boolean>;
     setBalance: (balance: number) => void;
 }
 
@@ -20,24 +21,30 @@ export const useCreditStore = create<CreditState>((set) => ({
         set({ isLoading: true, error: null });
         try {
             const response = await apiGet<{ balance: number }>('/credits/balance');
-            // The backend returns the number directly or an object? 
-            // Checking credits.controller.ts: `return this.creditsService.getBalance(req.user.id);`
-            // CreditsService usually returns a number directly? Let's assume object wrapper or number. 
-            // Actually, standard NestJS methods often return the primitive if not wrapped in DTO. 
-            // But typically JSON APIs return objects. Let's verify standard response format.
-            // If it returns just `100`, axios might parse it. 
-            // Safest is to handle both, but let's assume it returns { balance: number } or just number.
-            // Looking at other stores/api usage might clarify.
-            // Let's assume it returns a number for now based on the controller signature not explicitly wrapping it.
-            // Wait, let's double check standard API wrapper.
-            // If `apiGet` follows standard generic formatting, it might expect T.
-            // Let's assume the API returns `number` directly based on `CreditsController`.
-
             const balance = typeof response === 'number' ? response : (response as any).balance;
             set({ balance: typeof balance === 'number' ? balance : 0, isLoading: false });
         } catch (error: any) {
             console.error('Failed to fetch credits', error);
             set({ error: error.message || 'Failed to fetch credits', isLoading: false });
+        }
+    },
+
+    topUp: async (amount: number, paymentRef?: string) => {
+        set({ isLoading: true, error: null });
+        try {
+            const result = await apiPost<{ success: boolean; added: number; balance: number }>('/credits/topup', {
+                amount,
+                paymentRef,
+            });
+            set({ balance: result.balance, isLoading: false });
+            toast.success(`Added ${result.added} credits! Balance: ${result.balance}`);
+            return true;
+        } catch (error: any) {
+            console.error('Failed to top up credits', error);
+            const msg = error.message || 'Failed to add credits';
+            set({ error: msg, isLoading: false });
+            toast.error(msg);
+            return false;
         }
     },
 

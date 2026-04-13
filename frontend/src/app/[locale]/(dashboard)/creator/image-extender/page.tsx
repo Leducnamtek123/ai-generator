@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { Maximize, Upload, Download, Sparkles, Loader2, RotateCcw, Folder, ArrowUp, ArrowDown, ArrowLeft, ArrowRight } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -36,21 +36,32 @@ export default function ImageExtenderPage() {
     const [prompt, setPrompt] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { startGeneration } = useGenerationStore();
+    const { imageExtend, currentGeneration } = useGenerationStore();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) { setUploadedImage(URL.createObjectURL(file)); setResultImage(null); }
     };
 
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResultImage(currentGeneration.resultUrl);
+            setIsProcessing(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsProcessing(false);
+        }
+    }, [currentGeneration]);
+
     const handleExtend = async () => {
         if (!uploadedImage) return;
         setIsProcessing(true);
-        await startGeneration('/generations/image', {
-            prompt: prompt || `Extend image ${direction} to ${targetRatio}`,
+        await imageExtend({
             imageUrl: uploadedImage,
+            direction,
+            pixels: expandAmount,
+            prompt: prompt || `Extend image ${direction}`,
         });
-        setResultImage(uploadedImage);
         setIsProcessing(false);
     };
 

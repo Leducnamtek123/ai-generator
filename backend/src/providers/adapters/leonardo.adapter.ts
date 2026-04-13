@@ -3,11 +3,11 @@ import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { AllConfigType } from '../../config/config.type';
 import {
-  AIProvider,
+  BaseProvider,
   GenerationResult,
   ImageOptions,
-  VideoOptions,
   UpscaleOptions,
+  ProviderCapability,
 } from '../provider.interface';
 
 const LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1';
@@ -16,20 +16,28 @@ const LEONARDO_API_BASE = 'https://cloud.leonardo.ai/api/rest/v1';
  * Leonardo.AI Direct API Adapter
  */
 @Injectable()
-export class LeonardoAdapter implements AIProvider {
+export class LeonardoAdapter extends BaseProvider {
   readonly name = 'leonardo';
+  readonly capabilities: ProviderCapability[] = [
+    'image-generation',
+    'upscale',
+    'variations',
+  ];
+
   private readonly logger = new Logger(LeonardoAdapter.name);
 
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService<AllConfigType>,
-  ) {}
+  ) {
+    super();
+  }
 
   private getApiKey(): string {
     const apiKey = this.configService.get(
-      'providers.imageGeneration.leonardo.apiKey',
+      'providers.leonardo.apiKey',
       { infer: true },
-    );
+    ) as string | undefined;
     if (!apiKey) {
       throw new Error('LEONARDO_API_KEY is not configured');
     }
@@ -48,9 +56,9 @@ export class LeonardoAdapter implements AIProvider {
     options?: ImageOptions,
   ): Promise<GenerationResult> {
     const modelId =
-      this.configService.get('providers.imageGeneration.leonardo.modelId', {
+      this.configService.get('providers.leonardo.modelId', {
         infer: true,
-      }) || 'phoenix';
+      }) as string || 'phoenix';
 
     try {
       // Step 1: Create generation
@@ -79,26 +87,11 @@ export class LeonardoAdapter implements AIProvider {
     }
   }
 
-  async generateVideo(
-    _prompt: string,
-    _options?: VideoOptions,
-  ): Promise<GenerationResult> {
-    // Leonardo doesn't support video, throw appropriate error
-    return Promise.reject(
-      new Error(
-        'Leonardo.AI does not support video generation. Use Runway or n8n.',
-      ),
-    );
-  }
-
   async upscaleImage(
     imageUrl: string,
     _options?: UpscaleOptions,
   ): Promise<GenerationResult> {
     try {
-      // Note: In Leonardo, upscaling usually requires a variation ID/Generation ID
-      // If imageUrl is already a Leonardo URL, this might not work directly.
-      // Assuming for now it's a generation ID or we have a way to handle it.
       const response = await this.httpService.axiosRef.post(
         `${LEONARDO_API_BASE}/variations/upscale`,
         {
@@ -115,16 +108,11 @@ export class LeonardoAdapter implements AIProvider {
     }
   }
 
-  async enhancePrompt(prompt: string, _style?: string): Promise<string> {
-    // Leonardo doesn't have prompt enhancement, return as-is
-    return Promise.resolve(prompt);
-  }
-
   private async pollGenerationResult(
     generationId: string,
   ): Promise<GenerationResult> {
     const maxRetries = 30;
-    const delay = 3000; // 3 seconds
+    const delay = 3000;
 
     for (let i = 0; i < maxRetries; i++) {
       try {
@@ -153,7 +141,7 @@ export class LeonardoAdapter implements AIProvider {
         this.logger.debug(
           `Polling Leonardo generation ${generationId}... status: ${status}`,
         );
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(`Polling error for ${generationId}: ${error.message}`);
       }
 
@@ -189,7 +177,7 @@ export class LeonardoAdapter implements AIProvider {
         } else if (status === 'FAILED') {
           throw new Error('Leonardo variation failed');
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.warn(
           `Polling error for variation ${variationId}: ${error.message}`,
         );

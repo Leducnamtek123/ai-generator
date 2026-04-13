@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { ZoomIn, Upload, Download, Sparkles, Loader2, RotateCcw, Folder, Video, Settings, Check } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -53,7 +53,7 @@ export default function VideoUpscalerPage() {
         if (!videoFile) return;
         setIsProcessing(true);
         setProgress(0);
-        // Start API call
+        setResultVideo(null);
         await upscaleVideo({
             videoUrl: videoFile,
             targetResolution,
@@ -62,10 +62,19 @@ export default function VideoUpscalerPage() {
             sharpen,
             fpsBoost,
         });
-        setProgress(100);
-        setResultVideo(videoFile);
-        setIsProcessing(false);
+        // Result will come through currentGeneration.resultUrl via polling
     };
+
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResultVideo(currentGeneration.resultUrl);
+            setProgress(100);
+            setIsProcessing(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsProcessing(false);
+        }
+    }, [currentGeneration]);
 
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">

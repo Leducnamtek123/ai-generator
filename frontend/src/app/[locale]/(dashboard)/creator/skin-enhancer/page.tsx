@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { Sparkles, Upload, Download, Loader2, RotateCcw, Eye, EyeOff, Folder, Sliders } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -37,12 +37,22 @@ export default function SkinEnhancerPage() {
     const [showOriginal, setShowOriginal] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { startGeneration } = useGenerationStore();
+    const { skinEnhance, currentGeneration } = useGenerationStore();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) { setUploadedImage(URL.createObjectURL(file)); setResultImage(null); }
     };
+
+    // Watch for completed generation result
+    useEffect(() => {
+        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
+            setResultImage(currentGeneration.resultUrl);
+            setIsProcessing(false);
+        } else if (currentGeneration?.status === 'failed') {
+            setIsProcessing(false);
+        }
+    }, [currentGeneration]);
 
     const togglePreset = (id: string) => {
         setSelectedPresets(prev => prev.includes(id) ? prev.filter(p => p !== id) : [...prev, id]);
@@ -51,11 +61,12 @@ export default function SkinEnhancerPage() {
     const handleEnhance = async () => {
         if (!uploadedImage) return;
         setIsProcessing(true);
-        await startGeneration('/generations/image', {
-            prompt: `Skin enhancement: ${mode}, presets: ${selectedPresets.join(', ')}`,
+        await skinEnhance({
             imageUrl: uploadedImage,
+            level: smoothness,
+            mode,
+            preserveDetails: true,
         });
-        setResultImage(uploadedImage);
         setIsProcessing(false);
     };
 
