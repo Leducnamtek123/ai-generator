@@ -31,10 +31,12 @@ RUN adduser --system --uid 1001 nestjs
 
 COPY --from=builder --chown=nestjs:nodejs /app/node_modules ./node_modules
 COPY --from=builder --chown=nestjs:nodejs /app/dist ./dist
+# NestJS i18n looks relative to __dirname (dist/src/), so copy assets there too
+COPY --from=builder --chown=nestjs:nodejs /app/dist/i18n ./dist/src/i18n
 
 USER nestjs
 
 EXPOSE 8000
 ENV PORT 8000
 
-CMD ["node", "dist/main.js"]
+CMD ["node", "dist/src/main.js"]

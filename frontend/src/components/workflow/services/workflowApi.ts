@@ -35,47 +35,8 @@ const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' || true; // Def
 // HTTP CLIENT HELPERS
 // ============================================
 
-interface ApiResponse<T> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    statusCode?: number;
-}
-
-async function apiRequest<T>(
-    endpoint: string,
-    options: RequestInit = {}
-): Promise<ApiResponse<T>> {
-    try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-            ...options,
-            headers: {
-                'Content-Type': 'application/json',
-                ...options.headers,
-            },
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            return {
-                success: false,
-                error: data.error || `HTTP ${response.status}`,
-                statusCode: response.status,
-            };
-        }
-
-        return {
-            success: true,
-            data,
-        };
-    } catch (error) {
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'Unknown error',
-        };
-    }
-}
+// Import pre-configured axios instance
+import { api } from '@/lib/api';
 
 // ============================================
 // MOCK IMPLEMENTATIONS
@@ -200,22 +161,18 @@ export const workflowApi = {
             return mockGenerateImage(request);
         }
 
-        const response = await apiRequest<GenerationResult>('/generate/image', {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-
-        if (!response.success || !response.data) {
+        try {
+            const response = await api.post<GenerationResult>('/generate/image', request);
+            return response.data;
+        } catch (error: any) {
             return {
                 success: false,
                 nodeId: request.nodeId,
                 generationId: '',
                 status: NodeStatus.ERROR,
-                error: response.error || 'Failed to generate image',
+                error: error.response?.data?.error || error.message || 'Failed to generate image',
             };
         }
-
-        return response.data;
     },
 
     /**
@@ -226,22 +183,18 @@ export const workflowApi = {
             return mockGenerateVideo(request);
         }
 
-        const response = await apiRequest<GenerationResult>('/generate/video', {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-
-        if (!response.success || !response.data) {
+        try {
+            const response = await api.post<GenerationResult>('/generate/video', request);
+            return response.data;
+        } catch (error: any) {
             return {
                 success: false,
                 nodeId: request.nodeId,
                 generationId: '',
                 status: NodeStatus.ERROR,
-                error: response.error || 'Failed to generate video',
+                error: error.response?.data?.error || error.message || 'Failed to generate video',
             };
         }
-
-        return response.data;
     },
 
     /**
@@ -252,19 +205,15 @@ export const workflowApi = {
             return mockEnhancePrompt(request);
         }
 
-        const response = await apiRequest<{ enhancedText: string }>('/enhance/prompt', {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-
-        if (!response.success || !response.data) {
+        try {
+            const response = await api.post<{ enhancedText: string }>('/enhance/prompt', request);
+            return response.data;
+        } catch (error: any) {
             return {
                 enhancedText: '',
-                error: response.error || 'Failed to enhance prompt',
+                error: error.response?.data?.error || error.message || 'Failed to enhance prompt',
             };
         }
-
-        return response.data;
     },
 
     /**
@@ -275,22 +224,18 @@ export const workflowApi = {
             return mockUpscaleImage(request);
         }
 
-        const response = await apiRequest<GenerationResult>('/upscale/image', {
-            method: 'POST',
-            body: JSON.stringify(request),
-        });
-
-        if (!response.success || !response.data) {
+        try {
+            const response = await api.post<GenerationResult>('/upscale/image', request);
+            return response.data;
+        } catch (error: any) {
             return {
                 success: false,
                 nodeId: request.nodeId,
                 generationId: '',
                 status: NodeStatus.ERROR,
-                error: response.error || 'Failed to upscale image',
+                error: error.response?.data?.error || error.message || 'Failed to upscale image',
             };
         }
-
-        return response.data;
     },
 
     /**
@@ -307,19 +252,18 @@ export const workflowApi = {
             };
         }
 
-        const response = await apiRequest<GenerationResult>(`/generation/${generationId}/status`);
-
-        if (!response.success || !response.data) {
+        try {
+            const response = await api.get<GenerationResult>(`/generation/${generationId}/status`);
+            return response.data;
+        } catch (error: any) {
             return {
                 success: false,
                 nodeId: '',
                 generationId,
                 status: NodeStatus.ERROR,
-                error: response.error,
+                error: error.response?.data?.error || error.message,
             };
         }
-
-        return response.data;
     },
 
     /**
@@ -349,18 +293,19 @@ export const workflowApi = {
         const formData = new FormData();
         formData.append('file', file);
 
-        // Note: For real implementation, you'd use XMLHttpRequest or
-        // a library that supports upload progress
-        const response = await fetch(`${API_BASE_URL}/media/upload`, {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
+        try {
+            const response = await api.post('/files/upload', formData, {
+                headers: { 'Content-Type': 'multipart/form-data' },
+                onUploadProgress: (progressEvent) => {
+                    if (progressEvent.total && onProgress) {
+                        onProgress(Math.round((progressEvent.loaded * 100) / progressEvent.total));
+                    }
+                },
+            });
+            return response.data;
+        } catch (error) {
             return null;
         }
-
-        return response.json();
     },
 
     /**
@@ -382,11 +327,14 @@ export const workflowApi = {
             };
         }
 
-        const response = await apiRequest<MediaLibraryResponse>(
-            `/media/library?folder=${folder || ''}&page=${page}`
-        );
-
-        return response.data || { items: [], folders: [], totalCount: 0, hasMore: false };
+        try {
+            const response = await api.get<MediaLibraryResponse>('/media/library', {
+                params: { folder: folder || '', page }
+            });
+            return response.data;
+        } catch {
+            return { items: [], folders: [], totalCount: 0, hasMore: false };
+        }
     },
 
     /**
@@ -398,16 +346,15 @@ export const workflowApi = {
             return { success: true, id: workflow.id };
         }
 
-        const response = await apiRequest<{ id: string }>('/workflows', {
-            method: 'POST',
-            body: JSON.stringify(workflow),
-        });
-
-        return {
-            success: response.success,
-            id: response.data?.id,
-            error: response.error,
-        };
+        try {
+            const response = await api.post<{ id: string }>('/workflows', workflow);
+            return { success: true, id: response.data.id };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.response?.data?.error || error.message,
+            };
+        }
     },
 
     /**
@@ -419,8 +366,12 @@ export const workflowApi = {
             return null; // No saved workflows in mock
         }
 
-        const response = await apiRequest<WorkflowData>(`/workflows/${workflowId}`);
-        return response.data || null;
+        try {
+            const response = await api.get<WorkflowData>(`/workflows/${workflowId}`);
+            return response.data;
+        } catch {
+            return null;
+        }
     },
 };
 

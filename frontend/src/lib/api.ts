@@ -2,10 +2,10 @@ import axios, { AxiosError, AxiosRequestConfig } from "axios";
 import { env } from "@/env";
 import { getSession } from "next-auth/react";
 
-// FIXME: Set your API base URL and global headers
+// Use relative path for proxying through Next.js proxy.ts
 export const api = axios.create({
-  baseURL: `${env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/v1`,
-  timeout: 10_000,
+  baseURL: '/api',
+  timeout: 30_000, // Increased timeout for heavy tasks like video/image gen
   headers: {
     Accept: "application/json"
   }

@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { X, Search, MessageSquare, Filter, MoreHorizontal, User, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';

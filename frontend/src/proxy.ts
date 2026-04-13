@@ -22,21 +22,31 @@ function matchesSegment(pathname: string, segments: string[]): boolean {
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Skip intl processing for API routes
-  if (pathname.startsWith('/api/') || pathname.startsWith('/_next/')) {
+  // Handle API proxying (exclude auth routes handled by Next.js)
+  if (pathname.startsWith('/api') && !pathname.startsWith('/api/auth')) {
+    // NEXT_PUBLIC_API_URL is "http://localhost:8000/api/v1"
+    const backendBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+    
+    // Remove the local '/api' prefix and append to backend base
+    const targetPath = pathname.replace(/^\/api/, '');
+    const url = new URL(backendBase + targetPath);
+    url.search = req.nextUrl.search;
+
+    return NextResponse.rewrite(url);
+  }
+
+  // Skip intl processing for API routes and system routes
+  if (pathname.startsWith('/api') || pathname.startsWith('/_next/')) {
     return NextResponse.next();
   }
 
   // Handle i18n routing first which returns a response
   const res = intlMiddleware(req);
 
-  // Note: we can't easily wait for auth session without the wrapper if we are not in an edge runtime where it's supported without wrapper.
-  // Wait, NextAuth beta v5 auth() can be called as a function.
-  // Actually, we can just return the intl middleware response directly for now to isolate the issue.
   return res;
 }
 
 export const config = {
-  // Matcher ignoring common static files and api routes
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  // Matcher ignoring common static files but INCLUDING api routes for proxying
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
 };

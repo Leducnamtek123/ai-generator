@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { Play, Settings, Trash2, ArrowUpRight, Copy, RefreshCw } from 'lucide-react';
 import { cn } from '@/lib/utils';

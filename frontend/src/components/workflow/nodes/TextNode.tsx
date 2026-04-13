@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useCallback, useState, useRef } from 'react';
 import { BaseNode } from './BaseNode';
 import { Handle, Position } from '@xyflow/react';

@@ -13,12 +13,24 @@ export function getAssetUrl(path: string | undefined | null) {
   if (!path) return '';
   if (path.startsWith('http')) return path;
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  // If path already contains /api/v1, just prefix the origin
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  
+  // If the path already has /api/, we extract the origin from apiUrl
   if (path.startsWith('/api/')) {
-    const validApiUrl = apiUrl.startsWith('http') ? apiUrl : `http://${apiUrl}`;
-    return `${new URL(validApiUrl).origin}${path}`;
+    try {
+      const origin = new URL(apiUrl).origin;
+      return `${origin}${path}`;
+    } catch {
+      return path;
+    }
   }
 
-  return `${apiUrl}/v1${path.startsWith('/') ? '' : '/'}${path}`;
+  // Otherwise, if path is just an asset, it might be served directly from backend origin or under /api/v1.
+  // We assume the asset is relative to the backend origin.
+  try {
+     const origin = new URL(apiUrl).origin;
+     return `${origin}${path.startsWith('/') ? '' : '/'}${path}`;
+  } catch {
+     return path;
+  }
 }

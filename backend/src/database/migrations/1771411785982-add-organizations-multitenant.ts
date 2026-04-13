@@ -1,9 +1,9 @@
 import { MigrationInterface, QueryRunner } from 'typeorm';
 
-export class AddOrganizationsMultitenant1711800000000
+export class AddOrganizationsMultitenant1771411785982
   implements MigrationInterface
 {
-  name = 'AddOrganizationsMultitenant1711800000000';
+  name = 'AddOrganizationsMultitenant1771411785982';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Create OrgRole enum type

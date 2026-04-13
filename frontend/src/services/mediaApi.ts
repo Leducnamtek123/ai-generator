@@ -69,7 +69,7 @@ export const mediaApi = {
         formData.append('file', file);
 
         try {
-            const response = await api.post<MediaItem>('/media/upload', formData, {
+            const response = await api.post<MediaItem>('/files/upload', formData, {
                 headers: { 'Content-Type': 'multipart/form-data' },
                 onUploadProgress: (progressEvent) => {
                     if (progressEvent.total && onProgress) {
@@ -100,7 +100,7 @@ export const mediaApi = {
         }
 
         try {
-            const response = await api.get<MediaLibraryResponse>('/media/library', {
+            const response = await api.get<MediaLibraryResponse>('/assets', {
                 params: { folder: folder || '', page },
             });
             return response.data;

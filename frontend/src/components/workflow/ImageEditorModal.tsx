@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { X, Send, Wand2, Eraser, Crop, Maximize2, MoreHorizontal } from 'lucide-react';
 

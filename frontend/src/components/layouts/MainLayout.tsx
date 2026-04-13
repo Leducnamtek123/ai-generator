@@ -10,6 +10,7 @@ import { UserMenu } from './header/UserMenu';
 import { useAuth } from '@/providers';
 import { useRouter } from '@/i18n/navigation';
 import { useWorkflowStore } from '@/stores/workflow-store';
+import { useNotificationStore } from '@/stores/notification-store';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,6 +34,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const { user, isLoading } = useAuth();
     const router = useRouter();
     const { workflow, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
+    const { notifications, unreadCount, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } = useNotificationStore();
 
     const [isRenameOpen, setIsRenameOpen] = React.useState(false);
     const [newName, setNewName] = React.useState('');
@@ -44,6 +46,13 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             router.push('/');
         }
     }, [user, isLoading, pathname, router, isPublicRoute]);
+
+    React.useEffect(() => {
+        if (user) {
+            fetchNotifications();
+            fetchUnreadCount();
+        }
+    }, [user, fetchNotifications, fetchUnreadCount]);
 
     if (isLoading) return <div className="h-screen w-full bg-background flex items-center justify-center"><Sparkles className="w-8 h-8 animate-pulse text-primary" /></div>;
 
@@ -197,42 +206,57 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                             <DropdownMenuTrigger asChild>
                                 <Button variant="ghost" size="icon" className="h-8 w-8 relative">
                                     <Bell className="w-4 h-4 text-muted-foreground" />
-                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-primary" />
+                                    )}
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-80 p-0">
                                 <div className="p-3 border-b border-border flex items-center justify-between">
                                     <h3 className="font-semibold text-sm">Notifications</h3>
-                                    <button className="text-xs text-muted-foreground hover:text-foreground">Mark all as read</button>
+                                    <button 
+                                        onClick={() => markAllAsRead()}
+                                        className="text-xs text-muted-foreground hover:text-foreground"
+                                    >
+                                        Mark all as read
+                                    </button>
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto">
-                                    <div className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 opacity-60">
-                                        <div className="w-8 h-8 rounded-full bg-green-500/20 text-green-500 flex items-center justify-center shrink-0">
-                                            <Sparkles className="w-4 h-4" />
+                                    {notifications.length === 0 ? (
+                                        <div className="p-8 text-center text-muted-foreground text-xs">
+                                            No notifications yet
                                         </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium leading-tight">Image generated successfully</p>
-                                            <p className="text-xs text-muted-foreground">Your 4 images for "Cyberpunk city" are ready.</p>
-                                        </div>
-                                    </div>
-                                    <div className="p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 px-3 py-3">
-                                        <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
-                                            <Image className="w-4 h-4" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium leading-tight">Welcome to PaintAI</p>
-                                            <p className="text-xs text-muted-foreground">Thanks for joining! You have 100 free credits to get started.</p>
-                                        </div>
-                                    </div>
-                                    <div className="p-3 hover:bg-muted/50 cursor-pointer flex gap-3 px-3 py-3 opacity-60">
-                                        <div className="w-8 h-8 rounded-full bg-red-500/20 text-red-500 flex items-center justify-center shrink-0">
-                                            <Bell className="w-4 h-4" />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <p className="text-sm font-medium leading-tight">Video generation failed</p>
-                                            <p className="text-xs text-muted-foreground">Error generating "Lip sync for Avatar". Credits refunded.</p>
-                                        </div>
-                                    </div>
+                                    ) : (
+                                        notifications.map((notification) => (
+                                            <div 
+                                                key={notification.id}
+                                                onClick={() => markAsRead(notification.id)}
+                                                className={cn(
+                                                    "p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 transition-colors",
+                                                    notification.isRead && "opacity-60"
+                                                )}
+                                            >
+                                                <div className={cn(
+                                                    "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+                                                    notification.type === 'success' && "bg-green-500/20 text-green-500",
+                                                    notification.type === 'info' && "bg-primary/20 text-primary",
+                                                    notification.type === 'warning' && "bg-yellow-500/20 text-yellow-500",
+                                                    notification.type === 'error' && "bg-red-500/20 text-red-500",
+                                                )}>
+                                                    {notification.type === 'success' ? <Sparkles className="w-4 h-4" /> : 
+                                                     notification.type === 'error' ? <Bell className="w-4 h-4" /> :
+                                                     <Bell className="w-4 h-4" />}
+                                                </div>
+                                                <div className="space-y-1">
+                                                    <p className="text-sm font-medium leading-tight">{notification.title}</p>
+                                                    <p className="text-xs text-muted-foreground">{notification.message}</p>
+                                                    <p className="text-[10px] text-muted-foreground opacity-50">
+                                                        {new Date(notification.createdAt).toLocaleDateString()}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
                                 </div>
                                 <div className="p-2 border-t border-border">
                                     <Button variant="ghost" className="w-full text-xs h-8">View all notifications</Button>

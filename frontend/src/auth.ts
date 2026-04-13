@@ -1,23 +1,22 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import axios from "axios";
 
-const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1";
+const IS_SERVER = typeof window === "undefined";
+const API_URL = IS_SERVER
+  ? (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL?.replace("localhost", "backend") || "http://backend:8000/api/v1")
+  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1");
 
 async function refreshAccessToken(refreshToken: string) {
   try {
-    const res = await fetch(`${API_URL}/auth/refresh`, {
-      method: "POST",
+    const res = await axios.post(`${API_URL}/auth/refresh`, null, {
       headers: {
-        "Content-Type": "application/json",
         Authorization: `Bearer ${refreshToken}`,
       },
     });
 
-    if (!res.ok) return null;
-
-    const data = await res.json();
+    const data = res.data;
     return {
       accessToken: data.token as string,
       refreshToken: data.refreshToken as string,
@@ -44,18 +43,12 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         if (!credentials?.email || !credentials?.password) return null;
 
         try {
-          const res = await fetch(`${API_URL}/auth/email/login`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              email: credentials.email,
-              password: credentials.password,
-            }),
+          const res = await axios.post(`${API_URL}/auth/email/login`, {
+            email: credentials.email,
+            password: credentials.password,
           });
 
-          if (!res.ok) return null;
-
-          const data = await res.json();
+          const data = res.data;
           // Backend returns: { token, refreshToken, tokenExpires, user }
           return {
             id: String(data.user.id),
@@ -76,9 +69,32 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
-      // Initial sign in — persist tokens from authorize()
-      if (user) {
+    async jwt({ token, user, account }) {
+      // If logging in via Google OAuth
+      if (account?.provider === "google" && account.id_token) {
+        try {
+          const res = await axios.post(`${API_URL}/auth/google/login`, {
+            idToken: account.id_token,
+          });
+          
+          const data = res.data;
+            token.accessToken = data.token;
+            token.refreshToken = data.refreshToken;
+            token.tokenExpires = data.tokenExpires;
+            token.userId = String(data.user?.id || user?.id);
+            return token;
+          } catch (error) {
+            if (axios.isAxiosError(error)) {
+              console.error("Google login failed", error.response?.data);
+            } else {
+              console.error("Google login error", error);
+            }
+            token.error = "GoogleLoginFailed";
+          }
+        }
+
+      // Initial sign in — persist tokens from authorize() (for Credentials)
+      if (user && account?.provider === "credentials") {
         token.accessToken = (user as unknown as Record<string, unknown>).accessToken as string;
         token.refreshToken = (user as unknown as Record<string, unknown>).refreshToken as string;
         token.tokenExpires = (user as unknown as Record<string, unknown>).tokenExpires as number;

@@ -4,7 +4,10 @@ import {
   ClassSerializerInterceptor,
   ValidationPipe,
   VersioningType,
+  Logger,
 } from '@nestjs/common';
+import helmet from 'helmet';
+import compression from 'compression';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory, Reflector } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -13,6 +16,8 @@ import { AppModule } from './app.module';
 import validationOptions from './utils/validation-options';
 import { AllConfigType } from './config/config.type';
 import { ResolvePromisesInterceptor } from './utils/serializer.interceptor';
+import { AllExceptionsFilter } from './utils/filters/all-exceptions.filter';
+import { HttpAdapterHost } from '@nestjs/core';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -24,6 +29,9 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
+ 
+  app.use(helmet());
+  app.use(compression());
 
   app.enableShutdownHooks();
   app.setGlobalPrefix(
@@ -48,6 +56,9 @@ async function bootstrap() {
     new ClassSerializerInterceptor(app.get(Reflector)),
   );
 
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new AllExceptionsFilter({ httpAdapter } as any));
+
   const options = new DocumentBuilder()
     .setTitle('AI Generator API')
     .setDescription('AI Generator - Image, Video, Audio & Workflow Generation Platform')
@@ -65,7 +76,20 @@ async function bootstrap() {
 
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup('docs', app, document);
-
-  await app.listen(configService.getOrThrow('app.port', { infer: true }));
+ 
+  const port = configService.getOrThrow('app.port', { infer: true });
+  const appMode = configService.get('app.nodeEnv', { infer: true }); // Or use a specific APP_MODE
+ 
+  // If we are in worker mode, we might not want to listen on a port,
+  // or listen on a different port for health checks.
+  // For now, let's just log the mode.
+  if (process.env.APP_MODE === 'worker') {
+    Logger.log('👷 Worker Mode enabled - Processing background jobs...');
+    // In many setups, workers don't need a port, but for health checks we might still keep it.
+    await app.listen(port); 
+  } else {
+    await app.listen(port);
+    Logger.log(`🚀 API Mode enabled - Running on: http://localhost:${port}/${configService.getOrThrow('app.apiPrefix', { infer: true })}/v1`);
+  }
 }
 void bootstrap();

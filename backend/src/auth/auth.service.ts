@@ -24,11 +24,15 @@ import { UsersService } from '../users/users.service';
 import { AllConfigType } from '../config/config.type';
 import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
+import { OrganizationsService } from '../organizations/organizations.service';
 import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
-import { ProjectsService } from '../projects/projects.service';
+import { AuthTokenService } from './services/auth-token.service';
+import { SocialAuthService } from './services/social-auth.service';
+import { AuthProvisioningService } from './services/auth-provisioning.service';
+import { AuthPasswordService } from './services/auth-password.service';
 
 @Injectable()
 export class AuthService {
@@ -38,7 +42,10 @@ export class AuthService {
     private sessionService: SessionService,
     private mailService: MailService,
     private configService: ConfigService<AllConfigType>,
-    private projectsService: ProjectsService,
+    private authTokenService: AuthTokenService,
+    private socialAuthService: SocialAuthService,
+    private authProvisioningService: AuthProvisioningService,
+    private authPasswordService: AuthPasswordService,
   ) {}
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
@@ -95,14 +102,14 @@ export class AuthService {
       hash,
     });
 
-    const { token, refreshToken, tokenExpires } = await this.getTokensData({
+    const { token, refreshToken, tokenExpires } = await this.authTokenService.getTokensData({
       id: user.id,
       role: user.role,
       sessionId: session.id,
       hash,
     });
 
-    await this.ensureDefaultProject(user.id);
+    await this.authProvisioningService.provisionUser(user.id);
 
     return {
       refreshToken,
@@ -116,61 +123,9 @@ export class AuthService {
     authProvider: string,
     socialData: SocialInterface,
   ): Promise<LoginResponseDto> {
-    let user: NullableType<User> = null;
-    const socialEmail = socialData.email?.toLowerCase();
-    let userByEmail: NullableType<User> = null;
-
-    if (socialEmail) {
-      userByEmail = await this.usersService.findByEmail(socialEmail);
-    }
-
-    if (socialData.id) {
-      user = await this.usersService.findBySocialIdAndProvider({
-        socialId: socialData.id,
-        provider: authProvider,
-      });
-    }
-
-    if (user) {
-      if (socialEmail && !userByEmail) {
-        user.email = socialEmail;
-      }
-      await this.usersService.update(user.id, user);
-    } else if (userByEmail) {
-      user = userByEmail;
-    } else if (socialData.id) {
-      const role = {
-        id: RoleEnum.user,
-      };
-      const status = {
-        id: StatusEnum.active,
-      };
-
-      user = await this.usersService.create({
-        email: socialEmail ?? null,
-        firstName: socialData.firstName ?? null,
-        lastName: socialData.lastName ?? null,
-        socialId: socialData.id,
-        provider: authProvider,
-        role,
-        status,
-      });
-
-      user = await this.usersService.findById(user.id);
-    }
-
-    if (user) {
-      await this.ensureDefaultProject(user.id);
-    }
-
-    if (!user) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          user: 'userNotFound',
-        },
-      });
-    }
+    const user = await this.socialAuthService.getOrCreateUser(authProvider, socialData);
+    
+    await this.authProvisioningService.provisionUser(user.id);
 
     const hash = crypto
       .createHash('sha256')
@@ -186,7 +141,7 @@ export class AuthService {
       token: jwtToken,
       refreshToken,
       tokenExpires,
-    } = await this.getTokensData({
+    } = await this.authTokenService.getTokensData({
       id: user.id,
       role: user.role,
       sessionId: session.id,
@@ -213,7 +168,7 @@ export class AuthService {
       },
     });
 
-    await this.ensureDefaultProject(user.id);
+    await this.authProvisioningService.provisionUser(user.id);
 
     const hash = await this.jwtService.signAsync(
       {
@@ -238,167 +193,19 @@ export class AuthService {
   }
 
   async confirmEmail(hash: string): Promise<void> {
-    let userId: User['id'];
-
-    try {
-      const jwtData = await this.jwtService.verifyAsync<{
-        confirmEmailUserId: User['id'];
-      }>(hash, {
-        secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
-          infer: true,
-        }),
-      });
-
-      userId = jwtData.confirmEmailUserId;
-    } catch {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          hash: `invalidHash`,
-        },
-      });
-    }
-
-    const user = await this.usersService.findById(userId);
-
-    if (
-      !user ||
-      user?.status?.id?.toString() !== StatusEnum.inactive.toString()
-    ) {
-      throw new NotFoundException({
-        status: HttpStatus.NOT_FOUND,
-        error: `notFound`,
-      });
-    }
-
-    user.status = {
-      id: StatusEnum.active,
-    };
-
-    await this.usersService.update(user.id, user);
+    return this.authPasswordService.confirmEmail(hash);
   }
 
   async confirmNewEmail(hash: string): Promise<void> {
-    let userId: User['id'];
-    let newEmail: User['email'];
-
-    try {
-      const jwtData = await this.jwtService.verifyAsync<{
-        confirmEmailUserId: User['id'];
-        newEmail: User['email'];
-      }>(hash, {
-        secret: this.configService.getOrThrow('auth.confirmEmailSecret', {
-          infer: true,
-        }),
-      });
-
-      userId = jwtData.confirmEmailUserId;
-      newEmail = jwtData.newEmail;
-    } catch {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          hash: `invalidHash`,
-        },
-      });
-    }
-
-    const user = await this.usersService.findById(userId);
-
-    if (!user) {
-      throw new NotFoundException({
-        status: HttpStatus.NOT_FOUND,
-        error: `notFound`,
-      });
-    }
-
-    user.email = newEmail;
-    user.status = {
-      id: StatusEnum.active,
-    };
-
-    await this.usersService.update(user.id, user);
+    return this.authPasswordService.confirmNewEmail(hash);
   }
 
   async forgotPassword(email: string): Promise<void> {
-    const user = await this.usersService.findByEmail(email);
-
-    if (!user) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          email: 'emailNotExists',
-        },
-      });
-    }
-
-    const tokenExpiresIn = this.configService.getOrThrow('auth.forgotExpires', {
-      infer: true,
-    });
-
-    const tokenExpires = Date.now() + ms(tokenExpiresIn);
-
-    const hash = await this.jwtService.signAsync(
-      {
-        forgotUserId: user.id,
-      },
-      {
-        secret: this.configService.getOrThrow('auth.forgotSecret', {
-          infer: true,
-        }),
-        expiresIn: tokenExpiresIn,
-      },
-    );
-
-    await this.mailService.forgotPassword({
-      to: email,
-      data: {
-        hash,
-        tokenExpires,
-      },
-    });
+    return this.authPasswordService.forgotPassword(email);
   }
 
   async resetPassword(hash: string, password: string): Promise<void> {
-    let userId: User['id'];
-
-    try {
-      const jwtData = await this.jwtService.verifyAsync<{
-        forgotUserId: User['id'];
-      }>(hash, {
-        secret: this.configService.getOrThrow('auth.forgotSecret', {
-          infer: true,
-        }),
-      });
-
-      userId = jwtData.forgotUserId;
-    } catch {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          hash: `invalidHash`,
-        },
-      });
-    }
-
-    const user = await this.usersService.findById(userId);
-
-    if (!user) {
-      throw new UnprocessableEntityException({
-        status: HttpStatus.UNPROCESSABLE_ENTITY,
-        errors: {
-          hash: `notFound`,
-        },
-      });
-    }
-
-    user.password = password;
-
-    await this.sessionService.deleteByUserId({
-      userId: user.id,
-    });
-
-    await this.usersService.update(user.id, user);
+    return this.authPasswordService.resetPassword(hash, password);
   }
 
   async me(userJwtPayload: JwtPayloadType): Promise<NullableType<User>> {
@@ -530,7 +337,7 @@ export class AuthService {
       hash,
     });
 
-    const { token, refreshToken, tokenExpires } = await this.getTokensData({
+    const { token, refreshToken, tokenExpires } = await this.authTokenService.getTokensData({
       id: session.user.id,
       role: {
         id: user.role.id,
@@ -554,68 +361,4 @@ export class AuthService {
     return this.sessionService.deleteById(data.sessionId);
   }
 
-  private async getTokensData(data: {
-    id: User['id'];
-    role: User['role'];
-    sessionId: Session['id'];
-    hash: Session['hash'];
-  }) {
-    const tokenExpiresIn = this.configService.getOrThrow('auth.expires', {
-      infer: true,
-    });
-
-    const tokenExpires = Date.now() + ms(tokenExpiresIn);
-
-    const [token, refreshToken] = await Promise.all([
-      await this.jwtService.signAsync(
-        {
-          id: data.id,
-          role: data.role,
-          sessionId: data.sessionId,
-        },
-        {
-          secret: this.configService.getOrThrow('auth.secret', { infer: true }),
-          expiresIn: tokenExpiresIn,
-        },
-      ),
-      await this.jwtService.signAsync(
-        {
-          sessionId: data.sessionId,
-          hash: data.hash,
-        },
-        {
-          secret: this.configService.getOrThrow('auth.refreshSecret', {
-            infer: true,
-          }),
-          expiresIn: this.configService.getOrThrow('auth.refreshExpires', {
-            infer: true,
-          }),
-        },
-      ),
-    ]);
-
-    return {
-      token,
-      refreshToken,
-      tokenExpires,
-    };
-  }
-
-  private async ensureDefaultProject(userId: User['id']): Promise<void> {
-    try {
-      const projects = await this.projectsService.findAll(userId);
-      if (projects.length === 0) {
-        await this.projectsService.create(
-          {
-            name: 'General',
-            description: 'Default personal workspace',
-          },
-          userId,
-        );
-      }
-    } catch (error) {
-      // Log error but don't block login
-      console.error('Failed to ensure default project:', error);
-    }
-  }
 }

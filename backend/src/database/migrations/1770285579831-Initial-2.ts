@@ -4,10 +4,10 @@ export class Initial21770285579831 implements MigrationInterface {
   name = 'Initial21770285579831';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`ALTER TABLE "project" DROP COLUMN "thumbnail"`);
-    await queryRunner.query(`ALTER TABLE "workflow" DROP COLUMN "visibility"`);
-    await queryRunner.query(`ALTER TABLE "project" DROP COLUMN "visibility"`);
-    await queryRunner.query(`ALTER TABLE "workflow" DROP COLUMN "previewUrl"`);
+    await queryRunner.query(`ALTER TABLE "project" DROP COLUMN IF EXISTS "thumbnail"`);
+    await queryRunner.query(`ALTER TABLE "workflow" DROP COLUMN IF EXISTS "visibility"`);
+    await queryRunner.query(`ALTER TABLE "project" DROP COLUMN IF EXISTS "visibility"`);
+    await queryRunner.query(`ALTER TABLE "workflow" DROP COLUMN IF EXISTS "previewUrl"`);
     await queryRunner.query(
       `ALTER TABLE "project" ADD "visibility" character varying NOT NULL DEFAULT 'private'`,
     );

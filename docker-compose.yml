@@ -51,9 +51,9 @@ services:
       exit 0;
       "
 
-  # Backend (NestJS API) - Core Engine with direct AI provider integration
-  backend:
-    container_name: ai-generator-backend
+  # API Gateway (NestJS API) - Handles HTTP requests
+  api:
+    container_name: ai-generator-api
     build:
       context: ./backend
       dockerfile: Dockerfile
@@ -67,6 +67,27 @@ services:
       - WORKER_HOST=redis://redis:6379/1
       - REDIS_HOST=redis
       - AWS_S3_ENDPOINT=http://minio:9000
+      - APP_MODE=api
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  # Background Worker - Processes heavy AI tasks via BullMQ
+  worker:
+    container_name: ai-generator-worker
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./backend/.env
+    environment:
+      - DATABASE_HOST=postgres
+      - WORKER_HOST=redis://redis:6379/1
+      - REDIS_HOST=redis
+      - AWS_S3_ENDPOINT=http://minio:9000
+      - APP_MODE=worker
     depends_on:
       - postgres
       - redis
@@ -83,8 +104,10 @@ services:
       - "3000:3000"
     env_file:
       - ./frontend/.env
+    environment:
+      - NEXT_PUBLIC_API_URL=http://api:8000/api/v1
     depends_on:
-      - backend
+      - api
 
 volumes:
   postgres-data:

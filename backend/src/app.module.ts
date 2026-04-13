@@ -60,6 +60,9 @@ import { MembersModule } from './members/members.module';
 import { InvitesModule } from './invites/invites.module';
 import { BillingModule } from './billing/billing.module';
 import { PermissionsModule } from './permissions/permissions.module';
+import { NotificationsModule } from './notifications/notifications.module';
+import { DashboardModule } from './dashboard/dashboard.module';
+import { HealthModule } from './health/health.module';
 
 @Module({
   imports: [
@@ -125,6 +128,9 @@ import { PermissionsModule } from './permissions/permissions.module';
     InvitesModule,
     BillingModule,
     PermissionsModule,
+    NotificationsModule,
+    DashboardModule,
+    HealthModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

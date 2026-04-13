@@ -1,15 +1,16 @@
-import React, { useState, useRef, useEffect } from 'react';
-import {
-    X, Send, Wand2, Scissors, Crop, Maximize2,
-    MoreHorizontal, Play, Pause, Volume2, VolumeX,
-    Zap, Hand, Type, Music, Sparkles
-} from 'lucide-react';
+'use client';
 
-import { cn } from '@/lib/utils';
+import React, { useState } from 'react';
+import {
+    X, Send, Wand2, Scissors, Crop,
+    Play, Volume2, VolumeX, Type, Music, Sparkles, MoreHorizontal,
+} from 'lucide-react';
 import { toast } from 'sonner';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/ui/dialog';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
+import { useVideoPlayer } from './hooks/useVideoPlayer';
+import { VideoToolButton } from './components/VideoToolButton';
 
 interface VideoEditorModalProps {
     isOpen: boolean;
@@ -18,64 +19,28 @@ interface VideoEditorModalProps {
     onSave?: (newUrl: string) => void;
 }
 
-export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEditorModalProps) {
+export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModalProps) {
     const [prompt, setPrompt] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
-    const [isPlaying, setIsPlaying] = useState(false);
-    const [isMuted, setIsMuted] = useState(true);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const videoRef = useRef<HTMLVideoElement>(null);
 
-    useEffect(() => {
-        if (isOpen && videoRef.current) {
-            videoRef.current.currentTime = 0;
-            setIsPlaying(false);
-        }
-    }, [isOpen]);
-
-    const handleTogglePlay = () => {
-        if (videoRef.current) {
-            if (isPlaying) {
-                videoRef.current.pause();
-            } else {
-                videoRef.current.play();
-            }
-            setIsPlaying(!isPlaying);
-        }
-    };
-
-    const handleTimeUpdate = () => {
-        if (videoRef.current) {
-            setCurrentTime(videoRef.current.currentTime);
-        }
-    };
-
-    const handleLoadedMetadata = () => {
-        if (videoRef.current) {
-            setDuration(videoRef.current.duration);
-        }
-    };
+    const {
+        videoRef, isPlaying, isMuted, currentTime, duration,
+        togglePlay, toggleMute, handleTimeUpdate, handleLoadedMetadata, formatTime,
+    } = useVideoPlayer(isOpen);
 
     const handleEdit = async () => {
         if (!prompt.trim()) return;
         setIsProcessing(true);
-        // Simulate edit
         await new Promise(r => setTimeout(r, 3000));
         setIsProcessing(false);
         setPrompt('');
         toast.success("Video edit simulation: Clip would be processed based on prompt.");
     };
 
-    const formatTime = (time: number) => {
-        const minutes = Math.floor(time / 60);
-        const seconds = Math.floor(time % 60);
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-    };
-
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
             <DialogContent className="max-w-[100vw] w-screen h-screen m-0 p-0 bg-black/95 border-none flex flex-col gap-0 z-[100] outline-none">
+                {/* Header */}
                 <DialogHeader className="h-14 px-6 flex flex-row items-center justify-between border-b border-white/5 bg-[#0F1014] space-y-0">
                     <div className="flex items-center gap-4">
                         <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg text-white/60 hover:text-white transition-colors">
@@ -89,9 +54,8 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                     </div>
                 </DialogHeader>
 
-                {/* Main Content Area */}
+                {/* Video Area */}
                 <div className="flex-1 relative flex flex-col items-center justify-center p-8 overflow-hidden bg-[#050505]">
-                    {/* Video Area */}
                     <div className="relative w-full max-w-4xl aspect-video bg-black rounded-xl overflow-hidden shadow-2xl border border-white/5 flex items-center justify-center group">
                         <video
                             ref={videoRef}
@@ -100,7 +64,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                             muted={isMuted}
                             onTimeUpdate={handleTimeUpdate}
                             onLoadedMetadata={handleLoadedMetadata}
-                            onClick={handleTogglePlay}
+                            onClick={togglePlay}
                             loop
                         />
 
@@ -123,36 +87,21 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                                     </div>
                                     <div>
                                         <h3 className="text-white font-semibold text-lg">AI Video Processing</h3>
-                                        <p className="text-white/40 text-sm mt-1 max-w-xs">Enhancing lighting, atmosphere, and textures based on your prompt...</p>
+                                        <p className="text-white/40 text-sm mt-1 max-w-xs">Enhancing lighting, atmosphere, and textures...</p>
                                     </div>
                                 </div>
                             </div>
                         )}
-
-                        {/* Premium Plan Overlay (Mockup as seen in screenshot) */}
-                        {/* <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
-                            <div className="bg-[#1A1B1F]/90 p-8 rounded-3xl border border-white/10 flex flex-col items-center text-center max-w-sm">
-                                <div className="w-12 h-12 rounded-2xl bg-yellow-500/20 flex items-center justify-center mb-4">
-                                    <Lightning className="w-6 h-6 text-yellow-500 fill-yellow-500" />
-                                </div>
-                                <h3 className="text-xl font-bold text-white mb-2">Upgrade to Premium</h3>
-                                <p className="text-white/50 text-sm mb-6">Continue editing with advanced AI features and higher resolution output.</p>
-                                <Button className="bg-white text-black hover:bg-gray-200 rounded-full px-8">See plans</Button>
-                            </div>
-                        </div> */}
                     </div>
 
-                    {/* Timeline & Controls (Freepik style) */}
+                    {/* Timeline & Controls */}
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-3xl flex flex-col gap-4">
-
-                        {/* Range/Timeline Visualizer */}
+                        {/* Range/Timeline */}
                         <div className="bg-[#151619]/90 border border-white/10 rounded-2xl p-4 backdrop-blur-xl">
                             <div className="flex items-center justify-between mb-3 px-1">
                                 <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Range selected</span>
                                 <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">{formatTime(duration)}</span>
                             </div>
-
-                            {/* Film Strip */}
                             <div className="h-10 w-full bg-black/40 rounded-lg relative overflow-hidden border border-white/5 flex gap-1 p-1">
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <div key={i} className="flex-1 h-full bg-white/5 rounded-sm overflow-hidden border border-white/5 relative">
@@ -160,14 +109,10 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
                                     </div>
                                 ))}
-
-                                {/* Selected Range Highlight */}
                                 <div className="absolute top-0 bottom-0 left-[10%] right-[10%] border-2 border-white rounded-lg z-10">
                                     <div className="absolute top-1/2 -translate-y-1/2 -left-1 w-2 h-4 bg-white rounded-sm cursor-col-resize" />
                                     <div className="absolute top-1/2 -translate-y-1/2 -right-1 w-2 h-4 bg-white rounded-sm cursor-col-resize" />
                                 </div>
-
-                                {/* Current Time Indicator */}
                                 <div
                                     className="absolute top-0 bottom-0 w-0.5 bg-blue-500 z-20 shadow-[0_0_8px_rgba(59,130,246,0.8)]"
                                     style={{ left: `${(currentTime / duration) * 100 || 0}%` }}
@@ -175,9 +120,8 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                             </div>
                         </div>
 
-                        {/* AI Input & Toolbar */}
+                        {/* AI Input & Tools */}
                         <div className="bg-[#1A1B1F]/90 border border-white/10 rounded-3xl shadow-2xl p-3 flex flex-col gap-3 backdrop-blur-2xl">
-                            {/* Prompt Input */}
                             <div className="relative">
                                 <Input
                                     placeholder="Describe what you want to do with your video"
@@ -199,12 +143,10 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                                     <Send className="w-4 h-4" />
                                 </Button>
                             </div>
-
-                            {/* Tools Row (Bottom Strip) */}
                             <div className="flex items-center justify-between px-2">
                                 <div className="flex items-center gap-0.5">
                                     <VideoToolButton icon={Sparkles} label="Magic" active />
-                                    <VideoToolButton icon={Play} label="Preview" onClick={handleTogglePlay} />
+                                    <VideoToolButton icon={Play} label="Preview" onClick={togglePlay} />
                                     <VideoToolButton icon={Crop} label="Crop" />
                                     <VideoToolButton icon={Wand2} label="Relight" />
                                     <VideoToolButton icon={Scissors} label="Trim" />
@@ -213,7 +155,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                                 </div>
                                 <div className="flex items-center gap-1">
                                     <div className="h-4 w-px bg-white/10 mx-2" />
-                                    <VideoToolButton icon={isMuted ? VolumeX : Volume2} onClick={() => setIsMuted(!isMuted)} />
+                                    <VideoToolButton icon={isMuted ? VolumeX : Volume2} onClick={toggleMute} />
                                     <VideoToolButton icon={MoreHorizontal} />
                                 </div>
                             </div>
@@ -222,20 +164,5 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl, onSave }: VideoEdi
                 </div>
             </DialogContent>
         </Dialog>
-    );
-}
-
-function VideoToolButton({ icon: Icon, label, active, onClick }: { icon: any, label?: string, active?: boolean, onClick?: () => void }) {
-    return (
-        <button
-            onClick={onClick}
-            className={cn(
-                "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all group",
-                active ? "bg-white/10 text-white" : "hover:bg-white/5 text-white/40 hover:text-white"
-            )}
-        >
-            <Icon className={cn("w-4 h-4 transition-transform group-hover:scale-110", active && "scale-110")} />
-            {label && <span className="text-[9px] font-medium tracking-tight h-0 opacity-0 group-hover:h-auto group-hover:opacity-100 transition-all">{label}</span>}
-        </button>
     );
 }
