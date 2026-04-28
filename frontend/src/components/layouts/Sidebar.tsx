@@ -17,7 +17,12 @@ import {
     Grid3X3,
     Mic,
     Pin,
-    Search
+    Search,
+    Share2,
+    Calendar,
+    MessageSquare,
+    LayoutDashboard,
+    Clapperboard
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
@@ -36,11 +41,20 @@ export const navItems = [
     { icon: Globe, label: 'Community', href: '/community' },
 ];
 
+export const socialItems = [
+    { icon: LayoutDashboard, label: 'Social Dashboard', href: '/social/dashboard' },
+    { icon: Share2, label: 'Channels', href: '/social/channels' },
+    { icon: Calendar, label: 'Calendar', href: '/social/calendar' },
+    { icon: Sparkles, label: 'Publish', href: '/social/publish' },
+    { icon: MessageSquare, label: 'Interaction Inbox', href: '/social/inbox', isNew: true },
+];
+
 export const pinnedItems = [
     { icon: ImageIcon, label: 'Image Generator', href: '/creator/image-generator' },
     { icon: Video, label: 'Video Generator', href: '/creator/video-generator' },
     { icon: Sparkles, label: 'Assistant', href: '/creator/ai-assistant' },
     { icon: LayoutGrid, label: 'Creative Studio', href: '/creative-studio', isNew: true },
+    { icon: Clapperboard, label: 'VisualFlow Studio', href: '/visual-flow', isNew: true },
 ];
 
 export const bottomItems = [
@@ -65,6 +79,7 @@ export const ALL_TOOLS_LIST = [
     { id: 'sfx-gen', label: 'Sound Effect Generator', href: '/creator/sfx-generator', icon: Mic, category: 'audio' },
     { id: 'music-gen', label: 'Music Generator', href: '/creator/music-generator', icon: Mic, category: 'audio' },
     { id: 'creative-studio', label: 'Creative Studio', href: '/creative-studio', icon: LayoutGrid, category: 'others', isNew: true },
+    { id: 'visual-flow', label: 'VisualFlow Studio', href: '/visual-flow', icon: Clapperboard, category: 'others', isNew: true },
     { id: 'workflow-editor', label: 'Workflow Editor', href: '/creator/workflow-editor', icon: LayoutGrid, category: 'others', isNew: true },
     { id: 'design-editor', label: 'Design Editor', href: '/creator/design-editor', icon: LayoutGrid, category: 'others' },
     { id: 'mockup-gen', label: 'Mockup Generator', href: '/creator/mockup-generator', icon: LayoutGrid, category: 'others' },
@@ -75,31 +90,31 @@ export const ALL_TOOLS_LIST = [
     { id: 'sketch-to-image', label: 'Sketch to Image', href: '/creator/sketch-to-image', icon: ImageIcon, category: 'others' },
 ];
 
-export const INITIAL_PINNED_IDS = ['image-gen', 'video-gen', 'assistant', 'creative-studio'];
+export const INITIAL_PINNED_IDS = ['image-gen', 'video-gen', 'assistant', 'creative-studio', 'visual-flow'];
 
 export const stockMenuData = {
     image: [
-        { label: 'All images', href: '/stock/images' },
-        { label: 'Vectors', href: '/stock/vectors' },
-        { label: 'Photos', href: '/stock/photos' },
-        { label: 'Illustrations', href: '/stock/illustrations' },
-        { label: 'Icons', href: '/stock/icons' },
-        { label: '3D', href: '/stock/3d' },
+        { label: 'All images', href: '/stock?category=images' },
+        { label: 'Vectors', href: '/stock?category=vectors' },
+        { label: 'Photos', href: '/stock?category=photos' },
+        { label: 'Illustrations', href: '/stock?category=illustrations' },
+        { label: 'Icons', href: '/stock?category=icons' },
+        { label: '3D', href: '/stock?category=3d' },
     ],
     video: [
-        { label: 'Videos', href: '/stock/videos' },
-        { label: 'Video templates', href: '/stock/video-templates' },
-        { label: 'Motion graphics', href: '/stock/motion-graphics' },
+        { label: 'Videos', href: '/stock?category=videos' },
+        { label: 'Video templates', href: '/stock?category=video-templates' },
+        { label: 'Motion graphics', href: '/stock?category=motion-graphics' },
     ],
     audio: [
-        { label: 'Sound Effects', href: '/stock/sound-effects' },
-        { label: 'Music', href: '/stock/music' },
+        { label: 'Sound Effects', href: '/stock?category=sound-effects' },
+        { label: 'Music', href: '/stock?category=music' },
     ],
     design: [
-        { label: 'Templates', href: '/stock/templates' },
-        { label: 'Mockups', href: '/stock/mockups' },
-        { label: 'Fonts', href: '/stock/fonts' },
-        { label: 'PSD', href: '/stock/psd' },
+        { label: 'Templates', href: '/stock?category=templates' },
+        { label: 'Mockups', href: '/stock?category=mockups' },
+        { label: 'Fonts', href: '/stock?category=fonts' },
+        { label: 'PSD', href: '/stock?category=psd' },
     ],
 };
 
@@ -230,11 +245,11 @@ export function Sidebar() {
                 </div>
             </div>
             <div className="mt-6 pt-6 border-t border-border flex gap-6">
-                <Link href="/my-collections" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/stock?view=collections" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <LayoutGrid className="w-4 h-4" />
                     My Collections
                 </Link>
-                <Link href="/downloads" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Link href="/stock?view=downloads" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                     <Clock className="w-4 h-4" />
                     Downloads
                 </Link>
@@ -446,6 +461,21 @@ export function Sidebar() {
                     {/* Main Nav */}
                     <div className="space-y-0.5">
                         {navItems.map((item) => (
+                            <NavItem key={item.label} item={item} />
+                        ))}
+                    </div>
+
+                    {/* Social Hub Section */}
+                    {isCollapsed ? (
+                        <div className="h-px w-8 bg-sidebar-border mx-auto my-3" />
+                    ) : (
+                        <div className="px-3 py-3">
+                            <h3 className="text-[10px] font-medium text-sidebar-foreground/30 uppercase tracking-wider">Social Hub</h3>
+                        </div>
+                    )}
+
+                    <div className="space-y-0.5">
+                        {socialItems.map((item) => (
                             <NavItem key={item.label} item={item} />
                         ))}
                     </div>

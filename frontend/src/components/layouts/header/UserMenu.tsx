@@ -16,7 +16,9 @@ import {
 import { useTheme } from 'next-themes';
 import { useLocale } from 'next-intl';
 import { useRouter, usePathname } from '@/i18n/navigation';
-import { LOCALES } from '@/constants/i18n';
+import { LOCALES, type LocaleCode } from '@/constants/i18n';
+import { useOrgStore } from '@/stores/org-store';
+import { env } from '@/env';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -40,6 +42,15 @@ export function UserMenu() {
     const locale = useLocale();
     const router = useRouter();
     const pathname = usePathname();
+    const currentOrg = useOrgStore((state) => state.currentOrg);
+
+    const goTo = (href: string) => {
+        router.push(href);
+    };
+
+    const openHelpCenter = () => {
+        window.open(`${env.NEXT_PUBLIC_GITHUB_URL.replace(/\/$/, '')}/issues`, '_blank', 'noopener,noreferrer');
+    };
 
     if (!user) return null;
 
@@ -76,10 +87,17 @@ export function UserMenu() {
                     </div>
 
                     <div className="px-2 py-3 space-y-2">
-                        <Button className="w-full text-xs font-semibold h-9 rounded-lg bg-pricing hover:bg-pricing/90 text-pricing-foreground">
+                        <Button
+                            className="w-full text-xs font-semibold h-9 rounded-lg bg-pricing hover:bg-pricing/90 text-pricing-foreground"
+                            onClick={() => goTo('/settings?tab=billing')}
+                        >
                             Get a plan
                         </Button>
-                        <Button variant="secondary" className="w-full text-xs font-semibold h-9 rounded-lg">
+                        <Button
+                            variant="secondary"
+                            className="w-full text-xs font-semibold h-9 rounded-lg"
+                            onClick={() => goTo('/orgs/new')}
+                        >
                             Create your team
                         </Button>
                     </div>
@@ -87,7 +105,16 @@ export function UserMenu() {
                     <DropdownMenuSeparator />
 
                     <DropdownMenuGroup className="py-1">
-                        <DropdownMenuItem className="flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer">
+                        <DropdownMenuItem
+                            className="flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer"
+                            onClick={() => {
+                                if (currentOrg?.slug) {
+                                    goTo(`/orgs/${currentOrg.slug}/billing`);
+                                    return;
+                                }
+                                goTo('/settings?tab=billing');
+                            }}
+                        >
                             <div className="flex items-center gap-3">
                                 <CreditCard className="w-4 h-4" />
                                 <span className="text-sm font-medium">Plan & billing</span>
@@ -95,17 +122,26 @@ export function UserMenu() {
                             <span className="px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground bg-muted rounded border border-border uppercase">Free</span>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+                        <DropdownMenuItem
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                            onClick={() => goTo('/settings')}
+                        >
                             <Settings className="w-4 h-4" />
                             <span className="text-sm font-medium">Settings</span>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+                        <DropdownMenuItem
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                            onClick={() => goTo('/settings?tab=profile')}
+                        >
                             <User className="w-4 h-4" />
                             <span className="text-sm font-medium">Creator profile</span>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+                        <DropdownMenuItem
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                            onClick={() => goTo('/stock?view=collections')}
+                        >
                             <Layers className="w-4 h-4" />
                             <span className="text-sm font-medium">My collections</span>
                         </DropdownMenuItem>
@@ -122,21 +158,21 @@ export function UserMenu() {
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <span className="text-xs text-muted-foreground">
-                                        {(LOCALES as any)[locale]?.label || locale}
+                                        {(locale in LOCALES ? LOCALES[locale as LocaleCode].label : locale)}
                                     </span>
                                     <ChevronRight className="w-3 h-3 text-muted-foreground" />
                                 </div>
                             </DropdownMenuSubTrigger>
                             <DropdownMenuPortal>
                                 <DropdownMenuSubContent className="min-w-[120px]">
-                                    {Object.entries(LOCALES).map(([code, info]) => (
+                                    {(Object.entries(LOCALES) as [LocaleCode, (typeof LOCALES)[LocaleCode]][]).map(([code, info]) => (
                                         <DropdownMenuItem
                                             key={code}
                                             className={cn(
                                                 "px-3 py-2 text-sm cursor-pointer",
                                                 locale === code && "bg-accent text-accent-foreground font-medium"
                                             )}
-                                            onClick={() => router.replace(pathname, { locale: code as any })}
+                                            onClick={() => router.replace(pathname, { locale: code })}
                                         >
                                             <span className="mr-2">{info.flag}</span>
                                             {info.label}
@@ -181,12 +217,18 @@ export function UserMenu() {
                             </DropdownMenuPortal>
                         </DropdownMenuSub>
 
-                        <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+                        <DropdownMenuItem
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                            onClick={() => goTo('/assistant')}
+                        >
                             <Code className="w-4 h-4" />
                             <span className="text-sm font-medium">Use AI code</span>
                         </DropdownMenuItem>
 
-                        <DropdownMenuItem className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer">
+                        <DropdownMenuItem
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+                            onClick={openHelpCenter}
+                        >
                             <LifeBuoy className="w-4 h-4" />
                             <span className="text-sm font-medium">Help center</span>
                         </DropdownMenuItem>

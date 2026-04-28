@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, FormEvent } from 'react';
+import { useState, FormEvent, useEffect } from 'react';
 import { Search, ArrowRight, Download, Heart, Loader2 } from 'lucide-react';
 import { Input } from '@/ui/input';
 import { Button } from '@/ui/button';
 import { toast } from 'sonner';
+import { useSearchParams } from 'next/navigation';
 
 const CATEGORIES = [
     { title: 'Vectors', color: 'from-chart-1/20 to-chart-1/10' },
@@ -25,10 +26,20 @@ const FEATURED_COLLECTIONS = [
 ];
 
 export default function StockPage() {
+    const searchParams = useSearchParams();
     const [query, setQuery] = useState('');
     const [isSearching, setIsSearching] = useState(false);
     const [results, setResults] = useState<any[]>([]);
     const [hasSearched, setHasSearched] = useState(false);
+
+    useEffect(() => {
+        const category = searchParams.get('category');
+        const view = searchParams.get('view');
+        const seed = category ?? view;
+        if (seed) {
+            setQuery(seed.replace(/[-_]/g, ' '));
+        }
+    }, [searchParams]);
 
     const handleSearch = async (e?: FormEvent) => {
         if (e) e.preventDefault();

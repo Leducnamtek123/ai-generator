@@ -2,7 +2,7 @@
 
 import { type AbstractIntlMessages } from "next-intl";
 
-import { IntlProvider, MSWProvider, QueryProvider, ThemeProvider } from "@/providers";
+import { IntlProvider, MSWProvider, QueryProvider, ThemeProvider, SocketProvider } from "@/providers";
 import { AuthProvider } from "./AuthProvider";
 import { SessionProvider } from "next-auth/react";
 
@@ -20,9 +20,11 @@ export function Providers({
       <IntlProvider messages={messages} locale={locale}>
         <SessionProvider>
           <AuthProvider>
-            {/* <MSWProvider> */}
-            <QueryProvider>{children}</QueryProvider>
-            {/* </MSWProvider> */}
+            <SocketProvider>
+              {/* <MSWProvider> */}
+              <QueryProvider>{children}</QueryProvider>
+              {/* </MSWProvider> */}
+            </SocketProvider>
           </AuthProvider>
         </SessionProvider>
       </IntlProvider>

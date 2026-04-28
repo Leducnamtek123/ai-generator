@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { GenerationProcessor } from './processors/generation.processor';
 import redisConfig from './config/redis.config';
-import { GENERATION_QUEUE, WORKFLOW_QUEUE } from './queues.constants';
+import { GENERATION_QUEUE, WORKFLOW_QUEUE, SOCIAL_POSTING_QUEUE } from './queues.constants';
 import { ProvidersModule } from '../providers/providers.module';
 import { WorkflowsModule } from '../workflows/workflows.module';
 import { GenerationsModule } from '../generations/generations.module';
@@ -25,9 +25,10 @@ import { CreditsModule } from '../credits/credits.module';
       }),
       inject: [ConfigService],
     }),
-    BullModule.registerQueue(
+     BullModule.registerQueue(
       { name: GENERATION_QUEUE },
       { name: WORKFLOW_QUEUE },
+      { name: SOCIAL_POSTING_QUEUE },
     ),
     ProvidersModule,
     GenerationsModule,

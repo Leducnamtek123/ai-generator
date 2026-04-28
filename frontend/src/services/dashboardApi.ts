@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { api } from '@/lib/api';
 
 export interface DashboardStats {
   totalWorkflows: number;
@@ -9,7 +9,7 @@ export interface DashboardStats {
 
 export const dashboardApi = {
   getStats: async () => {
-    const response = await axios.get<DashboardStats>('/api/dashboard/stats');
+    const response = await api.get<DashboardStats>('/dashboard/stats');
     return response.data;
   },
 };

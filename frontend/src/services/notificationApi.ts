@@ -1,4 +1,4 @@
-import axios from 'axios';
+import { api } from '@/lib/api';
 
 export interface Notification {
   id: string;
@@ -11,24 +11,24 @@ export interface Notification {
 
 export const notificationApi = {
   getNotifications: async (page = 1, limit = 10) => {
-    const response = await axios.get<Notification[]>('/api/notifications', {
+    const response = await api.get<Notification[]>('/notifications', {
       params: { page, limit },
     });
     return response.data;
   },
 
   getUnreadCount: async () => {
-    const response = await axios.get<{ count: number }>('/api/notifications/unread-count');
+    const response = await api.get<{ count: number }>('/notifications/unread-count');
     return response.data;
   },
 
   markAsRead: async (id: string) => {
-    const response = await axios.patch<Notification>(`/api/notifications/${id}/read`);
+    const response = await api.patch<Notification>(`/notifications/${id}/read`);
     return response.data;
   },
 
   markAllAsRead: async () => {
-    const response = await axios.patch<{ success: boolean }>('/api/notifications/mark-all-read');
+    const response = await api.patch<{ success: boolean }>('/notifications/mark-all-read');
     return response.data;
   },
 };

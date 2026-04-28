@@ -3,10 +3,22 @@ import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import axios from "axios";
 
-const IS_SERVER = typeof window === "undefined";
-const API_URL = IS_SERVER
-  ? (process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL?.replace("localhost", "backend") || "http://backend:8000/api/v1")
-  : (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api/v1");
+const API_URL = (
+  process.env.INTERNAL_API_URL ||
+  process.env.API_BACKEND_URL ||
+  process.env.NEXT_PUBLIC_API_URL ||
+  "http://localhost:8000/api/v1"
+).replace(/\/+$/, "");
+
+function toEpochMs(value: unknown): number | undefined {
+  if (typeof value !== "number" && typeof value !== "string") return undefined;
+
+  const num = Number(value);
+  if (!Number.isFinite(num)) return undefined;
+
+  // Convert seconds to ms if needed.
+  return num < 10_000_000_000 ? num * 1000 : num;
+}
 
 async function refreshAccessToken(refreshToken: string) {
   try {
@@ -20,7 +32,7 @@ async function refreshAccessToken(refreshToken: string) {
     return {
       accessToken: data.token as string,
       refreshToken: data.refreshToken as string,
-      tokenExpires: data.tokenExpires as number,
+      tokenExpires: data.tokenExpires as number | string,
     };
   } catch {
     return null;
@@ -49,7 +61,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           });
 
           const data = res.data;
-          // Backend returns: { token, refreshToken, tokenExpires, user }
+          console.debug("[Auth] Backend login success:", {
+            hasToken: !!data.token,
+            hasUser: !!data.user,
+          });
+
           return {
             id: String(data.user.id),
             name:
@@ -70,45 +86,65 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   ],
   callbacks: {
     async jwt({ token, user, account }) {
-      // If logging in via Google OAuth
+      // If logging in via Google OAuth, exchange id_token for backend tokens.
       if (account?.provider === "google" && account.id_token) {
         try {
           const res = await axios.post(`${API_URL}/auth/google/login`, {
             idToken: account.id_token,
           });
-          
+
           const data = res.data;
-            token.accessToken = data.token;
-            token.refreshToken = data.refreshToken;
-            token.tokenExpires = data.tokenExpires;
-            token.userId = String(data.user?.id || user?.id);
-            return token;
-          } catch (error) {
-            if (axios.isAxiosError(error)) {
-              console.error("Google login failed", error.response?.data);
-            } else {
-              console.error("Google login error", error);
-            }
-            token.error = "GoogleLoginFailed";
+          token.accessToken = data.token;
+          token.refreshToken = data.refreshToken;
+          token.tokenExpires = data.tokenExpires;
+          token.userId = String(data.user?.id || user?.id);
+          token.error = undefined;
+          return token;
+        } catch (error) {
+          if (axios.isAxiosError(error)) {
+            console.error("Google login failed", error.response?.data);
+          } else {
+            console.error("Google login error", error);
           }
+          token.error = "GoogleLoginFailed";
         }
+      }
 
-      // Initial sign in — persist tokens from authorize() (for Credentials)
-      if (user && account?.provider === "credentials") {
-        token.accessToken = (user as unknown as Record<string, unknown>).accessToken as string;
-        token.refreshToken = (user as unknown as Record<string, unknown>).refreshToken as string;
-        token.tokenExpires = (user as unknown as Record<string, unknown>).tokenExpires as number;
+      // Initial sign-in from credentials provider.
+      const userAccessToken = (user as Record<string, unknown> | undefined)
+        ?.accessToken as string | undefined;
+
+      if (user && userAccessToken) {
+        token.accessToken = userAccessToken;
+        token.refreshToken = (user as Record<string, unknown>).refreshToken as
+          | string
+          | undefined;
+        token.tokenExpires = (user as Record<string, unknown>).tokenExpires as
+          | number
+          | string
+          | undefined;
         token.userId = user.id;
+        token.error = undefined;
         return token;
       }
 
-      // Token still valid — return as-is
-      const expires = token.tokenExpires as number | undefined;
-      if (expires && Date.now() < expires) {
+      const expiresMs = toEpochMs(token.tokenExpires);
+      const hasAccessToken = Boolean(token.accessToken);
+      const refreshSkewMs = 15_000;
+
+      // Keep current token when it is still valid.
+      if (hasAccessToken && expiresMs && Date.now() < expiresMs - refreshSkewMs) {
+        token.error = undefined;
         return token;
       }
 
-      // Token expired — attempt refresh
+      // If expiry is missing/invalid but access token exists, do not force-refresh.
+      if (hasAccessToken && !expiresMs) {
+        token.error = undefined;
+        return token;
+      }
+
+      // Token is missing or expired, attempt refresh.
       const refreshToken = token.refreshToken as string | undefined;
       if (!refreshToken) {
         token.error = "RefreshTokenMissing";
@@ -124,16 +160,24 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       token.accessToken = refreshed.accessToken;
       token.refreshToken = refreshed.refreshToken;
       token.tokenExpires = refreshed.tokenExpires;
+      token.error = undefined;
       return token;
     },
     async session({ session, token }) {
+      console.debug(
+        "[Auth] Mapping token to session. Token has accessToken:",
+        !!token.accessToken
+      );
       session.accessToken = token.accessToken as string;
       if (session.user) {
         session.user.id = token.userId as string;
+        // Keep token accessible in both locations for legacy consumers.
+        session.user.accessToken = token.accessToken as string;
       }
-      // Pass error to client so it can force re-login
+      // Pass error to client so it can force re-login.
       if (token.error) {
-        (session as unknown as Record<string, unknown>).error = token.error;
+        console.warn("[Auth] Session carries error:", token.error);
+        (session as { error?: string }).error = token.error as string;
       }
       return session;
     },

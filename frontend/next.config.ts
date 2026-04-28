@@ -13,6 +13,8 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   reactCompiler: true,
   htmlLimitedBots: /.*/,
+  skipProxyUrlNormalize: true,
+
 
   turbopack: {
     rules: {

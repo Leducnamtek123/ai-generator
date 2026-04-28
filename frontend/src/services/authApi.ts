@@ -57,4 +57,10 @@ export const authApi = {
     const res = await api.post("/auth/logout");
     return res.data;
   },
+
+  // Matches: DELETE /auth/me
+  deleteAccount: async () => {
+    const res = await api.delete("/auth/me");
+    return res.data;
+  },
 };

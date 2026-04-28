@@ -2,37 +2,64 @@ import { auth } from "@/auth";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
+import { getToken } from "next-auth/jwt";
 
 const intlMiddleware = createMiddleware(routing);
 
-const PROTECTED_SEGMENTS = ['/dashboard', '/workflow', '/studio', '/projects', '/orgs',
-  '/creative-studio', '/creator', '/history', '/invites', '/settings', '/stock',
-  '/assistant', '/community', '/design-system', '/workflows'];
-const AUTH_SEGMENTS = ['/sign-in', '/sign-up'];
+const NEXT_AUTH_ACTIONS = new Set([
+  "signin",
+  "signout",
+  "callback",
+  "session",
+  "csrf",
+  "providers",
+  "error",
+  "verify-request",
+]);
 
-function matchesSegment(pathname: string, segments: string[]): boolean {
-  return segments.some((seg) => {
-    const pattern = new RegExp(`(^|/[a-z]{2})${seg}(/|$)`);
-    return pattern.test(pathname);
-  });
+function isNextAuthRoute(pathname: string): boolean {
+  if (!pathname.startsWith("/api/auth")) return false;
+
+  const action = pathname.slice("/api/auth".length).split("/").filter(Boolean)[0];
+  return !action || NEXT_AUTH_ACTIONS.has(action);
 }
+
 
 // Do not rely on auth wrapper which causes weird redirect loop with next-intl.
 // Manually get session.
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // Handle API proxying (exclude auth routes handled by Next.js)
-  if (pathname.startsWith('/api') && !pathname.startsWith('/api/auth')) {
-    // NEXT_PUBLIC_API_URL is "http://localhost:8000/api/v1"
-    const backendBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
+  // Handle API proxying (exclude only NextAuth routes handled by Next.js)
+  if (pathname.startsWith('/api') && !isNextAuthRoute(pathname)) {
+    // API_BACKEND_URL is a server-only runtime env var (not baked at build time)
+    const backendBase = process.env.API_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
     
     // Remove the local '/api' prefix and append to backend base
     const targetPath = pathname.replace(/^\/api/, '');
     const url = new URL(backendBase + targetPath);
     url.search = req.nextUrl.search;
 
-    return NextResponse.rewrite(url);
+    const headers = new Headers(req.headers);
+    const hasAuthHeader = headers.has("authorization");
+
+    if (!hasAuthHeader) {
+      const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+      const accessToken = token?.accessToken as string | undefined;
+      if (accessToken) {
+        headers.set("authorization", `Bearer ${accessToken}`);
+      }
+    }
+
+    console.log(
+      `[PROXY] Forwarding ${pathname} to ${url.toString()} with AuthHeader: ${headers.has("authorization")}`
+    );
+
+    return NextResponse.rewrite(url, {
+      request: {
+        headers,
+      },
+    });
   }
 
   // Skip intl processing for API routes and system routes

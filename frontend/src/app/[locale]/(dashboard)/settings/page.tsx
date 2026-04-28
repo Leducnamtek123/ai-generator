@@ -1,396 +1,719 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
+import { signOut } from 'next-auth/react';
 import {
-    User, Lock, CreditCard, Key, Bell, Shield,
-    Camera, Save, Loader2, Eye, EyeOff, Trash2, LogOut, ChevronRight
+  User,
+  Lock,
+  CreditCard,
+  Key,
+  Bell,
+  Save,
+  Loader2,
+  Eye,
+  EyeOff,
+  Trash2,
+  LogOut,
+  Plus,
+  RefreshCw,
+  CheckCircle2,
+  XCircle,
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useCreditStore } from '@/stores/credit-store';
+import {
+  paymentApi,
+  type CreditPackageId,
+  type PaymentProvider,
+} from '@/services/paymentApi';
+import { authApi } from '@/services/authApi';
+import { socialHubApi, type SocialChannel, type SocialProvider } from '@/services/socialHubApi';
+import { notificationApi } from '@/services/notificationApi';
+
+type UserProfile = {
+  firstName?: string | null;
+  lastName?: string | null;
+  email?: string | null;
+};
 
 const settingsTabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'account', label: 'Account', icon: Lock },
-    { id: 'billing', label: 'Billing', icon: CreditCard },
-    { id: 'notifications', label: 'Notifications', icon: Bell },
-    { id: 'api', label: 'API Keys', icon: Key },
-];
+  { id: 'profile', label: 'Profile', icon: User },
+  { id: 'account', label: 'Account', icon: Lock },
+  { id: 'billing', label: 'Billing', icon: CreditCard },
+  { id: 'notifications', label: 'Notifications', icon: Bell },
+  { id: 'api', label: 'API Keys', icon: Key },
+] as const;
 
 export default function SettingsPage() {
-    const [activeTab, setActiveTab] = useState('profile');
+  const searchParams = useSearchParams();
+  const [activeTab, setActiveTab] = useState<(typeof settingsTabs)[number]['id']>(() => {
+    const tab = searchParams.get('tab');
+    if (tab && settingsTabs.some((item) => item.id === tab)) {
+      return tab as (typeof settingsTabs)[number]['id'];
+    }
+    return 'profile';
+  });
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const notifiedRef = useRef<string>('');
 
-    return (
-        <div className="min-h-screen bg-background text-foreground">
-            <div className="max-w-[1200px] mx-auto px-6 py-8">
-                <h1 className="text-2xl font-bold mb-8">Settings</h1>
+  const fetchProfile = useCallback(async () => {
+    try {
+      const me = await authApi.getProfile();
+      setProfile({
+        firstName: me?.firstName ?? '',
+        lastName: me?.lastName ?? '',
+        email: me?.email ?? '',
+      });
+    } catch (error) {
+      console.error('Failed to fetch profile', error);
+    }
+  }, []);
 
-                <div className="flex gap-8">
-                    {/* Sidebar */}
-                    <nav className="w-[220px] shrink-0 space-y-1">
-                        {settingsTabs.map((tab) => (
-                            <button
-                                key={tab.id}
-                                onClick={() => setActiveTab(tab.id)}
-                                className={cn(
-                                    "w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all",
-                                    activeTab === tab.id
-                                        ? "bg-accent text-accent-foreground"
-                                        : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                                )}
-                            >
-                                <tab.icon className="w-4 h-4" />
-                                {tab.label}
-                            </button>
-                        ))}
-                    </nav>
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void fetchProfile();
+  }, [fetchProfile]);
 
-                    {/* Content */}
-                    <div className="flex-1 min-w-0">
-                        {activeTab === 'profile' && <ProfileSettings />}
-                        {activeTab === 'account' && <AccountSettings />}
-                        {activeTab === 'billing' && <BillingSettings />}
-                        {activeTab === 'notifications' && <NotificationSettings />}
-                        {activeTab === 'api' && <ApiKeySettings />}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
+  useEffect(() => {
+    const paymentStatus = searchParams.get('paymentStatus');
+    const paymentProvider = searchParams.get('paymentProvider');
+    const paymentOrder = searchParams.get('paymentOrder');
+    if (!paymentStatus || !paymentProvider) return;
 
-// ──────────────────────────── Profile ────────────────────────────
+    const notifyKey = `${paymentProvider}:${paymentOrder || ''}:${paymentStatus}`;
+    if (notifiedRef.current === notifyKey) return;
+    notifiedRef.current = notifyKey;
 
-function ProfileSettings() {
-    const [firstName, setFirstName] = useState('');
-    const [lastName, setLastName] = useState('');
-    const [email, setEmail] = useState('');
-    const [bio, setBio] = useState('');
-    const [isSaving, setIsSaving] = useState(false);
+    if (paymentStatus === 'paid') {
+      toast.success(`Thanh toan ${paymentProvider.toUpperCase()} thanh cong`);
+    } else if (paymentStatus === 'pending') {
+      toast.info(`Giao dich ${paymentProvider.toUpperCase()} dang cho xu ly`);
+    } else {
+      toast.error(`Thanh toan ${paymentProvider.toUpperCase()} that bai`);
+    }
+  }, [searchParams]);
 
-    const handleSave = async () => {
-        setIsSaving(true);
-        try {
+  useEffect(() => {
+    const paymentOrder = searchParams.get('paymentOrder');
+    const paymentProvider = searchParams.get('paymentProvider');
+    const paymentStatus = searchParams.get('paymentStatus');
+    if (!paymentOrder || !paymentProvider || paymentStatus !== 'pending') return;
 
-            await new Promise(r => setTimeout(r, 500));
-            toast.success('Profile updated');
-        } catch {
-            toast.error('Failed to update profile');
-        } finally {
-            setIsSaving(false);
+    const checkStatus = async () => {
+      try {
+        const order = await paymentApi.getStatus(paymentOrder);
+        if (order.status === 'paid') {
+          toast.success(`Thanh toan ${paymentProvider.toUpperCase()} da hoan tat`);
+        } else if (order.status === 'failed' || order.status === 'cancelled') {
+          toast.error(`Thanh toan ${paymentProvider.toUpperCase()} that bai`);
         }
+      } catch {
+        // ignore status polling errors on return page
+      }
     };
 
-    return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-lg font-semibold mb-1">Profile</h2>
-                <p className="text-sm text-muted-foreground">Manage your public profile information</p>
-            </div>
+    void checkStatus();
+  }, [searchParams]);
 
-            {/* Avatar */}
-            <div className="flex items-center gap-6">
-                <div className="relative">
-                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-chart-2/30 flex items-center justify-center text-2xl font-bold">
-                        {firstName?.[0] || 'U'}
-                    </div>
-                    <button className="absolute -bottom-1 -right-1 w-7 h-7 bg-background border border-border rounded-lg flex items-center justify-center hover:bg-accent transition-colors">
-                        <Camera className="w-3.5 h-3.5" />
-                    </button>
-                </div>
-                <div>
-                    <p className="text-sm font-medium">Profile photo</p>
-                    <p className="text-xs text-muted-foreground">PNG, JPG up to 5MB</p>
-                </div>
-            </div>
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      <div className="max-w-[1200px] mx-auto px-6 py-8">
+        <h1 className="text-2xl font-bold mb-8">Settings</h1>
 
-            {/* Form */}
-            <div className="grid grid-cols-2 gap-6">
-                <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">First Name</Label>
-                    <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder="John" />
-                </div>
-                <div className="space-y-2">
-                    <Label className="text-xs uppercase tracking-wider text-muted-foreground">Last Name</Label>
-                    <Input value={lastName} onChange={(e) => setLastName(e.target.value)} placeholder="Doe" />
-                </div>
-            </div>
+        <div className="flex gap-8">
+          <nav className="w-[220px] shrink-0 space-y-1">
+            {settingsTabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={cn(
+                  'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all',
+                  activeTab === tab.id
+                    ? 'bg-accent text-accent-foreground'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-muted',
+                )}
+              >
+                <tab.icon className="w-4 h-4" />
+                {tab.label}
+              </button>
+            ))}
+          </nav>
 
-            <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Email</Label>
-                <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="john@example.com" type="email" />
-            </div>
-
-            <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Bio</Label>
-                <textarea
-                    value={bio}
-                    onChange={(e) => setBio(e.target.value)}
-                    placeholder="Tell us about yourself..."
-                    rows={3}
-                    className="w-full px-3 py-2 bg-background border border-border rounded-xl text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
-                />
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-border">
-                <Button onClick={handleSave} disabled={isSaving}>
-                    {isSaving ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Save className="w-4 h-4 mr-2" />}
-                    Save Changes
-                </Button>
-            </div>
+          <div className="flex-1 min-w-0">
+            {activeTab === 'profile' && (
+              <ProfileSettings profile={profile} onProfileRefresh={fetchProfile} />
+            )}
+            {activeTab === 'account' && <AccountSettings />}
+            {activeTab === 'billing' && <BillingSettings />}
+            {activeTab === 'notifications' && <NotificationSettings />}
+            {activeTab === 'api' && <ApiKeySettings />}
+          </div>
         </div>
-    );
+      </div>
+    </div>
+  );
 }
 
-// ──────────────────────────── Account ────────────────────────────
+function ProfileSettings({
+  profile,
+  onProfileRefresh,
+}: {
+  profile: UserProfile | null;
+  onProfileRefresh: () => Promise<void>;
+}) {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [email, setEmail] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
+
+  useEffect(() => {
+    setFirstName(profile?.firstName ?? '');
+    setLastName(profile?.lastName ?? '');
+    setEmail(profile?.email ?? '');
+  }, [profile]);
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      await authApi.updateProfile({ firstName, lastName, email });
+      toast.success('Profile updated');
+      await onProfileRefresh();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update profile';
+      toast.error(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const initials = useMemo(
+    () => `${firstName?.[0] || ''}${lastName?.[0] || ''}`.toUpperCase() || 'U',
+    [firstName, lastName],
+  );
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-semibold mb-1">Profile</h2>
+        <p className="text-sm text-muted-foreground">
+          Manage your public profile information
+        </p>
+      </div>
+
+      <div className="flex items-center gap-6">
+        <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-chart-2/30 flex items-center justify-center text-2xl font-bold">
+          {initials}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+            First Name
+          </Label>
+          <Input
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            placeholder="John"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+            Last Name
+          </Label>
+          <Input
+            value={lastName}
+            onChange={(e) => setLastName(e.target.value)}
+            placeholder="Doe"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label className="text-xs uppercase tracking-wider text-muted-foreground">
+          Email
+        </Label>
+        <Input
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="john@example.com"
+          type="email"
+        />
+      </div>
+
+      <div className="flex justify-end pt-4 border-t border-border">
+        <Button onClick={handleSave} disabled={isSaving}>
+          {isSaving ? (
+            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          ) : (
+            <Save className="w-4 h-4 mr-2" />
+          )}
+          Save Changes
+        </Button>
+      </div>
+    </div>
+  );
+}
 
 function AccountSettings() {
-    const [showPassword, setShowPassword] = useState(false);
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
+  const [accounts, setAccounts] = useState<SocialChannel[]>([]);
+  const [providers, setProviders] = useState<SocialProvider[]>([]);
+  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
 
-    return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-lg font-semibold mb-1">Account</h2>
-                <p className="text-sm text-muted-foreground">Manage your account security</p>
-            </div>
+  const loadChannels = useCallback(async () => {
+    setIsLoadingChannels(true);
+    try {
+      const [channelData, providerData] = await Promise.all([
+        socialHubApi.getChannels(),
+        socialHubApi.getProviders(),
+      ]);
+      setAccounts(channelData);
+      setProviders(providerData);
+    } catch (error) {
+      console.error('Failed to load social accounts', error);
+      toast.error('Failed to load connected accounts');
+    } finally {
+      setIsLoadingChannels(false);
+    }
+  }, []);
 
-            {/* Change Password */}
-            <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Lock className="w-4 h-4" /> Change Password
-                </h3>
-                <div className="space-y-3">
-                    <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Current Password</Label>
-                        <div className="relative">
-                            <Input type={showPassword ? 'text' : 'password'} placeholder="••••••••" />
-                            <button onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                            </button>
-                        </div>
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">New Password</Label>
-                        <Input type="password" placeholder="••••••••" />
-                    </div>
-                    <div className="space-y-2">
-                        <Label className="text-xs text-muted-foreground">Confirm New Password</Label>
-                        <Input type="password" placeholder="••••••••" />
-                    </div>
-                </div>
-                <Button size="sm">Update Password</Button>
-            </div>
+  useEffect(() => {
+    void loadChannels();
+  }, [loadChannels]);
 
-            {/* Connected Accounts */}
-            <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                    <Shield className="w-4 h-4" /> Connected Accounts
-                </h3>
-                {['Google', 'Apple', 'Facebook'].map((provider) => (
-                    <div key={provider} className="flex items-center justify-between py-2">
-                        <span className="text-sm">{provider}</span>
-                        <Button variant="outline" size="sm">Connect</Button>
-                    </div>
-                ))}
-            </div>
+  const updatePassword = async () => {
+    if (!currentPassword || !newPassword || !confirmPassword) {
+      toast.error('Please fill all password fields.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      toast.error('New password and confirmation do not match.');
+      return;
+    }
+    setIsUpdatingPassword(true);
+    try {
+      await authApi.updateProfile({
+        oldPassword: currentPassword,
+        password: newPassword,
+      });
+      toast.success('Password updated.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmPassword('');
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Failed to update password';
+      toast.error(message);
+    } finally {
+      setIsUpdatingPassword(false);
+    }
+  };
 
-            {/* Danger Zone */}
-            <div className="p-6 bg-card rounded-2xl border border-destructive/30 space-y-4">
-                <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
-                    <Trash2 className="w-4 h-4" /> Danger Zone
-                </h3>
-                <p className="text-xs text-muted-foreground">Once deleted, your account cannot be recovered. All data will be permanently removed.</p>
-                <div className="flex gap-3">
-                    <Button variant="outline" size="sm">
-                        <LogOut className="w-4 h-4 mr-2" /> Sign Out All Devices
-                    </Button>
-                    <Button variant="destructive" size="sm">
-                        <Trash2 className="w-4 h-4 mr-2" /> Delete Account
-                    </Button>
-                </div>
+  const connectProvider = async (provider: string) => {
+    try {
+      const { url } = await socialHubApi.getAuthUrl(provider);
+      window.location.href = url;
+    } catch (error) {
+      console.error('Failed to connect provider', error);
+      toast.error('Failed to start provider connection.');
+    }
+  };
+
+  const disconnectAccount = async (accountId: number) => {
+    toast.promise(socialHubApi.disconnectChannel(accountId), {
+      loading: 'Disconnecting...',
+      success: async () => {
+        await loadChannels();
+        return 'Disconnected';
+      },
+      error: 'Failed to disconnect',
+    });
+  };
+
+  const logoutCurrentSession = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // ignore backend logout error and continue clearing NextAuth session
+    }
+    await signOut({ callbackUrl: '/sign-in', redirect: true });
+  };
+
+  const deleteAccount = async () => {
+    const ok = window.confirm('Delete account permanently? This action cannot be undone.');
+    if (!ok) return;
+    try {
+      await authApi.deleteAccount();
+      toast.success('Account deleted');
+      await signOut({ callbackUrl: '/sign-in', redirect: true });
+    } catch (error) {
+      console.error('Failed to delete account', error);
+      toast.error('Failed to delete account');
+    }
+  };
+
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-semibold mb-1">Account</h2>
+        <p className="text-sm text-muted-foreground">Manage your account security</p>
+      </div>
+
+      <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <Lock className="w-4 h-4" /> Change Password
+        </h3>
+        <div className="space-y-3">
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Current Password</Label>
+            <div className="relative">
+              <Input
+                type={showCurrent ? 'text' : 'password'}
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+              />
+              <button
+                onClick={() => setShowCurrent(!showCurrent)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">New Password</Label>
+            <div className="relative">
+              <Input
+                type={showNext ? 'text' : 'password'}
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+              <button
+                onClick={() => setShowNext(!showNext)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+              >
+                {showNext ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs text-muted-foreground">Confirm New Password</Label>
+            <Input
+              type="password"
+              value={confirmPassword}
+              onChange={(e) => setConfirmPassword(e.target.value)}
+            />
+          </div>
         </div>
-    );
-}
+        <Button size="sm" onClick={() => void updatePassword()} disabled={isUpdatingPassword}>
+          {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+        </Button>
+      </div>
 
-// ──────────────────────────── Billing ────────────────────────────
+      <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold">Connected Social Accounts</h3>
+          <Button variant="outline" size="sm" onClick={() => void loadChannels()}>
+            <RefreshCw className="w-4 h-4 mr-2" />
+            Refresh
+          </Button>
+        </div>
+        {isLoadingChannels ? (
+          <p className="text-sm text-muted-foreground">Loading...</p>
+        ) : (
+          providers.map((provider) => {
+            const account = accounts.find((item) => item.platform === provider.identifier);
+            const isConnected = !!account;
+            return (
+              <div key={provider.identifier} className="flex items-center justify-between py-2">
+                <div className="inline-flex items-center gap-2">
+                  {isConnected ? (
+                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  ) : (
+                    <XCircle className="w-4 h-4 text-muted-foreground" />
+                  )}
+                  <span className="text-sm">
+                    {provider.name}
+                    {account?.name ? ` (${account.name})` : ''}
+                  </span>
+                </div>
+                {isConnected ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void disconnectAccount(account.id)}
+                  >
+                    Disconnect
+                  </Button>
+                ) : (
+                  <Button size="sm" onClick={() => void connectProvider(provider.identifier)}>
+                    Connect
+                  </Button>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      <div className="p-6 bg-card rounded-2xl border border-destructive/30 space-y-4">
+        <h3 className="text-sm font-semibold text-destructive flex items-center gap-2">
+          <Trash2 className="w-4 h-4" /> Danger Zone
+        </h3>
+        <p className="text-xs text-muted-foreground">
+          Once deleted, your account cannot be recovered.
+        </p>
+        <div className="flex gap-3">
+          <Button variant="outline" size="sm" onClick={() => void logoutCurrentSession()}>
+            <LogOut className="w-4 h-4 mr-2" /> Sign Out
+          </Button>
+          <Button variant="destructive" size="sm" onClick={() => void deleteAccount()}>
+            <Trash2 className="w-4 h-4 mr-2" /> Delete Account
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function BillingSettings() {
-    return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-lg font-semibold mb-1">Billing</h2>
-                <p className="text-sm text-muted-foreground">Manage credits and payment methods</p>
-            </div>
+  const { balance, fetchBalance, isLoading } = useCreditStore();
+  const [isPaying, setIsPaying] = useState<CreditPackageId | null>(null);
 
-            {/* Credit Balance */}
-            <div className="p-6 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-2xl border border-border">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Credit Balance</p>
-                        <p className="text-4xl font-bold">250</p>
-                        <p className="text-xs text-muted-foreground mt-1">credits remaining</p>
-                    </div>
-                    <Button>Buy Credits</Button>
-                </div>
-            </div>
+  useEffect(() => {
+    void fetchBalance();
+  }, [fetchBalance]);
 
-            {/* Plans */}
-            <div className="grid grid-cols-3 gap-4">
-                {[
-                    { name: 'Starter', credits: 100, price: '$9.99', popular: false },
-                    { name: 'Pro', credits: 500, price: '$39.99', popular: true },
-                    { name: 'Enterprise', credits: 2000, price: '$129.99', popular: false },
-                ].map((plan) => (
-                    <div key={plan.name} className={cn(
-                        "p-5 rounded-2xl border bg-card space-y-3 relative",
-                        plan.popular ? "border-primary shadow-lg shadow-primary/10" : "border-border"
-                    )}>
-                        {plan.popular && (
-                            <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider rounded-full">
-                                Popular
-                            </span>
-                        )}
-                        <h3 className="font-semibold">{plan.name}</h3>
-                        <p className="text-2xl font-bold">{plan.price}</p>
-                        <p className="text-xs text-muted-foreground">{plan.credits} credits</p>
-                        <Button variant={plan.popular ? 'default' : 'outline'} className="w-full" size="sm">
-                            Purchase
-                        </Button>
-                    </div>
-                ))}
-            </div>
+  const purchase = async (packageId: CreditPackageId, provider: PaymentProvider) => {
+    try {
+      setIsPaying(packageId);
+      const checkout = await paymentApi.checkout({ packageId, provider });
+      if (!checkout.paymentUrl) {
+        toast.error('Khong tao duoc URL thanh toan');
+        return;
+      }
+      window.location.href = checkout.paymentUrl;
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : 'Khoi tao thanh toan that bai';
+      toast.error(message);
+    } finally {
+      setIsPaying(null);
+    }
+  };
 
-            {/* Transaction History */}
-            <div className="space-y-3">
-                <h3 className="text-sm font-semibold">Transaction History</h3>
-                <div className="border border-border rounded-xl overflow-hidden">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-border bg-muted/50">
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Date</th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Type</th>
-                                <th className="text-left px-4 py-3 font-medium text-muted-foreground">Description</th>
-                                <th className="text-right px-4 py-3 font-medium text-muted-foreground">Amount</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <tr className="border-b border-border">
-                                <td className="px-4 py-3 text-muted-foreground">No transactions yet</td>
-                                <td></td><td></td><td></td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-semibold mb-1">Billing</h2>
+        <p className="text-sm text-muted-foreground">Manage credits and payment methods</p>
+      </div>
+
+      <div className="p-6 bg-gradient-to-br from-primary/10 to-chart-2/10 rounded-2xl border border-border">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">
+              Credit Balance
+            </p>
+            <p className="text-4xl font-bold">{typeof balance === 'number' ? balance : 0}</p>
+            <p className="text-xs text-muted-foreground mt-1">credits remaining</p>
+          </div>
+          <Button variant="outline" onClick={() => void fetchBalance()} disabled={isLoading}>
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
-    );
-}
+      </div>
 
-// ──────────────────────────── Notifications ────────────────────────────
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          {
+            id: 'starter' as CreditPackageId,
+            name: 'Starter',
+            credits: 100,
+            price: '99,000 VND',
+            popular: false,
+          },
+          {
+            id: 'pro' as CreditPackageId,
+            name: 'Pro',
+            credits: 500,
+            price: '390,000 VND',
+            popular: true,
+          },
+          {
+            id: 'enterprise' as CreditPackageId,
+            name: 'Enterprise',
+            credits: 2000,
+            price: '1,290,000 VND',
+            popular: false,
+          },
+        ].map((plan) => (
+          <div
+            key={plan.name}
+            className={cn(
+              'p-5 rounded-2xl border bg-card space-y-3 relative',
+              plan.popular ? 'border-primary shadow-lg shadow-primary/10' : 'border-border',
+            )}
+          >
+            {plan.popular && (
+              <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-primary text-primary-foreground text-[10px] font-bold uppercase tracking-wider rounded-full">
+                Popular
+              </span>
+            )}
+            <h3 className="font-semibold">{plan.name}</h3>
+            <p className="text-2xl font-bold">{plan.price}</p>
+            <p className="text-xs text-muted-foreground">{plan.credits} credits</p>
+            <div className="space-y-2">
+              <Button
+                variant={plan.popular ? 'default' : 'outline'}
+                className="w-full"
+                size="sm"
+                disabled={isPaying === plan.id}
+                onClick={() => void purchase(plan.id, 'vnpay')}
+              >
+                {isPaying === plan.id ? 'Processing...' : 'Pay with VNPAY'}
+              </Button>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isPaying === plan.id}
+                  onClick={() => void purchase(plan.id, 'momo')}
+                >
+                  MoMo
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isPaying === plan.id}
+                  onClick={() => void purchase(plan.id, 'zalopay')}
+                >
+                  ZaloPay
+                </Button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function NotificationSettings() {
-    const [settings, setSettings] = useState({
-        generationComplete: true,
-        creditLow: true,
-        weeklyDigest: false,
-        communityMentions: true,
-        productUpdates: false,
-    });
+  const [unreadCount, setUnreadCount] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-    const toggle = (key: keyof typeof settings) => {
-        setSettings(prev => ({ ...prev, [key]: !prev[key] }));
-    };
+  const loadUnreadCount = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await notificationApi.getUnreadCount();
+      setUnreadCount(data.count);
+    } catch (error) {
+      console.error('Failed to fetch unread count', error);
+      toast.error('Failed to load notification stats');
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-    const items = [
-        { key: 'generationComplete' as const, label: 'Generation Complete', description: 'Get notified when your generations finish' },
-        { key: 'creditLow' as const, label: 'Low Credit Warning', description: 'Alert when credits drop below 10' },
-        { key: 'weeklyDigest' as const, label: 'Weekly Digest', description: 'Summary of your weekly activity' },
-        { key: 'communityMentions' as const, label: 'Community Mentions', description: 'When someone interacts with your content' },
-        { key: 'productUpdates' as const, label: 'Product Updates', description: 'New features and improvements' },
-    ];
+  useEffect(() => {
+    void loadUnreadCount();
+  }, [loadUnreadCount]);
 
-    return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-lg font-semibold mb-1">Notifications</h2>
-                <p className="text-sm text-muted-foreground">Choose what you want to be notified about</p>
-            </div>
+  const markAllRead = async () => {
+    try {
+      await notificationApi.markAllAsRead();
+      toast.success('All notifications marked as read');
+      await loadUnreadCount();
+    } catch (error) {
+      console.error('Failed to mark notifications as read', error);
+      toast.error('Failed to mark all read');
+    }
+  };
 
-            <div className="space-y-2">
-                {items.map((item) => (
-                    <div key={item.key} className="flex items-center justify-between p-4 bg-card rounded-xl border border-border">
-                        <div>
-                            <p className="text-sm font-medium">{item.label}</p>
-                            <p className="text-xs text-muted-foreground">{item.description}</p>
-                        </div>
-                        <button
-                            onClick={() => toggle(item.key)}
-                            className={cn(
-                                "w-11 h-6 rounded-full transition-colors relative",
-                                settings[item.key] ? "bg-primary" : "bg-muted-foreground/30"
-                            )}
-                        >
-                            <span className={cn(
-                                "absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform",
-                                settings[item.key] ? "translate-x-[22px]" : "translate-x-0.5"
-                            )} />
-                        </button>
-                    </div>
-                ))}
-            </div>
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-semibold mb-1">Notifications</h2>
+        <p className="text-sm text-muted-foreground">Actions connected to backend APIs</p>
+      </div>
 
-            <div className="flex justify-end pt-4 border-t border-border">
-                <Button onClick={() => toast.success('Notification preferences saved')}>
-                    <Save className="w-4 h-4 mr-2" /> Save Preferences
-                </Button>
-            </div>
+      <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Unread Notifications</p>
+            <p className="text-xs text-muted-foreground">
+              Current unread count from server
+            </p>
+          </div>
+          <p className="text-2xl font-bold">{unreadCount ?? '-'}</p>
         </div>
-    );
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => void loadUnreadCount()} disabled={isLoading}>
+            Refresh
+          </Button>
+          <Button onClick={() => void markAllRead()} disabled={isLoading}>
+            Mark All as Read
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ──────────────────────────── API Keys ────────────────────────────
-
 function ApiKeySettings() {
-    const [showKey, setShowKey] = useState(false);
+  const [showTokenPreview, setShowTokenPreview] = useState(false);
 
-    return (
-        <div className="space-y-8">
-            <div>
-                <h2 className="text-lg font-semibold mb-1">API Keys</h2>
-                <p className="text-sm text-muted-foreground">Manage your API access keys</p>
-            </div>
+  return (
+    <div className="space-y-8">
+      <div>
+        <h2 className="text-lg font-semibold mb-1">API Keys</h2>
+        <p className="text-sm text-muted-foreground">
+          This project does not expose dedicated API-key CRUD endpoints yet.
+        </p>
+      </div>
 
-            <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-sm font-medium">Production API Key</p>
-                        <p className="text-xs text-muted-foreground">Created Dec 15, 2024</p>
-                    </div>
-                    <Button variant="outline" size="sm" onClick={() => toast.success('New API key generated')}>
-                        Generate New Key
-                    </Button>
-                </div>
-                <div className="flex items-center gap-3">
-                    <Input
-                        readOnly
-                        value={showKey ? 'sk-ai-gen-xxxxxxxxxxxxxxxxxxxx' : '••••••••••••••••••••••••'}
-                        className="font-mono text-xs"
-                    />
-                    <Button variant="ghost" size="icon" onClick={() => setShowKey(!showKey)}>
-                        {showKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </Button>
-                </div>
-            </div>
-
-            <div className="p-4 bg-muted/50 rounded-xl border border-border">
-                <p className="text-xs text-muted-foreground">
-                    <strong className="text-foreground">Rate Limits:</strong> 100 requests/minute for standard plans.
-                    Upgrade to Pro for higher limits.
-                </p>
-            </div>
+      <div className="p-6 bg-card rounded-2xl border border-border space-y-4">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Backend Integration Status</p>
+            <p className="text-xs text-muted-foreground">
+              API key management is pending server implementation
+            </p>
+          </div>
+          <Button variant="outline" size="sm" onClick={() => toast.info('Server endpoint not available yet.')}>
+            <Plus className="w-4 h-4 mr-2" />
+            Generate New Key
+          </Button>
         </div>
-    );
+        <div className="flex items-center gap-3">
+          <Input
+            readOnly
+            value={
+              showTokenPreview
+                ? 'server-endpoint-required'
+                : '****************************************'
+            }
+            className="font-mono text-xs"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setShowTokenPreview(!showTokenPreview)}
+          >
+            {showTokenPreview ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
 }

@@ -9,6 +9,9 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     const { data: session, status } = useSession();
     const loading = status === "loading";
     const [mounted, setMounted] = useState(false);
+    const hasAccessToken = Boolean(
+        (session as any)?.accessToken || (session as any)?.user?.accessToken
+    );
 
     useEffect(() => {
         setMounted(true);
@@ -16,18 +19,17 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
 
     useEffect(() => {
         if (mounted && status !== "loading") {
-            if (!session) {
-
+            if (!session || !hasAccessToken) {
                 router.push('/sign-in');
             }
         }
-    }, [session, status, router, mounted]);
+    }, [session, status, router, mounted, hasAccessToken]);
 
     if (!mounted || loading) {
         return <div className="flex items-center justify-center min-h-screen bg-[#0B0C0E]"><div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
     }
 
-    if (!session) {
+    if (!session || !hasAccessToken) {
         return null;
     }
 

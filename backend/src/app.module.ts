@@ -51,6 +51,7 @@ import providersConfig from './providers/config/providers.config';
 import { GenerationsModule } from './generations/generations.module';
 import { QueuesModule } from './queues/queues.module';
 import { TemplatesModule } from './templates/templates.module';
+import { VisualFlowModule } from './visual-flow/visual-flow.module';
 
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
@@ -63,6 +64,9 @@ import { PermissionsModule } from './permissions/permissions.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { DashboardModule } from './dashboard/dashboard.module';
 import { HealthModule } from './health/health.module';
+import { SocialHubModule } from './social-hub/social-hub.module';
+import { PaymentsModule } from './payments/payments.module';
+import paymentsConfig from './payments/config/payments.config';
 
 @Module({
   imports: [
@@ -78,6 +82,7 @@ import { HealthModule } from './health/health.module';
         googleConfig,
         appleConfig,
         providersConfig,
+        paymentsConfig,
       ],
       envFilePath: ['.env'],
     }),
@@ -123,6 +128,7 @@ import { HealthModule } from './health/health.module';
     GenerationsModule,
     QueuesModule,
     TemplatesModule,
+    VisualFlowModule,
     OrganizationsModule,
     MembersModule,
     InvitesModule,
@@ -131,6 +137,8 @@ import { HealthModule } from './health/health.module';
     NotificationsModule,
     DashboardModule,
     HealthModule,
+    SocialHubModule,
+    PaymentsModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

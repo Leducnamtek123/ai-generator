@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
-import { Share2, Sparkles, Plus, Copy, Edit, Image, FolderInput, ChevronDown, Menu, Bell } from 'lucide-react';
+import { Share2, Sparkles, Plus, Copy, Edit, ChevronDown, Menu, Bell } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/ui/button';
 import { UserMenu } from './header/UserMenu';
@@ -39,11 +39,16 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const [isRenameOpen, setIsRenameOpen] = React.useState(false);
     const [newName, setNewName] = React.useState('');
 
-    const isPublicRoute = pathname === '/' || pathname === '/login' || pathname === '/register';
+    const isPublicRoute =
+        pathname === '/' ||
+        pathname === '/login' ||
+        pathname === '/register' ||
+        pathname === '/sign-in' ||
+        pathname === '/sign-up';
 
     React.useEffect(() => {
         if (!isLoading && !user && !isPublicRoute) {
-            router.push('/');
+            router.push('/sign-in');
         }
     }, [user, isLoading, pathname, router, isPublicRoute]);
 
@@ -86,7 +91,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     };
 
     const getBreadcrumbs = () => {
-        // Handle specific route for Workflow Editor
+        // Workflow Editor
         if (isWorkflow) {
             return (
                 <div className="flex items-center gap-2">
@@ -123,10 +128,9 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             );
         }
 
-        // Handle other Creator tools
+        // Creator tools
         if (pathname.startsWith('/creator/')) {
             const toolName = pathname.split('/').pop()?.replace(/-/g, ' ').replace(/^\w/, c => c.toUpperCase()) || 'Tool';
-            // Special case fixes for nice naming
             const formatName = (name: string) => {
                 const map: { [key: string]: string } = {
                     'image-generator': 'Image Generator',
@@ -134,25 +138,21 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                     'image-editor': 'Image Editor',
                     'image-upscaler': 'Image Upscaler',
                     'music-generator': 'Music Generator',
-                    // Add others as needed
                 };
                 return map[name.toLowerCase().replace(/ /g, '-')] || name;
             };
-
-            const displayName = formatName(toolName);
-
             return (
                 <div className="flex items-center gap-2 text-xs">
                     <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
                     <span className="text-muted-foreground">/</span>
                     <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
                     <span className="text-muted-foreground">/</span>
-                    <span className="text-foreground font-medium">{displayName}</span>
+                    <span className="text-foreground font-medium">{formatName(toolName)}</span>
                 </div>
             );
         }
 
-        // Handle Creator root page
+        // Creator root
         if (pathname === '/creator') {
             return (
                 <div className="flex items-center gap-2 text-xs">
@@ -163,15 +163,39 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             );
         }
 
+        // VisualFlow Studio
+        if (pathname.startsWith('/visual-flow')) {
+            const parts = pathname.split('/').filter(Boolean);
+            return (
+                <div className="flex items-center gap-2 text-xs">
+                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <span className="text-muted-foreground">/</span>
+                    <Link href="/visual-flow" className={cn(
+                        'transition-colors',
+                        parts.length === 1 ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
+                    )}>
+                        VisualFlow Studio
+                    </Link>
+                    {parts.length > 2 && (
+                        <>
+                            <span className="text-muted-foreground">/</span>
+                            <span className="text-foreground font-medium">Project</span>
+                        </>
+                    )}
+                </div>
+            );
+        }
+
         // Default / Dashboard
         return (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 text-xs">
                 <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
                 {pathname !== '/dashboard' && pathname !== '/' && (
                     <>
                         <span className="text-muted-foreground">/</span>
                         <Link href={pathname as any} className="text-foreground font-medium hover:text-foreground transition-colors">
-                            {pathname === '/creative-studio' ? 'Creative Studio' : (pathname.replace(/^\//, '').split('/')[0].charAt(0).toUpperCase() + pathname.replace(/^\//, '').split('/')[0].slice(1))}
+                            {pathname === '/creative-studio' ? 'Creative Studio'
+                                : (pathname.replace(/^\//, '').split('/')[0].charAt(0).toUpperCase() + pathname.replace(/^\//, '').split('/')[0].slice(1))}
                         </Link>
                     </>
                 )}
@@ -214,7 +238,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                             <DropdownMenuContent align="end" className="w-80 p-0">
                                 <div className="p-3 border-b border-border flex items-center justify-between">
                                     <h3 className="font-semibold text-sm">Notifications</h3>
-                                    <button 
+                                    <button
                                         onClick={() => markAllAsRead()}
                                         className="text-xs text-muted-foreground hover:text-foreground"
                                     >
@@ -228,7 +252,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                         </div>
                                     ) : (
                                         notifications.map((notification) => (
-                                            <div 
+                                            <div
                                                 key={notification.id}
                                                 onClick={() => markAsRead(notification.id)}
                                                 className={cn(
@@ -243,9 +267,8 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                                     notification.type === 'warning' && "bg-yellow-500/20 text-yellow-500",
                                                     notification.type === 'error' && "bg-red-500/20 text-red-500",
                                                 )}>
-                                                    {notification.type === 'success' ? <Sparkles className="w-4 h-4" /> : 
-                                                     notification.type === 'error' ? <Bell className="w-4 h-4" /> :
-                                                     <Bell className="w-4 h-4" />}
+                                                    {notification.type === 'success' ? <Sparkles className="w-4 h-4" /> :
+                                                        <Bell className="w-4 h-4" />}
                                                 </div>
                                                 <div className="space-y-1">
                                                     <p className="text-sm font-medium leading-tight">{notification.title}</p>

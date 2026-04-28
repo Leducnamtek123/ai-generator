@@ -9,6 +9,7 @@ import { MailConfig } from '../mail/config/mail-config.type';
 
 import { ProvidersConfigType } from '../providers/config/providers.config';
 import { RedisConfig } from '../queues/config/redis-config.type';
+import { PaymentsConfig } from '../payments/config/payments-config.type';
 
 export type AllConfigType = {
   app: AppConfig;
@@ -21,4 +22,5 @@ export type AllConfigType = {
   mail: MailConfig;
   providers: ProvidersConfigType;
   redis: RedisConfig;
+  payments: PaymentsConfig;
 };
