@@ -1,14 +1,15 @@
 import { LocaleSwitcher, ThemeSwitcher } from "@/widgets";
 import { Link } from "@/i18n/navigation";
+import Image from "next/image";
 import { Button } from "@/ui/button";
 
 export const Header = () => {
   return (
-    <header className="sticky top-0 z-50 w-full px-6 py-4">
+        <header className="sticky top-0 z-50 w-full px-6 py-4">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-3 bg-card border border-border rounded-2xl shadow-sm">
         <Link href="/dashboard" className="flex items-center gap-3 transition-opacity hover:opacity-80">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl overflow-hidden">
-            <img src="/logo.svg" alt="PaintAI Logo" className="h-full w-full object-contain" />
+            <Image src="/logo.svg" alt="PaintAI Logo" width={40} height={40} className="h-full w-full object-contain" />
           </div>
           <div className="flex flex-col">
             <span className="text-lg font-bold tracking-tight text-foreground leading-none">PaintAI</span>

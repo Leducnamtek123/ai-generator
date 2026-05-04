@@ -12,6 +12,7 @@ export interface SocialChannel {
   expiresAt?: string | null;
   needsReauth?: boolean;
   createdAt: string;
+  metadata?: Record<string, any> | null;
 }
 
 export interface SocialProvider {
@@ -32,7 +33,7 @@ export interface SocialPost {
   socialAccount?: SocialChannel | null;
 }
 
-export interface CreateSocialPostPayload {
+interface CreateSocialPostPayload {
   content: string;
   scheduledAt?: string | null;
   mediaUrls?: string[];
@@ -66,8 +67,10 @@ export interface SocialAnalytics {
 export const socialHubApi = {
   getChannels: async () => apiGet<SocialChannel[]>('/social-hub/channels'),
   getProviders: async () => apiGet<SocialProvider[]>('/social-hub/providers'),
-  getAuthUrl: async (platform: string) =>
-    apiGet<{ url: string }>(`/social-hub/auth/${platform}`),
+  getAuthUrl: async (platform: string, params?: Record<string, string>) => {
+    const query = params ? `?${new URLSearchParams(params).toString()}` : '';
+    return apiGet<{ url: string }>(`/social-hub/auth/${platform}${query}`);
+  },
   disconnectChannel: async (accountId: number) =>
     apiDel(`/social-hub/channels/${accountId}`),
 

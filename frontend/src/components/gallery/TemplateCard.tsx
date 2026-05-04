@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React from 'react';
 import { Template, TemplateTypeEnum } from '@/lib/api/templates';
 import { Sparkles, Play } from 'lucide-react';
@@ -42,10 +43,12 @@ export function TemplateCard({ template, className }: TemplateCardProps) {
             {/* Thumbnail Container */}
             <div className="relative aspect-[16/10] rounded-lg overflow-hidden bg-muted ring-1 ring-border group-hover:ring-border/80 transition-all">
                 {template.thumbnail ? (
-                    <img
+                    <Image
                         src={template.thumbnail}
                         alt={template.title}
-                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                        fill
+                        className="object-cover transition-transform duration-700 group-hover:scale-105"
+                        sizes="(max-width: 768px) 100vw, 25vw"
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
@@ -55,13 +58,13 @@ export function TemplateCard({ template, className }: TemplateCardProps) {
 
                 {/* Duration Badge (Top Left) */}
                 {isMedia && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-black/50 backdrop-blur-[2px] flex items-center gap-1">
+                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-gray-950/50 backdrop-blur-[2px] flex items-center gap-1">
                         <span className="text-[10px] font-medium text-white/90">02:00</span>
                     </div>
                 )}
 
                 {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                <div className="absolute inset-0 bg-gray-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
 
                 {/* Use Button - Bottom Center */}
                 <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out z-10">

@@ -13,15 +13,12 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
 import { Project } from "@/stores/project-store";
 
 export const columns: ColumnDef<Project>[] = [
     {
         accessorKey: "name",
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Project Name" />
-        ),
+        header: "Project Name",
         cell: ({ row }) => {
             const project = row.original;
             return (
@@ -54,9 +51,7 @@ export const columns: ColumnDef<Project>[] = [
     },
     {
         accessorKey: "updatedAt",
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Last Updated" />
-        ),
+        header: "Last Updated",
         cell: ({ row }) => {
             const date = new Date(row.getValue("updatedAt"));
             return (

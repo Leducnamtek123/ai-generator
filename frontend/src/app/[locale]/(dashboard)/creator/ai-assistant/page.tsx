@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useRef, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
@@ -60,6 +61,7 @@ export default function AssistantPage() {
     const [selectedAction, setSelectedAction] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const messageIdRef = useRef(0);
     const { startGeneration } = useGenerationStore();
 
     const scrollToBottom = () => {
@@ -72,9 +74,11 @@ export default function AssistantPage() {
 
     const handleSend = async () => {
         if (!input.trim() && !selectedAction) return;
+        messageIdRef.current += 1;
+        const userMessageId = `msg_${messageIdRef.current}`;
 
         const userMsg: Message = {
-            id: Date.now().toString(),
+            id: userMessageId,
             role: 'user',
             content: input,
             timestamp: new Date(),
@@ -87,9 +91,10 @@ export default function AssistantPage() {
 
         // Call API for generation
         await startGeneration('/generations/image', { prompt: input });
+        messageIdRef.current += 1;
 
         const assistantMsg: Message = {
-            id: (Date.now() + 1).toString(),
+            id: `msg_${messageIdRef.current}`,
             role: 'assistant',
             content: `I've processed your request: "${userMsg.content}". Here's what I generated for you. You can download, copy, or request modifications.`,
             timestamp: new Date(),
@@ -228,9 +233,9 @@ export default function AssistantPage() {
                                         {msg.generatedImages && msg.generatedImages.length > 0 && (
                                             <div className="grid grid-cols-2 gap-2">
                                                 {msg.generatedImages.map((url, i) => (
-                                                    <div key={i} className="group relative rounded-xl overflow-hidden border border-border">
-                                                        <img src={url} alt={`Generated ${i + 1}`} className="w-full aspect-square object-cover" />
-                                                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                    <div key={url} className="group relative aspect-square rounded-xl overflow-hidden border border-border">
+                                                        <Image src={url} alt={`Generated ${i + 1}`} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
+                                                        <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                             <Button size="icon" variant="secondary" className="w-8 h-8"><Download className="w-4 h-4" /></Button>
                                                             <Button size="icon" variant="secondary" className="w-8 h-8"><Copy className="w-4 h-4" /></Button>
                                                         </div>

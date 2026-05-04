@@ -11,11 +11,11 @@ export class CreateCheckoutDto {
   packageId: string;
 
   @ApiPropertyOptional({
-    enum: ['vnpay', 'momo', 'zalopay'],
+    enum: ['vnpay', 'momo', 'zalopay', '9pay'],
     default: 'vnpay',
   })
   @IsOptional()
-  @IsIn(['vnpay', 'momo', 'zalopay'])
+  @IsIn(['vnpay', 'momo', 'zalopay', '9pay'])
   provider?: PaymentProvider;
 
   @ApiPropertyOptional({

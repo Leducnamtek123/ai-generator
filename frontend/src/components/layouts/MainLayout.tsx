@@ -48,7 +48,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
 
     React.useEffect(() => {
         if (!isLoading && !user && !isPublicRoute) {
-            router.push('/sign-in');
+            window.location.replace('/sign-in');
         }
     }, [user, isLoading, pathname, router, isPublicRoute]);
 
@@ -193,7 +193,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                 {pathname !== '/dashboard' && pathname !== '/' && (
                     <>
                         <span className="text-muted-foreground">/</span>
-                        <Link href={pathname as any} className="text-foreground font-medium hover:text-foreground transition-colors">
+                        <Link href={pathname} className="text-foreground font-medium hover:text-foreground transition-colors">
                             {pathname === '/creative-studio' ? 'Creative Studio'
                                 : (pathname.replace(/^\//, '').split('/')[0].charAt(0).toUpperCase() + pathname.replace(/^\//, '').split('/')[0].slice(1))}
                         </Link>
@@ -252,11 +252,12 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                         </div>
                                     ) : (
                                         notifications.map((notification) => (
-                                            <div
+                                            <button
                                                 key={notification.id}
+                                                type="button"
                                                 onClick={() => markAsRead(notification.id)}
                                                 className={cn(
-                                                    "p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 transition-colors",
+                                                    "w-full text-left p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 transition-colors",
                                                     notification.isRead && "opacity-60"
                                                 )}
                                             >
@@ -277,7 +278,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                                         {new Date(notification.createdAt).toLocaleDateString()}
                                                     </p>
                                                 </div>
-                                            </div>
+                                            </button>
                                         ))
                                     )}
                                 </div>

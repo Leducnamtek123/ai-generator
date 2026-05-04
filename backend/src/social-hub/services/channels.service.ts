@@ -36,6 +36,7 @@ export class ChannelsService {
         picture: account.picture,
         expiresAt: account.expiresAt,
         needsReauth: account.metadata?.needsReauth || false,
+        metadata: account.metadata,
         createdAt: account.createdAt,
       }));
     } catch (error) {
@@ -53,12 +54,12 @@ export class ChannelsService {
     return this.socialAccountRepository.find();
   }
 
-  async connect(user: UserEntity, platform: string, code: string) {
+  async connect(user: UserEntity, platform: string, code: string, extraParams: Record<string, any> = {}) {
     console.log(`User ${user.id} connecting to ${platform} with code ${code}`);
 
     // Get the provider and exchange code for real tokens
     const provider = this.socialProviderRegistry.getProvider(platform);
-    const details = await provider.authenticate(code);
+    const details = await provider.authenticate(code, extraParams);
 
     // Check if account already exists (re-connecting)
     const existingAccount = await this.socialAccountRepository.findOne({
@@ -68,6 +69,17 @@ export class ChannelsService {
         platformId: details.id,
       },
     });
+
+    const metadata: any = {
+      ...(existingAccount?.metadata || {}),
+      needsReauth: false,
+      refreshError: null,
+      reconnectedAt: new Date().toISOString(),
+    };
+
+    if (platform === 'facebook' && !metadata.verifyToken) {
+      metadata.verifyToken = `paint_ai_${Math.random().toString(36).substring(2, 15)}`;
+    }
 
     if (existingAccount) {
       // Update existing account with new tokens
@@ -80,12 +92,7 @@ export class ChannelsService {
         : existingAccount.expiresAt;
       existingAccount.name = details.name || existingAccount.name;
       existingAccount.picture = details.picture || existingAccount.picture;
-      existingAccount.metadata = {
-        ...(existingAccount.metadata || {}),
-        needsReauth: false,
-        refreshError: null,
-        reconnectedAt: new Date().toISOString(),
-      };
+      existingAccount.metadata = metadata;
       return this.socialAccountRepository.save(existingAccount);
     }
 
@@ -103,6 +110,7 @@ export class ChannelsService {
       expiresAt: details.expiresIn
         ? new Date(Date.now() + details.expiresIn * 1000)
         : undefined,
+      metadata,
     });
 
     return this.socialAccountRepository.save(account);

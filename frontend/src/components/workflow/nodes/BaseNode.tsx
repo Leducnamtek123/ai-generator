@@ -19,22 +19,25 @@ interface BaseNodeProps {
 }
 
 export const BaseNode = memo(({
-    id, title, children, selected, onDelete, status,
+    title, children, selected,
     onTitleChange, isPreview, headerActions, sideActions
 }: BaseNodeProps) => {
     const [isEditing, setIsEditing] = React.useState(false);
     const [editTitle, setEditTitle] = React.useState(title);
     const inputRef = React.useRef<HTMLInputElement>(null);
 
-    React.useEffect(() => {
-        if (isEditing) inputRef.current?.focus();
-    }, [isEditing]);
-
     const handleTitleSubmit = () => {
         setIsEditing(false);
         if (editTitle.trim() !== title && onTitleChange) {
             onTitleChange(editTitle);
         }
+    };
+
+    const handleStartEditing = () => {
+        setIsEditing(true);
+        queueMicrotask(() => {
+            inputRef.current?.focus();
+        });
     };
 
     return (
@@ -54,7 +57,7 @@ export const BaseNode = memo(({
                             />
                         ) : (
                             <span
-                                onDoubleClick={() => setIsEditing(true)}
+                                onDoubleClick={handleStartEditing}
                                 className={cn(
                                     "text-[10px] font-medium transition-colors cursor-text select-none",
                                     selected ? "text-primary" : "text-muted-foreground group-hover:text-foreground"

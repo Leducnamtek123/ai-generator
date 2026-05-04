@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { X, Send, Wand2, Eraser, Crop, Maximize2, MoreHorizontal } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
@@ -35,7 +36,7 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-[100vw] w-screen h-screen m-0 p-0 bg-black/95 border-none flex flex-col gap-0 z-[100]">
+            <DialogContent className="max-w-[100vw] w-screen h-screen m-0 p-0 bg-gray-950/95 border-none flex flex-col gap-0 z-[100]">
                 <DialogHeader className="h-14 px-6 flex flex-row items-center justify-between border-b border-white/5 bg-[#0F1014] space-y-0">
                     <DialogTitle className="text-sm font-medium text-white">Image Editor</DialogTitle>
                 </DialogHeader>
@@ -43,17 +44,18 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
                 {/* Main Canvas */}
                 <div className="flex-1 relative flex items-center justify-center p-8 overflow-hidden bg-[#050505]">
                     {/* Image Container */}
-                    <div className="relative max-w-full max-h-full aspect-auto shadow-2xl">
-                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                        <img
+                    <div className="relative w-full max-w-5xl h-[80vh] shadow-2xl">
+                        <Image
                             src={imageUrl}
                             alt="Editing"
-                            className="max-w-full max-h-[80vh] object-contain rounded-lg border border-white/5"
+                            fill
+                            className="object-contain rounded-lg border border-white/5"
+                            sizes="100vw"
                         />
 
                         {/* Processing Overlay */}
                         {isProcessing && (
-                            <div className="absolute inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+                            <div className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
                                 <div className="flex flex-col items-center gap-3">
                                     <Wand2 className="w-8 h-8 text-blue-500 animate-pulse" />
                                     <span className="text-sm text-white font-medium">Generating details...</span>
@@ -71,7 +73,7 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
                                     placeholder="What do you want to change?"
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    className="w-full bg-black/30 border border-white/5 rounded-xl pl-4 pr-12 py-6 text-sm text-white focus:ring-1 focus:ring-blue-500/50 placeholder:text-white/30 h-auto"
+                                    className="w-full bg-gray-950/30 border border-white/5 rounded-xl pl-4 pr-12 py-6 text-sm text-white focus:ring-1 focus:ring-blue-500/50 placeholder:text-white/30 h-auto"
                                     onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
                                 />
                                 <Button

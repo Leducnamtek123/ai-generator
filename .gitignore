@@ -27,6 +27,7 @@ dist/
 # IDEs
 .vscode/
 .idea/
+.obsidian/
 *.swp
 *.swo
 

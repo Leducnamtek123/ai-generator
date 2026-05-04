@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, Upload } from 'lucide-react';
-import { NODE_CONFIG, NodeCategory, WorkflowNodeType, MAIN_NODES, UTILITY_NODES } from './types';
+import { Search, ChevronDown } from 'lucide-react';
+import { NODE_CONFIG, NodeCategory, WorkflowNodeType } from './types';
 import { cn } from '@/lib/utils';
 
 import { Input } from '@/ui/input';
@@ -72,7 +72,6 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                         placeholder="Search nodes..."
                         value={search}
                         onChange={e => setSearch(e.target.value)}
-                        autoFocus
                     />
                 </div>
             </div>

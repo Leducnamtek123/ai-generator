@@ -1,24 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useReducer } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
-    Palette, Type, Image as ImageIcon, Square, Circle, Triangle, Star,
-    Download, Sparkles, Loader2, Folder, Plus, Trash2, Copy, Layers,
+    Type, Image as ImageIcon, Square, Circle, Triangle, Star,
+    Download, Sparkles, Loader2, Folder, Plus, Trash2, Layers,
     AlignLeft, AlignCenter, AlignRight, Bold, Italic, Underline,
-    ZoomIn, ZoomOut, Undo2, Redo2, Move, MousePointer, Grid3X3
+    ZoomIn, ZoomOut, Undo2, Redo2, Move, MousePointer
 } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { Slider } from '@/ui/slider';
-import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
-
-const templateCategories = [
-    { id: 'social', label: 'Social Media' },
-    { id: 'presentation', label: 'Presentation' },
-    { id: 'print', label: 'Print' },
-    { id: 'marketing', label: 'Marketing' },
-];
 
 const canvasSizes = [
     { id: 'ig-post', label: 'Instagram Post', size: '1080×1080' },
@@ -55,46 +46,103 @@ interface DesignElement {
     height: number;
 }
 
-export default function DesignEditorPage() {
-    const [selectedSize, setSelectedSize] = useState('ig-post');
-    const [activePanel, setActivePanel] = useState<'templates' | 'elements' | 'text' | 'ai'>('templates');
-    const [elements, setElements] = useState<DesignElement[]>([
+type ActivePanel = 'templates' | 'elements' | 'text' | 'ai';
+type ActiveTool = 'select' | 'move';
+
+type DesignEditorState = {
+    selectedSize: string;
+    activePanel: ActivePanel;
+    elements: DesignElement[];
+    selectedElementId: string | null;
+    activeTool: ActiveTool;
+    aiPrompt: string;
+    isGenerating: boolean;
+};
+
+type DesignEditorAction =
+    | { type: 'setSelectedSize'; selectedSize: string }
+    | { type: 'setActivePanel'; activePanel: ActivePanel }
+    | { type: 'addElement'; element: DesignElement }
+    | { type: 'deleteElement'; id: string }
+    | { type: 'selectElement'; id: string | null }
+    | { type: 'setActiveTool'; activeTool: ActiveTool }
+    | { type: 'setAiPrompt'; aiPrompt: string }
+    | { type: 'setGenerating'; isGenerating: boolean };
+
+const initialState: DesignEditorState = {
+    selectedSize: 'ig-post',
+    activePanel: 'templates',
+    elements: [
         { id: '1', type: 'text', label: 'Your Title Here', x: 100, y: 100, width: 300, height: 60 },
         { id: '2', type: 'shape', label: 'Background Shape', x: 50, y: 50, width: 400, height: 400 },
-    ]);
-    const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
-    const [activeTool, setActiveTool] = useState('select');
-    const [aiPrompt, setAiPrompt] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
+    ],
+    selectedElementId: null,
+    activeTool: 'select',
+    aiPrompt: '',
+    isGenerating: false,
+};
+
+function reducer(state: DesignEditorState, action: DesignEditorAction): DesignEditorState {
+    switch (action.type) {
+        case 'setSelectedSize':
+            return { ...state, selectedSize: action.selectedSize };
+        case 'setActivePanel':
+            return { ...state, activePanel: action.activePanel };
+        case 'addElement':
+            return {
+                ...state,
+                elements: [...state.elements, action.element],
+                selectedElementId: action.element.id,
+            };
+        case 'deleteElement':
+            return {
+                ...state,
+                elements: state.elements.filter((element) => element.id !== action.id),
+                selectedElementId: state.selectedElementId === action.id ? null : state.selectedElementId,
+            };
+        case 'selectElement':
+            return { ...state, selectedElementId: action.id };
+        case 'setActiveTool':
+            return { ...state, activeTool: action.activeTool };
+        case 'setAiPrompt':
+            return { ...state, aiPrompt: action.aiPrompt };
+        case 'setGenerating':
+            return { ...state, isGenerating: action.isGenerating };
+        default:
+            return state;
+    }
+}
+
+export default function DesignEditorPage() {
+    const [state, dispatch] = useReducer(reducer, initialState);
     const { startGeneration } = useGenerationStore();
 
     const addElement = (type: 'text' | 'shape' | 'image') => {
+        const nextIndex = state.elements.length;
         const newEl: DesignElement = {
-            id: Date.now().toString(),
+            id: crypto.randomUUID(),
             type,
             label: type === 'text' ? 'New Text' : type === 'shape' ? 'Shape' : 'Image',
-            x: Math.random() * 200 + 50,
-            y: Math.random() * 200 + 50,
+            x: 50 + (nextIndex % 4) * 40,
+            y: 50 + (nextIndex % 3) * 40,
             width: type === 'text' ? 200 : 150,
             height: type === 'text' ? 40 : 150,
         };
-        setElements([...elements, newEl]);
-        setSelectedElementId(newEl.id);
+        dispatch({ type: 'addElement', element: newEl });
     };
 
     const deleteElement = (id: string) => {
-        setElements(elements.filter(e => e.id !== id));
-        if (selectedElementId === id) setSelectedElementId(null);
+        dispatch({ type: 'deleteElement', id });
     };
 
     const handleAiGenerate = async () => {
-        if (!aiPrompt.trim()) return;
-        setIsGenerating(true);
-        await startGeneration('/generations/image', { prompt: aiPrompt });
-        setIsGenerating(false);
+        if (!state.aiPrompt.trim()) return;
+        dispatch({ type: 'setGenerating', isGenerating: true });
+        await startGeneration('/generations/image', { prompt: state.aiPrompt });
+        dispatch({ type: 'setGenerating', isGenerating: false });
     };
 
-    const currentSize = canvasSizes.find(s => s.id === selectedSize);
+    const currentSize = canvasSizes.find((s) => s.id === state.selectedSize);
 
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">
@@ -107,19 +155,19 @@ export default function DesignEditorPage() {
                 {/* Panel Tabs */}
                 <div className="px-2 pt-2 flex gap-1 border-b border-border pb-2">
                     {([['templates', 'Templates'], ['elements', 'Elements'], ['text', 'Text'], ['ai', 'AI']] as const).map(([id, label]) => (
-                        <button key={id} onClick={() => setActivePanel(id as typeof activePanel)} className={cn("flex-1 py-1.5 text-[10px] font-medium rounded-lg transition-colors", activePanel === id ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground")}>{label}</button>
+                        <button key={id} onClick={() => dispatch({ type: 'setActivePanel', activePanel: id })} className={cn("flex-1 py-1.5 text-[10px] font-medium rounded-lg transition-colors", state.activePanel === id ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground")}>{label}</button>
                     ))}
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-4">
-                    {activePanel === 'templates' && (
+                    {state.activePanel === 'templates' && (
                         <>
                             {/* Canvas Size */}
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Canvas Size</h4>
                                 <div className="space-y-1.5">
                                     {canvasSizes.map((size) => (
-                                        <button key={size.id} onClick={() => setSelectedSize(size.id)} className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-all", selectedSize === size.id ? "bg-accent border-primary/20" : "bg-card border-border")}>
+                                        <button key={size.id} onClick={() => dispatch({ type: 'setSelectedSize', selectedSize: size.id })} className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-all", state.selectedSize === size.id ? "bg-accent border-primary/20" : "bg-card border-border")}>
                                             <span className="font-medium">{size.label}</span>
                                             <span className="text-muted-foreground text-[10px]">{size.size}</span>
                                         </button>
@@ -140,11 +188,11 @@ export default function DesignEditorPage() {
                         </>
                     )}
 
-                    {activePanel === 'elements' && (
+                    {state.activePanel === 'elements' && (
                         <>
                             <div className="grid grid-cols-2 gap-2">
-                                {elementTools.map((tool) => (
-                                    <button key={tool.id} onClick={() => tool.id !== 'ai' ? addElement(tool.id as 'text' | 'shape' | 'image') : setActivePanel('ai')} className="flex flex-col items-center gap-2 p-4 bg-card rounded-xl border border-border hover:border-primary/20 transition-all">
+                                    {elementTools.map((tool) => (
+                                    <button key={tool.id} onClick={() => tool.id !== 'ai' ? addElement(tool.id as 'text' | 'shape' | 'image') : dispatch({ type: 'setActivePanel', activePanel: 'ai' })} className="flex flex-col items-center gap-2 p-4 bg-card rounded-xl border border-border hover:border-primary/20 transition-all">
                                         <tool.icon className="w-5 h-5" />
                                         <span className="text-[10px] font-medium">{tool.label}</span>
                                     </button>
@@ -165,11 +213,26 @@ export default function DesignEditorPage() {
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2"><Layers className="w-3 h-3" /> Layers</h4>
                                 <div className="space-y-1">
-                                    {elements.map((el) => (
-                                        <button key={el.id} onClick={() => setSelectedElementId(el.id)} className={cn("w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all", selectedElementId === el.id ? "bg-accent border border-primary/20" : "bg-card border border-border")}>
+                                    {state.elements.map((el) => (
+                                        <button
+                                            key={el.id}
+                                            onClick={() => dispatch({ type: 'selectElement', id: el.id })}
+                                            className={cn(
+                                                "group w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs transition-all",
+                                                state.selectedElementId === el.id ? "bg-accent border border-primary/20" : "bg-card border border-border",
+                                            )}
+                                        >
                                             {el.type === 'text' ? <Type className="w-3 h-3" /> : el.type === 'shape' ? <Square className="w-3 h-3" /> : <ImageIcon className="w-3 h-3" />}
                                             <span className="flex-1 text-left truncate">{el.label}</span>
-                                            <button onClick={(e) => { e.stopPropagation(); deleteElement(el.id); }} className="opacity-0 group-hover:opacity-100 hover:text-destructive"><Trash2 className="w-3 h-3" /></button>
+                                            <button
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    deleteElement(el.id);
+                                                }}
+                                                className="opacity-0 group-hover:opacity-100 hover:text-destructive"
+                                            >
+                                                <Trash2 className="w-3 h-3" />
+                                            </button>
                                         </button>
                                     ))}
                                 </div>
@@ -177,7 +240,7 @@ export default function DesignEditorPage() {
                         </>
                     )}
 
-                    {activePanel === 'text' && (
+                    {state.activePanel === 'text' && (
                         <div className="space-y-4">
                             <Button onClick={() => addElement('text')} variant="outline" className="w-full gap-2"><Plus className="w-4 h-4" /> Add Text</Button>
                             <div className="space-y-3">
@@ -200,19 +263,19 @@ export default function DesignEditorPage() {
                         </div>
                     )}
 
-                    {activePanel === 'ai' && (
+                    {state.activePanel === 'ai' && (
                         <div className="space-y-4">
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">AI Design Assistant</h4>
-                                <textarea value={aiPrompt} onChange={(e) => setAiPrompt(e.target.value)} placeholder="Describe the design you want to create..." className="w-full h-32 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
+                                <textarea value={state.aiPrompt} onChange={(e) => dispatch({ type: 'setAiPrompt', aiPrompt: e.target.value })} placeholder="Describe the design you want to create..." className="w-full h-32 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
                             </div>
-                            <Button onClick={handleAiGenerate} disabled={isGenerating || !aiPrompt.trim()} className="w-full h-10 gap-2">
-                                {isGenerating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>) : (<><Sparkles className="w-4 h-4" /> Generate Design</>)}
+                            <Button onClick={handleAiGenerate} disabled={state.isGenerating || !state.aiPrompt.trim()} className="w-full h-10 gap-2">
+                                {state.isGenerating ? (<><Loader2 className="w-4 h-4 animate-spin" /> Generating...</>) : (<><Sparkles className="w-4 h-4" /> Generate Design</>)}
                             </Button>
                             <div className="space-y-2">
                                 <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Quick Prompts</h4>
                                 {['Modern tech startup banner', 'Elegant wedding invitation', 'Bold sale announcement', 'Minimalist logo design'].map((p) => (
-                                    <button key={p} onClick={() => setAiPrompt(p)} className="w-full text-left px-3 py-2 bg-card rounded-lg border border-border text-[10px] hover:bg-accent transition-colors">{p}</button>
+                                    <button key={p} onClick={() => dispatch({ type: 'setAiPrompt', aiPrompt: p })} className="w-full text-left px-3 py-2 bg-card rounded-lg border border-border text-[10px] hover:bg-accent transition-colors">{p}</button>
                                 ))}
                             </div>
                         </div>
@@ -225,8 +288,8 @@ export default function DesignEditorPage() {
                 {/* Canvas Toolbar */}
                 <div className="h-14 px-4 border-b border-border flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setActiveTool('select')}><MousePointer className={cn("w-4 h-4", activeTool === 'select' && "text-primary")} /></Button>
-                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => setActiveTool('move')}><Move className={cn("w-4 h-4", activeTool === 'move' && "text-primary")} /></Button>
+                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => dispatch({ type: 'setActiveTool', activeTool: 'select' })}><MousePointer className={cn("w-4 h-4", state.activeTool === 'select' && "text-primary")} /></Button>
+                        <Button variant="ghost" size="icon" className="w-8 h-8" onClick={() => dispatch({ type: 'setActiveTool', activeTool: 'move' })}><Move className={cn("w-4 h-4", state.activeTool === 'move' && "text-primary")} /></Button>
                         <div className="w-px h-6 bg-border mx-1" />
                         <Button variant="ghost" size="icon" className="w-8 h-8"><Undo2 className="w-4 h-4" /></Button>
                         <Button variant="ghost" size="icon" className="w-8 h-8"><Redo2 className="w-4 h-4" /></Button>
@@ -244,16 +307,16 @@ export default function DesignEditorPage() {
 
                 {/* Canvas */}
                 <div className="flex-1 flex items-center justify-center p-8 bg-muted/30 overflow-auto">
-                    <div className="bg-white shadow-2xl border border-border" style={{ width: '500px', aspectRatio: selectedSize === 'ig-post' ? '1/1' : selectedSize === 'ig-story' ? '9/16' : selectedSize === 'yt-thumb' ? '16/9' : selectedSize === 'fb-cover' ? '820/312' : '4/3' }}>
+                    <div className="bg-white shadow-2xl border border-border" style={{ width: '500px', aspectRatio: state.selectedSize === 'ig-post' ? '1/1' : state.selectedSize === 'ig-story' ? '9/16' : state.selectedSize === 'yt-thumb' ? '16/9' : state.selectedSize === 'fb-cover' ? '820/312' : '4/3' }}>
                         {/* Canvas elements rendered here */}
                         <div className="w-full h-full relative overflow-hidden">
-                            {elements.map((el) => (
+                            {state.elements.map((el) => (
                                 <div
                                     key={el.id}
-                                    onClick={() => setSelectedElementId(el.id)}
+                                    onClick={() => dispatch({ type: 'selectElement', id: el.id })}
                                     className={cn(
                                         "absolute cursor-move transition-all",
-                                        selectedElementId === el.id && "ring-2 ring-primary ring-offset-2"
+                                        state.selectedElementId === el.id && "ring-2 ring-primary ring-offset-2"
                                     )}
                                     style={{ left: el.x, top: el.y, width: el.width, height: el.height }}
                                 >

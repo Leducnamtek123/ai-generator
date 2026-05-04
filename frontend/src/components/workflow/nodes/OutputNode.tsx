@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { BaseNode } from './BaseNode';
 import { Image as ImageIcon } from 'lucide-react';
 import { useReactFlow } from '@xyflow/react';
@@ -16,7 +17,9 @@ export function OutputNode({ id, data, selected }: any) {
         <BaseNode id={id} title="Output Node" selected={selected} onDelete={handleDelete}>
             <div className="flex aspect-video w-full flex-col items-center justify-center rounded-lg border border-dashed border-border bg-accent/5">
                 {data.previewUrl ? (
-                    <img src={data.previewUrl} alt="Output" className="h-full w-full object-cover rounded-lg" />
+                    <div className="relative h-full w-full">
+                        <Image src={data.previewUrl} alt="Output" fill className="object-cover rounded-lg" sizes="(max-width: 1024px) 100vw, 320px" />
+                    </div>
                 ) : (
                     <div className="flex flex-col items-center gap-2">
                         <ImageIcon className="h-6 w-6 text-muted-foreground" />

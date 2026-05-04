@@ -32,6 +32,10 @@ export class GenerateImageDto {
   @IsOptional()
   @IsNumber()
   seed?: number;
+
+  @ApiPropertyOptional({ description: 'Extra metadata to store with generation' })
+  @IsOptional()
+  metadata?: Record<string, any>;
 }
 
 export class GenerateVideoDto {
@@ -63,6 +67,10 @@ export class GenerateVideoDto {
   @IsOptional()
   @IsString()
   endImageUrl?: string;
+
+  @ApiPropertyOptional({ description: 'Extra metadata to store with generation' })
+  @IsOptional()
+  metadata?: Record<string, any>;
 }
 
 import {

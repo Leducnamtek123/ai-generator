@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useCallback } from 'react';
+import Image from 'next/image';
 import { BaseNode } from './BaseNode';
 import { Handle, Position, useUpdateNodeInternals } from '@xyflow/react';
 import { Upload, Plus, Loader2, Wand2 } from 'lucide-react';
@@ -126,16 +127,20 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                                     onLoadedData={handleMediaLoad}
                                 />
                             ) : (
-                                <img
-                                    src={data.mediaUrl}
-                                    alt={data.mediaName || 'Uploaded media'}
-                                    className="w-full h-auto block object-cover"
-                                    onLoad={handleMediaLoad}
-                                />
+                                <div className="relative w-full aspect-video">
+                                    <Image
+                                        src={data.mediaUrl}
+                                        alt={data.mediaName || 'Uploaded media'}
+                                        fill
+                                        className="object-cover"
+                                        sizes="(max-width: 1024px) 100vw, 300px"
+                                        onLoad={handleMediaLoad}
+                                    />
+                                </div>
                             )}
 
                             {/* Hover Edit Overlay */}
-                            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                            <div className="absolute inset-0 bg-gray-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                                 <Button
                                     variant="secondary"
                                     size="sm"
@@ -148,11 +153,30 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                             </div>
                         </div>
                     ) : (
-                        <div className={cn("aspect-video w-full flex flex-col items-center justify-center p-4 bg-muted/50 border-2 border-dashed border-transparent hover:border-primary/50 transition-colors", data.isPreview && "p-2")}>
+                        <div 
+                            className={cn("aspect-video w-full flex flex-col items-center justify-center p-4 bg-muted/50 border-2 border-dashed border-transparent hover:border-primary/50 transition-colors", data.isPreview && "p-2")}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                fileInputRef.current?.click();
+                            }}
+                        >
                             {isUploading ? (
                                 <Loader2 className="w-4 h-4 text-primary animate-spin" />
                             ) : (
-                                <Upload className={cn("text-muted-foreground", data.isPreview ? "w-4 h-4" : "w-8 h-8")} />
+                                <>
+                                    <Upload className={cn("text-muted-foreground", data.isPreview ? "w-4 h-4" : "w-8 h-8 mb-2")} />
+                                    {!data.isPreview && <span className="text-xs text-muted-foreground font-medium">Upload media</span>}
+                                </>
+                            )}
+                            <input
+                                type="file"
+                                ref={fileInputRef}
+                                onChange={handleInputChange}
+                                accept={acceptTypes[mediaType]}
+                                className="hidden"
+                            />
+                            {false && (
+                                <span />
                             )}
                         </div>
                     )}

@@ -76,6 +76,12 @@ export class VisualSceneEntity extends EntityRelationalHelper {
   @Column({ nullable: true })
   horizontalMediaId: string;
 
+  @Column({ nullable: true })
+  verticalVideoMediaId: string;
+
+  @Column({ nullable: true })
+  horizontalVideoMediaId: string;
+
   @Column({ default: 'PENDING' })
   horizontalImageStatus: string;
 
@@ -91,6 +97,10 @@ export class VisualSceneEntity extends EntityRelationalHelper {
 
   @Column({ type: 'float', nullable: true })
   duration: number;
+
+  // ──────────── Narration (FlowKit TTS) ────────────
+  @Column({ type: 'text', nullable: true })
+  narratorText: string;
 
   @CreateDateColumn()
   createdAt: Date;

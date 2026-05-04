@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Sparkles, Wand2, Download, Maximize2, RefreshCw } from 'lucide-react';
 import { GlassCard } from '@/ui/glass-card';
 import { Button } from '@/ui/button';
@@ -13,7 +14,7 @@ export function AIStudio() {
                     <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground">Model Settings</h3>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] text-muted-foreground">Base Model</label>
+                        <div className="text-[10px] text-muted-foreground">Base Model</div>
                         <Button variant="outline" className="w-full justify-between text-xs">
                             Stable Diffusion XL
                             <Wand2 className="h-3 w-3" />
@@ -21,7 +22,7 @@ export function AIStudio() {
                     </div>
 
                     <div className="space-y-2">
-                        <label className="text-[10px] text-muted-foreground">Aspect Ratio</label>
+                        <div className="text-[10px] text-muted-foreground">Aspect Ratio</div>
                         <div className="grid grid-cols-3 gap-2">
                             {['1:1', '16:9', '4:5'].map((ratio) => (
                                 <Button
@@ -38,7 +39,7 @@ export function AIStudio() {
                     <div className="space-y-4 pt-4 border-t border-border">
                         <div className="space-y-2">
                             <div className="flex justify-between">
-                                <label className="text-[10px] text-muted-foreground">Steps</label>
+                                <div className="text-[10px] text-muted-foreground">Steps</div>
                                 <span className="text-[10px] text-primary">30</span>
                             </div>
                             <div className="h-1.5 w-full rounded-full bg-muted" />
@@ -46,7 +47,7 @@ export function AIStudio() {
 
                         <div className="space-y-2">
                             <div className="flex justify-between">
-                                <label className="text-[10px] text-muted-foreground">Guidance Scale</label>
+                                <div className="text-[10px] text-muted-foreground">Guidance Scale</div>
                                 <span className="text-[10px] text-primary">7.5</span>
                             </div>
                             <div className="h-1.5 w-full rounded-full bg-muted" />
@@ -73,12 +74,14 @@ export function AIStudio() {
 
                 <div className="flex flex-1 items-center justify-center p-8">
                     <div className="relative aspect-square w-full max-w-md overflow-hidden rounded-2xl border border-border bg-muted shadow-2xl">
-                        <img
+                        <Image
                             src="https://images.unsplash.com/photo-1614726365636-dd49de8410c1?w=800&h=800&fit=crop"
                             className="h-full w-full object-cover opacity-50 grayscale"
                             alt="Studio Preview"
+                            fill
+                            sizes="(max-width: 768px) 100vw, 33vw"
                         />
-                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-[2px]">
+                        <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/40 backdrop-blur-[2px]">
                             <Sparkles className="mb-2 h-8 w-8 text-primary animate-pulse" />
                             <p className="text-sm font-medium">Ready to create</p>
                             <p className="text-[10px] text-muted-foreground">Set your parameters and hit Generate</p>

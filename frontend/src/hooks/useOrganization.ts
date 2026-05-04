@@ -25,17 +25,16 @@ export function useOrganization(orgSlug?: string) {
   const [error, setError] = useState<string | null>(null);
 
   const loadOrganizations = useCallback(async () => {
+    let orgs: typeof organizations = [];
     try {
       setLoading(true);
-      const orgs = await orgApi.list();
+      orgs = await orgApi.list();
       setOrganizations(orgs);
-      return orgs;
     } catch {
       setError('Failed to load organizations');
-      return [];
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
+    return orgs;
   }, [setOrganizations]);
 
   const loadMembership = useCallback(async () => {

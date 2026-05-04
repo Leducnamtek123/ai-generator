@@ -4,7 +4,7 @@ import validateConfig from '../../utils/validate-config';
 import { PaymentProvider, PaymentsConfig } from './payments-config.type';
 
 class EnvironmentVariablesValidator {
-  @IsIn(['vnpay', 'momo', 'zalopay'])
+  @IsIn(['vnpay', 'momo', 'zalopay', '9pay'])
   @IsOptional()
   PAYMENT_DEFAULT_PROVIDER: PaymentProvider;
 
@@ -71,6 +71,22 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsOptional()
   ZALOPAY_ENDPOINT: string;
+
+  @IsString()
+  @IsOptional()
+  NINEPAY_MERCHANT_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  NINEPAY_SECRET_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  NINEPAY_CHECKSUM_KEY: string;
+
+  @IsString()
+  @IsOptional()
+  NINEPAY_ENDPOINT: string;
 }
 
 export default registerAs<PaymentsConfig>('payments', () => {
@@ -111,6 +127,13 @@ export default registerAs<PaymentsConfig>('payments', () => {
       endpoint:
         process.env.ZALOPAY_ENDPOINT ??
         'https://sb-openapi.zalopay.vn/v2/create',
+    },
+    ninepay: {
+      merchantKey: process.env.NINEPAY_MERCHANT_KEY,
+      secretKey: process.env.NINEPAY_SECRET_KEY,
+      checksumKey: process.env.NINEPAY_CHECKSUM_KEY,
+      endpoint:
+        process.env.NINEPAY_ENDPOINT ?? 'https://sand-payment.9pay.vn',
     },
   };
 });

@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useReducer, useCallback, useRef } from 'react';
+import Image from 'next/image';
 import {
     Search, Heart, Clock, Upload, Download, Folder,
     Camera, Video as VideoIcon, Filter, Check
@@ -20,51 +21,98 @@ interface MediaPickerModalProps {
     mediaType?: 'any' | 'image' | 'video';
 }
 
+type MediaPickerState = {
+    search: string;
+    activeFolder: string;
+    items: MediaItem[];
+    folders: MediaFolder[];
+    loading: boolean;
+    selectedItem: MediaItem | null;
+    isUploading: boolean;
+    uploadProgress: number;
+    dragOver: boolean;
+};
+
+type MediaPickerAction =
+    | { type: 'setSearch'; search: string }
+    | { type: 'setActiveFolder'; activeFolder: string }
+    | { type: 'setItems'; items: MediaItem[] }
+    | { type: 'setFolders'; folders: MediaFolder[] }
+    | { type: 'setLoading'; loading: boolean }
+    | { type: 'setSelectedItem'; selectedItem: MediaItem | null }
+    | { type: 'setIsUploading'; isUploading: boolean }
+    | { type: 'setUploadProgress'; uploadProgress: number }
+    | { type: 'setDragOver'; dragOver: boolean }
+    | { type: 'prependItem'; item: MediaItem };
+
+const initialState: MediaPickerState = {
+    search: '',
+    activeFolder: 'uploads',
+    items: [],
+    folders: [],
+    loading: false,
+    selectedItem: null,
+    isUploading: false,
+    uploadProgress: 0,
+    dragOver: false,
+};
+
+function reducer(state: MediaPickerState, action: MediaPickerAction): MediaPickerState {
+    switch (action.type) {
+        case 'setSearch':
+            return { ...state, search: action.search };
+        case 'setActiveFolder':
+            return { ...state, activeFolder: action.activeFolder };
+        case 'setItems':
+            return { ...state, items: action.items };
+        case 'setFolders':
+            return { ...state, folders: action.folders };
+        case 'setLoading':
+            return { ...state, loading: action.loading };
+        case 'setSelectedItem':
+            return { ...state, selectedItem: action.selectedItem };
+        case 'setIsUploading':
+            return { ...state, isUploading: action.isUploading };
+        case 'setUploadProgress':
+            return { ...state, uploadProgress: action.uploadProgress };
+        case 'setDragOver':
+            return { ...state, dragOver: action.dragOver };
+        case 'prependItem':
+            return { ...state, items: [action.item, ...state.items], selectedItem: action.item };
+        default:
+            return state;
+    }
+}
+
 export function MediaPickerModal({
     isOpen,
     onClose,
     onSelect,
     mediaType = 'any'
 }: MediaPickerModalProps) {
-    const [search, setSearch] = useState('');
-    const [activeFolder, setActiveFolder] = useState<string>('uploads');
-    const [items, setItems] = useState<MediaItem[]>([]);
-    const [folders, setFolders] = useState<MediaFolder[]>([]);
-    const [loading, setLoading] = useState(false);
-    const [selectedItem, setSelectedItem] = useState<MediaItem | null>(null);
-    const [isUploading, setIsUploading] = useState(false);
-    const [uploadProgress, setUploadProgress] = useState(0);
-    const [dragOver, setDragOver] = useState(false);
-
+    const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
 
-    // Load media library
-    useEffect(() => {
-        if (isOpen) {
-            loadMedia();
-        }
-    }, [isOpen, activeFolder]);
-
-    const loadMedia = async () => {
-        setLoading(true);
+    const loadMedia = useCallback(async (folderId: string) => {
+        dispatch({ type: 'setLoading', loading: true });
         try {
-            const response = await mediaApi.getMediaLibrary(activeFolder);
-            setItems(response.items);
-            setFolders(response.folders);
+            const response = await mediaApi.getMediaLibrary(folderId);
+            dispatch({ type: 'setItems', items: response.items });
+            dispatch({ type: 'setFolders', folders: response.folders });
         } catch (error) {
             console.error('Failed to load media:', error);
         }
-        setLoading(false);
-    };
+        dispatch({ type: 'setLoading', loading: false });
+    }, []);
 
     // Filter items by type and search
-    const filteredItems = items.filter(item => {
+    const filteredItems = state.items.filter(item => {
         // Type filter
         if (mediaType !== 'any' && item.type !== mediaType) {
             return false;
         }
         // Search filter
-        if (search && !item.name.toLowerCase().includes(search.toLowerCase())) {
+        if (state.search && !item.name.toLowerCase().includes(state.search.toLowerCase())) {
             return false;
         }
         return true;
@@ -86,40 +134,39 @@ export function MediaPickerModal({
             return;
         }
 
-        setIsUploading(true);
-        setUploadProgress(0);
+        dispatch({ type: 'setIsUploading', isUploading: true });
+        dispatch({ type: 'setUploadProgress', uploadProgress: 0 });
 
         try {
             const uploadedMedia = await mediaApi.uploadMedia(file, (progress) => {
-                setUploadProgress(progress);
+                dispatch({ type: 'setUploadProgress', uploadProgress: progress });
             });
 
             if (uploadedMedia) {
-                setItems(prev => [uploadedMedia, ...prev]);
-                setSelectedItem(uploadedMedia);
+                dispatch({ type: 'prependItem', item: uploadedMedia });
             }
         } catch (error) {
             console.error('Upload failed:', error);
             toast.error('Upload failed');
         }
 
-        setIsUploading(false);
-        setUploadProgress(0);
+        dispatch({ type: 'setIsUploading', isUploading: false });
+        dispatch({ type: 'setUploadProgress', uploadProgress: 0 });
     }, [mediaType]);
 
     // Handle drag and drop
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault();
-        setDragOver(true);
+        dispatch({ type: 'setDragOver', dragOver: true });
     };
 
     const handleDragLeave = () => {
-        setDragOver(false);
+        dispatch({ type: 'setDragOver', dragOver: false });
     };
 
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
-        setDragOver(false);
+        dispatch({ type: 'setDragOver', dragOver: false });
         handleFileUpload(e.dataTransfer.files);
     };
 
@@ -137,7 +184,17 @@ export function MediaPickerModal({
     if (!isOpen) return null;
 
     return (
-        <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+        <Dialog
+            open={isOpen}
+            onOpenChange={(open) => {
+                if (!open) {
+                    onClose();
+                    return;
+                }
+
+                void loadMedia(state.activeFolder);
+            }}
+        >
             <DialogContent className="max-w-4xl h-[600px] p-0 shadow-2xl flex flex-col overflow-hidden gap-0">
                 <DialogHeader className="px-6 py-4 border-b border-border space-y-0">
                     <DialogTitle className="text-lg font-semibold">Add media</DialogTitle>
@@ -154,15 +211,18 @@ export function MediaPickerModal({
                         </button>
 
                         {/* Folder List */}
-                        {folders.map(folder => {
+                        {state.folders.map(folder => {
                             const Icon = getFolderIcon(folder.icon);
                             return (
                                 <button
                                     key={folder.id}
-                                    onClick={() => setActiveFolder(folder.id)}
+                                    onClick={() => {
+                                        dispatch({ type: 'setActiveFolder', activeFolder: folder.id });
+                                        void loadMedia(folder.id);
+                                    }}
                                     className={cn(
                                         "w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors text-left",
-                                        activeFolder === folder.id
+                                        state.activeFolder === folder.id
                                             ? "bg-accent text-accent-foreground"
                                             : "text-muted-foreground hover:text-foreground hover:bg-accent"
                                     )}
@@ -186,14 +246,14 @@ export function MediaPickerModal({
                         {/* Search Bar */}
                         <div className="p-4 border-b border-border flex items-center gap-4">
                             <div className="flex-1">
-                                <span className="text-sm font-medium capitalize">{activeFolder}</span>
+                                <span className="text-sm font-medium capitalize">{state.activeFolder}</span>
                                 <span className="text-xs text-muted-foreground ml-2">February 2026</span>
                             </div>
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                                 <Input
-                                    value={search}
-                                    onChange={e => setSearch(e.target.value)}
+                                    value={state.search}
+                                    onChange={(e) => dispatch({ type: 'setSearch', search: e.target.value })}
                                     placeholder="Search..."
                                     className="w-48 pl-9 pr-3 py-1 h-auto"
                                 />
@@ -205,7 +265,7 @@ export function MediaPickerModal({
 
                         {/* Media Grid */}
                         <div className="flex-1 overflow-y-auto p-4">
-                            {loading ? (
+                            {state.loading ? (
                                 <div className="flex items-center justify-center h-full">
                                     <div className="w-8 h-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
                                 </div>
@@ -220,38 +280,39 @@ export function MediaPickerModal({
                                     {filteredItems.map(item => (
                                         <button
                                             key={item.id}
-                                            onClick={() => setSelectedItem(item)}
+                                            onClick={() => dispatch({ type: 'setSelectedItem', selectedItem: item })}
                                             className={cn(
                                                 "aspect-square rounded-lg overflow-hidden border-2 transition-all relative group",
-                                                selectedItem?.id === item.id
+                                                state.selectedItem?.id === item.id
                                                     ? "border-primary ring-2 ring-primary/30"
                                                     : "border-transparent hover:border-border"
                                             )}
                                         >
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img
+                                            <Image
                                                 src={item.thumbnailUrl}
                                                 alt={item.name}
-                                                className="w-full h-full object-cover"
+                                                fill
+                                                className="object-cover"
+                                                sizes="(max-width: 1024px) 25vw, 12vw"
                                             />
 
                                             {/* Video indicator */}
                                             {item.type === 'video' && (
-                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-black/60 rounded text-[10px] text-white flex items-center gap-1">
+                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white flex items-center gap-1">
                                                     <VideoIcon className="w-3 h-3" />
                                                     {item.duration}s
                                                 </div>
                                             )}
 
                                             {/* Selection indicator */}
-                                            {selectedItem?.id === item.id && (
+                                            {state.selectedItem?.id === item.id && (
                                                 <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
                                                     <Check className="w-4 h-4 text-primary-foreground" />
                                                 </div>
                                             )}
 
                                             {/* Hover overlay */}
-                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </button>
                                     ))}
                                 </div>
@@ -265,7 +326,7 @@ export function MediaPickerModal({
                         <div
                             className={cn(
                                 "flex-1 border-2 border-dashed rounded-xl flex flex-col items-center justify-center gap-4 transition-colors",
-                                dragOver
+                                state.dragOver
                                     ? "border-primary bg-primary/10"
                                     : "border-border"
                             )}
@@ -273,13 +334,13 @@ export function MediaPickerModal({
                             onDragLeave={handleDragLeave}
                             onDrop={handleDrop}
                         >
-                            {isUploading ? (
+                            {state.isUploading ? (
                                 <>
                                     <div className="w-16 h-16 rounded-full border-4 border-muted flex items-center justify-center relative">
                                         <div
                                             className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"
                                         />
-                                        <span className="text-sm font-medium">{uploadProgress}%</span>
+                                        <span className="text-sm font-medium">{state.uploadProgress}%</span>
                                     </div>
                                     <p className="text-xs text-muted-foreground">Uploading...</p>
                                 </>
@@ -296,10 +357,10 @@ export function MediaPickerModal({
 
                         {/* Upload Options */}
                         <div className="mt-4 space-y-2">
-                            <Button
-                                variant="secondary"
-                                onClick={() => fileInputRef.current?.click()}
-                                className="w-full gap-2"
+                        <Button
+                            variant="secondary"
+                            onClick={() => fileInputRef.current?.click()}
+                            className="w-full gap-2"
                             >
                                 <Upload className="w-4 h-4" />
                                 Upload media
@@ -332,17 +393,17 @@ export function MediaPickerModal({
                     >
                         Cancel
                     </Button>
-                    <Button
-                        onClick={() => {
-                            if (selectedItem) {
-                                onSelect(selectedItem);
-                                onClose();
-                            }
-                        }}
-                        disabled={!selectedItem}
-                    >
-                        Add media
-                    </Button>
+                        <Button
+                            onClick={() => {
+                                if (state.selectedItem) {
+                                    onSelect(state.selectedItem);
+                                    onClose();
+                                }
+                            }}
+                            disabled={!state.selectedItem}
+                        >
+                            Add media
+                        </Button>
                 </div>
             </DialogContent>
         </Dialog>

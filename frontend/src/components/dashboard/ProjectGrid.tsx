@@ -1,9 +1,10 @@
 'use client';
 
+import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '@/components/ui/dropdown-menu';
-import { MoreVertical, Calendar, Plus } from 'lucide-react';
+import { MoreVertical, Calendar, Plus, ImageIcon } from 'lucide-react';
 import { Link, useRouter } from '@/i18n/navigation';
 import { useProjectStore } from '@/stores/project-store';
 
@@ -39,14 +40,18 @@ export function ProjectGrid() {
                     >
                         <div className="aspect-video w-full overflow-hidden bg-gradient-to-br from-muted to-muted/50">
                             {project.thumbnail ? (
-                                <img
-                                    src={project.thumbnail}
-                                    alt={project.name}
-                                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
+                                <div className="relative h-full w-full">
+                                    <Image
+                                        src={project.thumbnail}
+                                        alt={project.name}
+                                        fill
+                                        className="object-cover transition-transform duration-500 group-hover:scale-110"
+                                        sizes="(max-width: 1024px) 100vw, 33vw"
+                                    />
+                                </div>
                             ) : (
                                 <div className="flex h-full w-full items-center justify-center bg-background">
-                                    <span className="text-4xl">🎨</span>
+                                    <ImageIcon className="h-10 w-10 text-muted-foreground/40" />
                                 </div>
                             )}
                         </div>

@@ -66,7 +66,7 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
     };
   }
 
-  async authenticate(code: string): Promise<AuthTokenDetails> {
+  async authenticate(code: string, extraParams: Record<string, any> = {}): Promise<AuthTokenDetails> {
     this.logger.log('Exchanging code for LinkedIn access token...');
 
     const clientId = this.configService.get('LINKEDIN_CLIENT_ID');

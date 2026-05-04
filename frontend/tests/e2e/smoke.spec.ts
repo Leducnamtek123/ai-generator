@@ -1,20 +1,24 @@
 import { expect, test } from '@playwright/test';
 
 test.describe('AI Creative Suite Smoke Tests', () => {
-    test('should load the dashboard and show core sections', async ({ page }) => {
+    test('should load the landing page and show core sections', async ({ page }) => {
         await page.goto('/');
 
-        // Check for dashboard sections
-        await expect(page.getByText(/Quick Actions/i)).toBeVisible();
-        await expect(page.getByText(/Recent Projects/i)).toBeVisible();
-        await expect(page.getByText(/AI Image Studio/i)).toBeVisible();
-        await expect(page.getByText(/Workflow Canvas/i)).toBeVisible();
+        await expect(page.getByRole('heading', { name: /Your paint/i })).toBeVisible();
+        await expect(page.getByText(/Recently Generated/i)).toBeVisible();
+        await expect(page.getByText(/Text to Everything\./i)).toBeVisible();
+        await expect(page.getByRole('button', { name: /Join Free/i })).toBeVisible();
     });
 
-    test('should have functioning navigation in sidebar', async ({ page }) => {
-        await page.goto('/');
-        await expect(page.getByText(/Main Menu/i)).toBeVisible();
-        await expect(page.getByText(/Workflow/i)).toBeVisible();
-        await expect(page.getByText(/Studio/i)).toBeVisible();
+    test('should have functioning navigation in the authenticated sidebar', async ({ page }) => {
+        await page.goto('/sign-in');
+        await page.getByLabel('Email address').fill('admin@example.com');
+        await page.getByLabel('Password').fill('secret');
+        await page.getByRole('button', { name: 'Continue' }).click();
+
+        await expect(page).toHaveURL(/\/dashboard/);
+        await expect(page.getByRole('link', { name: /VisualFlow Studio/i })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Home', exact: true })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Stock', exact: true })).toBeVisible();
     });
 });

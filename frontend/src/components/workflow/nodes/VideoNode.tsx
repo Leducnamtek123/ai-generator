@@ -52,13 +52,19 @@ const MODELS = [
     { id: VideoModel.RUNWAY, name: 'Runway Gen-3 Alpha', badge: 'Realistic' },
     { id: VideoModel.SORA, name: 'Sora', badge: 'New' },
     { id: VideoModel.PIKA, name: 'Pika 1.5', badge: 'Animation' },
-    { id: VideoModel.KLING, name: 'Kling', badge: 'Fast' },
+    { id: VideoModel.KLING, name: 'Kling', badge: 'Fast' },
 ];
 
 export function VideoNode({ id, data, selected }: VideoNodeProps) {
     const [selectedModel, setSelectedModel] = useState(data.model || VideoModel.RUNWAY);
     const [showFullscreen, setShowFullscreen] = useState(false);
     const [localPrompt, setLocalPrompt] = useState(data.prompt || '');
+
+    React.useEffect(() => {
+        if (data.prompt !== undefined && data.prompt !== localPrompt) {
+            setLocalPrompt(data.prompt);
+        }
+    }, [data.prompt]);
 
     // Derived state for display
     const currentModel = MODELS.find(m => m.id === selectedModel) || MODELS[0];
@@ -123,7 +129,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                     {/* Preview Area */}
                     <div className={cn("w-full bg-background flex items-center justify-center overflow-hidden relative", data.isPreview ? "min-h-[80px]" : "min-h-[200px]")}>
                         {isProcessing ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/60 backdrop-blur-md z-10 transition-all">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/60 backdrop-blur-md z-10 transition-all">
                                 <div className="relative">
                                     <div className="w-16 h-16 border-4 border-green-500/20 rounded-full" />
                                     <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-green-500 rounded-full animate-spin" />
@@ -149,7 +155,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                 />
 
                                 {/* Overlay Actions */}
-                                <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <div className="absolute inset-0 bg-gray-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                                     <button
                                         onClick={() => setShowFullscreen(true)}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -165,7 +171,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                         )}
 
                         {!data.isPreview && (
-                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-black/80 to-transparent pointer-events-none">
+                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-gray-950/80 to-transparent pointer-events-none">
                                 <div className="pointer-events-auto">
                                     {data.inputs?.prompt ? (
                                         <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
@@ -216,14 +222,14 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
             </BaseNode>
 
             {showFullscreen && data.previewUrl && !data.isPreview && (
-                <div className="fixed inset-0 z-[200] bg-black/90 flex items-center justify-center p-10" onClick={() => setShowFullscreen(false)}>
+                <button type="button" aria-label="Close fullscreen preview" className="fixed inset-0 z-[200] bg-gray-950/90 flex items-center justify-center p-10" onClick={() => setShowFullscreen(false)}>
                     <video
                         src={data.previewUrl}
                         className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                         controls
                         autoPlay
                     />
-                </div>
+                </button>
             )}
         </div>
     );

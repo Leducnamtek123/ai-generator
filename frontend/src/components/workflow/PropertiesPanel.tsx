@@ -32,44 +32,6 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
         onChange(selectedNode.id, { ...nodeData, [key]: value });
     };
 
-    const renderContent = () => {
-        const commonProps = {
-            nodeId: selectedNode.id,
-            nodeData,
-            onChange: handleChange,
-            isGenerating,
-            handlers: {
-                handleGenerateImage,
-                handleGenerateVideo,
-                handleUpscaleImage,
-                handleEnhancePrompt
-            }
-        };
-
-        switch (selectedNode.type) {
-            case WorkflowNodeType.TEXT:
-                return <TextNodePanel {...commonProps} />;
-            case WorkflowNodeType.MEDIA:
-                return <MediaNodePanel {...commonProps} />;
-            case WorkflowNodeType.IMAGE_GEN:
-                return <ImageGenNodePanel {...commonProps} />;
-            case WorkflowNodeType.VIDEO_GEN:
-                return <VideoGenNodePanel {...commonProps} />;
-            case WorkflowNodeType.ASSISTANT:
-                return <AssistantNodePanel {...commonProps} />;
-            case WorkflowNodeType.UPSCALE:
-                return <UpscaleNodePanel {...commonProps} />;
-            default:
-                return (
-                    <div className="flex flex-col items-center justify-center py-8 text-center">
-                        <Settings2 className="w-8 h-8 text-white/20 mb-3" />
-                        <p className="text-sm text-white/40">No properties available</p>
-                        <p className="text-xs text-white/20 mt-1">Select a different node</p>
-                    </div>
-                );
-        }
-    };
-
     const getIcon = () => {
         switch (selectedNode.type) {
             case WorkflowNodeType.TEXT: return <Type className="w-4 h-4 text-green-400" />;
@@ -114,7 +76,16 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
             {/* Content */}
             <div className="p-4 flex-1 overflow-y-auto">
-                {renderContent()}
+                <PropertiesContent
+                    selectedNode={selectedNode}
+                    nodeData={nodeData}
+                    onChange={handleChange}
+                    isGenerating={isGenerating}
+                    handleGenerateImage={handleGenerateImage}
+                    handleGenerateVideo={handleGenerateVideo}
+                    handleUpscaleImage={handleUpscaleImage}
+                    handleEnhancePrompt={handleEnhancePrompt}
+                />
             </div>
 
             {/* Footer */}
@@ -126,4 +97,62 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
             </div>
         </div>
     );
+}
+
+interface PropertiesContentProps {
+    selectedNode: Node;
+    nodeData: Record<string, unknown>;
+    onChange: (key: string, value: unknown) => void;
+    isGenerating: boolean;
+    handleGenerateImage: ReturnType<typeof useGeneration>['handleGenerateImage'];
+    handleGenerateVideo: ReturnType<typeof useGeneration>['handleGenerateVideo'];
+    handleUpscaleImage: ReturnType<typeof useGeneration>['handleUpscaleImage'];
+    handleEnhancePrompt: ReturnType<typeof useGeneration>['handleEnhancePrompt'];
+}
+
+function PropertiesContent({
+    selectedNode,
+    nodeData,
+    onChange,
+    isGenerating,
+    handleGenerateImage,
+    handleGenerateVideo,
+    handleUpscaleImage,
+    handleEnhancePrompt,
+}: PropertiesContentProps) {
+    const commonProps = {
+        nodeId: selectedNode.id,
+        nodeData,
+        onChange,
+        isGenerating,
+        handlers: {
+            handleGenerateImage,
+            handleGenerateVideo,
+            handleUpscaleImage,
+            handleEnhancePrompt,
+        },
+    };
+
+    switch (selectedNode.type) {
+        case WorkflowNodeType.TEXT:
+            return <TextNodePanel {...commonProps} />;
+        case WorkflowNodeType.MEDIA:
+            return <MediaNodePanel {...commonProps} />;
+        case WorkflowNodeType.IMAGE_GEN:
+            return <ImageGenNodePanel {...commonProps} />;
+        case WorkflowNodeType.VIDEO_GEN:
+            return <VideoGenNodePanel {...commonProps} />;
+        case WorkflowNodeType.ASSISTANT:
+            return <AssistantNodePanel {...commonProps} />;
+        case WorkflowNodeType.UPSCALE:
+            return <UpscaleNodePanel {...commonProps} />;
+        default:
+            return (
+                <div className="flex flex-col items-center justify-center py-8 text-center">
+                    <Settings2 className="w-8 h-8 text-white/20 mb-3" />
+                    <p className="text-sm text-white/40">No properties available</p>
+                    <p className="text-xs text-white/20 mt-1">Select a different node</p>
+                </div>
+            );
+    }
 }

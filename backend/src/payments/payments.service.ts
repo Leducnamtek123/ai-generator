@@ -11,6 +11,7 @@ import axios from 'axios';
 import { AllConfigType } from '../config/config.type';
 import { CreditsService } from '../credits/credits.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { VNPay } from 'vnpay';
 import { PaymentProvider } from './config/payments-config.type';
 import {
   PaymentOrderEntity,
@@ -25,6 +26,31 @@ export class PaymentsService {
     private readonly creditsService: CreditsService,
     private readonly configService: ConfigService<AllConfigType>,
   ) {}
+
+  private getVnpayInstance() {
+    const tmnCode = this.configService.get('payments.vnpay.tmnCode', {
+      infer: true,
+    });
+    const hashSecret = this.configService.get('payments.vnpay.hashSecret', {
+      infer: true,
+    });
+    const payUrl = this.configService.get('payments.vnpay.payUrl', {
+      infer: true,
+    });
+
+    if (!tmnCode || !hashSecret) {
+      throw new BadRequestException('VNPAY is not configured');
+    }
+
+    return new VNPay({
+      tmnCode,
+      secureSecret: hashSecret,
+      vnpayHost: payUrl?.includes('http')
+        ? new URL(payUrl).origin
+        : 'https://sandbox.vnpayment.vn',
+      testMode: true,
+    });
+  }
 
   async createCheckout(userId: string, dto: CreateCheckoutDto) {
     const provider = this.resolveProvider(dto.provider);
@@ -76,7 +102,20 @@ export class PaymentsService {
     provider: PaymentProvider,
     query: Record<string, string | string[]>,
   ) {
-    const normalizedQuery = this.normalizePayload(query);
+    let normalizedQuery = this.normalizePayload(query);
+    
+    // 9Pay return URL uses ?d=base64&s=signature
+    if (provider === '9pay' && normalizedQuery.d && normalizedQuery.s) {
+      const decodedData = this.decodeNinePayData(normalizedQuery.d);
+      const verified = this.verifyNinePaySignature({
+        d: normalizedQuery.d,
+        s: normalizedQuery.s,
+      });
+      
+      if (!verified) throw new BadRequestException('Invalid 9Pay signature');
+      normalizedQuery = { ...normalizedQuery, ...decodedData };
+    }
+
     const orderCode = this.extractOrderCode(provider, normalizedQuery);
     if (!orderCode) throw new BadRequestException('Missing order code');
 
@@ -106,6 +145,9 @@ export class PaymentsService {
 
     if (provider === 'zalopay') {
       return this.handleZaloPayCallback(normalizedPayload);
+    }
+    if (provider === '9pay') {
+      return this.handleNinePayIpn(normalizedPayload);
     }
 
     const orderCode = this.extractOrderCode(provider, normalizedPayload);
@@ -141,41 +183,39 @@ export class PaymentsService {
   ): Promise<{ paymentUrl: string; metadata?: Record<string, unknown> }> {
     switch (order.provider) {
       case 'vnpay':
-        return { paymentUrl: this.createVnpayCheckoutUrl(order) };
+        return { paymentUrl: await this.createVnpayCheckoutUrl(order) };
       case 'momo':
         return this.createMomoCheckout(order);
       case 'zalopay':
         return this.createZaloPayCheckout(order);
+      case '9pay':
+        return this.createNinePayCheckout(order);
       default:
         throw new BadRequestException('Unsupported payment provider');
     }
   }
 
   private async createMomoCheckout(order: PaymentOrderEntity) {
-    const partnerCode = this.configService.getOrThrow(
-      'payments.momo.partnerCode',
-      {
+    const partnerCode = this.configService.get('payments.momo.partnerCode', {
+      infer: true,
+    });
+    const accessKey = this.configService.get('payments.momo.accessKey', {
+      infer: true,
+    });
+    const secretKey = this.configService.get('payments.momo.secretKey', {
+      infer: true,
+    });
+    const endpoint = this.configService.get('payments.momo.endpoint', {
+      infer: true,
+    });
+    const requestType =
+      this.configService.get('payments.momo.requestType', {
         infer: true,
-      },
-    );
-    const accessKey = this.configService.getOrThrow('payments.momo.accessKey', {
-      infer: true,
-    });
-    const secretKey = this.configService.getOrThrow('payments.momo.secretKey', {
-      infer: true,
-    });
-    const endpoint = this.configService.getOrThrow('payments.momo.endpoint', {
-      infer: true,
-    });
-    const requestType = this.configService.getOrThrow(
-      'payments.momo.requestType',
-      {
+      }) || 'captureWallet';
+    const lang =
+      this.configService.get('payments.momo.lang', {
         infer: true,
-      },
-    );
-    const lang = this.configService.getOrThrow('payments.momo.lang', {
-      infer: true,
-    });
+      }) || 'vi';
 
     if (!partnerCode || !accessKey || !secretKey || !endpoint) {
       throw new BadRequestException('MoMo is not configured');
@@ -248,18 +288,15 @@ export class PaymentsService {
   }
 
   private async createZaloPayCheckout(order: PaymentOrderEntity) {
-    const appIdRaw = this.configService.getOrThrow('payments.zalopay.appId', {
+    const appIdRaw = this.configService.get('payments.zalopay.appId', {
       infer: true,
     });
-    const key1 = this.configService.getOrThrow('payments.zalopay.key1', {
+    const key1 = this.configService.get('payments.zalopay.key1', {
       infer: true,
     });
-    const endpoint = this.configService.getOrThrow(
-      'payments.zalopay.endpoint',
-      {
-        infer: true,
-      },
-    );
+    const endpoint = this.configService.get('payments.zalopay.endpoint', {
+      infer: true,
+    });
 
     if (!appIdRaw || !key1 || !endpoint) {
       throw new BadRequestException('ZaloPay is not configured');
@@ -323,45 +360,19 @@ export class PaymentsService {
     };
   }
 
-  private createVnpayCheckoutUrl(order: PaymentOrderEntity) {
-    const tmnCode = this.configService.getOrThrow('payments.vnpay.tmnCode', {
-      infer: true,
-    });
-    const hashSecret = this.configService.getOrThrow(
-      'payments.vnpay.hashSecret',
-      {
-        infer: true,
-      },
-    );
-    const payUrl = this.configService.getOrThrow('payments.vnpay.payUrl', {
-      infer: true,
-    });
-
-    if (!tmnCode || !hashSecret || !payUrl) {
-      throw new BadRequestException('VNPAY is not configured');
-    }
-
-    const queryData: Record<string, string> = {
-      vnp_Version: '2.1.0',
-      vnp_Command: 'pay',
-      vnp_TmnCode: tmnCode,
-      vnp_Amount: String(order.amountVnd * 100),
-      vnp_CreateDate: this.formatDateYmdHis(new Date()),
-      vnp_CurrCode: 'VND',
+  private async createVnpayCheckoutUrl(order: PaymentOrderEntity) {
+    const vnpay = this.getVnpayInstance();
+    return vnpay.buildPaymentUrl({
+      vnp_Amount: order.amountVnd,
+      vnp_CreateDate: parseInt(this.formatDateYmdHis(new Date())),
       vnp_IpAddr: '127.0.0.1',
-      vnp_Locale: this.configService.getOrThrow('payments.vnpay.locale', {
-        infer: true,
-      }),
       vnp_OrderInfo: `Top up ${order.credits} credits`,
-      vnp_OrderType: this.configService.getOrThrow('payments.vnpay.orderType', {
+      vnp_OrderType: (this.configService.get('payments.vnpay.orderType', {
         infer: true,
-      }),
+      }) || 'other') as any,
       vnp_ReturnUrl: this.getProviderReturnUrl('vnpay'),
       vnp_TxnRef: order.orderCode,
-    };
-
-    const signedQuery = this.createVnpaySignature(queryData, hashSecret);
-    return `${payUrl}?${signedQuery}`;
+    });
   }
 
   private verifyProviderReturn(
@@ -369,22 +380,13 @@ export class PaymentsService {
     payload: Record<string, string>,
   ) {
     if (provider === 'vnpay') {
-      const secureHash = payload.vnp_SecureHash;
-      if (!secureHash) return false;
-      const hashSecret = this.configService.getOrThrow(
-        'payments.vnpay.hashSecret',
-        {
-          infer: true,
-        },
-      );
-      const payloadToVerify = { ...payload };
-      delete payloadToVerify.vnp_SecureHash;
-      delete payloadToVerify.vnp_SecureHashType;
-      const calculatedHash = this.calculateVnpayHash(
-        payloadToVerify,
-        hashSecret,
-      );
-      return secureHash === calculatedHash;
+      try {
+        const vnpay = this.getVnpayInstance();
+        const verify = vnpay.verifyReturnUrl(payload as any);
+        return verify.isSuccess;
+      } catch {
+        return false;
+      }
     }
 
     if (provider === 'momo') {
@@ -395,6 +397,10 @@ export class PaymentsService {
       return this.verifyZaloPaySignature(payload);
     }
 
+    if (provider === '9pay') {
+      return this.verifyNinePaySignature(payload);
+    }
+
     return false;
   }
 
@@ -402,12 +408,13 @@ export class PaymentsService {
     const signature = payload.signature;
     if (!signature) return false;
 
-    const accessKey = this.configService.getOrThrow('payments.momo.accessKey', {
+    const accessKey = this.configService.get('payments.momo.accessKey', {
       infer: true,
     });
-    const secretKey = this.configService.getOrThrow('payments.momo.secretKey', {
+    const secretKey = this.configService.get('payments.momo.secretKey', {
       infer: true,
     });
+    if (!accessKey || !secretKey) return false;
 
     const rawSignature =
       `accessKey=${accessKey}` +
@@ -434,7 +441,7 @@ export class PaymentsService {
 
   private verifyZaloPaySignature(payload: Record<string, string>) {
     if (payload.data && payload.mac) {
-      const key2 = this.configService.getOrThrow('payments.zalopay.key2', {
+      const key2 = this.configService.get('payments.zalopay.key2', {
         infer: true,
       });
       if (!key2) return false;
@@ -462,6 +469,8 @@ export class PaymentsService {
         return Number(payload.resultCode) === 0 ? 'paid' : 'failed';
       case 'zalopay':
         return this.resolveZaloPayStatus(payload, order);
+      case '9pay':
+        return String(payload.status) === '1' ? 'paid' : 'failed';
       default:
         return 'failed';
     }
@@ -485,18 +494,15 @@ export class PaymentsService {
   }
 
   private async queryZaloPayOrder(appTransId: string) {
-    const appIdRaw = this.configService.getOrThrow('payments.zalopay.appId', {
+    const appIdRaw = this.configService.get('payments.zalopay.appId', {
       infer: true,
     });
-    const key1 = this.configService.getOrThrow('payments.zalopay.key1', {
+    const key1 = this.configService.get('payments.zalopay.key1', {
       infer: true,
     });
-    const endpoint = this.configService.getOrThrow(
-      'payments.zalopay.endpoint',
-      {
-        infer: true,
-      },
-    );
+    const endpoint = this.configService.get('payments.zalopay.endpoint', {
+      infer: true,
+    });
     const appId = Number(appIdRaw);
     if (!appId || !key1 || !endpoint) return 'pending';
 
@@ -614,6 +620,8 @@ export class PaymentsService {
         return payload.vnp_TxnRef;
       case 'momo':
         return payload.orderId || payload.orderCode;
+      case '9pay':
+        return payload.invoice_no || payload.orderId || payload.invoice;
       case 'zalopay': {
         const appTransId = this.readZaloAppTransId(payload);
         if (!appTransId) return payload.paymentOrder || '';
@@ -650,9 +658,10 @@ export class PaymentsService {
   }
 
   private getPackage(packageId: string) {
-    const packages = this.configService.getOrThrow('payments.creditPackages', {
+    const packages = this.configService.get('payments.creditPackages', {
       infer: true,
     });
+    if (!packages) throw new BadRequestException('Credit packages not configured');
     const paymentPackage = packages[packageId];
     if (!paymentPackage) throw new BadRequestException('Invalid package');
     return paymentPackage;
@@ -661,9 +670,10 @@ export class PaymentsService {
   private resolveProvider(provider?: PaymentProvider): PaymentProvider {
     return (
       provider ||
-      this.configService.getOrThrow('payments.defaultProvider', {
+      this.configService.get('payments.defaultProvider', {
         infer: true,
-      })
+      }) ||
+      'vnpay'
     );
   }
 
@@ -673,22 +683,28 @@ export class PaymentsService {
   }
 
   private getProviderReturnUrl(provider: PaymentProvider) {
-    const backendDomain = this.configService.getOrThrow('app.backendDomain', {
+    const backendDomain = this.configService.get('app.backendDomain', {
       infer: true,
     });
-    const apiPrefix = this.configService.getOrThrow('app.apiPrefix', {
+    const apiPrefix = this.configService.get('app.apiPrefix', {
       infer: true,
     });
+    if (!backendDomain || !apiPrefix) {
+      throw new BadRequestException('App backend domain or API prefix not configured');
+    }
     return `${backendDomain}/${apiPrefix}/v1/payments/return/${provider}`;
   }
 
   private getProviderIpnUrl(provider: PaymentProvider) {
-    const backendDomain = this.configService.getOrThrow('app.backendDomain', {
+    const backendDomain = this.configService.get('app.backendDomain', {
       infer: true,
     });
-    const apiPrefix = this.configService.getOrThrow('app.apiPrefix', {
+    const apiPrefix = this.configService.get('app.apiPrefix', {
       infer: true,
     });
+    if (!backendDomain || !apiPrefix) {
+      throw new BadRequestException('App backend domain or API prefix not configured');
+    }
     return `${backendDomain}/${apiPrefix}/v1/payments/ipn/${provider}`;
   }
 
@@ -697,12 +713,15 @@ export class PaymentsService {
     orderCode: string,
     status: PaymentOrderStatus,
   ) {
-    const frontendDomain = this.configService.getOrThrow('app.frontendDomain', {
+    const frontendDomain = this.configService.get('app.frontendDomain', {
       infer: true,
     });
-    const returnPath = this.configService.getOrThrow('payments.returnPath', {
+    const returnPath = this.configService.get('payments.returnPath', {
       infer: true,
     });
+    if (!frontendDomain || !returnPath) {
+      throw new BadRequestException('App frontend domain or return path not configured');
+    }
     const url = new URL(returnPath, frontendDomain);
     url.searchParams.set('paymentProvider', provider);
     url.searchParams.set('paymentOrder', orderCode);
@@ -760,5 +779,136 @@ export class PaymentsService {
     const mm = String(now.getUTCMonth() + 1).padStart(2, '0');
     const dd = String(now.getUTCDate()).padStart(2, '0');
     return `${yy}${mm}${dd}`;
+  }
+
+  private async createNinePayCheckout(order: PaymentOrderEntity) {
+    const merchantKey = this.configService.get('payments.ninepay.merchantKey', {
+      infer: true,
+    });
+    const secretKey = this.configService.get('payments.ninepay.secretKey', {
+      infer: true,
+    });
+    const endpoint = this.configService.get('payments.ninepay.endpoint', {
+      infer: true,
+    });
+
+    if (!merchantKey || !secretKey || !endpoint) {
+      throw new BadRequestException('9Pay is not configured');
+    }
+
+    const payload = {
+      amount: order.amountVnd,
+      back_url: this.getFrontendReturnUrl('9pay', order.orderCode, 'pending'),
+      description: `AI Generator top up ${order.credits} credits`,
+      invoice_no: order.orderCode,
+      merchantKey: merchantKey,
+      return_url: this.getProviderReturnUrl('9pay'),
+      time: Math.floor(Date.now() / 1000),
+    };
+
+    // Sort keys alphabetically - 9Pay requires specific order for some versions
+    const sortedPayload = Object.keys(payload)
+      .sort()
+      .reduce((obj, key) => {
+        obj[key] = payload[key];
+        return obj;
+      }, {});
+
+    // Use JSON.stringify without extra spaces and encode to base64
+    const message = Buffer.from(JSON.stringify(sortedPayload)).toString('base64');
+    
+    // Sign the base64 message directly using HMAC-SHA256
+    const signature = crypto
+      .createHmac('sha256', secretKey)
+      .update(message)
+      .digest('hex');
+
+    const portalUrl = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
+    const paymentUrl = `${portalUrl}/portal?d=${encodeURIComponent(message)}&s=${signature}`;
+
+    return {
+      paymentUrl,
+      metadata: {
+        ninepayInvoice: payload.invoice_no,
+      },
+    };
+  }
+
+  private decodeNinePayData(base64Data: string) {
+    try {
+      return JSON.parse(Buffer.from(base64Data, 'base64').toString('utf-8'));
+    } catch {
+      return {};
+    }
+  }
+
+  private verifyNinePaySignature(payload: Record<string, string>) {
+    const secretKey = this.configService.get('payments.ninepay.secretKey', {
+      infer: true,
+    });
+    if (!secretKey) return false;
+
+    const { d: message, s: signature } = payload;
+    if (!message || !signature) return false;
+
+    const expected = crypto
+      .createHmac('sha256', secretKey)
+      .update(message)
+      .digest('hex');
+
+    return expected.toLowerCase() === signature.toLowerCase();
+  }
+
+  private async handleNinePayIpn(payload: Record<string, string>) {
+    const checksumKey = this.configService.get('payments.ninepay.checksumKey', {
+      infer: true,
+    });
+    if (!checksumKey) return { status: 0, message: '9Pay is not configured' };
+
+    const resultStr = payload.result || '';
+    const checksum = payload.checksum || '';
+
+    if (!resultStr || !checksum) {
+      return { status: 0, message: 'Invalid payload' };
+    }
+
+    const expectedChecksum = crypto
+      .createHash('sha256')
+      .update(resultStr + checksumKey)
+      .digest('hex');
+      
+    if (expectedChecksum.toUpperCase() !== checksum.toUpperCase()) {
+      return { status: 0, message: 'Invalid signature' };
+    }
+
+    let resultData: any;
+    try {
+      resultData = JSON.parse(
+        Buffer.from(resultStr, 'base64').toString('utf-8'),
+      );
+    } catch {
+      return { status: 0, message: 'Invalid result format' };
+    }
+
+    const orderCode = resultData.invoice_no || resultData.invoice;
+    if (!orderCode) {
+      return { status: 0, message: 'Order not found' };
+    }
+
+    const order = await this.paymentOrderRepository.findOne({
+      where: { orderCode, provider: '9pay' },
+    });
+    
+    if (!order) return { status: 0, message: 'Order not found' };
+
+    const status =
+      resultData.status === 1 || String(resultData.status) === '1'
+        ? 'paid'
+        : 'failed';
+
+    const mergedPayload = { ...payload, ...resultData };
+    await this.finalizeOrder(order, status, mergedPayload);
+
+    return { status: 1, message: 'Success' };
   }
 }

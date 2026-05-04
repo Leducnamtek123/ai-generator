@@ -45,7 +45,12 @@ export function HandleMenu({ position, outputType, onAddAndConnect, onClose }: H
 
     return (
         <>
-            <div className="fixed inset-0 z-40" onClick={onClose} />
+            <button
+                type="button"
+                aria-label="Close handle menu"
+                className="fixed inset-0 z-40"
+                onClick={onClose}
+            />
             <div
                 className="fixed z-50 bg-[#1A1B1F] rounded-xl border border-white/10 shadow-2xl overflow-hidden"
                 style={{ left: position.x + 20, top: position.y - 20, minWidth: 180 }}

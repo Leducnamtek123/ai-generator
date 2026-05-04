@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Image from 'next/image';
 import { Scan, Loader2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
@@ -23,18 +24,18 @@ export function UpscaleNodePanel({ nodeData, onChange, isGenerating, handlers }:
             </div>
 
             {nodeData.previewUrl ? (
-                <div className="aspect-video rounded-lg bg-black/20 overflow-hidden relative">
-                    <img src={nodeData.previewUrl as string} alt="Upscaled preview" className="w-full h-full object-cover" />
+                <div className="aspect-video rounded-lg bg-gray-950/20 overflow-hidden relative">
+                    <Image src={nodeData.previewUrl as string} alt="Upscaled preview" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 320px" />
                 </div>
             ) : (
-                <div className="aspect-video rounded-lg bg-black/20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/10">
+                <div className="aspect-video rounded-lg bg-gray-950/20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/10">
                     <Scan className="w-8 h-8 text-white/20" />
                     <p className="text-xs text-white/30">Waiting for image...</p>
                 </div>
             )}
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Scale Factor</label>
+                <div className="text-xs font-medium text-white/60">Scale Factor</div>
                 <div className="grid grid-cols-2 gap-2">
                     <Button
                         variant={(nodeData.scale || UpscaleFactor.TWO_X) === UpscaleFactor.TWO_X ? 'default' : 'outline'}
@@ -60,11 +61,11 @@ export function UpscaleNodePanel({ nodeData, onChange, isGenerating, handlers }:
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Enhancement Mode</label>
+                <div className="text-xs font-medium text-white/60">Enhancement Mode</div>
                 <select
                     value={(nodeData.enhanceMode as string) || UpscaleMode.CREATIVE}
                     onChange={(e) => onChange('enhanceMode', e.target.value)}
-                    className="w-full bg-black/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                    className="w-full bg-gray-950/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
                 >
                     <option value={UpscaleMode.CREATIVE}>Creative (Add Details)</option>
                     <option value={UpscaleMode.FAITHFUL}>Faithful (Preserve Original)</option>

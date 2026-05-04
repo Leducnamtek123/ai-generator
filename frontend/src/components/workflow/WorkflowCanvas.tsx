@@ -43,18 +43,31 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
     const { runWorkflow } = useWorkflowExecution(setNodes, saveToHistory);
     const {
         selectedNode, setSelectedNode, activeTool, setActiveTool,
-        onConnect, addNode, updateNodeData, handleToolChange,
-        handleZoomIn, handleZoomOut, handleFitView, handlePaneClick
+        onConnect, addNode, updateNodeData, handleDeleteNode, handleToolChange,
+        handleZoomIn, handleZoomOut, handleFitView, handlePaneClick, handleNodeClick,
+        handleTextChange, handleDuplicateNode
     } = useWorkflowHandlers(nodes, setNodes, setEdges, saveToHistory, runWorkflow);
+
+    const [editingMedia, setEditingMedia] = React.useState<{ url: string; type: 'image' | 'video' } | null>(null);
 
     const nodesWithHandlers = useMemo(() => nodes.map(node => ({
         ...node,
         data: {
             ...node.data,
             onRun: (id?: string) => runWorkflow(id || node.id),
-            // ... inject other handlers ...
+            onMediaChange: (id: string, url: string, name: string, thumbnail?: string) => {
+                updateNodeData(id, { mediaUrl: url, mediaName: name, mediaThumbnail: thumbnail });
+            },
+            onDelete: handleDeleteNode,
+            onChange: (id: string, data: any) => updateNodeData(id, data),
+            onSettingsChange: (id: string, settings: any) => updateNodeData(id, settings),
+            onOpenImageEditor: (url: string) => setEditingMedia({ url, type: 'image' }),
+            onOpenVideoEditor: (url: string) => setEditingMedia({ url, type: 'video' }),
+            onTextChange: handleTextChange,
+            onDuplicate: () => handleDuplicateNode(node.id),
+            onSettings: () => setSelectedNode(node),
         }
-    })), [nodes, runWorkflow]);
+    })), [nodes, runWorkflow, updateNodeData, handleDeleteNode, handleTextChange, handleDuplicateNode, setSelectedNode]);
 
     return (
         <div className="flex h-full w-full flex-col bg-[#0B0C0E]">
@@ -82,6 +95,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
                         onPaneClick={handlePaneClick}
+                        onNodeClick={handleNodeClick}
                         nodeTypes={nodeTypes as any}
                         colorMode={currentTheme === 'dark' ? 'dark' : 'light'}
                     >
@@ -93,6 +107,18 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
                 <div className={cn("absolute right-0 top-0 bottom-0 z-30 transition-transform", !selectedNode && "translate-x-full")}>
                     <PropertiesPanel selectedNode={selectedNode} onChange={updateNodeData} onClose={() => setSelectedNode(null)} />
                 </div>
+
+                <ImageEditorModal
+                    isOpen={editingMedia?.type === 'image'}
+                    onClose={() => setEditingMedia(null)}
+                    imageUrl={editingMedia?.type === 'image' ? editingMedia.url : ''}
+                />
+                
+                <VideoEditorModal
+                    isOpen={editingMedia?.type === 'video'}
+                    onClose={() => setEditingMedia(null)}
+                    videoUrl={editingMedia?.type === 'video' ? editingMedia.url : ''}
+                />
             </div>
         </div>
     );

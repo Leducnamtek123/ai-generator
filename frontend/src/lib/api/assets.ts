@@ -40,7 +40,7 @@ export async function getAssets(params: GetAssetsParams = {}) {
     return response; // Return full response with hasNextPage
 }
 
-export interface CreateAssetDto {
+interface CreateAssetDto {
     type: 'image' | 'video' | 'audio';
     url: string;
     projectId?: string;

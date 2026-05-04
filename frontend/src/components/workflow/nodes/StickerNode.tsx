@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { BaseNode } from './BaseNode';
-import { Smile } from 'lucide-react';
+import { Smile, ThumbsUp, ThumbsDown, Heart, Flame, PartyPopper, Rocket, TriangleAlert, Check, X, HelpCircle, Lightbulb, Skull } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { NodeStatus } from '../types';
@@ -21,10 +21,23 @@ interface StickerNodeProps {
     selected?: boolean;
 }
 
-const STICKERS = ['👍', '👎', '❤️', '🔥', '🎉', '🚀', '⚠️', '✅', '❌', '🤔', '💡', '💩'];
+const STICKERS = [
+    { id: 'thumbs-up', icon: ThumbsUp },
+    { id: 'thumbs-down', icon: ThumbsDown },
+    { id: 'heart', icon: Heart },
+    { id: 'flame', icon: Flame },
+    { id: 'party', icon: PartyPopper },
+    { id: 'rocket', icon: Rocket },
+    { id: 'warning', icon: TriangleAlert },
+    { id: 'check', icon: Check },
+    { id: 'close', icon: X },
+    { id: 'think', icon: HelpCircle },
+    { id: 'idea', icon: Lightbulb },
+    { id: 'skull', icon: Skull },
+] as const;
 
 export function StickerNode({ id, data, selected }: StickerNodeProps) {
-    const [sticker, setSticker] = useState(data.sticker || '👍');
+    const [sticker, setSticker] = useState(data.sticker || 'thumbs-up');
     const [showPicker, setShowPicker] = useState(false);
 
     const handleSelect = (s: string) => {
@@ -52,24 +65,27 @@ export function StickerNode({ id, data, selected }: StickerNodeProps) {
                 onClick={() => !data.isPreview && setShowPicker(!showPicker)}
             >
                 <div className={cn(
-                    "text-8xl select-none filter drop-shadow-lg",
-                    data.isPreview && "text-4xl"
+                    "select-none filter drop-shadow-lg text-foreground",
+                    data.isPreview ? "text-4xl" : "text-6xl"
                 )}>
-                    {sticker}
+                    {(() => {
+                        const StickerIcon = STICKERS.find((s) => s.id === sticker)?.icon ?? Smile;
+                        return <StickerIcon className={cn("text-current", data.isPreview ? "w-10 h-10" : "w-16 h-16")} />;
+                    })()}
                 </div>
 
                 {!data.isPreview && showPicker && (
                     <div className="absolute top-full left-1/2 -translate-x-1/2 mt-2 bg-popover border border-border rounded-xl p-2 grid grid-cols-4 gap-2 shadow-2xl z-50 min-w-[160px]">
                         {STICKERS.map((s) => (
                             <button
-                                key={s}
+                                key={s.id}
                                 onClick={(e) => {
                                     e.stopPropagation();
-                                    handleSelect(s);
+                                    handleSelect(s.id);
                                 }}
                                 className="w-8 h-8 flex items-center justify-center text-xl hover:bg-accent rounded-lg transition-colors"
                             >
-                                {s}
+                                <s.icon className="w-4 h-4" />
                             </button>
                         ))}
                     </div>

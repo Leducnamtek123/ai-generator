@@ -1,78 +1,135 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback } from 'react';
 import { projectApi, type Project, type CreateProjectData } from '@/services/projectApi';
 import { useOrgStore } from '@/stores/org-store';
 import {
-    FolderKanban, Plus, Loader2, ArrowLeft, ExternalLink,
-    Trash2, MoreVertical, Globe
+    FolderKanban,
+    Plus,
+    Loader2,
+    ArrowLeft,
+    ExternalLink,
+    Trash2,
+    MoreVertical,
+    Globe
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Link } from '@/i18n/navigation';
 
+type State = {
+    projects: Project[];
+    loading: boolean;
+    showForm: boolean;
+    submitting: boolean;
+    error: string;
+    menuId: string | null;
+    form: CreateProjectData;
+};
+
+type Action =
+    | { type: 'setProjects'; projects: Project[] }
+    | { type: 'setLoading'; loading: boolean }
+    | { type: 'setShowForm'; showForm: boolean }
+    | { type: 'toggleShowForm' }
+    | { type: 'setSubmitting'; submitting: boolean }
+    | { type: 'setError'; error: string }
+    | { type: 'setMenuId'; menuId: string | null }
+    | { type: 'updateForm'; form: Partial<CreateProjectData> }
+    | { type: 'resetForm' };
+
+const initialState: State = {
+    projects: [],
+    loading: true,
+    showForm: false,
+    submitting: false,
+    error: '',
+    menuId: null,
+    form: { name: '', url: '', description: '' },
+};
+
+function reducer(state: State, action: Action): State {
+    switch (action.type) {
+        case 'setProjects':
+            return { ...state, projects: action.projects };
+        case 'setLoading':
+            return { ...state, loading: action.loading };
+        case 'setShowForm':
+            return { ...state, showForm: action.showForm };
+        case 'toggleShowForm':
+            return { ...state, showForm: !state.showForm };
+        case 'setSubmitting':
+            return { ...state, submitting: action.submitting };
+        case 'setError':
+            return { ...state, error: action.error };
+        case 'setMenuId':
+            return { ...state, menuId: action.menuId };
+        case 'updateForm':
+            return { ...state, form: { ...state.form, ...action.form } };
+        case 'resetForm':
+            return { ...state, form: { name: '', url: '', description: '' } };
+        default:
+            return state;
+    }
+}
+
 export default function ProjectsPage() {
     const { currentOrg, hasPermission } = useOrgStore();
-
-    const [projects, setProjects] = useState<Project[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [showForm, setShowForm] = useState(false);
-    const [submitting, setSubmitting] = useState(false);
-    const [error, setError] = useState('');
-    const [menuId, setMenuId] = useState<string | null>(null);
-    const [form, setForm] = useState<CreateProjectData>({ name: '', url: '', description: '' });
-
+    const [state, dispatch] = useReducer(reducer, initialState);
     const canCreate = hasPermission('create', 'Project');
 
     const loadProjects = useCallback(async () => {
         try {
-            setLoading(true);
-            // Backend uses /projects with pagination (not org-scoped in URL)
             const data = await projectApi.list();
-            setProjects(data.data || []);
+            dispatch({ type: 'setProjects', projects: data.data || [] });
         } catch {
-            setError('Failed to load projects');
-        } finally {
-            setLoading(false);
+            dispatch({ type: 'setError', error: 'Failed to load projects' });
         }
+        dispatch({ type: 'setLoading', loading: false });
     }, []);
 
     useEffect(() => {
-        loadProjects();
+        queueMicrotask(() => {
+            void loadProjects();
+        });
     }, [loadProjects]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!form.name || !form.url || !form.description) return;
-        setSubmitting(true);
-        setError('');
+        if (!state.form.name || !state.form.url || !state.form.description) return;
+
+        dispatch({ type: 'setSubmitting', submitting: true });
+        dispatch({ type: 'setError', error: '' });
         try {
             const { project } = await projectApi.create({
-                ...form,
+                ...state.form,
                 organizationId: currentOrg?.id,
             });
-            setProjects([project, ...projects]);
-            setForm({ name: '', url: '', description: '' });
-            setShowForm(false);
+            dispatch({ type: 'setProjects', projects: [project, ...state.projects] });
+            dispatch({ type: 'resetForm' });
+            dispatch({ type: 'setShowForm', showForm: false });
         } catch (err: unknown) {
             const apiErr = err as { response?: { data?: { message?: string } } };
-            setError(apiErr?.response?.data?.message || 'Failed to create project');
-        } finally {
-            setSubmitting(false);
+            dispatch({ type: 'setError', error: apiErr?.response?.data?.message || 'Failed to create project' });
         }
+        dispatch({ type: 'setSubmitting', submitting: false });
     };
 
     const handleDelete = async (projectId: string) => {
         if (!confirm('Are you sure you want to delete this project?')) return;
+
         try {
             await projectApi.delete(projectId);
-            setProjects(projects.filter((p) => p.id !== projectId));
+            dispatch({
+                type: 'setProjects',
+                projects: state.projects.filter((p) => p.id !== projectId),
+            });
         } catch (err: unknown) {
             const apiErr = err as { response?: { data?: { message?: string } } };
-            setError(apiErr?.response?.data?.message || 'Failed to delete project');
+            dispatch({ type: 'setError', error: apiErr?.response?.data?.message || 'Failed to delete project' });
         }
     };
 
-    if (loading) {
+    if (state.loading) {
         return (
             <div className="flex items-center justify-center py-20">
                 <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
@@ -84,7 +141,7 @@ export default function ProjectsPage() {
         <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
             <div className="mb-8">
                 <Link
-                    href={"/dashboard" as string}
+                    href="/dashboard"
                     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
                     <ArrowLeft className="w-4 h-4" />
@@ -97,11 +154,11 @@ export default function ProjectsPage() {
                             Projects
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
-                            {projects.length} project{projects.length !== 1 ? 's' : ''}
+                            {state.projects.length} project{state.projects.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     {canCreate && (
-                        <Button onClick={() => setShowForm(!showForm)}>
+                        <Button onClick={() => dispatch({ type: 'toggleShowForm' })}>
                             <Plus className="w-4 h-4" />
                             New Project
                         </Button>
@@ -109,49 +166,48 @@ export default function ProjectsPage() {
                 </div>
             </div>
 
-            {error && (
+            {state.error && (
                 <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm mb-6">
-                    {error}
+                    {state.error}
                 </div>
             )}
 
-            {/* Create Form */}
-            {showForm && (
+            {state.showForm && (
                 <div className="bg-card border border-border rounded-xl p-6 mb-6 animate-in slide-in-from-top-2">
                     <h3 className="text-sm font-semibold mb-4">Create New Project</h3>
                     <form onSubmit={handleCreate} className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                             <input
                                 type="text"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
+                                value={state.form.name}
+                                onChange={(e) => dispatch({ type: 'updateForm', form: { name: e.target.value } })}
                                 placeholder="Project name"
                                 className="px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 transition-all placeholder:text-muted-foreground/50"
                                 required
                             />
                             <input
                                 type="url"
-                                value={form.url}
-                                onChange={(e) => setForm({ ...form, url: e.target.value })}
+                                value={state.form.url}
+                                onChange={(e) => dispatch({ type: 'updateForm', form: { url: e.target.value } })}
                                 placeholder="https://project-url.com"
                                 className="px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 transition-all placeholder:text-muted-foreground/50"
                                 required
                             />
                         </div>
                         <textarea
-                            value={form.description}
-                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                            value={state.form.description}
+                            onChange={(e) => dispatch({ type: 'updateForm', form: { description: e.target.value } })}
                             placeholder="Brief description..."
                             rows={2}
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 transition-all placeholder:text-muted-foreground/50 resize-none"
                             required
                         />
                         <div className="flex justify-end gap-2">
-                            <Button variant="outline" type="button" onClick={() => setShowForm(false)}>
+                            <Button variant="outline" type="button" onClick={() => dispatch({ type: 'setShowForm', showForm: false })}>
                                 Cancel
                             </Button>
-                            <Button type="submit" disabled={submitting}>
-                                {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                            <Button type="submit" disabled={state.submitting}>
+                                {state.submitting && <Loader2 className="w-4 h-4 animate-spin" />}
                                 Create
                             </Button>
                         </div>
@@ -159,9 +215,8 @@ export default function ProjectsPage() {
                 </div>
             )}
 
-            {/* Projects Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects.map((project) => (
+                {state.projects.map((project) => (
                     <div
                         key={project.id}
                         className="bg-card border border-border rounded-xl overflow-hidden hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5 transition-all duration-300 group"
@@ -179,16 +234,25 @@ export default function ProjectsPage() {
                                         variant="ghost"
                                         size="icon-xs"
                                         className="bg-background/50 backdrop-blur-sm"
-                                        onClick={() => setMenuId(menuId === project.id ? null : project.id)}
+                                        onClick={() => dispatch({ type: 'setMenuId', menuId: state.menuId === project.id ? null : project.id })}
                                     >
                                         <MoreVertical className="w-4 h-4" />
                                     </Button>
-                                    {menuId === project.id && (
+                                    {state.menuId === project.id && (
                                         <>
-                                            <div className="fixed inset-0 z-40" onClick={() => setMenuId(null)} />
+                                            <button
+                                                type="button"
+                                                aria-label="Close project actions menu"
+                                                className="fixed inset-0 z-40"
+                                                onClick={() => dispatch({ type: 'setMenuId', menuId: null })}
+                                            />
                                             <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-xl w-36 p-1.5">
                                                 <button
-                                                    onClick={() => { handleDelete(project.id); setMenuId(null); }}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        void handleDelete(project.id);
+                                                        dispatch({ type: 'setMenuId', menuId: null });
+                                                    }}
                                                     className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
@@ -224,13 +288,13 @@ export default function ProjectsPage() {
                     </div>
                 ))}
 
-                {projects.length === 0 && !showForm && (
+                {state.projects.length === 0 && !state.showForm && (
                     <div className="col-span-full text-center py-16 text-muted-foreground">
                         <FolderKanban className="w-12 h-12 mx-auto mb-3 opacity-20" />
                         <p className="text-sm font-medium">No projects yet</p>
                         <p className="text-xs text-muted-foreground mt-1">Create your first project to get started</p>
                         {canCreate && (
-                            <Button variant="outline" size="sm" className="mt-4" onClick={() => setShowForm(true)}>
+                            <Button variant="outline" size="sm" className="mt-4" onClick={() => dispatch({ type: 'setShowForm', showForm: true })}>
                                 <Plus className="w-4 h-4" />
                                 Create Project
                             </Button>

@@ -22,11 +22,11 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Video Model</label>
+                    <div className="text-xs font-medium text-white/60">Video Model</div>
                 <select
                     value={(nodeData.model as string) || VideoModel.RUNWAY}
                     onChange={(e) => onChange('model', e.target.value)}
-                    className="w-full h-11 bg-black/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none"
+                    className="w-full h-11 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none"
                 >
                     <option value={VideoModel.RUNWAY} className="bg-[#1A1B1F]">Runway Gen-3 ⭐</option>
                     <option value={VideoModel.SORA} className="bg-[#1A1B1F]">OpenAI Sora</option>
@@ -36,7 +36,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Duration</label>
+                    <div className="text-xs font-medium text-white/60">Duration</div>
                 <div className="grid grid-cols-4 gap-2">
                     {[VideoDuration.FOUR_S, VideoDuration.EIGHT_S, VideoDuration.SIXTEEN_S, VideoDuration.TWENTY_FOUR_S].map((duration) => (
                         <Button
@@ -55,7 +55,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Aspect Ratio</label>
+                    <div className="text-xs font-medium text-white/60">Aspect Ratio</div>
                 <div className="grid grid-cols-3 gap-2">
                     {[AspectRatio.WIDESCREEN, AspectRatio.PORTRAIT_WIDE, AspectRatio.SQUARE].map((ratio) => (
                         <Button

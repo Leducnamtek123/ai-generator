@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { NodeProps, Handle, Position } from '@xyflow/react';
+import { NodeProps } from '@xyflow/react';
 import { MessageSquare, Trash2, MoreHorizontal, User, ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
+import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
 import {
     DropdownMenu,
@@ -67,17 +68,13 @@ const colorStyles = {
 function CommentNodeComponent({ id, data, selected }: NodeProps) {
     const commentData = data as CommentData;
     const [isEditing, setIsEditing] = useState(false);
-    const [localText, setLocalText] = useState(commentData.text || '');
+    const [draftText, setDraftText] = useState(commentData.text || '');
     const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     const color = commentData.color || 'yellow';
     const styles = colorStyles[color];
     const isMinimized = commentData.isMinimized || false;
     const isPinned = commentData.isPinned || false;
-
-    useEffect(() => {
-        setLocalText(commentData.text || '');
-    }, [commentData.text]);
 
     useEffect(() => {
         if (isEditing && textareaRef.current) {
@@ -88,17 +85,16 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
 
     const handleBlur = useCallback(() => {
         setIsEditing(false);
-        if (localText !== commentData.text) {
-            commentData.onTextChange?.(id, localText);
+        if (draftText !== commentData.text) {
+            commentData.onTextChange?.(id, draftText);
         }
-    }, [id, localText, commentData]);
+    }, [id, draftText, commentData]);
 
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
         if (e.key === 'Escape') {
             setIsEditing(false);
-            setLocalText(commentData.text || '');
+            setDraftText(commentData.text || '');
         }
-        // Ctrl/Cmd + Enter to save
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
             handleBlur();
         }
@@ -106,17 +102,9 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
 
     const formatTimestamp = (timestamp?: number) => {
         if (!timestamp) return 'Just now';
-        const diff = Date.now() - timestamp;
-        const minutes = Math.floor(diff / 60000);
-        if (minutes < 1) return 'Just now';
-        if (minutes < 60) return `${minutes}m ago`;
-        const hours = Math.floor(minutes / 60);
-        if (hours < 24) return `${hours}h ago`;
-        const days = Math.floor(hours / 24);
-        return `${days}d ago`;
+        return formatDistanceToNow(new Date(timestamp), { addSuffix: true });
     };
 
-    // Minimized view - just a small bubble
     if (isMinimized) {
         return (
             <div
@@ -135,8 +123,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                     <MessageSquare className={cn("w-5 h-5", styles.icon)} />
                 </div>
 
-                {/* Preview tooltip on hover */}
-                {localText && (
+                {draftText && (
                     <div className="absolute left-12 top-0 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
                         <div className={cn(
                             "max-w-[200px] p-2 rounded-lg shadow-xl text-xs",
@@ -144,13 +131,13 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                             styles.border,
                             "border backdrop-blur-md"
                         )}>
-                            <p className="text-foreground/80 line-clamp-3">{localText}</p>
+                            <p className="text-foreground/80 line-clamp-3">{draftText}</p>
                         </div>
                     </div>
                 )}
 
-                {/* Expand button */}
                 <button
+                    type="button"
                     onClick={() => commentData.onToggleMinimize?.(id)}
                     className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-popover border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
@@ -166,7 +153,6 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
         );
     }
 
-    // Full comment view
     return (
         <div
             className={cn(
@@ -177,7 +163,6 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 selected && "ring-2 ring-foreground/50 shadow-[0_0_20px_rgba(255,255,255,0.1)]"
             )}
         >
-            {/* Header */}
             <div className={cn(
                 "flex items-center justify-between px-3 py-2 rounded-t-xl",
                 styles.header
@@ -197,18 +182,17 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 </div>
 
                 <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {/* Minimize button */}
                     <button
+                        type="button"
                         onClick={() => commentData.onToggleMinimize?.(id)}
                         className="p-1 rounded hover:bg-background/10 transition-colors"
                     >
                         <ChevronUp className="w-4 h-4 text-foreground/60" />
                     </button>
 
-                    {/* Menu */}
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
-                            <button className="p-1 rounded hover:bg-background/10 transition-colors">
+                            <button type="button" className="p-1 rounded hover:bg-background/10 transition-colors">
                                 <MoreHorizontal className="w-4 h-4 text-foreground/60" />
                             </button>
                         </DropdownMenuTrigger>
@@ -224,18 +208,18 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                                 )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border" />
-                            {/* Color options */}
                             <div className="px-2 py-1.5">
                                 <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Color</p>
                                 <div className="flex gap-1">
-                                    {(Object.keys(colorStyles) as Array<keyof typeof colorStyles>).map((c) => (
+                                    {(Object.keys(colorStyles) as Array<keyof typeof colorStyles>).map((noteColor) => (
                                         <button
-                                            key={c}
-                                            onClick={() => commentData.onColorChange?.(id, c)}
+                                            type="button"
+                                            key={noteColor}
+                                            onClick={() => commentData.onColorChange?.(id, noteColor)}
                                             className={cn(
                                                 "w-5 h-5 rounded-full border-2 transition-transform",
-                                                colorStyles[c].bg,
-                                                color === c ? "scale-110 border-white" : "border-transparent hover:scale-105"
+                                                colorStyles[noteColor].bg,
+                                                color === noteColor ? "scale-110 border-white" : "border-transparent hover:scale-105"
                                             )}
                                         />
                                     ))}
@@ -253,13 +237,12 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 </div>
             </div>
 
-            {/* Content */}
             <div className="p-3">
                 {isEditing ? (
                     <textarea
                         ref={textareaRef}
-                        value={localText}
-                        onChange={(e) => setLocalText(e.target.value)}
+                        value={draftText}
+                        onChange={(e) => setDraftText(e.target.value)}
                         onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
                         placeholder="Add a comment..."
@@ -270,8 +253,8 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         onClick={() => setIsEditing(true)}
                         className="min-h-[40px] cursor-text"
                     >
-                        {localText ? (
-                            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{localText}</p>
+                        {draftText ? (
+                            <p className="text-sm text-foreground/80 whitespace-pre-wrap">{draftText}</p>
                         ) : (
                             <p className="text-sm text-muted-foreground italic">Click to add a comment...</p>
                         )}
@@ -279,7 +262,6 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 )}
             </div>
 
-            {/* Pinned indicator */}
             {isPinned && (
                 <div className="absolute -top-2 -right-2">
                     <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-lg">
@@ -288,7 +270,6 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 </div>
             )}
 
-            {/* Editing indicator */}
             {isEditing && (
                 <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground">
                     Ctrl+Enter to save • Esc to cancel

@@ -74,7 +74,6 @@ export function CreateWorkflowDialog({ onCreate, isLoading, children }: CreateWo
                             id="name"
                             size="md"
                             placeholder="Untitled Workflow"
-                            autoFocus
                             {...register("name")}
                         />
                         {errors.name && (

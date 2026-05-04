@@ -70,19 +70,18 @@ export default function ChannelsPage() {
         } catch (err) {
             console.error('Failed to fetch accounts', err);
             toast.error('Failed to load social channels');
-        } finally {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     }, []);
 
     React.useEffect(() => {
-        fetchAccounts();
+        queueMicrotask(() => { void fetchAccounts(); });
     }, [fetchAccounts]);
 
     const handleConnect = async (platformId: string) => {
         try {
             const { url } = await socialHubApi.getAuthUrl(platformId);
-            window.location.href = url;
+            window.location.assign(url);
         } catch (err) {
             console.error('Failed to initiate connection', err);
             toast.error('Failed to connect to social platform');

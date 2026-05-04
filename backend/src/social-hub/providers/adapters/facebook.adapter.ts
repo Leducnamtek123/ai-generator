@@ -31,6 +31,8 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
     'pages_manage_engagement',
     'pages_read_engagement',
     'read_insights',
+    'pages_messaging',
+    'pages_manage_metadata',
   ];
 
   override maxConcurrentJobs = 100; // Facebook has reasonable rate limits
@@ -90,11 +92,11 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
     return undefined;
   }
 
-  async authenticate(code: string): Promise<AuthTokenDetails> {
+  async authenticate(code: string, extraParams: Record<string, any> = {}): Promise<AuthTokenDetails> {
     this.logger.log('Exchanging code for Facebook access token...');
 
-    const appId = this.configService.get('FACEBOOK_APP_ID');
-    const appSecret = this.configService.get('FACEBOOK_APP_SECRET');
+    const appId = extraParams.appId || this.configService.get('FACEBOOK_APP_ID');
+    const appSecret = extraParams.appSecret || this.configService.get('FACEBOOK_APP_SECRET');
     const redirectUri = `${this.configService.get('BACKEND_DOMAIN')}/api/v1/social-hub/auth/facebook/callback`;
 
     try {

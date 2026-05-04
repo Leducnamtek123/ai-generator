@@ -3,6 +3,7 @@ import { GenerationBaseService } from './generation-base.service';
 import { ProviderRegistry } from '../../providers/provider.registry';
 import { GenerateVideoDto } from '../dto/generate.dto';
 import { GenerationEntity } from '../entities/generation.entity';
+import { GenerationEventsService } from './generation-events.service';
 
 @Injectable()
 export class VideoGenerationService {
@@ -11,6 +12,7 @@ export class VideoGenerationService {
   constructor(
     private readonly baseService: GenerationBaseService,
     private readonly providerRegistry: ProviderRegistry,
+    private readonly eventsService: GenerationEventsService,
   ) {}
 
   async generateVideo(dto: GenerateVideoDto, userId: string, projectId?: string): Promise<GenerationEntity> {
@@ -29,6 +31,8 @@ export class VideoGenerationService {
         duration: dto.duration,
         aspectRatio: dto.aspectRatio,
         startImageUrl: dto.startImageUrl,
+        projectId,
+        ...(dto.metadata || {}),
       },
     });
 
@@ -64,11 +68,13 @@ export class VideoGenerationService {
 
       await this.baseService.save(generation);
       await this.baseService.saveAsset(generation, projectId);
+      this.eventsService.emitUpdate(generation, projectId);
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.baseService.save(generation);
       await this.baseService.refundCredits(userId, cost, 'video');
+      this.eventsService.emitUpdate(generation, projectId);
     }
   }
 

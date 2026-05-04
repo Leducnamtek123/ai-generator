@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useReducer, useRef, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
@@ -23,6 +23,14 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/ui/dialog';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { useCreditStore } from '@/stores/credit-store';
@@ -50,6 +58,14 @@ const settingsTabs = [
 ] as const;
 
 export default function SettingsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+      <SettingsPageContent />
+    </Suspense>
+  );
+}
+
+function SettingsPageContent() {
   const searchParams = useSearchParams();
   const [activeTab, setActiveTab] = useState<(typeof settingsTabs)[number]['id']>(() => {
     const tab = searchParams.get('tab');
@@ -75,8 +91,7 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void fetchProfile();
+    queueMicrotask(() => { void fetchProfile(); });
   }, [fetchProfile]);
 
   useEffect(() => {
@@ -146,7 +161,11 @@ export default function SettingsPage() {
 
           <div className="flex-1 min-w-0">
             {activeTab === 'profile' && (
-              <ProfileSettings profile={profile} onProfileRefresh={fetchProfile} />
+              <ProfileSettings
+                key={`${profile?.email ?? 'empty'}-${profile?.firstName ?? ''}-${profile?.lastName ?? ''}`}
+                profile={profile}
+                onProfileRefresh={fetchProfile}
+              />
             )}
             {activeTab === 'account' && <AccountSettings />}
             {activeTab === 'billing' && <BillingSettings />}
@@ -166,16 +185,10 @@ function ProfileSettings({
   profile: UserProfile | null;
   onProfileRefresh: () => Promise<void>;
 }) {
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  const [firstName, setFirstName] = useState(profile?.firstName ?? '');
+  const [lastName, setLastName] = useState(profile?.lastName ?? '');
+  const [email, setEmail] = useState(profile?.email ?? '');
   const [isSaving, setIsSaving] = useState(false);
-
-  useEffect(() => {
-    setFirstName(profile?.firstName ?? '');
-    setLastName(profile?.lastName ?? '');
-    setEmail(profile?.email ?? '');
-  }, [profile]);
 
   const handleSave = async () => {
     setIsSaving(true);
@@ -186,9 +199,8 @@ function ProfileSettings({
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to update profile';
       toast.error(message);
-    } finally {
-      setIsSaving(false);
     }
+    setIsSaving(false);
   };
 
   const initials = useMemo(
@@ -261,72 +273,133 @@ function ProfileSettings({
 }
 
 function AccountSettings() {
-  const [showCurrent, setShowCurrent] = useState(false);
-  const [showNext, setShowNext] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [isUpdatingPassword, setIsUpdatingPassword] = useState(false);
-  const [accounts, setAccounts] = useState<SocialChannel[]>([]);
-  const [providers, setProviders] = useState<SocialProvider[]>([]);
-  const [isLoadingChannels, setIsLoadingChannels] = useState(true);
+  const [state, dispatch] = useReducer(
+    (
+      s: {
+        showCurrent: boolean;
+        showNext: boolean;
+        currentPassword: string;
+        newPassword: string;
+        confirmPassword: string;
+        isUpdatingPassword: boolean;
+        accounts: SocialChannel[];
+        providers: SocialProvider[];
+        isLoadingChannels: boolean;
+      },
+      a:
+        | { type: 'setShowCurrent'; showCurrent: boolean }
+        | { type: 'setShowNext'; showNext: boolean }
+        | { type: 'setCurrentPassword'; currentPassword: string }
+        | { type: 'setNewPassword'; newPassword: string }
+        | { type: 'setConfirmPassword'; confirmPassword: string }
+        | { type: 'setIsUpdatingPassword'; isUpdatingPassword: boolean }
+        | { type: 'setAccounts'; accounts: SocialChannel[] }
+        | { type: 'setProviders'; providers: SocialProvider[] }
+        | { type: 'setIsLoadingChannels'; isLoadingChannels: boolean }
+        | { type: 'resetPasswords' },
+    ) => {
+      switch (a.type) {
+        case 'setShowCurrent':
+          return { ...s, showCurrent: a.showCurrent };
+        case 'setShowNext':
+          return { ...s, showNext: a.showNext };
+        case 'setCurrentPassword':
+          return { ...s, currentPassword: a.currentPassword };
+        case 'setNewPassword':
+          return { ...s, newPassword: a.newPassword };
+        case 'setConfirmPassword':
+          return { ...s, confirmPassword: a.confirmPassword };
+        case 'setIsUpdatingPassword':
+          return { ...s, isUpdatingPassword: a.isUpdatingPassword };
+        case 'setAccounts':
+          return { ...s, accounts: a.accounts };
+        case 'setProviders':
+          return { ...s, providers: a.providers };
+        case 'setIsLoadingChannels':
+          return { ...s, isLoadingChannels: a.isLoadingChannels };
+        case 'resetPasswords':
+          return { ...s, currentPassword: '', newPassword: '', confirmPassword: '' };
+        default:
+          return s;
+      }
+    },
+    {
+      showCurrent: false,
+      showNext: false,
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+      isUpdatingPassword: false,
+      accounts: [],
+      providers: [],
+      isLoadingChannels: true,
+    },
+  );
 
   const loadChannels = useCallback(async () => {
-    setIsLoadingChannels(true);
+    dispatch({ type: 'setIsLoadingChannels', isLoadingChannels: true });
     try {
       const [channelData, providerData] = await Promise.all([
         socialHubApi.getChannels(),
         socialHubApi.getProviders(),
       ]);
-      setAccounts(channelData);
-      setProviders(providerData);
+      dispatch({ type: 'setAccounts', accounts: channelData });
+      dispatch({ type: 'setProviders', providers: providerData });
     } catch (error) {
       console.error('Failed to load social accounts', error);
       toast.error('Failed to load connected accounts');
-    } finally {
-      setIsLoadingChannels(false);
     }
+    dispatch({ type: 'setIsLoadingChannels', isLoadingChannels: false });
   }, []);
 
   useEffect(() => {
-    void loadChannels();
+    queueMicrotask(() => { void loadChannels(); });
   }, [loadChannels]);
 
   const updatePassword = async () => {
-    if (!currentPassword || !newPassword || !confirmPassword) {
+    if (!state.currentPassword || !state.newPassword || !state.confirmPassword) {
       toast.error('Please fill all password fields.');
       return;
     }
-    if (newPassword !== confirmPassword) {
+    if (state.newPassword !== state.confirmPassword) {
       toast.error('New password and confirmation do not match.');
       return;
     }
-    setIsUpdatingPassword(true);
+    dispatch({ type: 'setIsUpdatingPassword', isUpdatingPassword: true });
     try {
       await authApi.updateProfile({
-        oldPassword: currentPassword,
-        password: newPassword,
+        oldPassword: state.currentPassword,
+        password: state.newPassword,
       });
       toast.success('Password updated.');
-      setCurrentPassword('');
-      setNewPassword('');
-      setConfirmPassword('');
+      dispatch({ type: 'resetPasswords' });
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Failed to update password';
       toast.error(message);
-    } finally {
-      setIsUpdatingPassword(false);
     }
+    dispatch({ type: 'setIsUpdatingPassword', isUpdatingPassword: false });
   };
 
-  const connectProvider = async (provider: string) => {
+  const [isFbDialogOpen, setIsFbDialogOpen] = useState(false);
+  const [fbCreds, setFbCreds] = useState({ appId: '', appSecret: '' });
+
+  const connectProvider = async (provider: string, params?: Record<string, string>) => {
     try {
-      const { url } = await socialHubApi.getAuthUrl(provider);
-      window.location.href = url;
+      const { url } = await socialHubApi.getAuthUrl(provider, params);
+      window.location.assign(url);
     } catch (error) {
       console.error('Failed to connect provider', error);
       toast.error('Failed to start provider connection.');
     }
+  };
+
+  const handleFbConnect = async () => {
+    if (!fbCreds.appId || !fbCreds.appSecret) {
+      toast.error('Please enter both App ID and App Secret');
+      return;
+    }
+    await connectProvider('facebook', fbCreds);
+    setIsFbDialogOpen(false);
   };
 
   const disconnectAccount = async (accountId: number) => {
@@ -378,15 +451,15 @@ function AccountSettings() {
             <Label className="text-xs text-muted-foreground">Current Password</Label>
             <div className="relative">
               <Input
-                type={showCurrent ? 'text' : 'password'}
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
+                type={state.showCurrent ? 'text' : 'password'}
+                value={state.currentPassword}
+                onChange={(e) => dispatch({ type: 'setCurrentPassword', currentPassword: e.target.value })}
               />
               <button
-                onClick={() => setShowCurrent(!showCurrent)}
+                onClick={() => dispatch({ type: 'setShowCurrent', showCurrent: !state.showCurrent })}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {state.showCurrent ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
@@ -394,29 +467,29 @@ function AccountSettings() {
             <Label className="text-xs text-muted-foreground">New Password</Label>
             <div className="relative">
               <Input
-                type={showNext ? 'text' : 'password'}
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                type={state.showNext ? 'text' : 'password'}
+                value={state.newPassword}
+                onChange={(e) => dispatch({ type: 'setNewPassword', newPassword: e.target.value })}
               />
               <button
-                onClick={() => setShowNext(!showNext)}
+                onClick={() => dispatch({ type: 'setShowNext', showNext: !state.showNext })}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {showNext ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {state.showNext ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs text-muted-foreground">Confirm New Password</Label>
-            <Input
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-            />
+              <Input
+                type="password"
+                value={state.confirmPassword}
+                onChange={(e) => dispatch({ type: 'setConfirmPassword', confirmPassword: e.target.value })}
+              />
+            </div>
           </div>
-        </div>
-        <Button size="sm" onClick={() => void updatePassword()} disabled={isUpdatingPassword}>
-          {isUpdatingPassword ? 'Updating...' : 'Update Password'}
+        <Button size="sm" onClick={() => void updatePassword()} disabled={state.isUpdatingPassword}>
+          {state.isUpdatingPassword ? 'Updating...' : 'Update Password'}
         </Button>
       </div>
 
@@ -428,37 +501,79 @@ function AccountSettings() {
             Refresh
           </Button>
         </div>
-        {isLoadingChannels ? (
+        {state.isLoadingChannels ? (
           <p className="text-sm text-muted-foreground">Loading...</p>
         ) : (
-          providers.map((provider) => {
-            const account = accounts.find((item) => item.platform === provider.identifier);
+          state.providers.map((provider) => {
+            const account = state.accounts.find((item) => item.platform === provider.identifier);
             const isConnected = !!account;
             return (
-              <div key={provider.identifier} className="flex items-center justify-between py-2">
-                <div className="inline-flex items-center gap-2">
+              <div key={provider.identifier} className="flex flex-col gap-2 py-2 border-b border-border last:border-0">
+                <div className="flex items-center justify-between">
+                  <div className="inline-flex items-center gap-2">
+                    {isConnected ? (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-muted-foreground" />
+                    )}
+                    <span className="text-sm font-medium">
+                      {provider.name}
+                      {account?.name ? ` (${account.name})` : ''}
+                    </span>
+                  </div>
                   {isConnected ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void disconnectAccount(account.id)}
+                    >
+                      Disconnect
+                    </Button>
                   ) : (
-                    <XCircle className="w-4 h-4 text-muted-foreground" />
+                    <Button size="sm" onClick={() => {
+                      if (provider.identifier === 'facebook') {
+                        setIsFbDialogOpen(true);
+                      } else {
+                        void connectProvider(provider.identifier);
+                      }
+                    }}>
+                      Connect
+                    </Button>
                   )}
-                  <span className="text-sm">
-                    {provider.name}
-                    {account?.name ? ` (${account.name})` : ''}
-                  </span>
                 </div>
-                {isConnected ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => void disconnectAccount(account.id)}
-                  >
-                    Disconnect
-                  </Button>
-                ) : (
-                  <Button size="sm" onClick={() => void connectProvider(provider.identifier)}>
-                    Connect
-                  </Button>
+                
+                {isConnected && provider.identifier === 'facebook' && (
+                  <div className="mt-2 p-3 bg-muted/50 rounded-xl space-y-3 text-xs">
+                    <p className="font-semibold text-foreground">Webhook Configuration (for Messenger/Feed)</p>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">Webhook URL</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          readOnly 
+                          value={`${process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin + '/api' : '')}/v1/triggers/messenger/webhook/${account.id}`}
+                          className="h-7 text-[11px] font-mono"
+                        />
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => {
+                          navigator.clipboard.writeText(`${process.env.NEXT_PUBLIC_API_URL || (typeof window !== 'undefined' ? window.location.origin + '/api' : '')}/v1/triggers/messenger/webhook/${account.id}`);
+                          toast.success('Copied URL');
+                        }}>Copy</Button>
+                      </div>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-[10px] uppercase text-muted-foreground">Verify Token</Label>
+                      <div className="flex gap-2">
+                        <Input 
+                          readOnly 
+                          value={account.metadata?.verifyToken || 'N/A'}
+                          className="h-7 text-[11px] font-mono"
+                        />
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => {
+                          navigator.clipboard.writeText(account.metadata?.verifyToken || '');
+                          toast.success('Copied Token');
+                        }}>Copy</Button>
+                      </div>
+                    </div>
+                  </div>
                 )}
               </div>
             );
@@ -482,6 +597,46 @@ function AccountSettings() {
           </Button>
         </div>
       </div>
+
+      <Dialog open={isFbDialogOpen} onOpenChange={setIsFbDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Connect Facebook Page</DialogTitle>
+            <DialogDescription>
+              Enter your Meta App credentials to start the connection process.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="appId">Facebook App ID</Label>
+              <Input
+                id="appId"
+                placeholder="123456789012345"
+                value={fbCreds.appId}
+                onChange={(e) => setFbCreds({ ...fbCreds, appId: e.target.value })}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="appSecret">App Secret</Label>
+              <Input
+                id="appSecret"
+                type="password"
+                placeholder="••••••••••••••••"
+                value={fbCreds.appSecret}
+                onChange={(e) => setFbCreds({ ...fbCreds, appSecret: e.target.value })}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsFbDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleFbConnect}>
+              Connect & Authorize
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -502,13 +657,12 @@ function BillingSettings() {
         toast.error('Khong tao duoc URL thanh toan');
         return;
       }
-      window.location.href = checkout.paymentUrl;
+      window.location.assign(checkout.paymentUrl);
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : 'Khoi tao thanh toan that bai';
       toast.error(message);
-    } finally {
-      setIsPaying(null);
     }
+    setIsPaying(null);
   };
 
   return (
@@ -582,7 +736,7 @@ function BillingSettings() {
               >
                 {isPaying === plan.id ? 'Processing...' : 'Pay with VNPAY'}
               </Button>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 <Button
                   variant="outline"
                   size="sm"
@@ -598,6 +752,14 @@ function BillingSettings() {
                   onClick={() => void purchase(plan.id, 'zalopay')}
                 >
                   ZaloPay
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={isPaying === plan.id}
+                  onClick={() => void purchase(plan.id, '9pay')}
+                >
+                  9Pay
                 </Button>
               </div>
             </div>
@@ -620,13 +782,12 @@ function NotificationSettings() {
     } catch (error) {
       console.error('Failed to fetch unread count', error);
       toast.error('Failed to load notification stats');
-    } finally {
-      setIsLoading(false);
     }
+    setIsLoading(false);
   }, []);
 
   useEffect(() => {
-    void loadUnreadCount();
+    queueMicrotask(() => { void loadUnreadCount(); });
   }, [loadUnreadCount]);
 
   const markAllRead = async () => {

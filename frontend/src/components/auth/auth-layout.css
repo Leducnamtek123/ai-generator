@@ -333,15 +333,17 @@
     font-weight: 800;
     letter-spacing: -0.035em;
     line-height: var(--leading-tight);
-    color: var(--auth-text-primary);
     background: linear-gradient(
       160deg,
       var(--auth-text-primary) 30%,
-      oklch(0.80 0 0) 100%
+      oklch(0.85 0 0) 100%
     );
-    background-clip: text;
     -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
     -webkit-text-fill-color: transparent;
+    display: inline-block;
+    max-width: 100%;
   }
 
   .auth-visual__title::selection {

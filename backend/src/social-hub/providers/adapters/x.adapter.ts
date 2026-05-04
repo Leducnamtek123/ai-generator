@@ -82,7 +82,8 @@ export class XAdapter extends SocialAbstractBase implements SocialProvider {
     return undefined;
   }
 
-  async authenticate(code: string, codeVerifier?: string): Promise<AuthTokenDetails> {
+  async authenticate(code: string, extraParams: Record<string, any> = {}): Promise<AuthTokenDetails> {
+    const codeVerifier = extraParams.codeVerifier;
     this.logger.log('Exchanging code for X OAuth 2.0 access token...');
 
     const clientId = this.configService.get('TWITTER_CLIENT_ID');

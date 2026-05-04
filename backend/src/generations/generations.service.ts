@@ -11,6 +11,7 @@ import { ImageGenerationService } from './services/image-generation.service';
 import { VideoGenerationService } from './services/video-generation.service';
 import { AudioGenerationService } from './services/audio-generation.service';
 import { ProviderRegistry } from '../providers/provider.registry';
+import { GenerationEventsService } from './services/generation-events.service';
 
 @Injectable()
 export class GenerationsService {
@@ -22,6 +23,7 @@ export class GenerationsService {
     private readonly videoService: VideoGenerationService,
     private readonly audioService: AudioGenerationService,
     private readonly providerRegistry: ProviderRegistry,
+    private readonly eventsService: GenerationEventsService,
   ) {}
 
   async findOne(id: string): Promise<GenerationEntity> {
@@ -114,5 +116,8 @@ export class GenerationsService {
     if (status === 'failed' && generation.cost) {
       await this.baseService.refundCredits(generation.userId, generation.cost, generation.type);
     }
+
+    // Notify other services (e.g. VisualFlow)
+    this.eventsService.emitUpdate(generation, generation.metadata?.projectId);
   }
 }

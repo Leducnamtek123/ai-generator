@@ -38,37 +38,37 @@
         "./src/components/*"
       ],
       "@/layouts": [
-        "./src/components/layouts"
+        "./src/components/layouts/index.ts"
       ],
       "@/layouts/*": [
         "./src/components/layouts/*"
       ],
       "@/widgets": [
-        "./src/components/widgets"
+        "./src/components/widgets/index.ts"
       ],
       "@/widgets/*": [
         "./src/components/widgets/*"
       ],
       "@/ui": [
-        "./src/components/ui"
+        "./src/components/ui/index.ts"
       ],
       "@/ui/*": [
         "./src/components/ui/*"
       ],
       "@/hooks": [
-        "./src/hooks"
+        "./src/hooks/index.ts"
       ],
       "@/hooks/*": [
         "./src/hooks/*"
       ],
       "@/data": [
-        "./src/data"
+        "./src/data/index.ts"
       ],
       "@/data/*": [
         "./src/data/*"
       ],
       "@/schemas": [
-        "./src/schemas"
+        "./src/schemas/index.ts"
       ],
       "@/schemas/*": [
         "./src/schemas/*"

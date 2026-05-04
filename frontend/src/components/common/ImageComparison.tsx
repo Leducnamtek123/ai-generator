@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState, useRef, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { GripVertical } from 'lucide-react';
@@ -44,8 +45,8 @@ export function ImageComparison({ before, after, className }: ImageComparisonPro
         if (isDragging) {
             window.addEventListener('mousemove', onMouseMove);
             window.addEventListener('mouseup', onEnd);
-            window.addEventListener('touchmove', onTouchMove);
-            window.addEventListener('touchend', onEnd);
+            window.addEventListener('touchmove', onTouchMove, { passive: true });
+            window.addEventListener('touchend', onEnd, { passive: true });
         }
 
         return () => {
@@ -64,11 +65,13 @@ export function ImageComparison({ before, after, className }: ImageComparisonPro
             onTouchStart={onTouchStart}
         >
             {/* After Image - base layer */}
-            <img
+            <Image
                 src={after}
                 alt="After"
-                className="absolute inset-0 w-full h-full object-contain"
+                fill
+                className="object-contain"
                 draggable={false}
+                sizes="100vw"
             />
 
             {/* Before Image - clipped layer */}
@@ -76,11 +79,13 @@ export function ImageComparison({ before, after, className }: ImageComparisonPro
                 className="absolute inset-0 overflow-hidden"
                 style={{ clipPath: `inset(0 ${100 - sliderPos}% 0 0)` }}
             >
-                <img
+                <Image
                     src={before}
                     alt="Before"
-                    className="absolute inset-0 w-full h-full object-contain"
+                    fill
+                    className="object-contain"
                     draggable={false}
+                    sizes="100vw"
                 />
             </div>
 

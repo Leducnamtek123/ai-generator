@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useReducer } from 'react';
+import Image from 'next/image';
 import { useRouter } from '@/i18n/navigation';
 import {
   Plus,
@@ -22,6 +23,10 @@ import {
   Loader2,
   BookOpen,
   Sparkles,
+  UserRound,
+  MapPinned,
+  Ghost,
+  Gem,
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,22 +74,24 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-const ENTITY_TYPE_ICONS: Record<EntityType, string> = {
-  character: '🧑',
-  location: '🏔️',
-  creature: '🐉',
-  visual_asset: '💎',
+const ENTITY_TYPE_ICONS: Record<EntityType, React.ComponentType<{ className?: string }>> = {
+  character: UserRound,
+  location: MapPinned,
+  creature: Ghost,
+  visual_asset: Gem,
 };
 
 interface CharacterRowProps {
   char: VisualCharacter;
   onDelete: (id: string) => void;
 }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 function CharacterRow({ char, onDelete }: CharacterRowProps) {
+  const EntityIcon = ENTITY_TYPE_ICONS[char.entityType] ?? Clapperboard;
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
       <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-lg shrink-0">
-        {ENTITY_TYPE_ICONS[char.entityType] ?? '🎭'}
+        <EntityIcon className="w-4 h-4 text-white/80" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{char.name}</p>
@@ -92,11 +99,15 @@ function CharacterRow({ char, onDelete }: CharacterRowProps) {
       </div>
       <StatusBadge status={char.refStatus} />
       {char.referenceImageUrl && (
-        <img
-          src={char.referenceImageUrl}
-          alt={char.name}
-          className="w-8 h-8 rounded-lg object-cover border border-white/10"
-        />
+        <div className="relative w-8 h-8 overflow-hidden rounded-lg border border-white/10">
+          <Image
+            src={char.referenceImageUrl}
+            alt={char.name}
+            fill
+            className="object-cover"
+            sizes="32px"
+          />
+        </div>
       )}
       <button
         onClick={() => onDelete(char.id)}
@@ -118,43 +129,101 @@ interface CreateProjectWizardProps {
   onCreated: (project: VisualProject) => void;
 }
 
-function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardProps) {
-  const [step, setStep] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [form, setForm] = useState({
+type WizardCharacter = {
+  name: string;
+  entityType: EntityType;
+  description: string;
+  voiceDescription: string;
+};
+
+type WizardState = {
+  step: 1 | 2;
+  loading: boolean;
+  form: {
+    name: string;
+    story: string;
+    language: string;
+  };
+  characters: WizardCharacter[];
+  newChar: WizardCharacter;
+};
+
+type WizardAction =
+  | { type: 'setStep'; step: 1 | 2 }
+  | { type: 'setLoading'; loading: boolean }
+  | { type: 'setForm'; form: Partial<WizardState['form']> }
+  | { type: 'setCharacters'; characters: WizardCharacter[] }
+  | { type: 'setNewChar'; newChar: Partial<WizardCharacter> }
+  | { type: 'reset' };
+
+const initialWizardState: WizardState = {
+  step: 1,
+  loading: false,
+  form: {
     name: '',
     story: '',
     language: 'en',
-  });
-  const [characters, setCharacters] = useState<
-    Array<{ name: string; entityType: EntityType; description: string; voiceDescription: string }>
-  >([]);
-  const [newChar, setNewChar] = useState({ name: '', entityType: 'character' as EntityType, description: '', voiceDescription: '' });
+  },
+  characters: [],
+  newChar: {
+    name: '',
+    entityType: 'character',
+    description: '',
+    voiceDescription: '',
+  },
+};
+
+function wizardReducer(state: WizardState, action: WizardAction): WizardState {
+  switch (action.type) {
+    case 'setStep':
+      return { ...state, step: action.step };
+    case 'setLoading':
+      return { ...state, loading: action.loading };
+    case 'setForm':
+      return { ...state, form: { ...state.form, ...action.form } };
+    case 'setCharacters':
+      return { ...state, characters: action.characters };
+    case 'setNewChar':
+      return { ...state, newChar: { ...state.newChar, ...action.newChar } };
+    case 'reset':
+      return initialWizardState;
+    default:
+      return state;
+  }
+}
+
+function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardProps) {
+  const [state, dispatch] = useReducer(wizardReducer, initialWizardState);
 
   const handleAddChar = () => {
-    if (!newChar.name.trim()) return;
-    setCharacters((prev) => [...prev, { ...newChar }]);
-    setNewChar({ name: '', entityType: 'character', description: '', voiceDescription: '' });
+    if (!state.newChar.name.trim()) return;
+    dispatch({
+      type: 'setCharacters',
+      characters: [...state.characters, { ...state.newChar }],
+    });
+    dispatch({
+      type: 'setNewChar',
+      newChar: { name: '', entityType: 'character', description: '', voiceDescription: '' },
+    });
   };
 
   const handleCreate = async () => {
-    if (!form.name.trim()) return;
-    setLoading(true);
+    if (!state.form.name.trim()) return;
+    dispatch({ type: 'setLoading', loading: true });
     try {
       const project = await visualFlowApi.projects.create({
-        name: form.name,
-        story: form.story,
-        language: form.language,
-        characters: characters.length ? characters : undefined,
+        name: state.form.name,
+        story: state.form.story,
+        language: state.form.language,
+        characters: state.characters.length ? state.characters : undefined,
       });
       onCreated(project);
       onClose();
-      setStep(1);
-      setForm({ name: '', story: '', language: 'en' });
-      setCharacters([]);
-    } finally {
-      setLoading(false);
+      dispatch({ type: 'reset' });
+    } catch (error) {
+      console.error('Failed to create VisualFlow project', error);
     }
+    dispatch({ type: 'setLoading', loading: false });
   };
 
   if (!open) return null;
@@ -165,7 +234,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
           <DialogTitle className="flex items-center gap-2">
             <Clapperboard className="w-5 h-5 text-violet-400" />
             New VisualFlow Project
-            <span className="ml-auto text-xs text-white/40">Step {step} / 2</span>
+            <span className="ml-auto text-xs text-white/40">Step {state.step} / 2</span>
           </DialogTitle>
         </DialogHeader>
 
@@ -173,37 +242,36 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
         <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
           <div
             className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-500"
-            style={{ width: `${(step / 2) * 100}%` }}
+            style={{ width: `${(state.step / 2) * 100}%` }}
           />
         </div>
 
-        {step === 1 && (
+        {state.step === 1 && (
           <div className="space-y-4 py-2">
             <div>
-              <label className="text-xs font-medium text-white/50 uppercase tracking-widest">Project Name *</label>
+              <div className="text-xs font-medium text-white/50 uppercase tracking-widest">Project Name *</div>
               <Input
-                value={form.name}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, name: e.target.value }))}
+                value={state.form.name}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'setForm', form: { name: e.target.value } })}
                 placeholder="e.g. Dragon Chronicles Episode 1"
                 className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30"
-                autoFocus
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-white/50 uppercase tracking-widest">Story / Synopsis</label>
+              <div className="text-xs font-medium text-white/50 uppercase tracking-widest">Story / Synopsis</div>
               <Textarea
-                value={form.story}
-                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm((p) => ({ ...p, story: e.target.value }))}
+                value={state.form.story}
+                onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch({ type: 'setForm', form: { story: e.target.value } })}
                 placeholder="Describe your full story here. The AI will use this to maintain consistency across all scenes..."
                 rows={5}
                 className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-white/50 uppercase tracking-widest">Language</label>
+              <div className="text-xs font-medium text-white/50 uppercase tracking-widest">Language</div>
               <Input
-                value={form.language}
-                onChange={(e) => setForm((p) => ({ ...p, language: e.target.value }))}
+                value={state.form.language}
+                onChange={(e) => dispatch({ type: 'setForm', form: { language: e.target.value } })}
                 placeholder="en"
                 className="mt-1.5 bg-white/5 border-white/10 text-white w-24"
               />
@@ -211,32 +279,44 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
           </div>
         )}
 
-        {step === 2 && (
+        {state.step === 2 && (
           <div className="space-y-4 py-2">
             <p className="text-sm text-white/50">
               Add visual entities (characters, locations, props). Each gets a reference image to stay consistent across all scenes.
             </p>
             {/* Existing chars */}
-            {characters.length > 0 && (
+            {state.characters.length > 0 && (
               <div className="space-y-2 max-h-40 overflow-y-auto">
-                {characters.map((c, i) => (
-                  <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 text-sm">
-                    <span>{ENTITY_TYPE_ICONS[c.entityType]}</span>
-                    <span className="font-medium">{c.name}</span>
-                    <span className="text-white/40 truncate flex-1">{c.description}</span>
-                    <button onClick={() => setCharacters((p) => p.filter((_, j) => j !== i))} className="text-red-400 hover:text-red-300">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
-                  </div>
-                ))}
+                {state.characters.map((c, i) => {
+                  const EntityIcon = ENTITY_TYPE_ICONS[c.entityType] ?? Clapperboard;
+
+                  return (
+                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 text-sm">
+                      <EntityIcon className="w-4 h-4" />
+                      <span className="font-medium">{c.name}</span>
+                      <span className="text-white/40 truncate flex-1">{c.description}</span>
+                      <button
+                        onClick={() =>
+                          dispatch({
+                            type: 'setCharacters',
+                            characters: state.characters.filter((_, j) => j !== i),
+                          })
+                        }
+                        className="text-red-400 hover:text-red-300"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             )}
             {/* Add new char */}
             <div className="p-3 rounded-xl border border-dashed border-white/10 space-y-2">
               <div className="flex gap-2">
                 <select
-                  value={newChar.entityType}
-                  onChange={(e) => setNewChar((p) => ({ ...p, entityType: e.target.value as EntityType }))}
+                  value={state.newChar.entityType}
+                  onChange={(e) => dispatch({ type: 'setNewChar', newChar: { entityType: e.target.value as EntityType } })}
                   className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white"
                 >
                   <option value="character">Character</option>
@@ -245,22 +325,22 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                   <option value="visual_asset">Visual Asset</option>
                 </select>
                 <Input
-                  value={newChar.name}
-                  onChange={(e) => setNewChar((p) => ({ ...p, name: e.target.value }))}
+                  value={state.newChar.name}
+                  onChange={(e) => dispatch({ type: 'setNewChar', newChar: { name: e.target.value } })}
                   placeholder="Name (used in scene prompts)"
                   className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9"
                 />
               </div>
               <Textarea
-                value={newChar.description}
-                onChange={(e) => setNewChar((p) => ({ ...p, description: e.target.value }))}
+                value={state.newChar.description}
+                onChange={(e) => dispatch({ type: 'setNewChar', newChar: { description: e.target.value } })}
                 placeholder='Appearance only: "Chubby orange cat, blue apron, straw hat, Pixar 3D style"'
                 rows={2}
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none text-sm"
               />
               <Input
-                value={newChar.voiceDescription}
-                onChange={(e) => setNewChar((p) => ({ ...p, voiceDescription: e.target.value }))}
+                value={state.newChar.voiceDescription}
+                onChange={(e) => dispatch({ type: 'setNewChar', newChar: { voiceDescription: e.target.value } })}
                 placeholder="Voice (optional): 'Soft curious childlike voice'"
                 className="bg-white/5 border-white/10 text-white placeholder:text-white/30 h-8 text-xs"
               />
@@ -268,7 +348,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                 size="sm"
                 variant="outline"
                 onClick={handleAddChar}
-                disabled={!newChar.name.trim()}
+                disabled={!state.newChar.name.trim()}
                 className="w-full border-white/10 text-white/70 hover:bg-white/10"
               >
                 <Plus className="w-3.5 h-3.5 mr-1" /> Add Entity
@@ -278,18 +358,18 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
         )}
 
         <DialogFooter className="flex gap-2">
-          {step > 1 && (
-            <Button variant="ghost" onClick={() => setStep((s) => s - 1)} className="text-white/60">
+          {state.step > 1 && (
+            <Button variant="ghost" onClick={() => dispatch({ type: 'setStep', step: 1 })} className="text-white/60">
               Back
             </Button>
           )}
           <Button variant="ghost" onClick={onClose} className="text-white/60">
             Cancel
           </Button>
-          {step < 2 ? (
+          {state.step < 2 ? (
             <Button
-              onClick={() => setStep((s) => s + 1)}
-              disabled={!form.name.trim()}
+              onClick={() => dispatch({ type: 'setStep', step: 2 })}
+              disabled={!state.form.name.trim()}
               className="bg-violet-600 hover:bg-violet-500 text-white"
             >
               Next <ChevronRight className="w-4 h-4 ml-1" />
@@ -297,10 +377,10 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
           ) : (
             <Button
               onClick={handleCreate}
-              disabled={loading || !form.name.trim()}
+              disabled={state.loading || !state.form.name.trim()}
               className="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white"
             >
-              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {state.loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
               Create Project
             </Button>
           )}
@@ -327,17 +407,17 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
       {/* Thumbnail / gradient header */}
       <div className="h-36 bg-gradient-to-br from-violet-900/60 via-pink-900/40 to-indigo-900/60 relative overflow-hidden">
         {project.thumbnailUrl ? (
-          <img src={project.thumbnailUrl} alt={project.name} className="w-full h-full object-cover" />
+          <Image src={project.thumbnailUrl} alt={project.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
             <Clapperboard className="w-12 h-12 text-white/10" />
           </div>
         )}
         {/* Overlay actions */}
-        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity" onClick={(e) => e.stopPropagation()}>
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 bg-black/60 backdrop-blur rounded-lg text-white hover:bg-black/80 transition">
+              <button className="p-1.5 bg-gray-950/60 backdrop-blur rounded-lg text-white hover:bg-gray-950/80 transition">
                 <MoreHorizontal className="w-4 h-4" />
               </button>
             </DropdownMenuTrigger>
@@ -412,18 +492,16 @@ export default function VisualFlowPage() {
 
   const loadProjects = useCallback(async () => {
     try {
-      setLoading(true);
       const res = await visualFlowApi.projects.list();
       setProjects(res.data);
     } catch (e) {
       console.error('Failed to load visual projects', e);
-    } finally {
-      setLoading(false);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
-    loadProjects();
+    queueMicrotask(() => { void loadProjects(); });
   }, [loadProjects]);
 
   const handleDelete = async (id: string) => {

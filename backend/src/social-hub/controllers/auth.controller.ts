@@ -17,8 +17,9 @@ export class SocialAuthController {
   @UseGuards(AuthGuard('jwt'))
   async authenticate(
     @Param('platform') platform: string,
+    @Query() query: Record<string, string>,
   ) {
-    const url = await this.authService.getAuthUrl(platform);
+    const url = await this.authService.getAuthUrl(platform, query);
     return { url };
   }
 
@@ -29,11 +30,12 @@ export class SocialAuthController {
     @Request() req: any,
     @Param('platform') platform: string,
     @Query('code') code: string,
+    @Query('state') state: string,
     @Res() res: Response,
   ) {
-    const result = await this.authService.handleCallback(req.user, platform, code);
+    const result = await this.authService.handleCallback(req.user, platform, code, state);
     
     // Redirect back to frontend with status
-    return res.redirect(`${process.env.FRONTEND_DOMAIN}/social/channels?status=success&platform=${platform}`);
+    return res.redirect(`${process.env.FRONTEND_DOMAIN}/settings?tab=account&status=success&platform=${platform}`);
   }
 }

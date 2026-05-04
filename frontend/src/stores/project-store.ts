@@ -8,10 +8,13 @@ export interface Project {
     userId: string;
 
     thumbnail?: string;
-    content?: any;
+    content?: unknown;
     createdAt: Date;
     updatedAt: Date;
 }
+
+type ProjectFilters = Record<string, unknown>;
+type ProjectSort = Record<string, unknown>;
 
 interface ProjectState {
     projects: Project[];
@@ -19,7 +22,7 @@ interface ProjectState {
     isLoading: boolean;
     hasNextPage: boolean;
 
-    fetchProjects: (params?: { page?: number; limit?: number; filters?: any; sort?: any }) => Promise<void>;
+    fetchProjects: (params?: { page?: number; limit?: number; filters?: ProjectFilters; sort?: ProjectSort }) => Promise<void>;
     fetchProject: (id: string) => Promise<void>;
     createProject: (payload: { name: string; description?: string }) => Promise<string | null>;
     updateProject: (id: string, payload: { name?: string; description?: string }) => Promise<void>;
@@ -54,9 +57,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to fetch projects', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     fetchProject: async (id) => {
@@ -66,9 +68,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
             set({ currentProject: data });
         } catch (error) {
             console.error('Failed to fetch project', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     createProject: async (payload) => {
@@ -81,9 +82,8 @@ export const useProjectStore = create<ProjectState>((set, get) => ({
         } catch (error) {
             console.error('Failed to create project', error);
             return null;
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     updateProject: async (id, payload) => {

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import {
     FolderPlus, Film, LayoutGrid, Image as ImageIcon, Music, Mic, Video, Wand2,
@@ -87,9 +88,8 @@ export default function HistoryPage() {
     const [hasMore, setHasMore] = useState(true);
 
     const fetchHistory = useCallback(async (pageNum: number, reset = false) => {
-        try {
-            setIsLoading(true);
-            const params = new URLSearchParams({
+      try {
+        const params = new URLSearchParams({
                 page: pageNum.toString(),
                 limit: '20',
             });
@@ -103,24 +103,22 @@ export default function HistoryPage() {
             if (data?.data) {
                 setGenerations(prev => reset ? data.data : [...prev, ...data.data]);
                 setHasMore(data.hasNextPage ?? false);
-            } else {
-                // If API returns array directly
-                const arr = Array.isArray(data) ? data : [];
-                setGenerations(prev => reset ? arr : [...prev, ...arr]);
-                setHasMore(arr.length >= 20);
-            }
-        } catch (error) {
-            console.error('Failed to fetch history', error);
-            // Show empty state on failure
-            if (reset) setGenerations([]);
-        } finally {
-            setIsLoading(false);
+        } else {
+          // If API returns array directly
+          const arr = Array.isArray(data) ? data : [];
+          setGenerations(prev => reset ? arr : [...prev, ...arr]);
+          setHasMore(arr.length >= 20);
         }
+      } catch (error) {
+        console.error('Failed to fetch history', error);
+        // Show empty state on failure
+        if (reset) setGenerations([]);
+      }
+      setIsLoading(false);
     }, [filter, search]);
 
     useEffect(() => {
-        setPage(1);
-        fetchHistory(1, true);
+        queueMicrotask(() => { void fetchHistory(1, true); });
     }, [filter, fetchHistory]);
 
     const handleDelete = async (id: string) => {
@@ -220,10 +218,9 @@ export default function HistoryPage() {
                                                 className="h-24 bg-card hover:bg-accent border border-border hover:border-border/80 rounded-xl flex items-center p-4 gap-6 group cursor-pointer transition-all"
                                             >
                                                 {/* Thumbnail */}
-                                                <div className="w-32 h-full rounded-lg bg-muted flex items-center justify-center overflow-hidden">
+                                                <div className="relative w-32 h-full rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                                                     {gen.resultUrl ? (
-                                                        // eslint-disable-next-line @next/next/no-img-element
-                                                        <img src={gen.resultUrl} alt="" className="w-full h-full object-cover" />
+                                                        <Image src={gen.resultUrl} alt="" fill className="object-cover" sizes="128px" />
                                                     ) : (
                                                         <TypeIcon className="w-6 h-6 text-muted-foreground/30" />
                                                     )}

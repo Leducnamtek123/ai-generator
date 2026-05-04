@@ -40,9 +40,8 @@ export default function NewOrgPage() {
             router.push(`/orgs/${org.slug}/settings`);
         } catch (err: any) {
             setError(err?.response?.data?.message || 'Failed to create organization');
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
 
     return (
@@ -78,9 +77,9 @@ export default function NewOrgPage() {
 
                     {/* Name */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                        <div className="text-sm font-medium text-foreground">
                             Name <span className="text-destructive">*</span>
-                        </label>
+                        </div>
                         <input
                             type="text"
                             value={form.name}
@@ -92,10 +91,10 @@ export default function NewOrgPage() {
 
                     {/* URL */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
                             <Link2 className="w-3.5 h-3.5" />
                             URL <span className="text-destructive">*</span>
-                        </label>
+                        </div>
                         <input
                             type="url"
                             value={form.url}
@@ -107,10 +106,10 @@ export default function NewOrgPage() {
 
                     {/* Description */}
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                        <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
                             <FileText className="w-3.5 h-3.5" />
                             Description <span className="text-destructive">*</span>
-                        </label>
+                        </div>
                         <textarea
                             value={form.description}
                             onChange={(e) => setForm({ ...form, description: e.target.value })}
@@ -129,9 +128,9 @@ export default function NewOrgPage() {
                     </h2>
 
                     <div className="space-y-2">
-                        <label className="text-sm font-medium text-foreground">
+                        <div className="text-sm font-medium text-foreground">
                             Domain <span className="text-muted-foreground text-xs">(optional)</span>
-                        </label>
+                        </div>
                         <input
                             type="text"
                             value={form.domain || ''}

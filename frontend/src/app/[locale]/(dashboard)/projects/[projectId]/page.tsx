@@ -1,16 +1,15 @@
 'use client';
 
+import Image from 'next/image';
 import { useRouter } from '@/i18n/navigation';
 import { useState, useEffect, use } from 'react';
 import {
-    Plus,
     ArrowLeft,
     Image as ImageIcon,
     MoreHorizontal,
     MonitorPlay
 } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
 import { useWorkflowStore, Workflow } from '@/stores/workflow-store';
 import { useProjectStore } from '@/stores/project-store';
@@ -24,28 +23,11 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     const { workflows, fetchWorkflowsByProject, createWorkflow, isLoading } = useWorkflowStore();
     const { currentProject, fetchProject } = useProjectStore();
     const [activeTab, setActiveTab] = useState('studios');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [workflowName, setWorkflowName] = useState('');
 
     useEffect(() => {
         fetchProject(projectId);
         fetchWorkflowsByProject(projectId);
     }, [projectId, fetchProject, fetchWorkflowsByProject]);
-
-    const handleCreateWorkflow = async () => {
-        if (!workflowName.trim()) return;
-
-        const newId = await createWorkflow({
-            name: workflowName,
-            projectId: projectId
-        });
-
-        if (newId) {
-            setShowCreateModal(false);
-            setWorkflowName('');
-            router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
-        }
-    };
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -162,17 +144,21 @@ function StudioCard({ workflow, projectId }: { workflow: Workflow; projectId: st
     const router = useRouter();
     return (
         <div
+            role="button"
+            tabIndex={0}
             onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`)}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`); }}
             className="group cursor-pointer"
         >
             <div className="aspect-[4/3] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                     src={workflow.previewUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop'}
                     alt={workflow.name}
-                    className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                    fill
+                    className="object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                    sizes="(max-width: 1024px) 100vw, 25vw"
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
+                <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
                     <span className="text-xs font-medium text-foreground px-2 py-1 bg-background/80 rounded-full backdrop-blur-md">
                         Open Editor
                     </span>

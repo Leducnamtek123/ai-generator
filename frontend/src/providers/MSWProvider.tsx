@@ -1,34 +1,33 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
+import { worker } from '../mocks/browser';
 
 export function MSWProvider({ children }: { children: React.ReactNode }) {
-    const [isReady, setIsReady] = useState(false);
-
     useEffect(() => {
-        async function initMSW() {
-            if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
+        let isMounted = true;
 
+        void (async () => {
+            if (typeof window !== 'undefined' && process.env.NODE_ENV === 'development') {
                 try {
-                    const { worker } = await import('../mocks/browser');
+                    if (!isMounted) return;
                     await worker.start({
                         onUnhandledRequest: 'bypass',
                         serviceWorker: {
-                            url: '/mockServiceWorker.js'
-                        }
+                            url: '/mockServiceWorker.js',
+                        },
                     });
-
-                    setIsReady(true);
                 } catch (error) {
                     console.error('[MSW] Failed to initialize:', error);
                 }
-            } else {
-                setIsReady(true);
             }
-        }
 
-        initMSW();
+        })();
+
+        return () => {
+            isMounted = false;
+        };
     }, []);
 
     return <>{children}</>;

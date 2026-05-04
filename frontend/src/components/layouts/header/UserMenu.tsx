@@ -174,7 +174,7 @@ export function UserMenu() {
                                             )}
                                             onClick={() => router.replace(pathname, { locale: code })}
                                         >
-                                            <span className="mr-2">{info.flag}</span>
+                                            <Languages className="mr-2 h-4 w-4" />
                                             {info.label}
                                         </DropdownMenuItem>
                                     ))}

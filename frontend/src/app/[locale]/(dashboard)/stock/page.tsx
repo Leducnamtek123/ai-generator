@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, FormEvent, useEffect } from 'react';
+import { useState, FormEvent, Suspense } from 'react';
+import Image from 'next/image';
 import { Search, ArrowRight, Download, Heart, Loader2 } from 'lucide-react';
 import { Input } from '@/ui/input';
 import { Button } from '@/ui/button';
@@ -25,25 +26,39 @@ const FEATURED_COLLECTIONS = [
     { id: '4', title: 'Nature Textures', count: 95, image: 'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?w=800&q=80' },
 ];
 
-export default function StockPage() {
-    const searchParams = useSearchParams();
-    const [query, setQuery] = useState('');
-    const [isSearching, setIsSearching] = useState(false);
-    const [results, setResults] = useState<any[]>([]);
-    const [hasSearched, setHasSearched] = useState(false);
+interface StockResult {
+    id: string;
+    url: string;
+    title: string;
+    author: string;
+}
 
-    useEffect(() => {
+export default function StockPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <StockPageContent />
+        </Suspense>
+    );
+}
+
+function StockPageContent() {
+    const searchParams = useSearchParams();
+    const [query, setQuery] = useState(() => {
         const category = searchParams.get('category');
         const view = searchParams.get('view');
-        const seed = category ?? view;
-        if (seed) {
-            setQuery(seed.replace(/[-_]/g, ' '));
-        }
-    }, [searchParams]);
+        return (category ?? view ?? '').replace(/[-_]/g, ' ');
+    });
+    const [isSearching, setIsSearching] = useState(false);
+    const [results, setResults] = useState<StockResult[]>([]);
+    const [hasSearched, setHasSearched] = useState(false);
 
-    const handleSearch = async (e?: FormEvent) => {
-        if (e) e.preventDefault();
-        if (!query.trim()) return;
+    const handleSearch = async (eventOrQuery?: FormEvent | string) => {
+        if (typeof eventOrQuery !== 'string') {
+            eventOrQuery?.preventDefault();
+        }
+
+        const searchTerm = typeof eventOrQuery === 'string' ? eventOrQuery : query;
+        if (!searchTerm.trim()) return;
 
         setIsSearching(true);
         setHasSearched(true);
@@ -63,16 +78,15 @@ export default function StockPage() {
             const newResults = mockIds.map(id => ({
                 id,
                 url: `https://images.unsplash.com/photo-${id}?w=800&q=80`,
-                title: `${query} image ${Math.floor(Math.random() * 100)}`,
+                title: `${searchTerm} image ${Math.floor(Math.random() * 100)}`,
                 author: 'Creator ' + Math.floor(Math.random() * 100),
             }));
 
             setResults(newResults);
-        } catch (error) {
+        } catch {
             toast.error('Failed to search stock library');
-        } finally {
-            setIsSearching(false);
         }
+        setIsSearching(false);
     };
 
     const handleDownload = (url: string) => {
@@ -148,11 +162,10 @@ export default function StockPage() {
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
                                 {results.map((res) => (
                                     <div key={res.id} className="group relative aspect-[4/3] rounded-xl overflow-hidden bg-muted cursor-pointer shadow-sm hover:shadow-xl transition-all">
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img src={res.url} alt={res.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                                        <Image src={res.url} alt={res.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 1024px) 50vw, 25vw" />
                                         
                                         {/* Overlay gradient */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         
                                         {/* Actions */}
                                         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0 duration-300">
@@ -186,7 +199,14 @@ export default function StockPage() {
                             <h2 className="text-lg font-semibold mb-6">Explore by category</h2>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 {CATEGORIES.map((cat) => (
-                                    <div key={cat.title} onClick={() => { setQuery(cat.title); handleSearch(); }} className={`h-24 rounded-xl relative overflow-hidden group cursor-pointer border border-border bg-gradient-to-br ${cat.color} opacity-80 hover:opacity-100 transition-opacity`}>
+                                    <div
+                                        key={cat.title}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') void handleSearch(cat.title); }}
+                                        onClick={() => { setQuery(cat.title); void handleSearch(cat.title); }}
+                                        className={`h-24 rounded-xl relative overflow-hidden group cursor-pointer border border-border bg-gradient-to-br ${cat.color} opacity-80 hover:opacity-100 transition-opacity`}
+                                    >
                                         <div className="absolute inset-0 flex items-center justify-start p-6">
                                             <span className="font-semibold text-lg">{cat.title}</span>
                                         </div>
@@ -206,11 +226,17 @@ export default function StockPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                                 {FEATURED_COLLECTIONS.map((col) => (
-                                    <div key={col.id} onClick={() => { setQuery(col.title); handleSearch(); }} className="group cursor-pointer space-y-3">
+                                    <div
+                                        key={col.id}
+                                        role="button"
+                                        tabIndex={0}
+                                        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') void handleSearch(col.title); }}
+                                        onClick={() => { setQuery(col.title); void handleSearch(col.title); }}
+                                        className="group cursor-pointer space-y-3"
+                                    >
                                         <div className="aspect-[4/3] rounded-xl overflow-hidden bg-muted relative">
-                                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                                            <img src={col.image} alt={col.title} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
-                                            <div className="absolute inset-0 bg-black/20 group-hover:bg-transparent transition-colors" />
+                                            <Image src={col.image} alt={col.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 25vw" />
+                                            <div className="absolute inset-0 bg-gray-950/20 group-hover:bg-transparent transition-colors" />
                                         </div>
                                         <div>
                                             <h3 className="font-medium group-hover:text-primary transition-colors">{col.title}</h3>

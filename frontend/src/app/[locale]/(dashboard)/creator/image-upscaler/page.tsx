@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import Image from 'next/image';
+import { useState, useRef } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
     Select,
@@ -38,6 +39,7 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { toast } from 'sonner';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import {
@@ -77,16 +79,9 @@ export default function ImageUpscalerPage() {
     });
 
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-    const [localUpscaledImage, setLocalUpscaledImage] = useState<string | null>(null);
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
-
-    // Sync store state with local state
-    useEffect(() => {
-        if (currentGeneration?.status === 'completed' && currentGeneration.resultUrl) {
-            setLocalUpscaledImage(currentGeneration.resultUrl);
-        }
-    }, [currentGeneration]);
+    const localUpscaledImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
 
     const updateParam = <K extends keyof UpscaleParams>(key: K, value: UpscaleParams[K]) => {
         setParams(prev => ({ ...prev, [key]: value }));
@@ -94,7 +89,6 @@ export default function ImageUpscalerPage() {
 
     const handleSelectImage = (media: MediaItem) => {
         setUploadedImage(media.url);
-        setLocalUpscaledImage(null);
         reset(); // Reset previous generation
         setIsMediaModalOpen(false);
     };
@@ -104,7 +98,6 @@ export default function ImageUpscalerPage() {
         if (file) {
             const url = URL.createObjectURL(file);
             setUploadedImage(url);
-            setLocalUpscaledImage(null);
             reset();
         }
     };
@@ -141,7 +134,9 @@ export default function ImageUpscalerPage() {
                 if (uploadResult && uploadResult.path) {
                     imageUrlToUse = uploadResult.path;
                 } else {
-                    throw new Error("Upload failed: No path returned");
+                    console.error('Upload failed: No path returned');
+                    toast.error('Upload failed. Please try again.');
+                    return;
                 }
             } catch (error) {
                 console.error("Failed to upload image:", error);
@@ -202,12 +197,13 @@ export default function ImageUpscalerPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <div
+                        <button
+                            type="button"
                             onClick={triggerUpload}
                             className="group relative aspect-[4/3] rounded-2xl bg-muted border border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3"
                         >
                             {uploadedImage ? (
-                                <img src={uploadedImage} alt="Preview" className="w-full h-full object-cover" />
+                                <Image src={uploadedImage} alt="Preview" fill className="object-cover" sizes="(max-width: 768px) 100vw, 340px" />
                             ) : (
                                 <>
                                     <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
@@ -234,7 +230,7 @@ export default function ImageUpscalerPage() {
                                     <Grid3X3 className="w-4 h-4" />
                                 </Button>
                             </div>
-                        </div>
+                        </button>
 
                         <input
                             type="file"

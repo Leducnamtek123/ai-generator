@@ -2,7 +2,8 @@
 
 import { useCallback } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
-import { WorkflowNodeType, ConnectionType, NodeStatus, AssistantMode } from '../types';
+import { WorkflowNodeType, ConnectionType, NodeStatus } from '../types';
+import { generateImage, generateVideo, upscaleImage, enhancePrompt } from '@/lib/api/generations';
 
 export function useWorkflowExecution(
   setNodes: (nds: any) => void,
@@ -59,34 +60,71 @@ export function useWorkflowExecution(
       nds.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, status: NodeStatus.PROCESSING } } : n)
     );
 
-    // Simulation logic (same as in Canvas)
-    await new Promise(r => setTimeout(r, 1500 + Math.random() * 1500));
+    try {
+        let newData: any = { ...node.data, status: NodeStatus.SUCCESS };
 
-    setNodes((nds: any) => {
-      const updatedNodes = nds.map((n: any) => {
-        if (n.id === nodeId) {
-          const newData: any = { ...n.data, status: NodeStatus.SUCCESS };
-          // ... logic ... (simplified for space, but keep full logic from Canvas)
-          if (n.type === WorkflowNodeType.IMAGE_GEN) {
+        if (node.type === WorkflowNodeType.IMAGE_GEN) {
             const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
-            const prompt = textInput?.value || n.data.text || n.data.prompt || 'random scene';
-            const seed = prompt.split('').reduce((a: number, b: string) => a + b.charCodeAt(0), 0);
-            newData.previewUrl = `https://picsum.photos/seed/${seed}-${Date.now()}/512/512`;
+            const prompt = textInput?.value || node.data.text || node.data.prompt;
+            if (!prompt) throw new Error("Missing prompt for Image Generation");
+
+            const result = await generateImage({
+                prompt,
+                model: node.data.model as string,
+                aspectRatio: node.data.aspectRatio as string,
+                quality: 'standard'
+            });
+            newData.previewUrl = result.resultUrl;
             newData.usedPrompt = prompt;
-          }
-           if (n.type === WorkflowNodeType.ASSISTANT) {
-                const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
-                const originalText = textInput?.value || 'creative scene';
-                newData.inputText = originalText;
-                newData.enhancedText = `Enhanced: ${originalText}. Ultra-detailed, 8K, professional.`;
-            }
-          return { ...n, data: newData };
+        } else if (node.type === WorkflowNodeType.VIDEO_GEN) {
+            const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
+            const imageInput = inputs.find(i => i.type === ConnectionType.IMAGE);
+            const prompt = textInput?.value || node.data.text || node.data.prompt;
+            
+            const result = await generateVideo({
+                prompt: prompt || 'Video from image',
+                model: node.data.model as string,
+                duration: node.data.duration as string,
+                aspectRatio: node.data.aspectRatio as string,
+                startImageUrl: imageInput?.value
+            });
+            newData.previewUrl = result.resultUrl;
+        } else if (node.type === WorkflowNodeType.UPSCALE) {
+            const imageInput = inputs.find(i => i.type === ConnectionType.IMAGE);
+            const imageUrl = imageInput?.value || node.data.inputUrl;
+            if (!imageUrl) throw new Error("Missing image for Upscale");
+
+            const result = await upscaleImage({
+                imageUrl,
+                scale: (node.data.scale as number === 4 ? 4 : 2),
+                enhanceMode: node.data.enhanceMode as any || 'balanced'
+            });
+            newData.previewUrl = result.resultUrl;
+        } else if (node.type === WorkflowNodeType.ASSISTANT) {
+            const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
+            const originalText = textInput?.value || node.data.inputText;
+            if (!originalText) throw new Error("Missing input text for Assistant");
+
+            newData.inputText = originalText;
+            const res = await enhancePrompt({
+                prompt: originalText,
+                style: node.data.styleEmphasis as string || 'Photorealistic'
+            });
+            newData.enhancedText = res.enhancedPrompt;
         }
-        return n;
-      });
-      saveToHistory(updatedNodes, getEdges());
-      return updatedNodes;
-    });
+
+        setNodes((nds: any) => {
+            const updatedNodes = nds.map((n: any) => n.id === nodeId ? { ...n, data: newData } : n);
+            saveToHistory(updatedNodes, getEdges());
+            return updatedNodes;
+        });
+
+    } catch (err) {
+        console.error(`Failed to run node ${nodeId}`, err);
+        setNodes((nds: any) =>
+            nds.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, status: NodeStatus.ERROR } } : n)
+        );
+    }
   }, [setNodes, getNodes, getEdges, getNodeInputs, saveToHistory]);
 
   const runWorkflow = useCallback(async (startNodeId: string, mode: 'workflow' | 'local' = 'workflow') => {

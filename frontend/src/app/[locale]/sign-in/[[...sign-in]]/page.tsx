@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -49,9 +50,8 @@ export default function SignInPage() {
             toast.error("Login Failed", {
                 description: "Something went wrong. Please try again."
             });
-        } finally {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     };
 
     return (
@@ -60,7 +60,7 @@ export default function SignInPage() {
                 {/* Logo */}
                 <div className="auth-card__logo">
                     <div className="auth-card__logo-icon">
-                        <img src="/logo.svg" alt="PaintAI" />
+                        <Image src="/logo.svg" alt="PaintAI" width={32} height={32} />
                     </div>
                     <div>
                         <h1 className="auth-card__title">PaintAI</h1>

@@ -37,9 +37,8 @@ export default function SocialDashboardPage() {
                 setStats(data);
             } catch (err) {
                 console.error('Failed to fetch analytics', err);
-            } finally {
-                setIsLoading(false);
             }
+            setIsLoading(false);
         };
         fetchStats();
     }, []);

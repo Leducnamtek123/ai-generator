@@ -5,7 +5,8 @@ import { BaseNode } from './BaseNode';
 import { Handle, Position } from '@xyflow/react';
 import { Sparkles, Loader2, Play, Copy, RefreshCw, ChevronDown } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
-import { ExecutionMode, NodeStatus, AssistantMode } from '../types';
+import { ExecutionMode, NodeStatus, AssistantMode, StyleEmphasis } from '../types';
+import { useGeneration } from '@/hooks/useGeneration';
 
 interface AssistantNodeProps {
     id: string;
@@ -17,6 +18,7 @@ interface AssistantNodeProps {
         status?: NodeStatus;
         onDelete?: (id: string) => void;
         onRun?: (id: string, mode?: ExecutionMode) => void;
+        onChange?: (id: string, updates: Record<string, any>) => void;
         onDuplicate?: () => void;
         onSettings?: () => void;
         onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
@@ -32,13 +34,28 @@ const MODES = [
 ];
 
 export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
-    const [mode, setMode] = useState<AssistantMode>(data.mode || AssistantMode.ENHANCE);
     const [showModeDropdown, setShowModeDropdown] = useState(false);
+    const { isGenerating, handleEnhancePrompt } = useGeneration();
+    const mode = data.mode || AssistantMode.ENHANCE;
     const currentMode = MODES.find(m => m.id === mode) || MODES[0];
 
     const handleCopy = () => {
         if (data.enhancedText) {
             navigator.clipboard.writeText(data.enhancedText);
+        }
+    };
+
+    const handleEnhance = async (e: React.MouseEvent) => {
+        e.stopPropagation();
+        if (!data.inputText?.trim()) return;
+        
+        const enhanced = await handleEnhancePrompt({
+            prompt: data.inputText,
+            style: StyleEmphasis.PHOTOREALISTIC,
+        });
+
+        if (enhanced && data.onChange) {
+            data.onChange(id, { enhancedText: enhanced, status: NodeStatus.SUCCESS });
         }
     };
 
@@ -83,7 +100,7 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                                         <button
                                             key={m.id}
                                             onClick={() => {
-                                                setMode(m.id as any);
+                                                data.onChange?.(id, { mode: m.id });
                                                 setShowModeDropdown(false);
                                             }}
                                             className="w-full px-3 py-2 text-left hover:bg-accent transition-colors"
@@ -139,17 +156,14 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                     {/* Run Button */}
                     <div className="px-3 pb-3">
                         <button
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                data.onRun?.(id);
-                            }}
-                            disabled={data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || !data.inputText}
+                            onClick={handleEnhance}
+                            disabled={isGenerating || data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED || !data.inputText}
                             className="w-full py-2.5 rounded-lg bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed text-white font-medium text-sm flex items-center justify-center gap-2 transition-all"
                         >
-                            {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
+                            {isGenerating || data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                                 <>
                                     <Loader2 className="w-4 h-4 animate-spin" />
-                                    {data.status === NodeStatus.QUEUED ? 'Queued...' : 'Processing...'}
+                                    {isGenerating ? 'Enhancing...' : data.status === NodeStatus.QUEUED ? 'Queued...' : 'Processing...'}
                                 </>
                             ) : (
                                 <>

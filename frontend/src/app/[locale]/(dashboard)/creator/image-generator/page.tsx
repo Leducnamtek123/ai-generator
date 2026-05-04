@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import {
     ChevronDown,
@@ -161,11 +162,12 @@ export default function StudioPage() {
                         <h2 className="text-lg font-semibold mb-4">Current Generation</h2>
                         <div className="w-full aspect-[16/9] bg-card rounded-2xl border border-border flex items-center justify-center relative overflow-hidden group">
                             {currentGeneration.status === 'completed' && currentGeneration.resultUrl ? (
-                                // eslint-disable-next-line @next/next/no-img-element
-                                <img
+                                <Image
                                     src={currentGeneration.resultUrl}
                                     alt={currentGeneration.prompt}
-                                    className="w-full h-full object-contain"
+                                    fill
+                                    className="object-contain"
+                                    sizes="(max-width: 1024px) 100vw, 50vw"
                                 />
                             ) : (
                                 <div className="flex flex-col items-center gap-4">
@@ -251,20 +253,21 @@ export default function StudioPage() {
 
 function TemplateCard({ template, onClick }: { template: { id: string; title: string; thumbnail: string }, onClick?: () => void }) {
     return (
-        <div className="group cursor-pointer" onClick={onClick}>
+        <button type="button" className="group text-left cursor-pointer" onClick={onClick}>
             <div className="aspect-[3/4] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                     src={template.thumbnail}
                     alt={template.title}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105"
                     loading="lazy"
+                    sizes="(max-width: 1024px) 100vw, 20vw"
                 />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
                 {template.title}
             </p>
-        </div>
+        </button>
     );
 }

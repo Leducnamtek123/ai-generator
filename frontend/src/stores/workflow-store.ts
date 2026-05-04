@@ -203,9 +203,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to fetch workflows', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     fetchCommunityWorkflows: async () => {
@@ -217,9 +216,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to fetch community workflows', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     createWorkflow: async (payload) => {
@@ -265,9 +263,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         } catch (error) {
             console.error('Failed to create workflow', error);
             return null;
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     fetchWorkflow: async (id) => {
@@ -282,9 +279,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             });
         } catch (error) {
             console.error('Failed to fetch workflow', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     fetchWorkflowByProject: async (projectId) => {
@@ -318,9 +314,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to fetch/create workflow', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     fetchWorkflowsByProject: async (projectId) => {
@@ -334,9 +329,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to fetch project workflows', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     loadTemplate: async (templateId) => {
@@ -352,9 +346,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
             }
         } catch (error) {
             console.error('Failed to load template', error);
-        } finally {
-            set({ isLoading: false });
         }
+        set({ isLoading: false });
     },
 
     duplicateWorkflow: async (id: string) => {

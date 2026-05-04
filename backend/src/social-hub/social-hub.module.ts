@@ -26,6 +26,9 @@ import { PublishingService } from './services/publishing.service';
 import { SocialHubGateway } from './gateways/social-hub.gateway';
 import { AllConfigType } from '../config/config.type';
 
+import { MessengerService } from './services/messenger.service';
+import { FacebookMessengerController } from './controllers/facebook-messenger.controller';
+
 @Module({
   imports: [
     TypeOrmModule.forFeature([
@@ -52,7 +55,11 @@ import { AllConfigType } from '../config/config.type';
     HttpModule,
     ConfigModule,
   ],
-  controllers: [SocialHubController, SocialAuthController],
+  controllers: [
+    SocialHubController,
+    SocialAuthController,
+    FacebookMessengerController,
+  ],
   providers: [
     // Services
     ChannelsService,
@@ -60,6 +67,7 @@ import { AllConfigType } from '../config/config.type';
     SocialAuthService,
     SocialAnalyticsService,
     TokenRefreshService,
+    MessengerService,
     
     // Queue Processors
     SocialPostingProcessor,
@@ -83,6 +91,7 @@ import { AllConfigType } from '../config/config.type';
     SocialAnalyticsService,
     TokenRefreshService,
     SocialHubGateway,
+    MessengerService,
   ],
 })
 export class SocialHubModule { }

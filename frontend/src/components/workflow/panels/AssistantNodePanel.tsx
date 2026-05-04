@@ -23,11 +23,11 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Enhancement Mode</label>
+                <div className="text-xs font-medium text-white/60">Enhancement Mode</div>
                 <select
                     value={(nodeData.mode as string) || AssistantMode.ENHANCE}
                     onChange={(e) => onChange('mode', e.target.value)}
-                    className="w-full bg-black/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-gray-950/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-500/50"
                 >
                     <option value={AssistantMode.ENHANCE}>Enhance - Improve clarity & detail</option>
                     <option value={AssistantMode.EXPAND}>Expand - Add creative details</option>
@@ -38,7 +38,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Style Emphasis</label>
+                <div className="text-xs font-medium text-white/60">Style Emphasis</div>
                 <div className="flex flex-wrap gap-2">
                     {[StyleEmphasis.NONE, StyleEmphasis.PHOTOREALISTIC, StyleEmphasis.ARTISTIC, StyleEmphasis.ANIME, StyleEmphasis.FANTASY, StyleEmphasis.SCI_FI].map((style) => (
                         <Button
@@ -57,7 +57,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Detail Level</label>
+                <div className="text-xs font-medium text-white/60">Detail Level</div>
                 <div className="grid grid-cols-3 gap-2">
                     {[DetailLevel.LOW, DetailLevel.MEDIUM, DetailLevel.HIGH].map((level) => (
                         <Button
@@ -80,7 +80,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             {(nodeData.enhancedText as string) && (
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <label className="text-xs font-medium text-white/60">Enhanced Output</label>
+                        <div className="text-xs font-medium text-white/60">Enhanced Output</div>
                     </div>
                     <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg text-xs text-white/80 max-h-32 overflow-y-auto">
                         {nodeData.enhancedText as string}

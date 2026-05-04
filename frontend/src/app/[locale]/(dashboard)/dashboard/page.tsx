@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { Search, Image as ImageIcon, Video, Sparkles, LayoutGrid, Wand2, Music, Box } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { ToolCard } from '@/components/dashboard/ToolCard';
@@ -78,13 +79,13 @@ export default function DashboardPage() {
                                     className="min-w-[200px] h-[140px] bg-card rounded-xl border border-border flex flex-col justify-end p-4 relative group cursor-pointer hover:border-border/80 transition-colors overflow-hidden"
                                 >
                                     {workflow.previewUrl ? (
-                                        <img src={workflow.previewUrl} alt={workflow.name} className="absolute inset-0 w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity" />
+                                        <Image src={workflow.previewUrl} alt={workflow.name} fill className="object-cover opacity-50 group-hover:opacity-70 transition-opacity" sizes="200px" />
                                     ) : (
                                         <div className="absolute inset-0 flex items-center justify-center opacity-30 group-hover:opacity-50 transition-opacity">
                                             <LayoutGrid className="w-8 h-8" />
                                         </div>
                                     )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/20 to-transparent" />
                                     <div className="relative z-10">
                                         <div className="text-xs font-medium text-white">{workflow.name}</div>
                                         <div className="text-[10px] text-white/60">{new Date(workflow.createdAt).toLocaleDateString()}</div>

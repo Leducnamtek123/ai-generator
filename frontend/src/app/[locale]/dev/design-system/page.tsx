@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useEffect } from "react";
+import { useEffect } from "react";
 import { notFound } from "next/navigation";
 import { ColumnDef } from "@tanstack/react-table";
 import { Button } from "@/components/ui/button";
@@ -13,7 +13,6 @@ import {
     SelectValue,
 } from "@/components/ui/select";
 import { DataTable } from "@/components/shared/data-table/data-table";
-import { DataTableColumnHeader } from "@/components/shared/data-table/data-table-column-header";
 
 // Dummy Data for Table
 type Payment = {
@@ -46,15 +45,11 @@ const columns: ColumnDef<Payment>[] = [
     },
     {
         accessorKey: "email",
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Email" />
-        ),
+        header: "Email",
     },
     {
         accessorKey: "amount",
-        header: ({ column }) => (
-            <DataTableColumnHeader column={column} title="Amount" />
-        ),
+        header: "Amount",
         cell: ({ row }) => {
             const amount = parseFloat(row.getValue("amount"));
             const formatted = new Intl.NumberFormat("en-US", {

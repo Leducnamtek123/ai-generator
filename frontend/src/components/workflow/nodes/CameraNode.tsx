@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Image from 'next/image';
 import { BaseNode } from './BaseNode';
 import { Handle, Position } from '@xyflow/react';
 import { Camera, RefreshCw, Loader2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCw, Image as ImageIcon } from 'lucide-react';
@@ -83,26 +84,34 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                         data.isPreview ? "w-full h-[80px] border-r-0 border-b" : "w-[200px] h-[240px]"
                     )}>
                         {isProcessing && (
-                            <div className="absolute inset-0 z-20 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 z-20 bg-gray-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
                                 <Loader2 className="w-6 h-6 text-white animate-spin mb-2" />
                                 <span className="text-[10px] text-white/60 uppercase tracking-widest">Adjusting...</span>
                             </div>
                         )}
 
                         {data.previewUrl ? (
-                            <img
-                                src={data.previewUrl}
-                                alt="Preview"
-                                className="w-full h-full object-cover"
-                                onLoad={handleMediaLoad}
-                            />
+                            <div className="relative h-full w-full">
+                                <Image
+                                    src={data.previewUrl}
+                                    alt="Preview"
+                                    fill
+                                    className="object-cover"
+                                    sizes="(max-width: 1024px) 100vw, 200px"
+                                    onLoad={handleMediaLoad}
+                                />
+                            </div>
                         ) : data.inputImageUrl ? (
-                            <img
-                                src={data.inputImageUrl}
-                                alt="Input"
-                                className="w-full h-full object-cover opacity-50 grayscale"
-                                onLoad={handleMediaLoad}
-                            />
+                            <div className="relative h-full w-full">
+                                <Image
+                                    src={data.inputImageUrl}
+                                    alt="Input"
+                                    fill
+                                    className="object-cover opacity-50 grayscale"
+                                    sizes="(max-width: 1024px) 100vw, 200px"
+                                    onLoad={handleMediaLoad}
+                                />
+                            </div>
                         ) : (
                             <div className="flex flex-col items-center gap-2 text-muted-foreground/30">
                                 <Camera className="w-8 h-8" />
@@ -111,7 +120,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                         )}
 
                         {/* Angle Overlay Indicator */}
-                        <div className="absolute top-2 right-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded text-[9px] text-white/80 font-mono">
+                        <div className="absolute top-2 right-2 px-2 py-1 bg-gray-950/60 backdrop-blur-md rounded text-[9px] text-white/80 font-mono">
                             {ANGLES.find(a => a.id === angle)?.name}
                         </div>
                     </div>

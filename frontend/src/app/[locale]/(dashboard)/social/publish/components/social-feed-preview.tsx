@@ -1,22 +1,21 @@
 'use client';
 
+import Image from 'next/image';
 import React from 'react';
-import { 
-    Facebook, 
-    Twitter, 
-    Instagram, 
-    MessageSquare, 
-    Heart, 
-    Share2, 
-    MoreHorizontal,
-    Globe,
-    CheckCircle2,
-    Repeat2,
+import {
     Bookmark,
-    Send
+    CheckCircle2,
+    Facebook,
+    Globe,
+    Heart,
+    Instagram,
+    MessageSquare,
+    MoreHorizontal,
+    Repeat2,
+    Send,
+    Share2,
+    Twitter,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { motion } from 'framer-motion';
 
 interface PreviewProps {
     platform: string;
@@ -24,10 +23,14 @@ interface PreviewProps {
     mediaUrls?: string[];
 }
 
-export function SocialFeedPreview({ platform, content, mediaUrls = [] }: PreviewProps) {
-    if (platform === 'facebook') return <FacebookPreview content={content} mediaUrls={mediaUrls} />;
-    if (platform === 'twitter') return <TwitterPreview content={content} mediaUrls={mediaUrls} />;
-    if (platform === 'instagram') return <InstagramPreview content={content} mediaUrls={mediaUrls} />;
+const EMPTY_MEDIA_URLS: string[] = [];
+
+export function SocialFeedPreview({ platform, content, mediaUrls }: PreviewProps) {
+    const safeMediaUrls = mediaUrls?.length ? mediaUrls : EMPTY_MEDIA_URLS;
+
+    if (platform === 'facebook') return <FacebookPreview content={content} mediaUrls={safeMediaUrls} />;
+    if (platform === 'twitter') return <TwitterPreview content={content} mediaUrls={safeMediaUrls} />;
+    if (platform === 'instagram') return <InstagramPreview content={content} mediaUrls={safeMediaUrls} />;
     
     return (
         <div className="p-8 text-center text-muted-foreground border-2 border-dashed rounded-xl uppercase tracking-widest font-bold text-xs opacity-50">
@@ -62,8 +65,8 @@ function FacebookPreview({ content, mediaUrls }: { content: string; mediaUrls: s
             </div>
 
             {mediaUrls.length > 0 ? (
-                <div className="w-full aspect-video bg-black/20 overflow-hidden border-y border-white/5">
-                    <img src={mediaUrls[0]} alt="Post media" className="w-full h-full object-cover" />
+                <div className="relative w-full aspect-video bg-slate-900/30 overflow-hidden border-y border-white/5">
+                    <Image src={mediaUrls[0]} alt="Post media" fill className="object-cover" sizes="(max-width: 768px) 100vw, 600px" />
                 </div>
             ) : (
                 <div className="w-full h-64 bg-white/5 flex items-center justify-center border-y border-white/5 text-xs text-white/20 italic">
@@ -88,7 +91,7 @@ function FacebookPreview({ content, mediaUrls }: { content: string; mediaUrls: s
 
 function TwitterPreview({ content, mediaUrls }: { content: string; mediaUrls: string[] }) {
     return (
-        <div className="w-full max-w-lg bg-black border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-4 font-sans text-white">
+        <div className="w-full max-w-lg bg-slate-950 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-4 font-sans text-white">
             <div className="flex gap-3">
                 <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center border border-white/10 shrink-0">
                     <Twitter className="w-5 h-5 text-white" />
@@ -108,8 +111,8 @@ function TwitterPreview({ content, mediaUrls }: { content: string; mediaUrls: st
                     </div>
 
                     {mediaUrls.length > 0 && (
-                        <div className="mt-3 rounded-2xl overflow-hidden border border-white/10 aspect-video">
-                            <img src={mediaUrls[0]} alt="Post media" className="w-full h-full object-cover" />
+                        <div className="relative mt-3 rounded-2xl overflow-hidden border border-white/10 aspect-video">
+                            <Image src={mediaUrls[0]} alt="Post media" fill className="object-cover" sizes="(max-width: 768px) 100vw, 600px" />
                         </div>
                     )}
 
@@ -142,9 +145,9 @@ function InstagramPreview({ content, mediaUrls }: { content: string; mediaUrls: 
                 <MoreHorizontal className="w-5 h-5 text-gray-500" />
             </div>
 
-            <div className="w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden border-y border-gray-100">
+            <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden border-y border-gray-100">
                 {mediaUrls.length > 0 ? (
-                    <img src={mediaUrls[0]} alt="Post media" className="w-full h-full object-cover" />
+                    <Image src={mediaUrls[0]} alt="Post media" fill className="object-cover" sizes="(max-width: 768px) 100vw, 480px" />
                 ) : (
                     <Instagram className="w-20 h-20 text-gray-200" />
                 )}

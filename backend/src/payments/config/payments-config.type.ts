@@ -1,4 +1,4 @@
-export type PaymentProvider = 'vnpay' | 'momo' | 'zalopay';
+export type PaymentProvider = 'vnpay' | 'momo' | 'zalopay' | '9pay';
 
 export type PaymentsConfig = {
   defaultProvider: PaymentProvider;
@@ -23,6 +23,12 @@ export type PaymentsConfig = {
     appId?: string;
     key1?: string;
     key2?: string;
+    endpoint?: string;
+  };
+  ninepay: {
+    merchantKey?: string;
+    secretKey?: string;
+    checksumKey?: string;
     endpoint?: string;
   };
 };

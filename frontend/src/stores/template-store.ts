@@ -8,7 +8,7 @@ export interface Template {
     thumbnail: string;
     type: string;
     visibility: string;
-    content: any;
+    content: unknown;
     usageCount: number;
     createdAt: string;
 }
@@ -31,11 +31,11 @@ export const useTemplateStore = create<TemplateState>((set) => ({
         try {
             const data = await apiGet<Template[]>('/templates');
             set({ templates: data });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to fetch templates', error);
-            set({ error: error.message || 'Failed to fetch templates' });
-        } finally {
-            set({ isLoading: false });
+            const maybeError = error as { message?: string };
+            set({ error: maybeError.message || 'Failed to fetch templates' });
         }
+        set({ isLoading: false });
     },
 }));

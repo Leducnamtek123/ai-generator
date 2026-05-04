@@ -1,3 +1,4 @@
+import Image from 'next/image';
 import { GalleryItem } from '@/types/gallery';
 import { cn } from '@/lib/utils';
 import { Heart, Download, Copy } from 'lucide-react';
@@ -17,12 +18,13 @@ function GalleryCard({ item }: { item: GalleryItem }) {
         <div className="break-inside-avoid relative group rounded-xl overflow-hidden bg-[#151619] mb-4">
             {/* Image */}
             <div className={cn("w-full relative", item.aspectRatio)}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
+                <Image
                     src={item.url}
                     alt={item.prompt}
-                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                    fill
+                    className="object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
+                    sizes="(max-width: 768px) 100vw, 25vw"
                 />
 
                 {/* Overlay */}
@@ -45,7 +47,7 @@ function GalleryCard({ item }: { item: GalleryItem }) {
                                 className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors group/like relative"
                             >
                                 <Heart className={`w-3.5 h-3.5 transition-colors ${item.isLiked ? 'fill-red-500 text-red-500' : ''}`} />
-                                <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black text-white text-[10px] rounded opacity-0 group-hover/like:opacity-100 whitespace-nowrap">
+                                <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-950 text-white text-[10px] rounded opacity-0 group-hover/like:opacity-100 whitespace-nowrap">
                                     {item.likes > 0 ? `${item.likes} Likes` : 'Like'}
                                 </span>
                             </button>
@@ -59,7 +61,7 @@ function GalleryCard({ item }: { item: GalleryItem }) {
                                 className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-colors group/copy relative"
                             >
                                 <Copy className="w-3.5 h-3.5" />
-                                <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-black text-white text-[10px] rounded opacity-0 group-hover/copy:opacity-100 whitespace-nowrap">
+                                <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 bg-gray-950 text-white text-[10px] rounded opacity-0 group-hover/copy:opacity-100 whitespace-nowrap">
                                     Copy URL
                                 </span>
                             </button>

@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import React, { useState } from 'react';
 import { X, Undo2, Redo2, Trash2, Maximize2, MoveHorizontal, Settings2, ArrowUp, Eraser, PenLine, Paperclip, ChevronDown, Check } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -55,10 +56,12 @@ export function ImageEditorModal({ isOpen, onClose, image }: ImageEditorModalPro
             <div className="flex-1 relative flex items-center justify-center bg-[#070809] overflow-hidden p-8">
                 <div className="relative max-h-full max-w-full aspect-[4/3] shadow-2xl rounded-sm overflow-hidden border border-white/5 group">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                         src={image.url}
                         alt="Editing"
-                        className="w-full h-full object-contain max-h-[80vh]"
+                        fill
+                        className="object-contain"
+                        sizes="100vw"
                     />
 
                     {/* Mock Pink Brush Overlay (static for visual) */}

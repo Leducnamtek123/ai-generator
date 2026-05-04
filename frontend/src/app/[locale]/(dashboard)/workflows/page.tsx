@@ -1,6 +1,7 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import {
     Plus,
@@ -8,7 +9,6 @@ import {
     Workflow,
     MoreHorizontal,
     Globe,
-    Lock,
     Clock
 } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -165,21 +165,26 @@ export default function WorkflowsPage() {
             {/* Create Modal */}
             {showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
+                    <button
+                        type="button"
+                        aria-label="Close create workflow modal"
+                        className="absolute inset-0 bg-gray-950/60 backdrop-blur-sm"
+                        onClick={() => setShowCreateModal(false)}
+                    />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl">
                         <h2 className="text-xl font-bold mb-4">Create New Workflow</h2>
 
                         <div className="space-y-4 mb-6">
                             <div>
-                                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                <label htmlFor="workflowName" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                                     Workflow Name
                                 </label>
                                 <Input
+                                    id="workflowName"
                                     type="text"
                                     value={workflowName}
                                     onChange={(e) => setWorkflowName(e.target.value)}
                                     placeholder="e.g. Image Upscaling Pipeline"
-                                    autoFocus
                                     onKeyDown={(e) => e.key === 'Enter' && handleCreateWorkflow()}
                                 />
                             </div>
@@ -209,13 +214,16 @@ function WorkflowCard({
 
     return (
         <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/creator/workflow-editor?workflowId=${workflow.id}`); }}
             onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}`)}
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl overflow-hidden hover:bg-accent/50 transition-all flex flex-col"
         >
             {/* Preview Section */}
-            <div className="aspect-video bg-muted/30 relative border-b border-border/50">
+                <div className="aspect-video bg-muted/30 relative border-b border-border/50">
                 {workflow.previewUrl ? (
-                    <img src={workflow.previewUrl} alt={workflow.name} className="w-full h-full object-cover" />
+                    <Image src={workflow.previewUrl} alt={workflow.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
                         <Workflow className="w-12 h-12" />
@@ -225,7 +233,7 @@ function WorkflowCard({
                 {/* Stats / Badges Overlay */}
                 <div className="absolute top-2 right-2 flex gap-1">
                     {workflow.visibility === 'public' && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-black/40 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded-md bg-gray-950/40 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
                             <Globe className="w-3 h-3" /> Public
                         </span>
                     )}

@@ -1,15 +1,10 @@
 "use client";
 
+import * as React from "react";
 import { useMemo, useState } from "react";
 
 import {
-  ColumnDef,
-  flexRender,
-  getCoreRowModel,
-  getFilteredRowModel,
-  getSortedRowModel,
-  SortingState,
-  useReactTable
+    ColumnDef,
 } from "@tanstack/react-table";
 import { ArrowUpDown } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -23,17 +18,21 @@ export function UserList() {
   const { data = [], isPending, isError, error } = useUsers();
   const t = useTranslations("UserList");
 
-  const [sorting, setSorting] = useState<SortingState>([]);
   const [globalFilter, setGlobalFilter] = useState<string>("");
+  const [sortKey, setSortKey] = useState<"id" | "name" | null>("id");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("asc");
 
   const columns = useMemo<ColumnDef<UserType>[]>(
     () => [
       {
         accessorKey: "id",
-        header: ({ column }) => (
+        header: () => (
           <span
             className="flex cursor-pointer items-center gap-2 [&_svg]:size-4"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            onClick={() => {
+              setSortKey("id");
+              setSortDir((prev) => (sortKey === "id" && prev === "asc" ? "desc" : "asc"));
+            }}
           >
             {t("id")}
             <ArrowUpDown />
@@ -42,10 +41,13 @@ export function UserList() {
       },
       {
         accessorKey: "name",
-        header: ({ column }) => (
+        header: () => (
           <span
             className="flex cursor-pointer items-center gap-2 [&_svg]:size-4"
-            onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+            onClick={() => {
+              setSortKey("name");
+              setSortDir((prev) => (sortKey === "name" && prev === "asc" ? "desc" : "asc"));
+            }}
           >
             {t("name")}
             <ArrowUpDown />
@@ -59,20 +61,24 @@ export function UserList() {
         cell: ({ row }) => <div className="lowercase">{row.getValue("email") as string}</div>
       }
     ],
-    [t]
+    [t, sortKey]
   );
 
-  // eslint-disable-next-line react-hooks/incompatible-library
-  const table = useReactTable({
-    data: (data as UserType[]) ?? [],
-    columns,
-    onSortingChange: setSorting,
-    getCoreRowModel: getCoreRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    onGlobalFilterChange: setGlobalFilter,
-    state: { sorting, globalFilter }
-  });
+  const filtered = useMemo(() => {
+    const next = (data as UserType[]).filter((item) => {
+      const haystack = `${item.id} ${item.name ?? ""} ${item.email ?? ""}`.toLowerCase();
+      return haystack.includes(globalFilter.toLowerCase());
+    });
+
+    if (!sortKey) return next;
+
+    return [...next].sort((a, b) => {
+      const left = String(a[sortKey] ?? "");
+      const right = String(b[sortKey] ?? "");
+      const result = left.localeCompare(right);
+      return sortDir === "asc" ? result : -result;
+    });
+  }, [data, globalFilter, sortDir, sortKey]);
 
   if (isError) {
     return (
@@ -97,17 +103,15 @@ export function UserList() {
       <div className="overflow-hidden rounded-md border">
         <Table>
           <TableHeader className="bg-muted">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <TableHead key={header.id}>
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(header.column.columnDef.header, header.getContext())}
-                  </TableHead>
-                ))}
-              </TableRow>
-            ))}
+            <TableRow>
+              {columns.map((column, index) => (
+                <TableHead key={column.id ?? String((column as any).accessorKey ?? index)}>
+                  {typeof column.header === "function"
+                    ? (column.header as unknown as () => React.ReactNode)()
+                    : column.header}
+                </TableHead>
+              ))}
+            </TableRow>
           </TableHeader>
           <TableBody>
             {isPending ? (
@@ -116,14 +120,12 @@ export function UserList() {
                   {t("loading")}
                 </TableCell>
               </TableRow>
-            ) : table.getRowModel().rows?.length ? (
-              table.getRowModel().rows.map((row) => (
+            ) : filtered.length ? (
+              filtered.map((row) => (
                 <TableRow key={row.id}>
-                  {row.getVisibleCells().map((cell) => (
-                    <TableCell key={cell.id}>
-                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                    </TableCell>
-                  ))}
+                  <TableCell>{row.id}</TableCell>
+                  <TableCell>{row.name}</TableCell>
+                  <TableCell>{row.email}</TableCell>
                 </TableRow>
               ))
             ) : (

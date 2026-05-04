@@ -3,20 +3,33 @@
 import { useState } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
-    ChevronDown,
     Upload,
     Sparkles,
     Grid3X3,
     Play,
     Pause,
     Music,
+    Music2,
     Mic,
     Volume2,
     Loader2,
     Download,
     Folder,
     Clock,
-    Sliders
+    Zap,
+    Guitar,
+    Headphones,
+    Piano,
+    Waves,
+    Clapperboard,
+    Coffee,
+    Heart,
+    Mountain,
+    Trees,
+    Smile,
+    Frown,
+    MoonStar,
+    Moon
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
@@ -26,29 +39,29 @@ import { cn } from '@/lib/utils';
 const contentTabs = ['My Creations', 'Community', 'Templates', 'Tutorials'];
 
 const genres = [
-    { id: 'pop', name: 'Pop', icon: '🎵' },
-    { id: 'rock', name: 'Rock', icon: '🎸' },
-    { id: 'electronic', name: 'Electronic', icon: '🎧' },
-    { id: 'classical', name: 'Classical', icon: '🎻' },
-    { id: 'jazz', name: 'Jazz', icon: '🎷' },
-    { id: 'ambient', name: 'Ambient', icon: '🌊' },
-    { id: 'cinematic', name: 'Cinematic', icon: '🎬' },
-    { id: 'lofi', name: 'Lo-Fi', icon: '☕' },
-    { id: 'hiphop', name: 'Hip Hop', icon: '🎤' },
-    { id: 'rnb', name: 'R&B', icon: '💜' },
-    { id: 'country', name: 'Country', icon: '🤠' },
-    { id: 'reggae', name: 'Reggae', icon: '🌴' },
+    { id: 'pop', name: 'Pop', icon: Music2 },
+    { id: 'rock', name: 'Rock', icon: Guitar },
+    { id: 'electronic', name: 'Electronic', icon: Headphones },
+    { id: 'classical', name: 'Classical', icon: Piano },
+    { id: 'jazz', name: 'Jazz', icon: Music },
+    { id: 'ambient', name: 'Ambient', icon: Waves },
+    { id: 'cinematic', name: 'Cinematic', icon: Clapperboard },
+    { id: 'lofi', name: 'Lo-Fi', icon: Coffee },
+    { id: 'hiphop', name: 'Hip Hop', icon: Mic },
+    { id: 'rnb', name: 'R&B', icon: Heart },
+    { id: 'country', name: 'Country', icon: Mountain },
+    { id: 'reggae', name: 'Reggae', icon: Trees },
 ];
 
 const moods = [
-    { id: 'happy', label: 'Happy', emoji: '😊' },
-    { id: 'sad', label: 'Sad', emoji: '😢' },
-    { id: 'energetic', label: 'Energetic', emoji: '⚡' },
-    { id: 'calm', label: 'Calm', emoji: '🧘' },
-    { id: 'dark', label: 'Dark', emoji: '🌑' },
-    { id: 'uplifting', label: 'Uplifting', emoji: '🌟' },
-    { id: 'romantic', label: 'Romantic', emoji: '💕' },
-    { id: 'epic', label: 'Epic', emoji: '🏔️' },
+    { id: 'happy', label: 'Happy', icon: Smile },
+    { id: 'sad', label: 'Sad', icon: Frown },
+    { id: 'energetic', label: 'Energetic', icon: Zap },
+    { id: 'calm', label: 'Calm', icon: MoonStar },
+    { id: 'dark', label: 'Dark', icon: Moon },
+    { id: 'uplifting', label: 'Uplifting', icon: Sparkles },
+    { id: 'romantic', label: 'Romantic', icon: Heart },
+    { id: 'epic', label: 'Epic', icon: Mountain },
 ];
 
 const instruments = [
@@ -78,8 +91,7 @@ export default function MusicGeneratorPage() {
     const [duration, setDuration] = useState('30');
     const [tempo, setTempo] = useState(120);
     const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-    const [referenceFile, setReferenceFile] = useState<string | null>(null);
-    const { generateMusic, isGenerating, currentGeneration, error } = useGenerationStore();
+    const { generateMusic, isGenerating } = useGenerationStore();
 
     const toggleMood = (id: string) => {
         setSelectedMoods(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
@@ -133,10 +145,10 @@ export default function MusicGeneratorPage() {
                                         "p-2 rounded-xl flex flex-col items-center gap-1 text-[10px] transition-all border",
                                         selectedGenre === genre.id
                                             ? "bg-accent border-primary/20 text-foreground"
-                                            : "bg-card border-border text-muted-foreground hover:border-border/80"
+                                    : "bg-card border-border text-muted-foreground hover:border-border/80"
                                     )}
                                 >
-                                    <span className="text-base">{genre.icon}</span>
+                                    <genre.icon className="h-4 w-4 text-muted-foreground" />
                                     <span className="truncate w-full text-center">{genre.name}</span>
                                 </button>
                             ))}
@@ -155,10 +167,10 @@ export default function MusicGeneratorPage() {
                                         "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all",
                                         selectedMoods.includes(mood.id)
                                             ? "bg-accent border border-primary/20 text-foreground"
-                                            : "bg-card border border-border text-muted-foreground"
+                                    : "bg-card border border-border text-muted-foreground"
                                     )}
                                 >
-                                    <span>{mood.emoji}</span>
+                                    <mood.icon className="h-3.5 w-3.5" />
                                     <span>{mood.label}</span>
                                 </button>
                             ))}

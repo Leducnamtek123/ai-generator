@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useSyncExternalStore } from 'react';
+import Image from 'next/image';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useAuth } from '@/providers';
 import {
@@ -10,7 +11,6 @@ import {
     Sparkles,
     LayoutGrid,
     Clock,
-    ChevronDown,
     Box,
     Globe,
     PanelLeft,
@@ -34,14 +34,24 @@ import {
     HoverCardTrigger,
 } from "@/components/ui/hover-card";
 import { CreditBadge } from '@/components/common/CreditBadge';
+import type { LucideIcon } from 'lucide-react';
 
-export const navItems = [
+interface SidebarItem {
+    icon: LucideIcon;
+    label: string;
+    href: string;
+    id?: string;
+    category?: string;
+    isNew?: boolean;
+}
+
+export const navItems: SidebarItem[] = [
     { icon: Home, label: 'Home', href: '/dashboard' },
     { icon: Box, label: 'Stock', href: '/stock' },
     { icon: Globe, label: 'Community', href: '/community' },
 ];
 
-export const socialItems = [
+export const socialItems: SidebarItem[] = [
     { icon: LayoutDashboard, label: 'Social Dashboard', href: '/social/dashboard' },
     { icon: Share2, label: 'Channels', href: '/social/channels' },
     { icon: Calendar, label: 'Calendar', href: '/social/calendar' },
@@ -49,7 +59,7 @@ export const socialItems = [
     { icon: MessageSquare, label: 'Interaction Inbox', href: '/social/inbox', isNew: true },
 ];
 
-export const pinnedItems = [
+export const pinnedItems: SidebarItem[] = [
     { icon: ImageIcon, label: 'Image Generator', href: '/creator/image-generator' },
     { icon: Video, label: 'Video Generator', href: '/creator/video-generator' },
     { icon: Sparkles, label: 'Assistant', href: '/creator/ai-assistant' },
@@ -57,13 +67,13 @@ export const pinnedItems = [
     { icon: Clapperboard, label: 'VisualFlow Studio', href: '/visual-flow', isNew: true },
 ];
 
-export const bottomItems = [
+export const bottomItems: SidebarItem[] = [
     { icon: Box, label: 'Projects', href: '/projects' },
     { icon: Clock, label: 'History', href: '/history' },
     { icon: LayoutGrid, label: 'Settings', href: '/settings' },
 ];
 
-export const ALL_TOOLS_LIST = [
+export const ALL_TOOLS_LIST: SidebarItem[] = [
     { id: 'image-gen', label: 'Image Generator', href: '/creator/image-generator', icon: ImageIcon, category: 'image' },
     { id: 'image-editor', label: 'Image Editor', href: '/creator/image-editor', icon: ImageIcon, category: 'image' },
     { id: 'image-upscaler', label: 'Image Upscaler', href: '/creator/image-upscaler', icon: ImageIcon, category: 'image' },
@@ -125,45 +135,264 @@ const BREAKPOINTS = {
     xl: 1280,
 };
 
+const getViewportWidth = () => (typeof window === 'undefined' ? BREAKPOINTS.lg : window.innerWidth);
+
+const subscribeToViewport = (onStoreChange: () => void) => {
+    window.addEventListener('resize', onStoreChange);
+    return () => window.removeEventListener('resize', onStoreChange);
+};
+
+const StockHoverContent = () => (
+    <div className="w-[600px] p-6 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl">
+        <h3 className="text-lg font-semibold mb-4">Stock</h3>
+        <div className="grid grid-cols-4 gap-6">
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    <ImageIcon className="w-4 h-4" />
+                    IMAGE
+                </div>
+                {stockMenuData.image.map((tool) => (
+                    <Link
+                        key={tool.label}
+                        href={tool.href}
+                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                    >
+                        {tool.label}
+                    </Link>
+                ))}
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    <Video className="w-4 h-4" />
+                    VIDEO
+                </div>
+                {stockMenuData.video.map((tool) => (
+                    <Link
+                        key={tool.label}
+                        href={tool.href}
+                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                    >
+                        {tool.label}
+                    </Link>
+                ))}
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    <Mic className="w-4 h-4" />
+                    AUDIO
+                </div>
+                {stockMenuData.audio.map((tool) => (
+                    <Link
+                        key={tool.label}
+                        href={tool.href}
+                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                    >
+                        {tool.label}
+                    </Link>
+                ))}
+            </div>
+            <div className="space-y-2">
+                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+                    <LayoutGrid className="w-4 h-4" />
+                    DESIGN
+                </div>
+                {stockMenuData.design.map((tool) => (
+                    <Link
+                        key={tool.label}
+                        href={tool.href}
+                        className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
+                    >
+                        {tool.label}
+                    </Link>
+                ))}
+            </div>
+        </div>
+        <div className="mt-6 pt-6 border-t border-border flex gap-6">
+            <Link href="/stock?view=collections" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <LayoutGrid className="w-4 h-4" />
+                My Collections
+            </Link>
+            <Link href="/stock?view=downloads" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                <Clock className="w-4 h-4" />
+                Downloads
+            </Link>
+        </div>
+    </div>
+);
+
+interface SidebarNavItemProps {
+    item: SidebarItem;
+    pathname: string;
+    isCollapsed: boolean;
+}
+
+const SidebarNavItem = ({ item, pathname, isCollapsed }: SidebarNavItemProps) => {
+    const content = (
+        <Link
+            href={item.href}
+            className={cn(
+                "flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
+                pathname === item.href && "text-foreground bg-accent font-medium",
+                isCollapsed ? "justify-center px-2" : "justify-between"
+            )}
+        >
+            <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
+                <item.icon className="w-5 h-5 shrink-0" />
+                {!isCollapsed && <span>{item.label}</span>}
+            </div>
+            {!isCollapsed && item.isNew && (
+                <span className="px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded">New</span>
+            )}
+            {isCollapsed && item.isNew && (
+                <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
+            )}
+        </Link>
+    );
+
+    if (item.label === 'Stock' && !isCollapsed) {
+        return (
+            <HoverCard openDelay={0} closeDelay={100}>
+                <HoverCardTrigger asChild>{content}</HoverCardTrigger>
+                <HoverCardContent
+                    side="right"
+                    align="start"
+                    className="p-0 bg-transparent border-none shadow-none w-auto ml-2"
+                >
+                    <StockHoverContent />
+                </HoverCardContent>
+            </HoverCard>
+        );
+    }
+
+    return (
+        <TooltipProvider delayDuration={0}>
+            <Tooltip>
+                <TooltipTrigger asChild>{content}</TooltipTrigger>
+                {isCollapsed && (
+                    <TooltipContent side="right">
+                        <div className="flex items-center gap-2">
+                            {item.label}
+                            {item.isNew && <span className="px-1 py-0.5 text-[9px] font-bold text-primary bg-primary/10 rounded">New</span>}
+                        </div>
+                    </TooltipContent>
+                )}
+            </Tooltip>
+        </TooltipProvider>
+    );
+};
+
+interface AllToolsMenuItemProps {
+    isCollapsed: boolean;
+    pinnedIds: string[];
+    onTogglePin: (e: React.MouseEvent, id: string) => void;
+}
+
+const AllToolsMenuItem = ({ isCollapsed, pinnedIds, onTogglePin }: AllToolsMenuItemProps) => (
+    <HoverCard openDelay={0} closeDelay={100}>
+        <HoverCardTrigger asChild>
+            <button
+                type="button"
+                className={cn(
+                    "flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
+                    isCollapsed ? "justify-center px-2" : "justify-between"
+                )}
+            >
+                <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
+                    <Grid3X3 className="w-5 h-5 shrink-0" />
+                    {!isCollapsed && <span>All tools</span>}
+                </div>
+            </button>
+        </HoverCardTrigger>
+        <HoverCardContent
+            side="right"
+            align="start"
+            className="w-[700px] p-0 bg-popover border-border text-popover-foreground rounded-xl shadow-2xl overflow-hidden"
+        >
+            <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-xl font-bold">All tools</h3>
+                    <div className="relative">
+                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                            type="text"
+                            placeholder="Search tools..."
+                            className="bg-muted border border-border rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 ring-ring w-64"
+                        />
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-4 gap-8">
+                    {['image', 'video', 'audio', 'others'].map((cat) => (
+                        <div key={cat} className="space-y-4">
+                            <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                                {cat === 'image' && <ImageIcon className="w-3.5 h-3.5" />}
+                                {cat === 'video' && <Video className="w-3.5 h-3.5" />}
+                                {cat === 'audio' && <Mic className="w-3.5 h-3.5" />}
+                                {cat === 'others' && <Sparkles className="w-3.5 h-3.5" />}
+                                {cat}
+                            </div>
+                            <div className="space-y-1">
+                                {ALL_TOOLS_LIST.filter(t => t.category === cat).map((tool) => (
+                                        <Link
+                                            key={tool.id}
+                                            href={tool.href}
+                                        className="group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg hover:bg-accent transition-colors"
+                                    >
+                                        <div className="flex items-center gap-2">
+                                            <span className={cn(
+                                                "text-sm transition-colors",
+                                                pinnedIds.includes(tool.id || '') ? "text-foreground font-medium" : "text-muted-foreground group-hover:text-foreground"
+                                            )}>
+                                                {tool.label}
+                                            </span>
+                                            {tool.isNew && <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 rounded">New</span>}
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={(e) => onTogglePin(e, tool.id || '')}
+                                            className={cn(
+                                                "opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-accent rounded",
+                                                pinnedIds.includes(tool.id || '') && "opacity-100 text-primary"
+                                            )}
+                                        >
+                                            <Pin className={cn("w-3.5 h-3.5", pinnedIds.includes(tool.id || '') && "fill-current")} />
+                                        </button>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-muted p-4 flex items-center justify-center border-t border-border">
+                <button type="button" className="text-xs text-muted-foreground hover:text-foreground transition-colors">
+                    View all tools in a single list
+                </button>
+            </div>
+        </HoverCardContent>
+    </HoverCard>
+);
+
 export function Sidebar() {
     const pathname = usePathname();
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const [isMobile, setIsMobile] = useState(false);
-    const [isTablet, setIsTablet] = useState(false);
-    const [pinnedIds, setPinnedIds] = useState<string[]>([]);
     const { user } = useAuth();
+    const viewportWidth = useSyncExternalStore(subscribeToViewport, getViewportWidth, () => BREAKPOINTS.lg);
+    const [manualCollapsed, setManualCollapsed] = useState<boolean | null>(null);
+    const viewportCollapsed = viewportWidth < BREAKPOINTS.lg;
+    const isCollapsed = manualCollapsed ?? viewportCollapsed;
+    const isTablet = manualCollapsed === null && viewportWidth >= BREAKPOINTS.md && viewportWidth < BREAKPOINTS.lg;
 
-    useEffect(() => {
-        const checkScreenSize = () => {
-            const width = window.innerWidth;
-            if (width < BREAKPOINTS.lg) {
-                setIsCollapsed(true);
-            }
-            setIsMobile(width < BREAKPOINTS.md);
-            setIsTablet(width >= BREAKPOINTS.md && width < BREAKPOINTS.lg);
-        };
+    const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
+        if (typeof window === 'undefined') return INITIAL_PINNED_IDS;
 
-        checkScreenSize();
-        window.addEventListener('resize', checkScreenSize);
-        return () => window.removeEventListener('resize', checkScreenSize);
-    }, []);
-
-    useEffect(() => {
-        if (!user) return;
         const saved = localStorage.getItem('pinned-tools');
         if (saved) {
-            setPinnedIds(JSON.parse(saved));
-        } else {
-            setPinnedIds(INITIAL_PINNED_IDS);
+            return JSON.parse(saved) as string[];
         }
-    }, [user]);
 
-    useEffect(() => {
-        if (!user) return;
-        if (pinnedIds.length > 0) {
-            localStorage.setItem('pinned-tools', JSON.stringify(pinnedIds));
-        }
-    }, [pinnedIds, user]);
+        return INITIAL_PINNED_IDS;
+    });
 
     if (!user) return null;
 
@@ -177,229 +406,7 @@ export function Sidebar() {
         );
     };
 
-    const pinnedTools = ALL_TOOLS_LIST.filter(tool => pinnedIds.includes(tool.id));
-
-    const StockHoverContent = () => (
-        <div className="w-[600px] p-6 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl">
-            <h3 className="text-lg font-semibold mb-4">Stock</h3>
-            <div className="grid grid-cols-4 gap-6">
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        <ImageIcon className="w-4 h-4" />
-                        IMAGE
-                    </div>
-                    {stockMenuData.image.map((tool) => (
-                        <Link
-                            key={tool.label}
-                            href={tool.href as any}
-                            className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                        >
-                            {tool.label}
-                        </Link>
-                    ))}
-                </div>
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        <Video className="w-4 h-4" />
-                        VIDEO
-                    </div>
-                    {stockMenuData.video.map((tool) => (
-                        <Link
-                            key={tool.label}
-                            href={tool.href as any}
-                            className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                        >
-                            {tool.label}
-                        </Link>
-                    ))}
-                </div>
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        <Mic className="w-4 h-4" />
-                        AUDIO
-                    </div>
-                    {stockMenuData.audio.map((tool) => (
-                        <Link
-                            key={tool.label}
-                            href={tool.href as any}
-                            className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                        >
-                            {tool.label}
-                        </Link>
-                    ))}
-                </div>
-                <div className="space-y-2">
-                    <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-                        <LayoutGrid className="w-4 h-4" />
-                        DESIGN
-                    </div>
-                    {stockMenuData.design.map((tool) => (
-                        <Link
-                            key={tool.label}
-                            href={tool.href as any}
-                            className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
-                        >
-                            {tool.label}
-                        </Link>
-                    ))}
-                </div>
-            </div>
-            <div className="mt-6 pt-6 border-t border-border flex gap-6">
-                <Link href="/stock?view=collections" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <LayoutGrid className="w-4 h-4" />
-                    My Collections
-                </Link>
-                <Link href="/stock?view=downloads" className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    <Clock className="w-4 h-4" />
-                    Downloads
-                </Link>
-            </div>
-        </div>
-    );
-
-    const NavItem = ({ item }: { item: any }) => {
-        const content = (
-            <Link
-                href={item.href as any}
-                className={cn(
-                    "flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
-                    pathname === item.href && "text-foreground bg-accent font-medium",
-                    isCollapsed ? "justify-center px-2" : "justify-between"
-                )}
-            >
-                <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
-                    <item.icon className="w-5 h-5 shrink-0" />
-                    {!isCollapsed && <span>{item.label}</span>}
-                </div>
-                {!isCollapsed && item.isNew && (
-                    <span className="px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded">New</span>
-                )}
-                {isCollapsed && item.isNew && (
-                    <div className="absolute top-1 right-1 w-1.5 h-1.5 bg-primary rounded-full" />
-                )}
-            </Link>
-        );
-
-        if (item.label === 'Stock' && !isCollapsed) {
-            return (
-                <HoverCard openDelay={0} closeDelay={100}>
-                    <HoverCardTrigger asChild>
-                        {content}
-                    </HoverCardTrigger>
-                    <HoverCardContent
-                        side="right"
-                        align="start"
-                        className="p-0 bg-transparent border-none shadow-none w-auto ml-2"
-                    >
-                        <StockHoverContent />
-                    </HoverCardContent>
-                </HoverCard>
-            );
-        }
-
-        return (
-            <TooltipProvider delayDuration={0}>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        {content}
-                    </TooltipTrigger>
-                    {isCollapsed && (
-                        <TooltipContent side="right">
-                            <div className="flex items-center gap-2">
-                                {item.label}
-                                {item.isNew && <span className="px-1 py-0.5 text-[9px] font-bold text-primary bg-primary/10 rounded">New</span>}
-                            </div>
-                        </TooltipContent>
-                    )}
-                </Tooltip>
-            </TooltipProvider>
-        );
-    };
-
-    const AllToolsMenuItem = () => (
-        <HoverCard openDelay={0} closeDelay={100}>
-            <HoverCardTrigger asChild>
-                <button
-                    className={cn(
-                        "flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
-                        isCollapsed ? "justify-center px-2" : "justify-between"
-                    )}
-                >
-                    <div className={cn("flex items-center gap-3", isCollapsed && "justify-center w-full")}>
-                        <Grid3X3 className="w-5 h-5 shrink-0" />
-                        {!isCollapsed && <span>All tools</span>}
-                    </div>
-                </button>
-            </HoverCardTrigger>
-            <HoverCardContent
-                side="right"
-                align="start"
-                className="w-[700px] p-0 bg-popover border-border text-popover-foreground rounded-xl shadow-2xl overflow-hidden"
-            >
-                <div className="p-6">
-                    <div className="flex items-center justify-between mb-6">
-                        <h3 className="text-xl font-bold">All tools</h3>
-                        <div className="relative">
-                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-                            <input
-                                type="text"
-                                placeholder="Search tools..."
-                                className="bg-muted border border-border rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 ring-ring w-64"
-                            />
-                        </div>
-                    </div>
-
-                    <div className="grid grid-cols-4 gap-8">
-                        {['image', 'video', 'audio', 'others'].map((cat) => (
-                            <div key={cat} className="space-y-4">
-                                <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                                    {cat === 'image' && <ImageIcon className="w-3.5 h-3.5" />}
-                                    {cat === 'video' && <Video className="w-3.5 h-3.5" />}
-                                    {cat === 'audio' && <Mic className="w-3.5 h-3.5" />}
-                                    {cat === 'others' && <Sparkles className="w-3.5 h-3.5" />}
-                                    {cat}
-                                </div>
-                                <div className="space-y-1">
-                                    {ALL_TOOLS_LIST.filter(t => t.category === cat).map((tool) => (
-                                        <Link
-                                            key={tool.id}
-                                            href={tool.href as any}
-                                            className="group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg hover:bg-accent transition-colors"
-                                        >
-                                            <div className="flex items-center gap-2">
-                                                <span className={cn(
-                                                    "text-sm transition-colors",
-                                                    pinnedIds.includes(tool.id) ? "text-foreground font-medium" : "text-muted-foreground group-hover:text-foreground"
-                                                )}>
-                                                    {tool.label}
-                                                </span>
-                                                {tool.isNew && <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 rounded">New</span>}
-                                            </div>
-                                            <button
-                                                onClick={(e) => togglePin(e, tool.id)}
-                                                className={cn(
-                                                    "opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-accent rounded",
-                                                    pinnedIds.includes(tool.id) && "opacity-100 text-primary"
-                                                )}
-                                            >
-                                                <Pin className={cn("w-3.5 h-3.5", pinnedIds.includes(tool.id) && "fill-current")} />
-                                            </button>
-                                        </Link>
-                                    ))}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-
-                <div className="bg-muted p-4 flex items-center justify-center border-t border-border">
-                    <button className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                        View all tools in a single list
-                    </button>
-                </div>
-            </HoverCardContent>
-        </HoverCard>
-    );
+    const pinnedTools = ALL_TOOLS_LIST.filter(tool => pinnedIds.includes(tool.id || ''));
 
     return (
         <>
@@ -418,7 +425,7 @@ export function Sidebar() {
                         <div className="flex items-center w-full gap-2 group">
                             <div className="flex items-center gap-2 flex-1">
                                 <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center p-0.5 bg-sidebar-accent border border-sidebar-border group-hover:border-sidebar-accent-foreground/20 transition-colors">
-                                    <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
+                                    <Image src="/logo.svg" alt="Logo" width={36} height={36} className="w-full h-full object-contain" />
                                 </div>
                                 <div className="flex flex-col">
                                     <span className="text-sm font-bold text-sidebar-foreground tracking-tight leading-tight">PaintAI</span>
@@ -429,7 +436,7 @@ export function Sidebar() {
                                 variant="ghost"
                                 size="icon"
                                 className="h-8 w-8 text-sidebar-foreground/50 hover:text-sidebar-foreground shrink-0"
-                                onClick={() => setIsCollapsed(true)}
+                                onClick={() => setManualCollapsed(true)}
                             >
                                 <PanelLeft className="w-4 h-4" />
                             </Button>
@@ -438,15 +445,15 @@ export function Sidebar() {
                         isTablet ? (
                             <div className="w-10 h-10 flex items-center justify-center">
                                 <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-sidebar-accent border border-sidebar-border">
-                                    <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
+                                    <Image src="/logo.svg" alt="Logo" width={28} height={28} className="w-full h-full object-contain" />
                                 </div>
                             </div>
                         ) : (
                             <button
                                 className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
-                                onClick={() => setIsCollapsed(false)}
+                                onClick={() => setManualCollapsed(false)}
                             >
-                                <img src="/logo.svg" alt="Logo" className="w-6 h-6 object-contain" />
+                                <Image src="/logo.svg" alt="Logo" width={24} height={24} className="w-6 h-6 object-contain" />
                             </button>
                         )
                     )}
@@ -461,7 +468,7 @@ export function Sidebar() {
                     {/* Main Nav */}
                     <div className="space-y-0.5">
                         {navItems.map((item) => (
-                            <NavItem key={item.label} item={item} />
+                            <SidebarNavItem key={item.label} item={item} pathname={pathname} isCollapsed={isCollapsed} />
                         ))}
                     </div>
 
@@ -476,7 +483,7 @@ export function Sidebar() {
 
                     <div className="space-y-0.5">
                         {socialItems.map((item) => (
-                            <NavItem key={item.label} item={item} />
+                            <SidebarNavItem key={item.label} item={item} pathname={pathname} isCollapsed={isCollapsed} />
                         ))}
                     </div>
 
@@ -492,9 +499,9 @@ export function Sidebar() {
                     {/* Pinned Tools */}
                     <div className="space-y-0.5">
                         {pinnedTools.map((item) => (
-                            <NavItem key={item.id} item={item} />
+                            <SidebarNavItem key={item.id} item={item} pathname={pathname} isCollapsed={isCollapsed} />
                         ))}
-                        <AllToolsMenuItem />
+                        <AllToolsMenuItem isCollapsed={isCollapsed} pinnedIds={pinnedIds} onTogglePin={togglePin} />
                     </div>
 
                     {/* Divider */}
@@ -507,7 +514,7 @@ export function Sidebar() {
                     {/* Bottom Section */}
                     <div className="space-y-0.5">
                         {bottomItems.map((item) => (
-                            <NavItem key={item.label} item={item} />
+                            <SidebarNavItem key={item.label} item={item} pathname={pathname} isCollapsed={isCollapsed} />
                         ))}
                     </div>
                 </div>

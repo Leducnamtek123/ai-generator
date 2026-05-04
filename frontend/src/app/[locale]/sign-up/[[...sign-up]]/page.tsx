@@ -1,5 +1,6 @@
 'use client';
 
+import Image from 'next/image';
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -42,9 +43,8 @@ export default function SignUpPage() {
             toast.error("Registration failed", {
                 description: error.response?.data?.message || error.message || "Please check your details and try again."
             });
-        } finally {
-            setIsLoading(false);
         }
+        setIsLoading(false);
     };
 
     return (
@@ -53,7 +53,7 @@ export default function SignUpPage() {
                 {/* Logo */}
                 <div className="auth-card__logo">
                     <div className="auth-card__logo-icon">
-                        <img src="/logo.svg" alt="PaintAI" />
+                        <Image src="/logo.svg" alt="PaintAI" width={32} height={32} />
                     </div>
                     <div>
                         <h1 className="auth-card__title">PaintAI</h1>

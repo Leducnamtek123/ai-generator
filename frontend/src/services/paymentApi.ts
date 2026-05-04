@@ -1,18 +1,18 @@
 import { post, get } from '@/lib/api';
 
-export type PaymentProvider = 'vnpay' | 'momo' | 'zalopay';
+export type PaymentProvider = 'vnpay' | 'momo' | 'zalopay' | '9pay';
 export type CreditPackageId = 'starter' | 'pro' | 'enterprise';
 
-export interface CheckoutResponse {
+type CheckoutResponse = {
   orderCode: string;
   provider: PaymentProvider;
   amountVnd: number;
   credits: number;
   paymentUrl: string;
   status: 'pending' | 'paid' | 'failed' | 'cancelled';
-}
+};
 
-export interface PaymentOrder {
+type PaymentOrder = {
   id: string;
   userId: string;
   provider: PaymentProvider;
@@ -22,7 +22,7 @@ export interface PaymentOrder {
   status: 'pending' | 'paid' | 'failed' | 'cancelled';
   createdAt: string;
   updatedAt: string;
-}
+};
 
 export const paymentApi = {
   checkout: (payload: {

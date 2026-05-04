@@ -19,18 +19,16 @@ export default function BillingPage() {
 
     const loadBilling = useCallback(async () => {
         try {
-            setLoading(true);
             const data = await billingApi.get(slug);
             setBilling(data);
         } catch {
             setError('Failed to load billing details');
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     }, [slug]);
 
     useEffect(() => {
-        loadBilling();
+        queueMicrotask(() => { void loadBilling(); });
     }, [loadBilling]);
 
     const formatCurrency = (value: number) => {

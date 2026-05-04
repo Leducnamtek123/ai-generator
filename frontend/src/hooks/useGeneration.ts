@@ -14,6 +14,18 @@ import {
     EnhancePromptParams,
 } from '@/lib/api/generations';
 
+function getGenerationErrorMessage(err: unknown, fallback: string) {
+    if (typeof err === 'object' && err !== null) {
+        const maybeError = err as {
+            response?: { data?: { message?: string } };
+            message?: string;
+        };
+        return maybeError.response?.data?.message || maybeError.message || fallback;
+    }
+
+    return fallback;
+}
+
 interface UseGenerationReturn {
     isGenerating: boolean;
     result: GenerationResult | null;
@@ -38,72 +50,69 @@ export function useGeneration(): UseGenerationReturn {
     const handleGenerateImage = useCallback(async (params: GenerateImageParams) => {
         setIsGenerating(true);
         setError(null);
+        let result: GenerationResult | null = null;
         try {
-            const res = await generateImage(params);
-            setResult(res);
+            result = await generateImage(params);
+            setResult(result);
             toast.success('Image generation started!');
-            return res;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || 'Failed to generate image';
+        } catch (err: unknown) {
+            const msg = getGenerationErrorMessage(err, 'Failed to generate image');
             setError(msg);
             toast.error(msg);
-            return null;
-        } finally {
-            setIsGenerating(false);
         }
+        setIsGenerating(false);
+        return result;
     }, []);
 
     const handleGenerateVideo = useCallback(async (params: GenerateVideoParams) => {
         setIsGenerating(true);
         setError(null);
+        let result: GenerationResult | null = null;
         try {
-            const res = await generateVideo(params);
-            setResult(res);
+            result = await generateVideo(params);
+            setResult(result);
             toast.success('Video generation started!');
-            return res;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || 'Failed to generate video';
+        } catch (err: unknown) {
+            const msg = getGenerationErrorMessage(err, 'Failed to generate video');
             setError(msg);
             toast.error(msg);
-            return null;
-        } finally {
-            setIsGenerating(false);
         }
+        setIsGenerating(false);
+        return result;
     }, []);
 
     const handleUpscaleImage = useCallback(async (params: UpscaleImageParams) => {
         setIsGenerating(true);
         setError(null);
+        let result: GenerationResult | null = null;
         try {
-            const res = await upscaleImage(params);
-            setResult(res);
+            result = await upscaleImage(params);
+            setResult(result);
             toast.success('Upscale started!');
-            return res;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || 'Failed to upscale image';
+        } catch (err: unknown) {
+            const msg = getGenerationErrorMessage(err, 'Failed to upscale image');
             setError(msg);
             toast.error(msg);
-            return null;
-        } finally {
-            setIsGenerating(false);
         }
+        setIsGenerating(false);
+        return result;
     }, []);
 
     const handleEnhancePrompt = useCallback(async (params: EnhancePromptParams) => {
         setIsGenerating(true);
         setError(null);
+        let result: string | null = null;
         try {
             const res = await enhancePrompt(params);
             toast.success('Prompt enhanced!');
-            return res.enhancedPrompt;
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || 'Failed to enhance prompt';
+            result = res.enhancedPrompt;
+        } catch (err: unknown) {
+            const msg = getGenerationErrorMessage(err, 'Failed to enhance prompt');
             setError(msg);
             toast.error(msg);
-            return null;
-        } finally {
-            setIsGenerating(false);
         }
+        setIsGenerating(false);
+        return result;
     }, []);
 
     return {

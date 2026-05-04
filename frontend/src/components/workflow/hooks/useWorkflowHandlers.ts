@@ -17,7 +17,16 @@ export function useWorkflowHandlers(
     const [activeTool, setActiveTool] = useState<'select' | 'pan' | 'comment'>('select');
 
     const handleTextChange = useCallback((nodeId: string, text: string) => {
-        setNodes((nds: Node[]) => nds.map((n) => n.id === nodeId ? { ...n, data: { ...n.data, text } } : n));
+        setNodes((nds: Node[]) => nds.map((n) => {
+            if (n.id === nodeId) {
+                const newData: any = { ...n.data, text };
+                if (n.type !== WorkflowNodeType.TEXT) {
+                    newData.prompt = text; // Also update prompt for non-Text nodes (like VideoNode)
+                }
+                return { ...n, data: newData };
+            }
+            return n;
+        }));
         saveToHistory(getNodes(), getEdges());
     }, [setNodes, saveToHistory, getNodes, getEdges]);
 
@@ -65,6 +74,15 @@ export function useWorkflowHandlers(
         ));
     }, [setNodes]);
 
+    const handleDeleteNode = useCallback((nodeId: string) => {
+        setNodes((nds: Node[]) => nds.filter((n) => n.id !== nodeId));
+        setEdges((eds: Edge[]) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+        if (selectedNode?.id === nodeId) {
+            setSelectedNode(null);
+        }
+        saveToHistory(getNodes(), getEdges());
+    }, [setNodes, setEdges, selectedNode, saveToHistory, getNodes, getEdges]);
+
     const handleToolChange = useCallback((tool: 'select' | 'pan' | 'comment') => {
         setActiveTool(tool);
     }, []);
@@ -77,6 +95,10 @@ export function useWorkflowHandlers(
         setSelectedNode(null);
     }, []);
 
+    const handleNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
+        setSelectedNode(node);
+    }, []);
+
     return {
         selectedNode,
         setSelectedNode,
@@ -84,6 +106,7 @@ export function useWorkflowHandlers(
         setActiveTool,
         handleTextChange,
         handleDuplicateNode,
+        handleDeleteNode,
         onConnect,
         addNode,
         updateNodeData,
@@ -92,5 +115,6 @@ export function useWorkflowHandlers(
         handleZoomOut,
         handleFitView,
         handlePaneClick,
+        handleNodeClick,
     };
 }

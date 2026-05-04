@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
-import { useState, useEffect } from 'react';
+import { useEffect, useReducer } from 'react';
 import {
     Plus,
     Search,
@@ -23,33 +23,74 @@ const tabs = [
     { id: 'shared', label: 'Shared', icon: Users },
 ];
 
+type ProjectsState = {
+    activeTab: 'my' | 'shared';
+    viewMode: 'grid' | 'list';
+    showCreateModal: boolean;
+    projectName: string;
+    projectDesc: string;
+};
+
+type ProjectsAction =
+    | { type: 'setActiveTab'; activeTab: 'my' | 'shared' }
+    | { type: 'setViewMode'; viewMode: 'grid' | 'list' }
+    | { type: 'openCreateModal' }
+    | { type: 'closeCreateModal' }
+    | { type: 'setProjectName'; projectName: string }
+    | { type: 'setProjectDesc'; projectDesc: string }
+    | { type: 'resetCreateForm' };
+
+const initialState: ProjectsState = {
+    activeTab: 'my',
+    viewMode: 'grid',
+    showCreateModal: false,
+    projectName: '',
+    projectDesc: '',
+};
+
+function projectsReducer(state: ProjectsState, action: ProjectsAction): ProjectsState {
+    switch (action.type) {
+        case 'setActiveTab':
+            return { ...state, activeTab: action.activeTab };
+        case 'setViewMode':
+            return { ...state, viewMode: action.viewMode };
+        case 'openCreateModal':
+            return { ...state, showCreateModal: true };
+        case 'closeCreateModal':
+            return { ...state, showCreateModal: false };
+        case 'setProjectName':
+            return { ...state, projectName: action.projectName };
+        case 'setProjectDesc':
+            return { ...state, projectDesc: action.projectDesc };
+        case 'resetCreateForm':
+            return { ...state, projectName: '', projectDesc: '' };
+        default:
+            return state;
+    }
+}
+
 export default function ProjectsPage() {
     const router = useRouter();
-    const { projects, fetchProjects, createProject, isLoading } = useProjectStore();
-    const [activeTab, setActiveTab] = useState('my');
-    const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-    const [showCreateModal, setShowCreateModal] = useState(false);
-    const [projectName, setProjectName] = useState('');
-    const [projectDesc, setProjectDesc] = useState('');
+    const { projects, fetchProjects, createProject } = useProjectStore();
+    const [state, dispatch] = useReducer(projectsReducer, initialState);
 
     useEffect(() => {
-        if (activeTab === 'my') {
+        if (state.activeTab === 'my') {
             fetchProjects();
         }
-    }, [activeTab, fetchProjects]);
+    }, [state.activeTab, fetchProjects]);
 
     const handleCreateProject = async () => {
-        if (!projectName.trim()) return;
+        if (!state.projectName.trim()) return;
 
         const newId = await createProject({
-            name: projectName,
-            description: projectDesc
+            name: state.projectName,
+            description: state.projectDesc
         });
 
         if (newId) {
-            setShowCreateModal(false);
-            setProjectName('');
-            setProjectDesc('');
+            dispatch({ type: 'closeCreateModal' });
+            dispatch({ type: 'resetCreateForm' });
             router.push(`/projects/${newId}`);
         }
     };
@@ -64,7 +105,7 @@ export default function ProjectsPage() {
                     </h1>
                     <p className="text-sm text-muted-foreground mb-6">Manage and organize your creative assets</p>
                     <Button
-                        onClick={() => setShowCreateModal(true)}
+                        onClick={() => dispatch({ type: 'openCreateModal' })}
                         className="gap-2 px-5"
                     >
                         <Plus className="w-4 h-4" />
@@ -79,10 +120,10 @@ export default function ProjectsPage() {
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)}
+                            onClick={() => dispatch({ type: 'setActiveTab', activeTab: tab.id as 'my' | 'shared' })}
                             className={cn(
                                 "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors",
-                                activeTab === tab.id
+                                state.activeTab === tab.id
                                     ? "bg-accent text-accent-foreground"
                                     : "text-muted-foreground hover:text-foreground"
                             )}
@@ -104,18 +145,18 @@ export default function ProjectsPage() {
                     </div>
                     <div className="flex items-center border border-input rounded-md p-1 bg-background">
                         <Button
-                            variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
+                            variant={state.viewMode === 'grid' ? 'secondary' : 'ghost'}
                             size="icon-xs"
-                            onClick={() => setViewMode('grid')}
+                            onClick={() => dispatch({ type: 'setViewMode', viewMode: 'grid' })}
                             className="h-7 w-7"
                             title="Grid View"
                         >
                             <LayoutGrid className="w-4 h-4" />
                         </Button>
                         <Button
-                            variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                            variant={state.viewMode === 'list' ? 'secondary' : 'ghost'}
                             size="icon-xs"
-                            onClick={() => setViewMode('list')}
+                            onClick={() => dispatch({ type: 'setViewMode', viewMode: 'list' })}
                             className="h-7 w-7"
                             title="List View"
                         >
@@ -127,7 +168,7 @@ export default function ProjectsPage() {
 
             {/* Content */}
             <div className="px-8 py-6">
-                {activeTab === 'my' && (
+                {state.activeTab === 'my' && (
                     <>
                         {projects.length === 0 ? (
                             <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
@@ -135,7 +176,7 @@ export default function ProjectsPage() {
                                 <p>No projects found. Create one to get started!</p>
                             </div>
                         ) : (
-                            viewMode === 'grid' ? (
+                            state.viewMode === 'grid' ? (
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                                     {projects.map((project) => (
                                         <ProjectCard key={project.id} project={project} />
@@ -148,7 +189,7 @@ export default function ProjectsPage() {
                     </>
                 )}
 
-                {activeTab === 'shared' && (
+                {state.activeTab === 'shared' && (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
                         <Users className="w-12 h-12 mb-4 opacity-20" />
                         <p>No shared projects yet.</p>
@@ -157,32 +198,38 @@ export default function ProjectsPage() {
             </div>
 
             {/* Create Project Modal */}
-            {showCreateModal && (
+            {state.showCreateModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreateModal(false)} />
+                    <button
+                        type="button"
+                        aria-label="Close create project modal"
+                        className="absolute inset-0 bg-[#0a0a0f]/60 backdrop-blur-sm"
+                        onClick={() => dispatch({ type: 'closeCreateModal' })}
+                    />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl">
                         <h2 className="text-xl font-bold mb-4">Create New Project</h2>
 
                         <div className="space-y-4 mb-6">
                             <div>
-                                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                <label htmlFor="projectName" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                                     Project Name
                                 </label>
                                 <Input
+                                    id="projectName"
                                     type="text"
-                                    value={projectName}
-                                    onChange={(e) => setProjectName(e.target.value)}
+                                    value={state.projectName}
+                                    onChange={(e) => dispatch({ type: 'setProjectName', projectName: e.target.value })}
                                     placeholder="e.g. Social Media Campaign"
-                                    autoFocus
                                 />
                             </div>
                             <div>
-                                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                <label htmlFor="projectDesc" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                                     Description (Optional)
                                 </label>
                                 <textarea
-                                    value={projectDesc}
-                                    onChange={(e) => setProjectDesc(e.target.value)}
+                                    id="projectDesc"
+                                    value={state.projectDesc}
+                                    onChange={(e) => dispatch({ type: 'setProjectDesc', projectDesc: e.target.value })}
                                     placeholder="What is this project about?"
                                     className="w-full h-24 px-3 py-2 bg-background border border-border rounded-lg placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
                                 />
@@ -190,8 +237,8 @@ export default function ProjectsPage() {
                         </div>
 
                         <div className="flex justify-end gap-3">
-                            <Button variant="ghost" onClick={() => setShowCreateModal(false)}>Cancel</Button>
-                            <Button onClick={handleCreateProject} disabled={!projectName.trim()}>Create Project</Button>
+                            <Button variant="ghost" onClick={() => dispatch({ type: 'closeCreateModal' })}>Cancel</Button>
+                            <Button onClick={handleCreateProject} disabled={!state.projectName.trim()}>Create Project</Button>
                         </div>
                     </div>
                 </div>
@@ -204,6 +251,9 @@ function ProjectCard({ project }: { project: Project }) {
     const router = useRouter();
     return (
         <div
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/projects/${project.id}`); }}
             onClick={() => router.push(`/projects/${project.id}`)}
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl p-5 hover:bg-accent/50 transition-all"
         >

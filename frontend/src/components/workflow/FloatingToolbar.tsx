@@ -47,7 +47,6 @@ export function FloatingToolbar({
 }: FloatingToolbarProps) {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
-    const [currentTool, setCurrentTool] = useState<ToolMode>(activeTool);
     const menuRef = useRef<HTMLDivElement>(null);
 
     // Close menu on outside click
@@ -62,7 +61,6 @@ export function FloatingToolbar({
     }, []);
 
     const handleToolChange = (tool: ToolMode) => {
-        setCurrentTool(tool);
         onToolChange?.(tool);
     };
 
@@ -88,13 +86,13 @@ export function FloatingToolbar({
                     <ToolbarButton
                         icon={<MousePointer2 className="w-5 h-5" />}
                         label="Select (V)"
-                        active={currentTool === 'select'}
+                        active={activeTool === 'select'}
                         onClick={() => handleToolChange('select')}
                     />
                     <ToolbarButton
                         icon={<Hand className="w-5 h-5" />}
                         label="Pan (H)"
-                        active={currentTool === 'pan'}
+                        active={activeTool === 'pan'}
                         onClick={() => handleToolChange('pan')}
                     />
 
@@ -119,7 +117,7 @@ export function FloatingToolbar({
                     <ToolbarButton
                         icon={<MessageSquare className="w-5 h-5" />}
                         label="Add Comment (C)"
-                        active={currentTool === 'comment'}
+                        active={activeTool === 'comment'}
                         onClick={() => handleToolChange('comment')}
                     />
                     <ToolbarButton

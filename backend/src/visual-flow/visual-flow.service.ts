@@ -3,9 +3,13 @@ import {
   Logger,
   NotFoundException,
   BadRequestException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
+import { VISUAL_FLOW_QUEUE } from '../queues/queues.constants';
 import { VisualProjectEntity } from './entities/visual-project.entity';
 import { VisualCharacterEntity } from './entities/visual-character.entity';
 import { VisualVideoEntity } from './entities/visual-video.entity';
@@ -19,9 +23,20 @@ import {
   UpdateVisualSceneDto,
 } from './dto/visual-flow.dto';
 import { GenerationsService } from '../generations/generations.service';
+import { MaterialsService } from './services/materials.service';
+import { PostProcessService } from './services/post-process.service';
+import { VideoReviewService } from './services/video-review.service';
+import { TTSService } from './services/tts.service';
+import {
+  ReviewVideoDto,
+  SlideshowFromScenesDto,
+  GenerateVideoNarrationDto,
+} from './dto/flowkit-features.dto';
+import { VisualFlowEventsService } from './services/visual-flow-events.service';
+import { GenerationEventsService } from '../generations/services/generation-events.service';
 
 @Injectable()
-export class VisualFlowService {
+export class VisualFlowService implements OnModuleInit {
   private readonly logger = new Logger(VisualFlowService.name);
 
   constructor(
@@ -34,7 +49,109 @@ export class VisualFlowService {
     @InjectRepository(VisualSceneEntity)
     private readonly sceneRepo: Repository<VisualSceneEntity>,
     private readonly generationsService: GenerationsService,
+    private readonly materialsService: MaterialsService,
+    private readonly postProcessService: PostProcessService,
+    private readonly videoReviewService: VideoReviewService,
+    private readonly ttsService: TTSService,
+    private readonly eventsService: VisualFlowEventsService,
+    private readonly generationEventsService: GenerationEventsService,
+    @InjectQueue(VISUAL_FLOW_QUEUE) private readonly vfQueue: Queue,
   ) {}
+
+  onModuleInit() {
+    this.generationEventsService.generationUpdated.subscribe((data) => {
+      this.handleGenerationUpdate(data.generation, data.projectId).catch((err) =>
+        this.logger.error(`Error handling generation update: ${err.message}`),
+      );
+    });
+  }
+
+  private async handleGenerationUpdate(generation: any, projectId?: string) {
+    if (!projectId) return;
+    const metadata = generation.metadata || {};
+    const vfAction = metadata.vfAction;
+    if (!vfAction) return;
+
+    this.logger.log(`Handling VF generation update: ${vfAction} for project ${projectId}`);
+
+    if (vfAction === 'generate_ref') {
+      const charId = metadata.characterId;
+      if (!charId) return;
+      const char = await this.characterRepo.findOne({ where: { id: charId } });
+      if (!char) return;
+
+      char.refStatus = generation.status === 'completed' ? 'COMPLETED' : generation.status === 'failed' ? 'FAILED' : 'PROCESSING';
+      if (generation.resultUrl) char.referenceImageUrl = generation.resultUrl;
+      await this.characterRepo.save(char);
+
+      this.eventsService.emitCharacterUpdate(projectId, char.id, {
+        refStatus: char.refStatus,
+        referenceImageUrl: char.referenceImageUrl,
+      });
+    } else if (vfAction === 'generate_scene_image') {
+      const { sceneId, orientation, videoId } = metadata;
+      if (!sceneId || !orientation || !videoId) return;
+
+      const scene = await this.sceneRepo.findOne({ where: { id: sceneId } });
+      if (!scene) return;
+
+      const isVertical = orientation === 'VERTICAL';
+      const status = generation.status === 'completed' ? 'COMPLETED' : generation.status === 'failed' ? 'FAILED' : 'PROCESSING';
+
+      if (isVertical) {
+        scene.verticalImageStatus = status;
+        if (generation.resultUrl) scene.verticalImageUrl = generation.resultUrl;
+      } else {
+        scene.horizontalImageStatus = status;
+        if (generation.resultUrl) scene.horizontalImageUrl = generation.resultUrl;
+      }
+
+      await this.sceneRepo.save(scene);
+      this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, {
+        verticalImageStatus: scene.verticalImageStatus,
+        horizontalImageStatus: scene.horizontalImageStatus,
+        verticalImageUrl: scene.verticalImageUrl,
+        horizontalImageUrl: scene.horizontalImageUrl,
+      });
+    } else if (vfAction === 'generate_scene_video') {
+      const { sceneId, orientation, videoId } = metadata;
+      if (!sceneId || !orientation || !videoId) return;
+
+      const scene = await this.sceneRepo.findOne({ where: { id: sceneId } });
+      if (!scene) return;
+
+      const isVertical = orientation === 'VERTICAL';
+      const status = generation.status === 'completed' ? 'COMPLETED' : generation.status === 'failed' ? 'FAILED' : 'PROCESSING';
+
+      if (isVertical) {
+        scene.verticalVideoStatus = status;
+        if (generation.resultUrl) scene.verticalVideoUrl = generation.resultUrl;
+      } else {
+        scene.horizontalVideoStatus = status;
+        if (generation.resultUrl) scene.horizontalVideoUrl = generation.resultUrl;
+      }
+
+      await this.sceneRepo.save(scene);
+      this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, {
+        verticalVideoStatus: scene.verticalVideoStatus,
+        horizontalVideoStatus: scene.horizontalVideoStatus,
+        verticalVideoUrl: scene.verticalVideoUrl,
+        horizontalVideoUrl: scene.horizontalVideoUrl,
+      });
+    }
+  }
+
+  // ═══════════════════════════════════════════════
+  // REPOSITORY HELPERS
+  // ═══════════════════════════════════════════════
+  
+  async saveCharacter(character: VisualCharacterEntity) {
+    return this.characterRepo.save(character);
+  }
+
+  async saveScene(scene: VisualSceneEntity) {
+    return this.sceneRepo.save(scene);
+  }
 
   // ═══════════════════════════════════════════════
   // PROJECT CRUD
@@ -262,39 +379,23 @@ export class VisualFlowService {
       return { message: 'No pending characters to generate refs for', queued: 0 };
     }
 
-    // Fire & forget — generate reference image per character
+    // Add jobs to BullMQ queue
     const jobs = characters.map(async (char) => {
-      try {
-        char.refStatus = 'PROCESSING';
-        await this.characterRepo.save(char);
+      char.refStatus = 'PROCESSING';
+      await this.characterRepo.save(char);
 
-        const generation = await this.generationsService.generateImage(
-          {
-            prompt: char.description
-              ? `Reference portrait of: ${char.description}. Clean studio background, no text.`
-              : `Reference image of ${char.name}`,
-            aspectRatio: '1:1',
-            quality: 'hd',
-          },
-          userId,
-        );
+      this.eventsService.emitCharacterUpdate(projectId, char.id, {
+        refStatus: char.refStatus,
+      });
 
-        // Poll or wait for result — simplified: store generation id in metadata
-        // In production this would use a queue / SSE
-        char.refStatus = generation.status === 'completed' ? 'COMPLETED' : 'PROCESSING';
-        if (generation.resultUrl) {
-          char.referenceImageUrl = generation.resultUrl;
-          char.mediaId = generation.id; // use generation ID as mediaId reference
-          char.refStatus = 'COMPLETED';
-        }
-        await this.characterRepo.save(char);
-        return { characterId: char.id, status: 'queued', generationId: generation.id };
-      } catch (err) {
-        this.logger.error(`Failed to generate ref for character ${char.id}: ${err.message}`);
-        char.refStatus = 'FAILED';
-        await this.characterRepo.save(char);
-        return { characterId: char.id, status: 'failed', error: err.message };
-      }
+      await this.vfQueue.add('generate_ref', {
+        action: 'generate_ref',
+        projectId,
+        userId,
+        characterId: char.id,
+      });
+
+      return { characterId: char.id, status: 'queued' };
     });
 
     const results = await Promise.allSettled(jobs);
@@ -339,53 +440,45 @@ export class VisualFlowService {
     );
 
     const jobs = scenes.map(async (scene) => {
-      try {
-        // Build prompt enriched with ref image metadata
-        const refNames = (scene.characterNames ?? [])
-          .filter((n) => charMap[n])
-          .join(', ');
-        const enrichedPrompt = scene.prompt;
+      // Build character name → URL map for reference injection
+      const refNames = (scene.characterNames ?? [])
+        .filter((n) => charMap[n])
+        .join(', ');
+      const enrichedPrompt = scene.prompt;
 
-        if (orientation === 'VERTICAL' || orientation === 'BOTH') {
-          scene.verticalImageStatus = 'PROCESSING';
-          await this.sceneRepo.save(scene);
-
-          const gen = await this.generationsService.generateImage(
-            { prompt: enrichedPrompt, aspectRatio: '9:16', quality: 'hd' },
-            userId,
-          );
-          scene.verticalMediaId = gen.id;
-          if (gen.resultUrl) {
-            scene.verticalImageUrl = gen.resultUrl;
-            scene.verticalImageStatus = 'COMPLETED';
-          }
-          await this.sceneRepo.save(scene);
-        }
-
-        if (orientation === 'HORIZONTAL' || orientation === 'BOTH') {
-          scene.horizontalImageStatus = 'PROCESSING';
-          await this.sceneRepo.save(scene);
-
-          const gen = await this.generationsService.generateImage(
-            { prompt: enrichedPrompt, aspectRatio: '16:9', quality: 'hd' },
-            userId,
-          );
-          scene.horizontalMediaId = gen.id;
-          if (gen.resultUrl) {
-            scene.horizontalImageUrl = gen.resultUrl;
-            scene.horizontalImageStatus = 'COMPLETED';
-          }
-          await this.sceneRepo.save(scene);
-        }
-
-        return { sceneId: scene.id, status: 'queued', refChars: refNames };
-      } catch (err) {
-        this.logger.error(`Failed scene image gen for ${scene.id}: ${err.message}`);
-        scene.verticalImageStatus = 'FAILED';
-        scene.horizontalImageStatus = 'FAILED';
+      if (orientation === 'VERTICAL' || orientation === 'BOTH') {
+        scene.verticalImageStatus = 'PROCESSING';
         await this.sceneRepo.save(scene);
-        return { sceneId: scene.id, status: 'failed', error: err.message };
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { verticalImageStatus: 'PROCESSING' });
+
+        await this.vfQueue.add('generate_scene_image', {
+          action: 'generate_scene_image',
+          projectId,
+          videoId,
+          userId,
+          sceneId: scene.id,
+          orientation: 'VERTICAL',
+          prompt: enrichedPrompt,
+        });
       }
+
+      if (orientation === 'HORIZONTAL' || orientation === 'BOTH') {
+        scene.horizontalImageStatus = 'PROCESSING';
+        await this.sceneRepo.save(scene);
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { horizontalImageStatus: 'PROCESSING' });
+
+        await this.vfQueue.add('generate_scene_image', {
+          action: 'generate_scene_image',
+          projectId,
+          videoId,
+          userId,
+          sceneId: scene.id,
+          orientation: 'HORIZONTAL',
+          prompt: enrichedPrompt,
+        });
+      }
+
+      return { sceneId: scene.id, status: 'queued', refChars: refNames };
     });
 
     const results = await Promise.allSettled(jobs);
@@ -425,60 +518,45 @@ export class VisualFlowService {
     }
 
     const jobs = scenes.map(async (scene) => {
-      try {
-        const motionPrompt = scene.videoPrompt ?? scene.prompt;
+      if (
+        (orientation === 'VERTICAL' || orientation === 'BOTH') &&
+        scene.verticalImageUrl
+      ) {
+        scene.verticalVideoStatus = 'PROCESSING';
+        await this.sceneRepo.save(scene);
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { verticalVideoStatus: 'PROCESSING' });
 
-        if (
-          (orientation === 'VERTICAL' || orientation === 'BOTH') &&
-          scene.verticalImageUrl
-        ) {
-          scene.verticalVideoStatus = 'PROCESSING';
-          await this.sceneRepo.save(scene);
-
-          const gen = await this.generationsService.generateVideo(
-            {
-              prompt: motionPrompt,
-              aspectRatio: '9:16',
-              duration: '8s',
-              startImageUrl: scene.verticalImageUrl,
-            },
-            userId,
-          );
-          if (gen.resultUrl) {
-            scene.verticalVideoUrl = gen.resultUrl;
-            scene.verticalVideoStatus = 'COMPLETED';
-          }
-          await this.sceneRepo.save(scene);
-        }
-
-        if (
-          (orientation === 'HORIZONTAL' || orientation === 'BOTH') &&
-          scene.horizontalImageUrl
-        ) {
-          scene.horizontalVideoStatus = 'PROCESSING';
-          await this.sceneRepo.save(scene);
-
-          const gen = await this.generationsService.generateVideo(
-            {
-              prompt: motionPrompt,
-              aspectRatio: '16:9',
-              duration: '8s',
-              startImageUrl: scene.horizontalImageUrl,
-            },
-            userId,
-          );
-          if (gen.resultUrl) {
-            scene.horizontalVideoUrl = gen.resultUrl;
-            scene.horizontalVideoStatus = 'COMPLETED';
-          }
-          await this.sceneRepo.save(scene);
-        }
-
-        return { sceneId: scene.id, status: 'queued' };
-      } catch (err) {
-        this.logger.error(`Failed scene video gen for ${scene.id}: ${err.message}`);
-        return { sceneId: scene.id, status: 'failed', error: err.message };
+        await this.vfQueue.add('generate_scene_video', {
+          action: 'generate_scene_video',
+          projectId,
+          videoId,
+          userId,
+          sceneId: scene.id,
+          orientation: 'VERTICAL',
+          prompt: scene.videoPrompt || scene.prompt,
+        });
       }
+
+      if (
+        (orientation === 'HORIZONTAL' || orientation === 'BOTH') &&
+        scene.horizontalImageUrl
+      ) {
+        scene.horizontalVideoStatus = 'PROCESSING';
+        await this.sceneRepo.save(scene);
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { horizontalVideoStatus: 'PROCESSING' });
+
+        await this.vfQueue.add('generate_scene_video', {
+          action: 'generate_scene_video',
+          projectId,
+          videoId,
+          userId,
+          sceneId: scene.id,
+          orientation: 'HORIZONTAL',
+          prompt: scene.videoPrompt || scene.prompt,
+        });
+      }
+
+      return { sceneId: scene.id, status: 'queued' };
     });
 
     const results = await Promise.allSettled(jobs);
@@ -538,6 +616,330 @@ export class VisualFlowService {
         horizontalImageUrl: s.horizontalImageUrl,
         horizontalVideoUrl: s.horizontalVideoUrl,
       })),
+    };
+  }
+
+  // ═══════════════════════════════════════════════
+  // MATERIALS: APPLY TO SCENES (FlowKit)
+  // ═══════════════════════════════════════════════
+
+  async applyMaterialToScenes(
+    projectId: string,
+    materialId: string,
+    userId: string,
+    sceneIds?: string[],
+  ) {
+    const project = await this.findOneProject(projectId, userId);
+    const videos = project.videos ?? [];
+    let allScenes: VisualSceneEntity[] = [];
+    for (const video of videos) {
+      const scenes = await this.getScenes(video.id);
+      allScenes = allScenes.concat(scenes);
+    }
+
+    if (sceneIds?.length) {
+      allScenes = allScenes.filter((s) => sceneIds.includes(s.id));
+    }
+
+    let updated = 0;
+    for (const scene of allScenes) {
+      const newPrompt = this.materialsService.applyToPrompt(materialId, scene.prompt);
+      if (newPrompt !== scene.prompt) {
+        scene.prompt = newPrompt;
+        // Reset image/video status since prompt changed
+        scene.verticalImageStatus = 'PENDING';
+        scene.horizontalImageStatus = 'PENDING';
+        scene.verticalVideoStatus = 'PENDING';
+        scene.horizontalVideoStatus = 'PENDING';
+        await this.sceneRepo.save(scene);
+        updated++;
+      }
+    }
+
+    return {
+      materialId,
+      scenesUpdated: updated,
+      scenesTotal: allScenes.length,
+    };
+  }
+
+  // ═══════════════════════════════════════════════
+  // CONCAT SCENE VIDEOS (FlowKit)
+  // ═══════════════════════════════════════════════
+
+  async concatSceneVideos(
+    projectId: string,
+    videoId: string,
+    userId: string,
+    orientation: 'VERTICAL' | 'HORIZONTAL' = 'VERTICAL',
+    sceneIds?: string[],
+    musicUrl?: string,
+    musicVolume?: number,
+  ) {
+    await this.findOneProject(projectId, userId);
+    let scenes = await this.getScenes(videoId);
+
+    if (sceneIds?.length) {
+      scenes = scenes.filter((s) => sceneIds.includes(s.id));
+    }
+
+    const urlField = orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
+    const videoPaths = scenes
+      .filter((s) => s[urlField])
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => s[urlField] as string);
+
+    if (!videoPaths.length) {
+      throw new BadRequestException(
+        `No ${orientation.toLowerCase()} videos found to concatenate`,
+      );
+    }
+
+    // Merge all scene videos
+    const outputBase = `files/videos/${videoId}`;
+    const mergedPath = `${outputBase}_concat_${orientation.toLowerCase()}.mp4`;
+    await this.postProcessService.mergeVideos(videoPaths, mergedPath);
+
+    // Optionally add background music
+    let finalPath = mergedPath;
+    if (musicUrl) {
+      finalPath = `${outputBase}_final_${orientation.toLowerCase()}.mp4`;
+      await this.postProcessService.addMusic(mergedPath, musicUrl, finalPath, {
+        musicVolume: musicVolume ?? 0.3,
+      });
+    }
+
+    // Update video entity with result
+    const video = await this.findOneVideo(videoId);
+    if (orientation === 'HORIZONTAL') {
+      video.horizontalUrl = finalPath;
+    } else {
+      video.verticalUrl = finalPath;
+    }
+    video.status = 'COMPLETED';
+    await this.videoRepo.save(video);
+
+    return {
+      videoId,
+      orientation,
+      scenesConcat: videoPaths.length,
+      outputUrl: finalPath,
+      hasMusicOverlay: !!musicUrl,
+    };
+  }
+
+  // ═══════════════════════════════════════════════
+  // REVIEW VIDEO SCENES (FlowKit)
+  // ═══════════════════════════════════════════════
+
+  async reviewVideoScenes(
+    projectId: string,
+    videoId: string,
+    userId: string,
+    dto: ReviewVideoDto,
+  ) {
+    await this.findOneProject(projectId, userId);
+    let scenes = await this.getScenes(videoId);
+
+    if (dto.sceneIds) {
+      const ids = dto.sceneIds.split(',').map((s) => s.trim()).filter(Boolean);
+      scenes = scenes.filter((s) => ids.includes(s.id));
+    }
+
+    const orientation = dto.orientation || 'VERTICAL';
+    const urlField = orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
+
+    const videoPaths = scenes
+      .filter((s) => s[urlField])
+      .map((s) => s[urlField] as string);
+    const prompts = scenes
+      .filter((s) => s[urlField])
+      .map((s) => s.prompt || '');
+
+    if (!videoPaths.length) {
+      throw new BadRequestException(
+        `No ${orientation.toLowerCase()} videos found to review`,
+      );
+    }
+
+    return this.videoReviewService.reviewMultipleVideos(videoPaths, {
+      prompts,
+      mode: dto.mode || 'light',
+      videoId,
+    });
+  }
+
+  // ═══════════════════════════════════════════════
+  // SLIDESHOW FROM SCENE IMAGES (FlowKit)
+  // ═══════════════════════════════════════════════
+
+  async createSlideshowFromScenes(
+    projectId: string,
+    videoId: string,
+    userId: string,
+    dto: SlideshowFromScenesDto,
+  ) {
+    await this.findOneProject(projectId, userId);
+    let scenes = await this.getScenes(videoId);
+
+    if (dto.sceneIds?.length) {
+      scenes = scenes.filter((s) => dto.sceneIds!.includes(s.id));
+    }
+
+    const orientation = dto.orientation || 'VERTICAL';
+    const imageField =
+      orientation === 'HORIZONTAL' ? 'horizontalImageUrl' : 'verticalImageUrl';
+
+    // Collect images sorted by display order
+    const imagePaths = scenes
+      .filter((s) => s[imageField])
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => s[imageField] as string);
+
+    if (!imagePaths.length) {
+      throw new BadRequestException(
+        `No ${orientation.toLowerCase()} scene images found. Generate images first.`,
+      );
+    }
+
+    // Determine output dimensions based on orientation
+    const width = orientation === 'HORIZONTAL' ? 1920 : 1080;
+    const height = orientation === 'HORIZONTAL' ? 1080 : 1920;
+
+    // Create slideshow from scene images
+    const outputBase = `files/videos/${videoId}`;
+    const slideshowPath = `${outputBase}_slideshow_${orientation.toLowerCase()}.mp4`;
+
+    const result = await this.postProcessService.imagesToSlideshow(
+      imagePaths,
+      slideshowPath,
+      {
+        durationPerSlide: dto.durationPerSlide ?? 4,
+        transitionDuration: dto.transitionDuration ?? 1,
+        zoomEffect: dto.zoomEffect ?? true,
+        fps: 25,
+        width,
+        height,
+      },
+    );
+
+    // Optionally overlay background music
+    let finalPath = result.path;
+    if (dto.musicUrl) {
+      finalPath = `${outputBase}_slideshow_music_${orientation.toLowerCase()}.mp4`;
+      await this.postProcessService.addMusic(result.path, dto.musicUrl, finalPath, {
+        musicVolume: dto.musicVolume ?? 0.3,
+      });
+    }
+
+    // Update video entity
+    const video = await this.findOneVideo(videoId);
+    if (orientation === 'HORIZONTAL') {
+      video.horizontalUrl = finalPath;
+    } else {
+      video.verticalUrl = finalPath;
+    }
+    video.status = 'COMPLETED';
+    await this.videoRepo.save(video);
+
+    return {
+      videoId,
+      orientation,
+      type: 'slideshow',
+      slideCount: result.slideCount,
+      totalDuration: result.totalDuration,
+      outputUrl: finalPath,
+      hasMusicOverlay: !!dto.musicUrl,
+      scenesUsed: imagePaths.length,
+    };
+  }
+
+  // ═══════════════════════════════════════════════
+  // VIDEO NARRATION PIPELINE (FlowKit TTS)
+  // ═══════════════════════════════════════════════
+
+  async generateVideoNarration(
+    projectId: string,
+    videoId: string,
+    userId: string,
+    dto: GenerateVideoNarrationDto,
+  ) {
+    await this.findOneProject(projectId, userId);
+    const scenes = await this.getScenes(videoId);
+
+    // Build batch items from scenes with narratorText
+    const batchItems = scenes
+      .filter((s) => s.narratorText?.trim())
+      .sort((a, b) => a.displayOrder - b.displayOrder)
+      .map((s) => ({
+        sceneId: s.id,
+        text: s.narratorText,
+        displayOrder: s.displayOrder,
+      }));
+
+    if (!batchItems.length) {
+      return {
+        videoId,
+        narrationResults: [],
+        message: 'No scenes have narratorText. Add narrator_text to scenes first.',
+      };
+    }
+
+    const outputDir = `files/narration/${videoId}`;
+    const results = await this.ttsService.generateVideoNarration(
+      batchItems,
+      outputDir,
+      {
+        voice: dto.voice,
+        speed: dto.speed,
+        model: dto.model,
+        forceRegenerate: dto.forceRegenerate,
+      },
+    );
+
+    // Optionally overlay narration onto scene videos
+    const overlayResults: any[] = [];
+    if (dto.overlayOnVideos) {
+      const orientation = dto.orientation || 'VERTICAL';
+      const videoField =
+        orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
+
+      for (const result of results) {
+        if (result.status !== 'COMPLETED' || !result.audioPath) continue;
+
+        const scene = scenes.find((s) => s.id === result.sceneId);
+        if (!scene || !scene[videoField]) continue;
+
+        try {
+          const narrated = `files/narration/${videoId}/narrated_${scene.id}.mp4`;
+          await this.postProcessService.addNarration(
+            scene[videoField] as string,
+            result.audioPath,
+            narrated,
+          );
+          overlayResults.push({
+            sceneId: scene.id,
+            narratedVideoPath: narrated,
+          });
+        } catch (err: any) {
+          this.logger.error(
+            `Failed to overlay narration on scene ${scene.id}: ${err.message}`,
+          );
+        }
+      }
+    }
+
+    return {
+      videoId,
+      narrationResults: results,
+      overlayResults: dto.overlayOnVideos ? overlayResults : undefined,
+      stats: {
+        total: scenes.length,
+        withText: batchItems.length,
+        generated: results.filter((r) => r.status === 'COMPLETED').length,
+        failed: results.filter((r) => r.status === 'FAILED').length,
+        overlaid: overlayResults.length,
+      },
     };
   }
 }

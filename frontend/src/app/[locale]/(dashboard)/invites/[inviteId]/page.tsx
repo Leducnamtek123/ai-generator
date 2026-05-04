@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { inviteApi, type InviteDetails } from '@/services/inviteApi';
 import {
@@ -8,60 +8,92 @@ import {
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 
+type InviteState = {
+    invite: InviteDetails | null;
+    accepting: boolean;
+    rejecting: boolean;
+    error: string;
+    result: 'accepted' | 'rejected' | null;
+};
+
+type InviteAction =
+    | { type: 'setInvite'; invite: InviteDetails }
+    | { type: 'setAccepting'; accepting: boolean }
+    | { type: 'setRejecting'; rejecting: boolean }
+    | { type: 'setError'; error: string }
+    | { type: 'setResult'; result: 'accepted' | 'rejected' | null }
+    | { type: 'clearError' };
+
+const initialState: InviteState = {
+    invite: null,
+    accepting: false,
+    rejecting: false,
+    error: '',
+    result: null,
+};
+
+function inviteReducer(state: InviteState, action: InviteAction): InviteState {
+    switch (action.type) {
+        case 'setInvite':
+            return { ...state, invite: action.invite, error: '' };
+        case 'setAccepting':
+            return { ...state, accepting: action.accepting };
+        case 'setRejecting':
+            return { ...state, rejecting: action.rejecting };
+        case 'setError':
+            return { ...state, error: action.error };
+        case 'setResult':
+            return { ...state, result: action.result };
+        case 'clearError':
+            return { ...state, error: '' };
+        default:
+            return state;
+    }
+}
+
 export default function InviteAcceptPage() {
     const params = useParams();
     const router = useRouter();
     const inviteId = params?.inviteId as string;
-
-    const [invite, setInvite] = useState<InviteDetails | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [accepting, setAccepting] = useState(false);
-    const [rejecting, setRejecting] = useState(false);
-    const [error, setError] = useState('');
-    const [result, setResult] = useState<'accepted' | 'rejected' | null>(null);
+    const [state, dispatch] = useReducer(inviteReducer, initialState);
 
     const loadInvite = useCallback(async () => {
         try {
-            setLoading(true);
             const data = await inviteApi.getDetails(inviteId);
-            setInvite(data);
+            dispatch({ type: 'setInvite', invite: data });
         } catch {
-            setError('Invite not found or has expired');
-        } finally {
-            setLoading(false);
+            dispatch({ type: 'setError', error: 'Invite not found or has expired' });
         }
     }, [inviteId]);
 
     useEffect(() => {
-        loadInvite();
+        queueMicrotask(() => { void loadInvite(); });
     }, [loadInvite]);
 
     const handleAccept = async () => {
-        setAccepting(true);
+        dispatch({ type: 'setAccepting', accepting: true });
         try {
             await inviteApi.accept(inviteId);
-            setResult('accepted');
+            dispatch({ type: 'setResult', result: 'accepted' });
             setTimeout(() => router.push('/dashboard'), 2000);
         } catch {
-            setError('Failed to accept invite');
-        } finally {
-            setAccepting(false);
+            dispatch({ type: 'setError', error: 'Failed to accept invite' });
         }
+        dispatch({ type: 'setAccepting', accepting: false });
     };
 
     const handleReject = async () => {
-        setRejecting(true);
+        dispatch({ type: 'setRejecting', rejecting: true });
         try {
             await inviteApi.reject(inviteId);
-            setResult('rejected');
+            dispatch({ type: 'setResult', result: 'rejected' });
         } catch {
-            setError('Failed to reject invite');
-        } finally {
-            setRejecting(false);
+            dispatch({ type: 'setError', error: 'Failed to reject invite' });
         }
+        dispatch({ type: 'setRejecting', rejecting: false });
     };
 
-    if (loading) {
+    if (!state.invite && !state.error) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
@@ -69,7 +101,7 @@ export default function InviteAcceptPage() {
         );
     }
 
-    if (error && !invite) {
+    if (state.error && !state.invite) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="text-center max-w-md">
@@ -77,31 +109,31 @@ export default function InviteAcceptPage() {
                         <X className="w-8 h-8 text-destructive" />
                     </div>
                     <h1 className="text-xl font-bold text-foreground mb-2">Invalid Invite</h1>
-                    <p className="text-sm text-muted-foreground">{error}</p>
+                    <p className="text-sm text-muted-foreground">{state.error}</p>
                 </div>
             </div>
         );
     }
 
-    if (result) {
+    if (state.result) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="text-center max-w-md">
                     <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
-                        result === 'accepted' ? 'bg-emerald-500/10' : 'bg-muted'
+                        state.result === 'accepted' ? 'bg-emerald-500/10' : 'bg-muted'
                     }`}>
-                        {result === 'accepted' ? (
+                        {state.result === 'accepted' ? (
                             <Check className="w-8 h-8 text-emerald-500" />
                         ) : (
                             <X className="w-8 h-8 text-muted-foreground" />
                         )}
                     </div>
                     <h1 className="text-xl font-bold text-foreground mb-2">
-                        {result === 'accepted' ? 'Invite Accepted!' : 'Invite Rejected'}
+                        {state.result === 'accepted' ? 'Invite Accepted!' : 'Invite Rejected'}
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        {result === 'accepted'
-                            ? `You are now a member of ${invite?.org?.name}. Redirecting...`
+                        {state.result === 'accepted'
+                            ? `You are now a member of ${state.invite?.org?.name}. Redirecting...`
                             : 'The invite has been rejected.'}
                     </p>
                 </div>
@@ -133,15 +165,15 @@ export default function InviteAcceptPage() {
                         <div className="bg-muted/50 rounded-xl p-5 mb-6 space-y-4">
                             <div className="flex items-center gap-3">
                                 <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
-                                    {invite?.org?.name?.charAt(0)?.toUpperCase()}
-                                </div>
-                                <div className="text-left">
-                                    <div className="text-sm font-semibold flex items-center gap-1.5">
-                                        <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
-                                        {invite?.org?.name}
-                                    </div>
-                                </div>
-                            </div>
+                        {state.invite?.org?.name?.charAt(0)?.toUpperCase()}
+                    </div>
+                    <div className="text-left">
+                        <div className="text-sm font-semibold flex items-center gap-1.5">
+                            <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                            {state.invite?.org?.name}
+                        </div>
+                    </div>
+                </div>
 
                             <div className="h-px bg-border" />
 
@@ -151,7 +183,7 @@ export default function InviteAcceptPage() {
                                     Invited by
                                 </div>
                                 <span className="font-medium text-foreground">
-                                    {invite?.author?.userInfo?.name || 'Unknown'}
+                                    {state.invite?.author?.userInfo?.name || 'Unknown'}
                                 </span>
                             </div>
 
@@ -161,7 +193,7 @@ export default function InviteAcceptPage() {
                                     Role
                                 </div>
                                 <span className="font-medium text-foreground capitalize">
-                                    {invite?.invite?.role?.toLowerCase()}
+                                    {state.invite?.invite?.role?.toLowerCase()}
                                 </span>
                             </div>
 
@@ -171,14 +203,14 @@ export default function InviteAcceptPage() {
                                     Email
                                 </div>
                                 <span className="font-medium text-foreground">
-                                    {invite?.invite?.email}
+                                    {state.invite?.invite?.email}
                                 </span>
                             </div>
                         </div>
 
-                        {error && (
+                        {state.error && (
                             <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-lg px-3 py-2 text-sm mb-4">
-                                {error}
+                                {state.error}
                             </div>
                         )}
 
@@ -187,17 +219,17 @@ export default function InviteAcceptPage() {
                                 variant="outline"
                                 className="flex-1"
                                 onClick={handleReject}
-                                disabled={rejecting || accepting}
+                                disabled={state.rejecting || state.accepting}
                             >
-                                {rejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                {state.rejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
                                 Decline
                             </Button>
                             <Button
                                 className="flex-1"
                                 onClick={handleAccept}
-                                disabled={accepting || rejecting}
+                                disabled={state.accepting || state.rejecting}
                             >
-                                {accepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                {state.accepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
                                 Accept
                             </Button>
                         </div>

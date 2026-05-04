@@ -10,6 +10,7 @@ import { GenerationBaseService } from './services/generation-base.service';
 import { ImageGenerationService } from './services/image-generation.service';
 import { VideoGenerationService } from './services/video-generation.service';
 import { AudioGenerationService } from './services/audio-generation.service';
+import { GenerationEventsService } from './services/generation-events.service';
 
 @Module({
   imports: [
@@ -25,7 +26,8 @@ import { AudioGenerationService } from './services/audio-generation.service';
     ImageGenerationService,
     VideoGenerationService,
     AudioGenerationService,
+    GenerationEventsService,
   ],
-  exports: [GenerationsService],
+  exports: [GenerationsService, GenerationEventsService],
 })
 export class GenerationsModule {}

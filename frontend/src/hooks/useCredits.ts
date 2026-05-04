@@ -16,22 +16,29 @@ export function useCredits(): UseCreditsReturn {
     const [error, setError] = useState<string | null>(null);
 
     const fetchBalance = useCallback(async () => {
+        let nextBalance: number | null = null;
         try {
             setIsLoading(true);
             setError(null);
             const data = await getCreditsBalance();
-            setBalance(data);
-        } catch (err: any) {
-            const msg = err?.response?.data?.message || err?.message || 'Failed to fetch balance';
+            nextBalance = data;
+        } catch (err: unknown) {
+            const maybeError = err as {
+                response?: { data?: { message?: string } };
+                message?: string;
+            };
+            const msg = maybeError?.response?.data?.message || maybeError?.message || 'Failed to fetch balance';
             setError(msg);
-            setBalance(0);
-        } finally {
-            setIsLoading(false);
+            nextBalance = 0;
         }
+        setBalance(nextBalance);
+        setIsLoading(false);
     }, []);
 
     useEffect(() => {
-        fetchBalance();
+        queueMicrotask(() => {
+            void fetchBalance();
+        });
     }, [fetchBalance]);
 
     return {

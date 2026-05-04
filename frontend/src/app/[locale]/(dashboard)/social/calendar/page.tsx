@@ -40,6 +40,81 @@ const MONTHS = [
 
 type StatusFilter = 'all' | SocialPostStatus;
 
+type CalendarState = {
+  view: 'month' | 'week' | 'day';
+  currentDate: Date;
+  baseNow: Date;
+  posts: SocialPost[];
+  channels: SocialChannel[];
+  statusFilter: StatusFilter;
+  isLoading: boolean;
+  isComposerOpen: boolean;
+  content: string;
+  selectedAccountId: number | null;
+  scheduledAt: string;
+  isSaving: boolean;
+};
+
+type CalendarAction =
+  | { type: 'setView'; view: 'month' | 'week' | 'day' }
+  | { type: 'setCurrentDate'; currentDate: Date }
+  | { type: 'setPosts'; posts: SocialPost[] }
+  | { type: 'setChannels'; channels: SocialChannel[] }
+  | { type: 'setStatusFilter'; statusFilter: StatusFilter }
+  | { type: 'setLoading'; isLoading: boolean }
+  | { type: 'setComposerOpen'; isComposerOpen: boolean }
+  | { type: 'setContent'; content: string }
+  | { type: 'setSelectedAccountId'; selectedAccountId: number | null }
+  | { type: 'setScheduledAt'; scheduledAt: string }
+  | { type: 'setSaving'; isSaving: boolean }
+  | { type: 'resetComposer' };
+
+const initialState: CalendarState = {
+  view: 'month',
+  currentDate: new Date(),
+  baseNow: new Date(),
+  posts: [],
+  channels: [],
+  statusFilter: 'all',
+  isLoading: true,
+  isComposerOpen: false,
+  content: '',
+  selectedAccountId: null,
+  scheduledAt: '',
+  isSaving: false,
+};
+
+function reducer(state: CalendarState, action: CalendarAction): CalendarState {
+  switch (action.type) {
+    case 'setView':
+      return { ...state, view: action.view };
+    case 'setCurrentDate':
+      return { ...state, currentDate: action.currentDate };
+    case 'setPosts':
+      return { ...state, posts: action.posts };
+    case 'setChannels':
+      return { ...state, channels: action.channels };
+    case 'setStatusFilter':
+      return { ...state, statusFilter: action.statusFilter };
+    case 'setLoading':
+      return { ...state, isLoading: action.isLoading };
+    case 'setComposerOpen':
+      return { ...state, isComposerOpen: action.isComposerOpen };
+    case 'setContent':
+      return { ...state, content: action.content };
+    case 'setSelectedAccountId':
+      return { ...state, selectedAccountId: action.selectedAccountId };
+    case 'setScheduledAt':
+      return { ...state, scheduledAt: action.scheduledAt };
+    case 'setSaving':
+      return { ...state, isSaving: action.isSaving };
+    case 'resetComposer':
+      return { ...state, isComposerOpen: false, content: '', scheduledAt: '' };
+    default:
+      return state;
+  }
+}
+
 function startOfMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), 1);
 }
@@ -56,48 +131,34 @@ function toDatetimeLocal(date: Date) {
 }
 
 export default function CalendarPage() {
-  const [view, setView] = React.useState<'month' | 'week' | 'day'>('month');
-  const [currentDate, setCurrentDate] = React.useState(new Date());
-  const [posts, setPosts] = React.useState<SocialPost[]>([]);
-  const [channels, setChannels] = React.useState<SocialChannel[]>([]);
-  const [statusFilter, setStatusFilter] = React.useState<StatusFilter>('all');
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isComposerOpen, setIsComposerOpen] = React.useState(false);
-  const [content, setContent] = React.useState('');
-  const [selectedAccountId, setSelectedAccountId] = React.useState<number | null>(
-    null,
-  );
-  const [scheduledAt, setScheduledAt] = React.useState('');
-  const [isSaving, setIsSaving] = React.useState(false);
+  const [state, dispatch] = React.useReducer(reducer, initialState);
 
-  const monthName = MONTHS[currentDate.getMonth()];
-  const year = currentDate.getFullYear();
+  const monthName = MONTHS[state.currentDate.getMonth()];
+  const year = state.currentDate.getFullYear();
 
   const fetchData = React.useCallback(async () => {
-    setIsLoading(true);
     try {
       const [postData, channelData] = await Promise.all([
         socialHubApi.getPosts(),
         socialHubApi.getChannels(),
       ]);
-      setPosts(postData);
-      setChannels(channelData);
-      if (!selectedAccountId && channelData.length > 0) {
-        setSelectedAccountId(channelData[0].id);
+      dispatch({ type: 'setPosts', posts: postData });
+      dispatch({ type: 'setChannels', channels: channelData });
+      if (!state.selectedAccountId && channelData.length > 0) {
+        dispatch({ type: 'setSelectedAccountId', selectedAccountId: channelData[0].id });
       }
     } catch (error) {
       console.error('Failed to fetch social calendar data', error);
       toast.error('Failed to load social calendar data.');
-    } finally {
-      setIsLoading(false);
     }
-  }, [selectedAccountId]);
+    dispatch({ type: 'setLoading', isLoading: false });
+  }, [state.selectedAccountId]);
 
   React.useEffect(() => {
-    void fetchData();
+    queueMicrotask(() => { void fetchData(); });
   }, [fetchData]);
 
-  const base = startOfMonth(currentDate);
+  const base = startOfMonth(state.currentDate);
   const offset = getMondayBasedOffset(base);
   const firstCell = new Date(base);
   firstCell.setDate(firstCell.getDate() - offset);
@@ -107,8 +168,8 @@ export default function CalendarPage() {
     return d;
   });
 
-  const filteredPosts = posts.filter((post) =>
-    statusFilter === 'all' ? true : post.status === statusFilter,
+  const filteredPosts = state.posts.filter((post) =>
+    state.statusFilter === 'all' ? true : post.status === state.statusFilter,
   );
 
   const postsByDay = React.useMemo(() => {
@@ -127,37 +188,36 @@ export default function CalendarPage() {
   }, [filteredPosts]);
 
   const openComposer = (seedDate?: Date) => {
-    const targetDate = seedDate ?? new Date(Date.now() + 60 * 60 * 1000);
-    setScheduledAt(toDatetimeLocal(targetDate));
-    setContent('');
-    setIsComposerOpen(true);
+    const targetDate = seedDate ?? new Date(state.baseNow.getTime() + 60 * 60 * 1000);
+    dispatch({ type: 'setScheduledAt', scheduledAt: toDatetimeLocal(targetDate) });
+    dispatch({ type: 'setContent', content: '' });
+    dispatch({ type: 'setComposerOpen', isComposerOpen: true });
   };
 
   const handleCreatePost = async () => {
-    if (!content.trim()) {
+    if (!state.content.trim()) {
       toast.error('Please enter post content.');
       return;
     }
-    if (!selectedAccountId) {
+    if (!state.selectedAccountId) {
       toast.error('Please select a connected channel.');
       return;
     }
-    setIsSaving(true);
+    dispatch({ type: 'setSaving', isSaving: true });
     try {
       await socialHubApi.createPost({
-        content: content.trim(),
-        scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-        socialAccountId: selectedAccountId,
+        content: state.content.trim(),
+        scheduledAt: state.scheduledAt ? new Date(state.scheduledAt).toISOString() : null,
+        socialAccountId: state.selectedAccountId,
       });
       toast.success('Post created successfully.');
-      setIsComposerOpen(false);
+      dispatch({ type: 'resetComposer' });
       await fetchData();
     } catch (error) {
       console.error('Failed to create post', error);
       toast.error('Failed to create post.');
-    } finally {
-      setIsSaving(false);
     }
+    dispatch({ type: 'setSaving', isSaving: false });
   };
 
   const handleDeletePost = async (postId: number) => {
@@ -198,10 +258,10 @@ export default function CalendarPage() {
             {(['month', 'week', 'day'] as const).map((v) => (
               <button
                 key={v}
-                onClick={() => setView(v)}
+                onClick={() => dispatch({ type: 'setView', view: v })}
                 className={cn(
                   'px-4 py-1.5 text-xs font-medium rounded-md capitalize transition-all',
-                  view === v
+                  state.view === v
                     ? 'bg-background text-foreground shadow-sm'
                     : 'text-muted-foreground hover:text-foreground',
                 )}
@@ -232,9 +292,10 @@ export default function CalendarPage() {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() =>
-                  setCurrentDate(
-                    new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1),
-                  )
+                  dispatch({
+                    type: 'setCurrentDate',
+                    currentDate: new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1, 1),
+                  })
                 }
               >
                 <ChevronLeft className="w-4 h-4" />
@@ -244,9 +305,10 @@ export default function CalendarPage() {
                 size="icon"
                 className="h-8 w-8"
                 onClick={() =>
-                  setCurrentDate(
-                    new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1),
-                  )
+                  dispatch({
+                    type: 'setCurrentDate',
+                    currentDate: new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 1, 1),
+                  })
                 }
               >
                 <ChevronRight className="w-4 h-4" />
@@ -256,7 +318,7 @@ export default function CalendarPage() {
               variant="outline"
               size="sm"
               className="h-8 text-xs"
-              onClick={() => setCurrentDate(new Date())}
+              onClick={() => dispatch({ type: 'setCurrentDate', currentDate: new Date() })}
             >
               Today
             </Button>
@@ -274,13 +336,13 @@ export default function CalendarPage() {
                   'published',
                   'failed',
                 ];
-                const currentIndex = sequence.indexOf(statusFilter);
+                const currentIndex = sequence.indexOf(state.statusFilter);
                 const next = sequence[(currentIndex + 1) % sequence.length];
-                setStatusFilter(next);
+                dispatch({ type: 'setStatusFilter', statusFilter: next });
               }}
             >
               <Filter className="w-3.5 h-3.5 mr-2" />
-              {statusFilter === 'all' ? 'All statuses' : statusFilter}
+              {state.statusFilter === 'all' ? 'All statuses' : state.statusFilter}
             </Button>
           </div>
         </div>
@@ -298,7 +360,7 @@ export default function CalendarPage() {
           {gridDays.map((day) => {
             const key = day.toISOString().slice(0, 10);
             const dayPosts = postsByDay.get(key) ?? [];
-            const isCurrentMonth = day.getMonth() === currentDate.getMonth();
+            const isCurrentMonth = day.getMonth() === state.currentDate.getMonth();
             const isToday = key === new Date().toISOString().slice(0, 10);
 
             return (
@@ -306,7 +368,7 @@ export default function CalendarPage() {
                 key={key}
                 className={cn(
                   'min-h-[140px] p-2 border-b border-r border-white/5 relative group transition-colors',
-                  isCurrentMonth ? 'hover:bg-white/[0.02]' : 'bg-black/20',
+                  isCurrentMonth ? 'hover:bg-white/[0.02]' : 'bg-gray-950/20',
                 )}
               >
                 <span
@@ -321,7 +383,7 @@ export default function CalendarPage() {
                 </span>
 
                 <div className="mt-2 space-y-1">
-                  {dayPosts.slice(0, 3).map((post) => (
+              {dayPosts.slice(0, 3).map((post) => (
                     <motion.div
                       key={post.id}
                       initial={{ opacity: 0, scale: 0.95 }}
@@ -376,8 +438,8 @@ export default function CalendarPage() {
                 <button
                   className="absolute bottom-2 right-2 p-2 rounded-lg bg-primary opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 text-primary-foreground shadow-lg shadow-primary/40"
                   title="Schedule post"
-                  onClick={() => openComposer(day)}
-                >
+                    onClick={() => openComposer(day)}
+                  >
                   <Plus className="w-4 h-4" />
                 </button>
               </div>
@@ -386,12 +448,12 @@ export default function CalendarPage() {
         </div>
       </GlassCard>
 
-      {isLoading && (
+      {state.isLoading && (
         <div className="text-sm text-muted-foreground">Loading calendar data...</div>
       )}
 
-      {isComposerOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+      {state.isComposerOpen && (
+        <div className="fixed inset-0 z-50 bg-gray-950/60 backdrop-blur-sm flex items-center justify-center p-4">
           <GlassCard
             variant="morphism"
             className="w-full max-w-xl border border-white/10 p-6 space-y-4"
@@ -404,22 +466,22 @@ export default function CalendarPage() {
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => setIsComposerOpen(false)}
+                onClick={() => dispatch({ type: 'setComposerOpen', isComposerOpen: false })}
               >
                 <X className="w-4 h-4" />
               </Button>
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">
                 Channel
-              </label>
+              </div>
               <select
-                value={selectedAccountId ?? ''}
-                onChange={(e) => setSelectedAccountId(Number(e.target.value))}
+                value={state.selectedAccountId ?? ''}
+                onChange={(e) => dispatch({ type: 'setSelectedAccountId', selectedAccountId: Number(e.target.value) })}
                 className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
               >
-                {channels.map((channel) => (
+                {state.channels.map((channel) => (
                   <option key={channel.id} value={channel.id}>
                     {channel.name || channel.username || channel.platform}
                   </option>
@@ -428,12 +490,12 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">
                 Content
-              </label>
+              </div>
               <textarea
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
+                value={state.content}
+                onChange={(e) => dispatch({ type: 'setContent', content: e.target.value })}
                 rows={4}
                 className="w-full rounded-md border border-border bg-background p-3 text-sm resize-none"
                 placeholder="Write your post content..."
@@ -441,13 +503,13 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs text-muted-foreground uppercase tracking-wider">
+              <div className="text-xs text-muted-foreground uppercase tracking-wider">
                 Schedule Time
-              </label>
+              </div>
               <input
                 type="datetime-local"
-                value={scheduledAt}
-                onChange={(e) => setScheduledAt(e.target.value)}
+                value={state.scheduledAt}
+                onChange={(e) => dispatch({ type: 'setScheduledAt', scheduledAt: e.target.value })}
                 className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
               />
             </div>
@@ -455,13 +517,13 @@ export default function CalendarPage() {
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => setIsComposerOpen(false)}
-                disabled={isSaving}
+                onClick={() => dispatch({ type: 'setComposerOpen', isComposerOpen: false })}
+                disabled={state.isSaving}
               >
                 Cancel
               </Button>
-              <Button onClick={() => void handleCreatePost()} disabled={isSaving}>
-                {isSaving ? 'Saving...' : 'Create Post'}
+              <Button onClick={() => void handleCreatePost()} disabled={state.isSaving}>
+                {state.isSaving ? 'Saving...' : 'Create Post'}
               </Button>
             </div>
           </GlassCard>

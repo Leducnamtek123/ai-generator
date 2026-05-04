@@ -1,0 +1,680 @@
+﻿react-doctor v0.0.39
+
+[32mΓ£ö[39m Select projects to scan [2mΓÇ║[22m ai-generator-frontend
+[2mScanning C:\Users\leduc\Documents\ai-generator\frontend...[22m
+
+node.exe : - Detecting framework. Found [36mNext.js[39m.
+At line:1 char:1
++ & "C:\Program Files\nodejs/node.exe" "C:\Program Files\nodejs/node_mo ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (- Detecting fra...6mNext.js[39m.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+[32mΓêÜ[39m Detecting framework. Found [36mNext.js[39m.
+- Detecting React version. Found [36mReact ^19.2.1[39m.
+[32mΓêÜ[39m Detecting React version. Found [36mReact ^19.2.1[39m.
+- Detecting language. Found [36mTypeScript[39m.
+[32mΓêÜ[39m Detecting language. Found [36mTypeScript[39m.
+- Detecting React Compiler. [36mFound React Compiler.[39m
+[32mΓêÜ[39m Detecting React Compiler. [36mFound React Compiler.[39m
+- Found [36m302[39m source files.
+[32mΓêÜ[39m Found [36m302[39m source files.
+
+- Running lint checks...
+- Detecting dead code.
+[32mΓêÜ[39m Detecting dead code.
+- Running lint checks...
+[32mΓêÜ[39m Running lint checks.
+  [31mΓ£ù[39m React Compiler can't optimize this code[31m (32)[39m
+[2m    Error: Calling setState synchronously within an effect can trigger cascading renders
+    
+    Effects are intended to synchronize state between React and external systems such as manually updating the DOM, state management libraries, or other platform APIs. In general, the body of an effect should do one or both of the following:
+    * Update external systems with the latest state from React.
+    * Subscribe for updates from some external system, calling setState in a callback function when external state changes.
+    
+    Calling setState synchronously within an effect body causes cascading renders that can hurt performance, and is not recommended. (https://react.dev/learn/you-might-not-need-an-effect).[22m
+[2m  src/app/[locale]/(dashboard)/creator/sfx-generator/page.tsx:57[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:79[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:175[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:292[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:629[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:67[22m
+[2m  src/app/[locale]/(dashboard)/social/channels/page.tsx:79[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/members/page.tsx:48[22m
+[2m  src/app/[locale]/(dashboard)/creator/sketch-to-image/page.tsx:79[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:49[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:97[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/billing/page.tsx:33[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-upscaler/page.tsx:87[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:52[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/projects/page.tsx:40[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/invites/page.tsx:47[22m
+[2m  src/components/workflow/nodes/StickyNoteNode.tsx:40[22m
+[2m  src/components/workflow/nodes/CommentNode.tsx:79[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-upscaler/page.tsx:71[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:81[22m
+[2m  src/components/auth/ProtectedRoute.tsx:17[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:65[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:93[22m
+[2m  src/components/layouts/MobileNav.tsx:35[22m
+[2m  src/app/[locale]/(dashboard)/invites/[inviteId]/page.tsx:36[22m
+[2m  src/components/layouts/Sidebar.tsx:155[22m
+[2m  src/app/[locale]/(dashboard)/history/page.tsx:122[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:50[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:426[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:40[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:441[22m
+[2m  src/providers/SocketProvider.tsx:71[22m
+
+  [31mΓ£ù[39m React Compiler can't optimize this code[31m (37)[39m
+[2m    Todo: (BuildHIR::lowerStatement) Handle TryStatement with a finalizer ('finally') clause[22m
+[2m  src/app/[locale]/(dashboard)/social/dashboard/page.tsx:35[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:182[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:276[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:305[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:498[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:617[22m
+[2m  src/app/[locale]/(dashboard)/social/channels/page.tsx:63[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/members/page.tsx:36[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:78[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:146[22m
+[2m  src/app/[locale]/sign-in/[[...sign-in]]/page.tsx:31[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/billing/page.tsx:21[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-upscaler/page.tsx:144[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:33[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:59[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/projects/page.tsx:27[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/projects/page.tsx:48[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/invites/page.tsx:35[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/invites/page.tsx:55[22m
+[2m  src/app/[locale]/(dashboard)/orgs/new/page.tsx:33[22m
+[2m  src/app/[locale]/(dashboard)/invites/[inviteId]/page.tsx:24[22m
+[2m  src/app/[locale]/(dashboard)/invites/[inviteId]/page.tsx:41[22m
+[2m  src/app/[locale]/(dashboard)/invites/[inviteId]/page.tsx:54[22m
+[2m  src/components/saas/OrgSwitcher.tsx:30[22m
+[2m  src/app/[locale]/(dashboard)/history/page.tsx:90[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:118[22m
+[2m  src/app/[locale]/sign-up/[[...sign-up]]/page.tsx:34[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:143[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:414[22m
+[2m  src/providers/MSWProvider.tsx:14[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/page.tsx:51[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:51[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:185[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:331[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:423[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:469[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:45[22m
+
+  [31mΓ£ù[39m React Compiler can't optimize this code[31m (5)[39m
+[2m    Error: This value cannot be modified
+    
+    Modifying a variable defined outside a component or hook is not allowed. Consider using an effect.[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:325[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:505[22m
+[2m  src/app/[locale]/(dashboard)/social/channels/page.tsx:85[22m
+[2m  src/components/common/MediaPickerModal.tsx:44[22m
+[2m  src/components/saas/OrgSwitcher.tsx:26[22m
+
+  [31mΓ£ù[39m React Compiler can't optimize this code[31m (5)[39m
+[2m    Error: Cannot call impure function during render
+    
+    `Date.now` is an impure function. Calling an impure function can produce unstable results that update unpredictably when the component happens to re-render. (https://react.dev/reference/rules/components-and-hooks-must-be-pure#components-and-hooks-must-be-idempotent).[22m
+[2m  src/components/workflow/nodes/CommentNode.tsx:109[22m
+[2m  src/app/[locale]/(dashboard)/creator/clip-editor/page.tsx:42[22m
+[2m  src/app/[locale]/(dashboard)/creator/design-editor/page.tsx:73[22m
+[2m  src/app/[locale]/(dashboard)/creator/design-editor/page.tsx:76[22m
+[2m  src/app/[locale]/(dashboard)/creator/design-editor/page.tsx:77[22m
+
+  [31mΓ£ù[39m React Compiler can't optimize this code[31m (2)[39m
+[2m    Compilation Skipped: Use of incompatible library
+    
+    This API returns functions which cannot be memoized without leading to stale UI. To prevent this, by default React Compiler will skip memoizing this component/hook. However, you may see issues if values from this API are passed to other components/hooks that are memoized.[22m
+[2m  src/components/widgets/user-list/UserList.tsx:66[22m
+[2m  src/components/shared/data-table/data-table.tsx:37[22m
+
+  [31mΓ£ù[39m Component "NavItem" defined inside "MobileNav" ΓÇö creates new instance every render, destroying state[31m (4)[39m
+[2m    Move to a separate file or to module scope above the parent component[22m
+[2m  src/components/layouts/MobileNav.tsx:56[22m
+[2m  src/components/layouts/Sidebar.tsx:182[22m
+[2m  src/components/layouts/Sidebar.tsx:260[22m
+[2m  src/components/layouts/Sidebar.tsx:319[22m
+
+  [31mΓ£ù[39m React Compiler can't optimize this code
+[2m    Error: Cannot create components during render
+    
+    Components created during render will reset their state each time they are created. Declare components outside of render.[22m
+[2m  src/components/layouts/Sidebar.tsx:497[22m
+
+  [33mΓÜá[39m Enforce a clickable non-interactive element has at least one keyboard event listener.[33m (49)[39m
+[2m    Visible, non-interactive elements with click handlers must have one of `keyup`, `keydown`, or `keypress` listener.[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:162[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:206[22m
+[2m  src/components/workflow/HandleMenu.tsx:48[22m
+[2m  src/app/[locale]/(dashboard)/projects/[projectId]/page.tsx:164[22m
+[2m  src/components/workflow/nodes/MediaNode.tsx:109[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-editor/page.tsx:195[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:107[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/members/page.tsx:143[22m
+[2m  src/app/[locale]/(dashboard)/creator/mockup-generator/page.tsx:77[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:76[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-upscaler/page.tsx:205[22m
+[2m  src/components/workflow/nodes/GeneratorNode.tsx:179[22m
+[2m  src/components/workflow/nodes/GeneratorNode.tsx:234[22m
+[2m  src/components/workflow/nodes/StickerNode.tsx:46[22m
+[2m  src/components/workflow/NodeContextMenu.tsx:43[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/projects/page.tsx:188[22m
+[2m  src/components/workflow/nodes/CommentNode.tsx:269[22m
+[2m  src/components/widgets/user-list/UserList.tsx:34[22m
+[2m  src/components/widgets/user-list/UserList.tsx:46[22m
+[2m  src/components/workflow/nodes/VideoNode.tsx:219[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-upscaler/page.tsx:89[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:113[22m
+[2m  src/components/workflow/nodes/UpscaleNode.tsx:409[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-generator/page.tsx:254[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:82[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:96[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:177[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:191[22m
+[2m  src/components/layouts/MobileNav.tsx:78[22m
+[2m  src/components/saas/OrgSwitcher.tsx:94[22m
+[2m  src/components/layouts/MainLayout.tsx:255[22m
+[2m  src/app/[locale]/(dashboard)/creator/design-editor/page.tsx:251[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:81[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:70[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:145[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:203[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:217[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:258[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:298[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:323[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:337[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:509[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:168[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:211[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:189[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:209[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:692[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:701[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:172[22m
+
+  [33mΓÜá[39m A form label must be associated with a control.[33m (63)[39m
+[2m    Either give the label a `htmlFor` attribute with the id of the associated control, or wrap the label around the control.[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:168[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:180[22m
+[2m  src/components/workflow/panels/AssistantNodePanel.tsx:26[22m
+[2m  src/components/workflow/panels/AssistantNodePanel.tsx:41[22m
+[2m  src/components/workflow/panels/AssistantNodePanel.tsx:60[22m
+[2m  src/components/workflow/panels/AssistantNodePanel.tsx:83[22m
+[2m  src/components/workflow/nodes/InputNode.tsx:23[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:414[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:431[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:444[22m
+[2m  src/components/workflow/panels/UpscaleNodePanel.tsx:37[22m
+[2m  src/components/workflow/panels/UpscaleNodePanel.tsx:63[22m
+[2m  src/components/workflow/panels/TextNodePanel.tsx:25[22m
+[2m  src/components/workflow/panels/TextNodePanel.tsx:43[22m
+[2m  src/components/workflow/panels/TextNodePanel.tsx:59[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:130[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:134[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:138[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:153[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:156[22m
+[2m  src/components/workflow/panels/VideoGenNodePanel.tsx:25[22m
+[2m  src/components/workflow/panels/VideoGenNodePanel.tsx:39[22m
+[2m  src/components/workflow/panels/VideoGenNodePanel.tsx:58[22m
+[2m  src/components/workflow/panels/MediaNodePanel.tsx:30[22m
+[2m  src/components/workflow/panels/MediaNodePanel.tsx:54[22m
+[2m  src/components/workflow/panels/MediaNodePanel.tsx:73[22m
+[2m  src/app/[locale]/(dashboard)/creator/clip-editor/page.tsx:96[22m
+[2m  src/app/[locale]/(dashboard)/creator/clip-editor/page.tsx:100[22m
+[2m  src/app/[locale]/(dashboard)/creator/clip-editor/page.tsx:104[22m
+[2m  src/app/[locale]/(dashboard)/creator/clip-editor/page.tsx:108[22m
+[2m  src/components/workflow/panels/ImageGenNodePanel.tsx:28[22m
+[2m  src/components/workflow/panels/ImageGenNodePanel.tsx:44[22m
+[2m  src/components/workflow/panels/ImageGenNodePanel.tsx:63[22m
+[2m  src/components/workflow/panels/ImageGenNodePanel.tsx:78[22m
+[2m  src/components/workflow/panels/ImageGenNodePanel.tsx:118[22m
+[2m  src/components/studio/AIStudio.tsx:16[22m
+[2m  src/components/studio/AIStudio.tsx:24[22m
+[2m  src/components/studio/AIStudio.tsx:41[22m
+[2m  src/components/studio/AIStudio.tsx:49[22m
+[2m  src/app/[locale]/(dashboard)/orgs/new/page.tsx:81[22m
+[2m  src/app/[locale]/(dashboard)/orgs/new/page.tsx:95[22m
+[2m  src/app/[locale]/(dashboard)/orgs/new/page.tsx:110[22m
+[2m  src/app/[locale]/(dashboard)/orgs/new/page.tsx:132[22m
+[2m  src/app/[locale]/(dashboard)/orgs/new/page.tsx:147[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:230[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:239[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:302[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:183[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:193[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:203[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:174[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/page.tsx:160[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:223[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:244[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:259[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:270[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:282[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:355[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:364[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:380[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:108[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:120[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:167[22m
+
+  [33mΓÜá[39m The `autoFocus` attribute is found here, which can cause usability issues for sighted and non-sighted users.[33m (6)[39m
+[2m    Remove the `autoFocus` attribute.[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:176[22m
+[2m  src/components/workflow/NodeSelector.tsx:75[22m
+[2m  src/components/projects/create-workflow-dialog.tsx:77[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:308[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:189[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:182[22m
+
+  [33mΓÜá[39m Static HTML elements with event handlers require a role.[33m (49)[39m
+[2m    Add a role attribute to this element, or use a semantic HTML element instead.[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:162[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:206[22m
+[2m  src/components/workflow/HandleMenu.tsx:48[22m
+[2m  src/app/[locale]/(dashboard)/projects/[projectId]/page.tsx:164[22m
+[2m  src/components/workflow/nodes/MediaNode.tsx:109[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-editor/page.tsx:195[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:107[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/members/page.tsx:143[22m
+[2m  src/app/[locale]/(dashboard)/creator/mockup-generator/page.tsx:77[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:76[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-upscaler/page.tsx:205[22m
+[2m  src/components/workflow/nodes/GeneratorNode.tsx:234[22m
+[2m  src/components/workflow/nodes/StickerNode.tsx:46[22m
+[2m  src/components/workflow/NodeContextMenu.tsx:43[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/projects/page.tsx:188[22m
+[2m  src/components/workflow/nodes/CommentNode.tsx:269[22m
+[2m  src/components/widgets/user-list/UserList.tsx:34[22m
+[2m  src/components/widgets/user-list/UserList.tsx:46[22m
+[2m  src/components/workflow/nodes/VideoNode.tsx:219[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-upscaler/page.tsx:89[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:113[22m
+[2m  src/components/workflow/nodes/UpscaleNode.tsx:409[22m
+[2m  src/components/common/ImageComparison.tsx:60[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-generator/page.tsx:254[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:82[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:96[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:177[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:191[22m
+[2m  src/components/layouts/MobileNav.tsx:78[22m
+[2m  src/components/saas/OrgSwitcher.tsx:94[22m
+[2m  src/components/layouts/MainLayout.tsx:255[22m
+[2m  src/app/[locale]/(dashboard)/creator/design-editor/page.tsx:251[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:81[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:70[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:145[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:203[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:217[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:258[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:298[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:323[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:337[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:509[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:168[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:211[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:189[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:209[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:692[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:701[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:172[22m
+
+  [33mΓÜá[39m Component "ProjectsPage" has 5 useState calls ΓÇö consider useReducer for related state[33m (34)[39m
+[2m    Group related state: `const [state, dispatch] = useReducer(reducer, { field1, field2, ... })`[22m
+[2m  src/app/[locale]/(dashboard)/projects/page.tsx:26[22m
+[2m  src/app/[locale]/(dashboard)/creator/sfx-generator/page.tsx:31[22m
+[2m  src/app/[locale]/(dashboard)/creator/voice-generator/page.tsx:66[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:263[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-editor/page.tsx:73[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:44[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/members/page.tsx:22[22m
+[2m  src/app/[locale]/(dashboard)/creator/mockup-generator/page.tsx:36[22m
+[2m  src/app/[locale]/(dashboard)/creator/sketch-to-image/page.tsx:43[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:29[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:58[22m
+[2m  src/components/workflow/nodes/GeneratorNode.tsx:61[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/settings/page.tsx:14[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/projects/page.tsx:13[22m
+[2m  src/app/[locale]/(dashboard)/orgs/[slug]/invites/page.tsx:20[22m
+[2m  src/app/[locale]/(dashboard)/creator/clip-editor/page.tsx:24[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-upscaler/page.tsx:27[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:57[22m
+[2m  src/components/workflow/nodes/UpscaleNode.tsx:75[22m
+[2m  src/components/common/MediaPickerModal.tsx:28[22m
+[2m  src/app/[locale]/(dashboard)/creator/music-generator/page.tsx:72[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:23[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:73[22m
+[2m  src/app/[locale]/(dashboard)/invites/[inviteId]/page.tsx:11[22m
+[2m  src/app/[locale]/(dashboard)/history/page.tsx:81[22m
+[2m  src/app/[locale]/(dashboard)/creator/icon-generator/page.tsx:61[22m
+[2m  src/app/[locale]/(dashboard)/creator/design-editor/page.tsx:58[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:27[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:29[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:46[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-editor/page.tsx:61[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:121[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/page.tsx:38[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:406[22m
+
+  [33mΓÜá[39m Import "m" with LazyMotion instead of "motion" ΓÇö saves ~30kb in bundle size[33m (9)[39m
+[2m    Use `import { LazyMotion, m } from "framer-motion"` with `domAnimation` features ΓÇö saves ~30kb[22m
+[2m  src/app/[locale]/(dashboard)/social/inbox/page.tsx:21[22m
+[2m  src/app/[locale]/(dashboard)/social/dashboard/page.tsx:18[22m
+[2m  src/app/[locale]/(dashboard)/social/channels/page.tsx:17[22m
+[2m  src/app/[locale]/page.tsx:4[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:15[22m
+[2m  src/components/common/NotFoundUI.tsx:4[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/page.tsx:23[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/social-feed-preview.tsx:19[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:15[22m
+
+  [33mΓÜá[39m animate-bounce feels dated and tacky ΓÇö use a subtle ease-out transform for natural deceleration
+[2m    Use `cubic-bezier(0.16, 1, 0.3, 1)` (ease-out-expo) for natural deceleration ΓÇö objects in the real world don't bounce[22m
+[2m  src/app/[locale]/(dashboard)/social/inbox/page.tsx:217[22m
+
+  [33mΓÜá[39m 3 setState calls in a single useEffect ΓÇö consider using useReducer or deriving state[33m (11)[39m
+[2m    Combine into useReducer: `const [state, dispatch] = useReducer(reducer, initialState)`[22m
+[2m  src/app/[locale]/(dashboard)/creator/sfx-generator/page.tsx:55[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:174[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:65[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:47[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-upscaler/page.tsx:69[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:79[22m
+[2m  src/app/[locale]/(dashboard)/creator/lip-sync/page.tsx:63[22m
+[2m  src/components/layouts/Sidebar.tsx:136[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:48[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/page.tsx:49[22m
+[2m  src/providers/SocketProvider.tsx:25[22m
+
+  [33mΓÜá[39m Component "VoiceGeneratorPage" is 328 lines ΓÇö consider breaking it into smaller focused components[33m (15)[39m
+[2m    Extract logical sections into focused components: `<UserHeader />`, `<UserActions />`, etc.[22m
+[2m  src/app/[locale]/(dashboard)/creator/voice-generator/page.tsx:66[22m
+[2m  src/components/icons/ZustandIcon.tsx:3[22m
+[2m  src/components/icons/TanStackIcon.tsx:3[22m
+[2m  src/app/[locale]/page.tsx:33[22m
+[2m  src/app/[locale]/(dashboard)/creator/sketch-to-image/page.tsx:43[22m
+[2m  src/app/[locale]/(dashboard)/social/calendar/page.tsx:58[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-upscaler/page.tsx:64[22m
+[2m  src/components/workflow/nodes/UpscaleNode.tsx:75[22m
+[2m  src/components/common/MediaPickerModal.tsx:23[22m
+[2m  src/app/[locale]/(dashboard)/creator/music-generator/page.tsx:72[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:73[22m
+[2m  src/components/layouts/Sidebar.tsx:128[22m
+[2m  src/components/layouts/MainLayout.tsx:31[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:46[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:406[22m
+
+  [33mΓÜá[39m Array index "i" used as key ΓÇö causes bugs when list is reordered or filtered[33m (14)[39m
+[2m    Use a stable unique identifier: `key={item.id}` or `key={item.slug}` ΓÇö index keys break on reorder/filter[22m
+[2m  src/app/[locale]/(dashboard)/dashboard/page.tsx:63[22m
+[2m  src/app/[locale]/(dashboard)/creator/mockup-generator/page.tsx:152[22m
+[2m  src/components/upscaler/PersonalGallery.tsx:36[22m
+[2m  src/components/upscaler/PersonalGallery.tsx:59[22m
+[2m  src/components/ui/slider.tsx:55[22m
+[2m  src/app/[locale]/(dashboard)/creator/ai-assistant/page.tsx:231[22m
+[2m  src/components/ui/field.tsx:203[22m
+[2m  src/app/[locale]/(dashboard)/creator/icon-generator/page.tsx:162[22m
+[2m  src/app/[locale]/(dashboard)/creator/icon-generator/page.tsx:242[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:145[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:223[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:146[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:144[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:173[22m
+
+  [33mΓÜá[39m Use next/image instead of <img> ΓÇö provides automatic optimization, lazy loading, and responsive srcset[33m (72)[39m
+[2m    `import Image from 'next/image'` ΓÇö provides automatic WebP/AVIF, lazy loading, and responsive srcset[22m
+[2m  src/app/[locale]/(dashboard)/dashboard/page.tsx:81[22m
+[2m  src/app/[locale]/(dashboard)/projects/[projectId]/page.tsx:170[22m
+[2m  src/components/workflow/nodes/MediaNode.tsx:129[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-editor/page.tsx:210[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:114[22m
+[2m  src/app/[locale]/(dashboard)/creator/bg-remover/page.tsx:303[22m
+[2m  src/components/dashboard/ProjectGrid.tsx:42[22m
+[2m  src/app/[locale]/page.tsx:79[22m
+[2m  src/app/[locale]/page.tsx:205[22m
+[2m  src/app/[locale]/page.tsx:308[22m
+[2m  src/app/[locale]/page.tsx:372[22m
+[2m  src/app/[locale]/(dashboard)/creator/mockup-generator/page.tsx:78[22m
+[2m  src/app/[locale]/(dashboard)/creator/mockup-generator/page.tsx:153[22m
+[2m  src/app/[locale]/(dashboard)/creator/sketch-to-image/page.tsx:342[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:77[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-extender/page.tsx:151[22m
+[2m  src/components/workflow/panels/UpscaleNodePanel.tsx:27[22m
+[2m  src/components/dashboard/GettingStartedCard.tsx:21[22m
+[2m  src/app/[locale]/sign-in/[[...sign-in]]/page.tsx:63[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-upscaler/page.tsx:210[22m
+[2m  src/components/workflow/nodes/GeneratorNode.tsx:179[22m
+[2m  src/components/workflow/nodes/GeneratorNode.tsx:235[22m
+[2m  src/components/editor/ImageEditorModal.tsx:58[22m
+[2m  src/components/workflow/VideoEditorModal.tsx:108[22m
+[2m  src/components/workflow/nodes/CameraNode.tsx:93[22m
+[2m  src/components/workflow/nodes/CameraNode.tsx:100[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:118[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:238[22m
+[2m  src/app/[locale]/(dashboard)/creator/camera-change/page.tsx:257[22m
+[2m  src/components/workflow/ImageEditorModal.tsx:48[22m
+[2m  src/components/workflow/nodes/UpscaleNode.tsx:189[22m
+[2m  src/components/workflow/nodes/UpscaleNode.tsx:413[22m
+[2m  src/components/studio/AIStudio.tsx:76[22m
+[2m  src/components/common/ImageComparison.tsx:67[22m
+[2m  src/components/common/ImageComparison.tsx:79[22m
+[2m  src/components/common/MediaPickerModal.tsx:232[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-generator/page.tsx:165[22m
+[2m  src/app/[locale]/(dashboard)/creator/image-generator/page.tsx:257[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:182[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:196[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:384[22m
+[2m  src/app/[locale]/(dashboard)/creator/video-generator/page.tsx:413[22m
+[2m  src/components/layouts/MobileNav.tsx:95[22m
+[2m  src/components/layouts/Sidebar.tsx:421[22m
+[2m  src/components/layouts/Sidebar.tsx:441[22m
+[2m  src/components/layouts/Sidebar.tsx:449[22m
+[2m  src/components/layouts/header/Header.tsx:11[22m
+[2m  src/app/[locale]/(dashboard)/history/page.tsx:226[22m
+[2m  src/app/[locale]/(dashboard)/creator/ai-assistant/page.tsx:232[22m
+[2m  src/components/gallery/TemplateCard.tsx:45[22m
+[2m  src/app/[locale]/(dashboard)/creator/icon-generator/page.tsx:244[22m
+[2m  src/components/workflow/nodes/OutputNode.tsx:19[22m
+[2m  src/components/gallery/MasonryGrid.tsx:21[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:82[22m
+[2m  src/app/[locale]/(dashboard)/creator/skin-enhancer/page.tsx:164[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:71[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:141[22m
+[2m  src/app/[locale]/(dashboard)/creator/variations/page.tsx:147[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:232[22m
+[2m  src/app/[locale]/(dashboard)/creative-studio/page.tsx:244[22m
+[2m  src/app/[locale]/sign-up/[[...sign-up]]/page.tsx:56[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:95[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:330[22m
+[2m  src/app/[locale]/(dashboard)/workflows/page.tsx:218[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:152[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:212[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:100[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:109[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:539[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/social-feed-preview.tsx:66[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/social-feed-preview.tsx:112[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/social-feed-preview.tsx:147[22m
+
+  [33mΓÜá[39m "recharts" is a heavy library ΓÇö use React.lazy() or next/dynamic for code splitting
+[2m    Use `const Component = dynamic(() => import('library'), { ssr: false })` from next/dynamic or React.lazy()[22m
+[2m  src/app/[locale]/(dashboard)/social/dashboard/page.tsx:19[22m
+
+  [33mΓÜá[39m useSearchParams() requires a <Suspense> boundary ΓÇö without one, the entire page bails out to client-side rendering[33m (2)[39m
+[2m    Wrap the component using useSearchParams: `<Suspense fallback={<Skeleton />}><SearchComponent /></Suspense>`[22m
+[2m  src/app/[locale]/(dashboard)/settings/page.tsx:53[22m
+[2m  src/app/[locale]/(dashboard)/stock/page.tsx:29[22m
+
+  [33mΓÜá[39m useState initialized from prop "activeTool" ΓÇö if this value should stay in sync with the prop, derive it during render instead
+[2m    Remove useState and compute the value inline: `const value = transform(propName)`[22m
+[2m  src/components/workflow/FloatingToolbar.tsx:50[22m
+
+  [33mΓÜá[39m Pure black background (bg-black) looks harsh ΓÇö use a near-black tinted toward your brand hue (e.g. bg-gray-950)[33m (5)[39m
+[2m    Tint the background slightly toward your brand hue ΓÇö e.g. `#0a0a0f` or Tailwind's `bg-gray-950`. Pure black looks harsh on modern displays[22m
+[2m  src/components/workflow/NodeToolbar.tsx:79[22m
+[2m  src/components/workflow/VideoEditorModal.tsx:59[22m
+[2m  src/components/gallery/MasonryGrid.tsx:48[22m
+[2m  src/components/gallery/MasonryGrid.tsx:62[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/social-feed-preview.tsx:91[22m
+
+  [33mΓÜá[39m router.push() in useEffect ΓÇö use redirect() from next/navigation or handle navigation in an event handler[33m (3)[39m
+[2m    Avoid redirects inside useEffect. Use an event handler, middleware, or server-side redirect (App Router: redirect() from next/navigation; Pages Router: getServerSideProps redirect)[22m
+[2m  src/app/[locale]/page.tsx:40[22m
+[2m  src/components/auth/ProtectedRoute.tsx:23[22m
+[2m  src/components/layouts/MainLayout.tsx:51[22m
+
+  [33mΓÜá[39m Gradient text (bg-clip-text + bg-gradient) is decorative rather than meaningful ΓÇö a common AI tell. Use solid colors for text[33m (3)[39m
+[2m    Use solid text colors for readability. If you need emphasis, use font weight, size, or a distinct color instead of gradients[22m
+[2m  src/app/[locale]/page.tsx:122[22m
+[2m  src/components/common/NotFoundUI.tsx:24[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/page.tsx:455[22m
+
+  [33mΓÜá[39m Inline render function "renderContent()" ΓÇö extract to a separate component for proper reconciliation
+[2m    Extract to a named component: `const ListItem = ({ item }) => <div>{item.name}</div>`[22m
+[2m  src/components/workflow/PropertiesPanel.tsx:117[22m
+
+  [33mΓÜá[39m "touchmove" listener without { passive: true } ΓÇö blocks scrolling performance[33m (2)[39m
+[2m    Add `{ passive: true }` as the third argument: `addEventListener('scroll', handler, { passive: true })`[22m
+[2m  src/components/common/ImageComparison.tsx:47[22m
+[2m  src/components/common/ImageComparison.tsx:48[22m
+
+  [33mΓÜá[39m useEffect simulating an event handler ΓÇö move logic to an actual event handler instead[33m (4)[39m
+[2m    Move the conditional logic into onClick, onChange, or onSubmit handlers directly[22m
+[2m  src/components/workflow/nodes/BaseNode.tsx:29[22m
+[2m  src/components/common/MediaPickerModal.tsx:42[22m
+[2m  src/components/layouts/MainLayout.tsx:55[22m
+[2m  src/app/[locale]/(dashboard)/visual-flow/projects/[id]/page.tsx:441[22m
+
+  [33mΓÜá[39m useEffect(setState, []) on mount causes a flash ΓÇö consider useSyncExternalStore or suppressHydrationWarning
+[2m    Use `useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot)` or add `suppressHydrationWarning` to the element[22m
+[2m  src/components/auth/ProtectedRoute.tsx:16[22m
+
+  [33mΓÜá[39m Default prop value [] creates a new array reference every render ΓÇö extract to a module-level constant
+[2m    Move to module scope: `const EMPTY_ITEMS: Item[] = []` then use as the default value[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/social-feed-preview.tsx:27[22m
+
+  [33mΓÜá[39m .map().filter(Boolean) iterates twice ΓÇö use .flatMap() to transform and filter in a single pass
+[2m    Use `.flatMap(item => condition ? [value] : [])` ΓÇö transforms and filters in a single pass instead of creating an intermediate array[22m
+[2m  src/app/[locale]/(dashboard)/social/publish/components/ai-assistant-modal.tsx:66[22m
+
+  [33mΓÜá[39m Unused file[33m (64)[39m
+[2m    This file is not imported by any other file in the project.[22m
+[2m  src\constants\date.ts[22m
+[2m  src\data\features.data.ts[22m
+[2m  src\data\index.ts[22m
+[2m  src\data\stack.data.ts[22m
+[2m  src\hooks\index.ts[22m
+[2m  src\hooks\useOrganization.ts[22m
+[2m  src\hooks\useUsers.ts[22m
+[2m  src\lib\cookie-client.ts[22m
+[2m  src\lib\date.ts[22m
+[2m  src\lib\locale.ts[22m
+[2m  src\lib\upload.ts[22m
+[2m  src\schemas\auth.schema.ts[22m
+[2m  src\schemas\index.ts[22m
+[2m  src\stores\counter.store.ts[22m
+[2m  src\stores\index.ts[22m
+[2m  src\types\data-table.type.ts[22m
+[2m  src\types\index.ts[22m
+[2m  src\types\user.type.ts[22m
+[2m  src\components\common\ImageComparison.tsx[22m
+[2m  src\components\dashboard\GettingStartedCard.tsx[22m
+[2m  src\components\dashboard\ProjectGrid.tsx[22m
+[2m  src\components\dashboard\QuickActions.tsx[22m
+[2m  src\components\editor\ImageEditorModal.tsx[22m
+[2m  src\components\projects\create-project-dialog.tsx[22m
+[2m  src\components\layouts\index.ts[22m
+[2m  src\components\studio\AIStudio.tsx[22m
+[2m  src\components\icons\index.ts[22m
+[2m  src\components\icons\ReactHookFormIcon.tsx[22m
+[2m  src\components\icons\ReactIcon.tsx[22m
+[2m  src\components\icons\ShadcnIcon.tsx[22m
+[2m  src\components\icons\TailwindCSSIcon.tsx[22m
+[2m  src\components\icons\TanStackIcon.tsx[22m
+[2m  src\components\icons\TypeScriptIcon.tsx[22m
+[2m  src\components\icons\ZodIcon.tsx[22m
+[2m  src\components\icons\ZustandIcon.tsx[22m
+[2m  src\components\widgets\index.ts[22m
+[2m  src\components\workflow\WorkflowTemplates.ts[22m
+[2m  src\lib\helpers\array.ts[22m
+[2m  src\lib\helpers\env.ts[22m
+[2m  src\lib\helpers\index.ts[22m
+[2m  src\components\layouts\footer\Footer.tsx[22m
+[2m  src\components\layouts\footer\index.ts[22m
+[2m  src\components\layouts\header\Header.tsx[22m
+[2m  src\components\layouts\header\index.ts[22m
+[2m  src\components\shared\data-table\index.ts[22m
+[2m  src\components\widgets\auth-form\AuthForm.tsx[22m
+[2m  src\components\widgets\auth-form\index.ts[22m
+[2m  src\components\widgets\features-list\FeaturesList.tsx[22m
+[2m  src\components\widgets\features-list\index.ts[22m
+[2m  src\components\widgets\dashboard\Dashboard.tsx[22m
+[2m  src\components\widgets\dashboard\index.ts[22m
+[2m  src\components\widgets\hero\Hero.tsx[22m
+[2m  src\components\widgets\hero\index.ts[22m
+[2m  src\components\widgets\locale-switcher\index.ts[22m
+[2m  src\components\widgets\locale-switcher\LocaleSwitcher.tsx[22m
+[2m  src\components\widgets\showcase\index.ts[22m
+[2m  src\components\widgets\showcase\Showcase.tsx[22m
+[2m  src\components\widgets\stack-list\index.ts[22m
+[2m  src\components\widgets\stack-list\StackList.tsx[22m
+[2m  src\components\widgets\theme-switcher\index.ts[22m
+[2m  src\components\widgets\theme-switcher\ThemeSwitcher.tsx[22m
+[2m  src\components\widgets\user-list\index.ts[22m
+[2m  src\components\widgets\user-list\UserList.tsx[22m
+[2m  src\components\workflow\services\workflowApi.ts[22m
+
+  [33mΓÜá[39m Unused export: signIn[33m (27)[39m
+[2m  src\auth.ts[22m
+[2m  src\providers\index.ts[22m
+[2m  src\i18n\navigation.ts[22m
+[2m  src\components\layouts\Sidebar.tsx[22m
+[2m  src\lib\utils.ts[22m
+[2m  src\lib\api.ts[22m
+[2m  src\hooks\queries\useDashboardStats.ts[22m
+[2m  src\hooks\queries\useOrganizations.ts[22m
+[2m  src\constants\i18n.ts[22m
+[2m  src\lib\api\generations.ts[22m
+[2m  src\lib\api\assets.ts[22m
+[2m  src\components\workflow\NodePanels.tsx[22m
+[2m  src\lib\api\credits.ts[22m
+
+  [33mΓÜá[39m Unused type: CheckoutResponse[33m (53)[39m
+[2m  src\services\paymentApi.ts[22m
+[2m  src\services\socialHubApi.ts[22m
+[2m  src\services\visualFlowApi.ts[22m
+[2m  src\stores\template-store.ts[22m
+[2m  src\services\orgApi.ts[22m
+[2m  src\stores\org-store.ts[22m
+[2m  src\services\projectApi.ts[22m
+[2m  src\components\workflow\types.ts[22m
+[2m  src\services\dashboardApi.ts[22m
+[2m  src\lib\api\generations.ts[22m
+[2m  src\lib\api\assets.ts[22m
+[2m  src\components\workflow\NodeInterfaces.ts[22m
+[2m  src\lib\api\credits.ts[22m
+
+  [2mΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ[22m
+  [2mΓöé[22m [33mΓöîΓöÇΓöÇΓöÇΓöÇΓöÇΓöÉ[39m                                                    [2mΓöé[22m
+  [2mΓöé[22m [33mΓöé ΓÇó ΓÇó Γöé[39m                                                    [2mΓöé[22m
+  [2mΓöé[22m [33mΓöé  ΓöÇ  Γöé[39m                                                    [2mΓöé[22m
+  [2mΓöé[22m [33mΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ[39m                                                    [2mΓöé[22m
+  [2mΓöé[22m React Doctor [2m(www.react.doctor)[22m                            [2mΓöé[22m
+  [2mΓöé[22m                                                            [2mΓöé[22m
+  [2mΓöé[22m [33m70[39m / 100  [33mNeeds work[39m                                       [2mΓöé[22m
+  [2mΓöé[22m                                                            [2mΓöé[22m
+  [2mΓöé[22m [33mΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûêΓûê[39m[2mΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæΓûæ[22m         [2mΓöé[22m
+  [2mΓöé[22m                                                            [2mΓöé[22m
+  [2mΓöé[22m [31mΓ£ù 86 errors[39m  [33mΓÜá 492 warnings[39m  [2macross 185/302 files[22m  [2min 4.4s[22m [2mΓöé[22m
+  [2mΓööΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÇΓöÿ[22m
+
+[2m  Full diagnostics written to C:\Users\leduc\AppData\Local\Temp\react-doctor-9ad7909c-eaf7-4ba2-b86e-3bc0b8497343[22m
+
+[2m  Share your results: [36mhttps://www.react.doctor/share?p=ai-generator-frontend&s=70&e=86&w=492&f=185[39m[22m
+

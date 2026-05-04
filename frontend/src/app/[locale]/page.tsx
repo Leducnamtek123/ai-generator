@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image';
 import { motion, AnimatePresence, useScroll, useTransform, useSpring, Variants } from 'framer-motion';
 import {
   Sparkles, Search, ImageIcon, Video, Mic, LayoutGrid,
@@ -75,8 +76,8 @@ export default function LandingPage() {
             animate={{ x: 0, opacity: 1 }}
             className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-blue-500/20 p-1 bg-white/5 border border-white/10">
-              <img src="/logo.svg" alt="PaintAI Logo" className="w-full h-full object-contain" />
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden shadow-lg shadow-blue-500/20 p-1 bg-white/5 border border-white/10">
+              <Image src="/logo.svg" alt="PaintAI Logo" fill className="object-contain" sizes="40px" />
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-black tracking-tighter uppercase leading-none">PaintAI</span>
@@ -130,7 +131,7 @@ export default function LandingPage() {
           <motion.div variants={itemVariants} className="max-w-3xl mx-auto">
             <div className="relative group p-1 rounded-[2rem] bg-gradient-to-br from-white/10 to-white/5 border border-white/10 backdrop-blur-2xl shadow-2xl">
               <div className="flex items-center bg-white rounded-[1.8rem] h-16 md:h-20 p-2 overflow-hidden">
-                <div className="hidden md:flex items-center gap-2 px-6 py-3 bg-black/5 hover:bg-black/10 rounded-2xl cursor-pointer text-black transition-colors shrink-0">
+                <div className="hidden md:flex items-center gap-2 px-6 py-3 bg-gray-950/5 hover:bg-gray-950/10 rounded-2xl cursor-pointer text-black transition-colors shrink-0">
                   <ImageIcon className="w-4 h-4" />
                   <span className="text-sm font-black uppercase tracking-wider">Assets</span>
                 </div>
@@ -202,10 +203,12 @@ export default function LandingPage() {
                   <source src={asset.url} type="video/mp4" />
                 </video>
               ) : (
-                <img
+                <Image
                   src={asset.url}
                   alt={asset.title}
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                  fill
+                  className="object-cover transition-transform duration-1000 group-hover:scale-110"
+                  sizes="(max-width: 1024px) 50vw, 25vw"
                 />
               )}
 
@@ -213,7 +216,7 @@ export default function LandingPage() {
               <motion.div
                 initial={false}
                 animate={{ opacity: isHovered === asset.id ? 1 : 0 }}
-                className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-10 flex flex-col justify-between p-6"
+                className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/20 to-transparent z-10 flex flex-col justify-between p-6"
               >
                 <div className="flex justify-end gap-2">
                   <button className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md border border-white/10 flex items-center justify-center hover:bg-white/20 transition-colors">
@@ -240,7 +243,7 @@ export default function LandingPage() {
 
               {/* Asset Indicators (Constant) */}
               {asset.type === 'video' && (
-                <div className="absolute top-4 left-4 z-20 w-8 h-8 rounded-full bg-black/40 backdrop-blur-md flex items-center justify-center group-hover:opacity-0 transition-opacity">
+                <div className="absolute top-4 left-4 z-20 w-8 h-8 rounded-full bg-gray-950/40 backdrop-blur-md flex items-center justify-center group-hover:opacity-0 transition-opacity">
                   <Play className="w-3 h-3 text-white fill-white" />
                 </div>
               )}
@@ -303,9 +306,9 @@ export default function LandingPage() {
               <motion.div
                 animate={{ y: [0, -20, 0] }}
                 transition={{ repeat: Infinity, duration: 6, ease: "easeInOut" }}
-                className="aspect-[3/4] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl"
+                className="relative aspect-[3/4] rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl"
               >
-                <img src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&q=80&w=800" className="w-full h-full object-cover" alt="" />
+                <Image src="https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?auto=format&fit=crop&q=80&w=800" alt="" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
               </motion.div>
               <motion.div
                 animate={{ y: [0, 20, 0] }}
@@ -368,8 +371,8 @@ export default function LandingPage() {
       <footer className="max-w-7xl mx-auto px-6 py-20 border-t border-white/5 opacity-40">
         <div className="flex flex-col md:flex-row justify-between items-center gap-10">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-white/5 border border-white/10">
-              <img src="/logo.svg" alt="Logo" className="w-full h-full object-contain" />
+            <div className="relative w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-white/5 border border-white/10">
+              <Image src="/logo.svg" alt="Logo" fill className="object-contain" sizes="32px" />
             </div>
             <div className="flex flex-col">
               <span className="font-black text-lg tracking-tighter uppercase leading-none">PaintAI</span>

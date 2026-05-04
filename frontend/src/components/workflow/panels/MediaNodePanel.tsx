@@ -27,8 +27,8 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
 
             {(nodeData.mediaUrl as string) && (
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/60">Current Media</label>
-                    <div className="p-3 bg-black/20 rounded-lg space-y-2">
+                    <div className="text-xs font-medium text-white/60">Current Media</div>
+                    <div className="p-3 bg-gray-950/20 rounded-lg space-y-2">
                         <p className="text-xs text-white truncate">{(nodeData.mediaName as string) || ''}</p>
                         <div className="flex gap-2">
                             <Button variant="ghost" size="sm" className="flex-1 gap-1 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors">
@@ -51,7 +51,7 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
             )}
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Media Type Filter</label>
+                <div className="text-xs font-medium text-white/60">Media Type Filter</div>
                 <div className="grid grid-cols-3 gap-2">
                     {[FileMediaType.ANY, FileMediaType.IMAGE, FileMediaType.VIDEO].map((type) => (
                         <Button
@@ -70,11 +70,11 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
             </div>
             
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Max File Size</label>
+                <div className="text-xs font-medium text-white/60">Max File Size</div>
                 <select
                     value={(nodeData.maxSize as string) || '10mb'}
                     onChange={(e) => onChange('maxSize', e.target.value)}
-                    className="w-full h-10 bg-black/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none"
+                    className="w-full h-10 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none"
                 >
                     <option value="5mb" className="bg-[#1A1B1F]">5 MB</option>
                     <option value="10mb" className="bg-[#1A1B1F]">10 MB</option>

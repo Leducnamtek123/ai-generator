@@ -1,6 +1,6 @@
 import { api } from '@/lib/api';
 
-export interface DashboardStats {
+interface DashboardStats {
   totalWorkflows: number;
   totalProjects: number;
   creditBalance: number;

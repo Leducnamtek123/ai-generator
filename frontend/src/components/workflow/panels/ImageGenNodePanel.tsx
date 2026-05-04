@@ -25,11 +25,11 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">AI Model</label>
+                <div className="text-xs font-medium text-white/60">AI Model</div>
                 <select
                     value={(nodeData.model as string) || 'seedream'}
                     onChange={(e) => onChange('model', e.target.value)}
-                    className="w-full h-11 bg-black/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 appearance-none"
+                    className="w-full h-11 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 appearance-none"
                 >
                     <option value="seedream">Seedream 4 4K ⭐</option>
                     <option value="flux">Flux Schnell</option>
@@ -41,7 +41,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Aspect Ratio</label>
+                <div className="text-xs font-medium text-white/60">Aspect Ratio</div>
                 <div className="grid grid-cols-4 gap-2">
                     {['1:1', '4:3', '16:9', '9:16'].map((ratio) => (
                         <Button
@@ -60,7 +60,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Quality</label>
+                <div className="text-xs font-medium text-white/60">Quality</div>
                 <div className="grid grid-cols-3 gap-2">
                     {['standard', 'hd', '4k'].map((quality) => (
                         <button
@@ -75,11 +75,11 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                <label className="text-xs font-medium text-white/60">Negative Prompt (Optional)</label>
+                <div className="text-xs font-medium text-white/60">Negative Prompt (Optional)</div>
                 <textarea
                     value={(nodeData.negativePrompt as string) || ''}
                     onChange={(e) => onChange('negativePrompt', e.target.value)}
-                    className="w-full h-20 bg-black/20 border border-white/10 rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none"
+                    className="w-full h-20 bg-gray-950/20 border border-white/10 rounded-lg p-3 text-xs text-white focus:outline-none focus:ring-1 focus:ring-blue-500/50 resize-none"
                     placeholder="What to avoid in generation..."
                 />
             </div>
@@ -115,8 +115,8 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
 
             {(nodeData.usedPrompt as string) && (
                 <div className="space-y-2">
-                    <label className="text-xs font-medium text-white/60">Last Used Prompt</label>
-                    <div className="p-3 bg-black/20 rounded-lg text-xs text-white/60 max-h-20 overflow-y-auto">
+                    <div className="text-xs font-medium text-white/60">Last Used Prompt</div>
+                    <div className="p-3 bg-gray-950/20 rounded-lg text-xs text-white/60 max-h-20 overflow-y-auto">
                         {nodeData.usedPrompt as string}
                     </div>
                 </div>

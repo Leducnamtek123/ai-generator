@@ -22,13 +22,8 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    useEffect(() => {
-        loadOrgs();
-    }, []);
-
     const loadOrgs = async () => {
         try {
-            setLoading(true);
             const orgs = await orgApi.list();
             setOrganizations(orgs);
             if (!currentOrg && orgs.length > 0) {
@@ -41,10 +36,13 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
             }
         } catch (err) {
             console.error('Failed to load organizations:', err);
-        } finally {
-            setLoading(false);
         }
+        setLoading(false);
     };
+
+    useEffect(() => {
+        queueMicrotask(() => { void loadOrgs(); });
+    }, []);
 
     const selectOrg = async (org: Organization) => {
         setCurrentOrg(org);
@@ -91,7 +89,12 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
 
             {isOpen && (
                 <>
-                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
+                    <button
+                        type="button"
+                        aria-label="Close org switcher"
+                        className="fixed inset-0 z-40"
+                        onClick={() => setIsOpen(false)}
+                    />
                     <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95">
                         {/* Org list */}
                         <div className="p-1.5 max-h-48 overflow-y-auto">

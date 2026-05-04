@@ -1,6 +1,6 @@
 import { get } from '@/lib/api';
 
-export interface CreditsBalance {
+interface CreditsBalance {
     balance: number;
 }
 

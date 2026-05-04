@@ -26,10 +26,19 @@ interface TextNodeProps {
     selected?: boolean;
 }
 
+import { useGeneration } from '@/hooks/useGeneration';
+import { StyleEmphasis } from '../types';
+
 export function TextNode({ id, data, selected }: TextNodeProps) {
     const [localText, setLocalText] = useState(data.text || '');
-    const [isEnhancing, setIsEnhancing] = useState(false);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const { isGenerating, handleEnhancePrompt } = useGeneration();
+
+    React.useEffect(() => {
+        if (data.text !== undefined && data.text !== localText) {
+            setLocalText(data.text);
+        }
+    }, [data.text]);
 
     const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setLocalText(e.target.value);
@@ -41,14 +50,16 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
     };
 
     const handleEnhance = async () => {
-        setIsEnhancing(true);
-        // Mock AI enhancement - in reality, call an API
-        await new Promise(r => setTimeout(r, 1500));
+        if (!localText.trim()) return;
+        const enhanced = await handleEnhancePrompt({
+            prompt: localText,
+            style: StyleEmphasis.PHOTOREALISTIC,
+        });
 
-        const enhanced = `A stunning, photorealistic image of ${localText}. Ultra-detailed, 8K resolution, cinematic lighting, professional photography, golden hour, shallow depth of field, vibrant colors.`;
-        setLocalText(enhanced);
-        data.onTextChange?.(id, enhanced);
-        setIsEnhancing(false);
+        if (enhanced) {
+            setLocalText(enhanced);
+            data.onTextChange?.(id, enhanced);
+        }
     };
 
     return (
@@ -99,10 +110,10 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                             <div className="flex items-center gap-2 mt-2">
                                 <button
                                     onClick={handleEnhance}
-                                    disabled={isEnhancing || !localText.trim()}
+                                    disabled={isGenerating || !localText.trim()}
                                     className="flex-1 flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs font-medium text-white transition-all"
                                 >
-                                    {isEnhancing ? (
+                                    {isGenerating ? (
                                         <>
                                             <Loader2 className="w-3 h-3 animate-spin" />
                                             Enhancing...

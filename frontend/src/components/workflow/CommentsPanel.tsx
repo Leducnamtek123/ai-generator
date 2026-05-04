@@ -41,13 +41,13 @@ export function CommentsPanel({ isOpen, onClose }: CommentsPanelProps) {
                         placeholder="Search comments..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-black/20 border-white/5 pl-9 h-9 text-xs placeholder:text-white/20"
+                        className="bg-gray-950/20 border-white/5 pl-9 h-9 text-xs placeholder:text-white/20"
                     />
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="px-4 py-2 flex items-center gap-1 border-b border-white/5 bg-black/10">
+            <div className="px-4 py-2 flex items-center gap-1 border-b border-white/5 bg-gray-950/10">
                 <TabButton
                     label="All"
                     active={activeTab === 'all'}
@@ -80,7 +80,7 @@ export function CommentsPanel({ isOpen, onClose }: CommentsPanelProps) {
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/5 bg-black/10 text-[10px] text-white/30 text-center">
+            <div className="p-4 border-t border-white/5 bg-gray-950/10 text-[10px] text-white/30 text-center">
                 Review all feedback in one place
             </div>
         </div>

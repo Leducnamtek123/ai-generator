@@ -58,7 +58,10 @@ export interface SocialProvider {
   requiredScopes?: string[];
 
   /** Exchange an OAuth code for access/refresh tokens */
-  authenticate(code: string, codeVerifier?: string): Promise<AuthTokenDetails>;
+  authenticate(
+    code: string,
+    extraParams?: Record<string, any>,
+  ): Promise<AuthTokenDetails>;
 
   /** Refresh an expired access token. Returns new token details or throws. */
   refreshToken?(refreshToken: string): Promise<AuthTokenDetails>;

@@ -1,6 +1,6 @@
 "use client";
 
-import { Globe } from "lucide-react";
+import { Languages } from "lucide-react";
 import { useLocale } from "next-intl";
 
 import { LocaleCode, LOCALES } from "@/constants/i18n";
@@ -29,7 +29,7 @@ export function LocaleSwitcher() {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" size="icon" aria-label="Submit">
-            <Globe className="size-4" />
+            <Languages className="size-4" />
             <span className="sr-only">Change language</span>
           </Button>
         </DropdownMenuTrigger>
@@ -40,7 +40,9 @@ export function LocaleSwitcher() {
               disabled={code === (currentLocale as LocaleCode)}
               onClick={() => router.replace(pathname, { locale: code })}
             >
-              <span>{LOCALES[code]?.flag ?? "🏳️"}</span>
+              <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted">
+                <Languages className="size-3.5" />
+              </span>
               {getLocaleLabel(code, currentLocale as LocaleCode)}
             </DropdownMenuItem>
           ))}
