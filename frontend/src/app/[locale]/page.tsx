@@ -41,23 +41,23 @@ const PROOF_POINTS = [
 const TRUSTED_BRAND_LOGOS = [
   {
     name: 'Microsoft',
-    src: 'https://cdn.simpleicons.org/microsoft',
+    mark: 'M',
   },
   {
     name: 'NVIDIA',
-    src: 'https://cdn.simpleicons.org/nvidia',
+    mark: 'N',
   },
   {
     name: 'Adobe',
-    src: 'https://cdn.simpleicons.org/adobe',
+    mark: 'A',
   },
   {
     name: 'Figma',
-    src: 'https://cdn.simpleicons.org/figma',
+    mark: 'F',
   },
   {
     name: 'Lenovo',
-    src: 'https://cdn.simpleicons.org/lenovo',
+    mark: 'L',
   },
 ] as const;
 
@@ -330,7 +330,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
           <div className="grid items-start gap-10 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="space-y-7 pt-2">
               <div className="space-y-4">
-                <h1 className="max-w-[10ch] text-[clamp(3.75rem,6.8vw,7.1rem)] font-black uppercase leading-[0.84] tracking-[-0.08em] text-balance">
+                <h1 className="max-w-[10ch] text-[clamp(3.2rem,6vw,7rem)] font-black uppercase leading-[0.86] tracking-[-0.08em] text-balance sm:max-w-[9ch]">
                   Ideas.
                   <span className="block text-white">Generated.</span>
                   <span className="block text-transparent bg-gradient-to-r from-sky-300 via-blue-400 to-indigo-300 bg-clip-text">
@@ -394,10 +394,12 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="absolute -right-6 bottom-0 h-36 w-36 rounded-full bg-sky-400/20 blur-3xl" />
 
               <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c0f14] shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
-                <div className="flex items-center justify-between border-b border-white/8 px-5 py-4">
-                  <div>
+                <div className="flex flex-col gap-3 border-b border-white/8 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="min-w-0">
                     <div className="text-[10px] font-semibold uppercase tracking-[0.34em] text-white/38">Creative workspace</div>
-                    <div className="mt-1 text-sm font-semibold text-white/88">Campaign launch / Winter Motion Set</div>
+                    <div className="mt-1 max-w-[22ch] text-sm font-semibold text-white/88 sm:max-w-none">
+                      Campaign launch / Winter Motion Set
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
@@ -408,15 +410,15 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 <div className="grid gap-4 p-5 lg:grid-cols-[0.9fr_1.1fr]">
                   <div className="space-y-4">
                     <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-                      <div className="flex items-center justify-between">
-                        <div>
+                      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                        <div className="min-w-0 flex-1">
                           <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/38">Prompt</div>
-                          <p className="mt-2 text-sm leading-6 text-white/80">
+                          <p className="mt-2 max-w-[28ch] text-sm leading-6 text-white/80">
                             Generate a cinematic product launch scene, dark studio lighting, electric blue edge glow, subtle
                             amber accents, and crisp typography.
                           </p>
                         </div>
-                        <Button size="icon" className="size-9 rounded-full bg-white text-black hover:bg-white/90">
+                        <Button size="icon" className="size-9 shrink-0 rounded-full bg-white text-black hover:bg-white/90">
                           <Play className="size-4 fill-current" />
                         </Button>
                       </div>
@@ -436,10 +438,10 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
                       {TOOL_STATS.map((stat) => (
-                        <div key={stat.label} className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4">
-                          <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/36">{stat.label}</div>
+                        <div key={stat.label} className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4 min-w-0">
+                          <div className="text-[10px] font-semibold uppercase tracking-[0.22em] text-white/36">{stat.label}</div>
                           <div className="mt-2 text-xl font-black tracking-[-0.04em]">{stat.value}</div>
                         </div>
                       ))}
@@ -457,18 +459,20 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                         sizes="(max-width: 1024px) 100vw, 48vw"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/18 to-transparent" />
-                      <div className="absolute bottom-4 left-4 right-4 flex items-end justify-between gap-4">
-                        <div>
+                      <div className="absolute bottom-4 left-4 right-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
+                        <div className="min-w-0">
                           <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/46">Generated asset</div>
-                          <div className="mt-1 text-lg font-bold tracking-[-0.03em]">Mastered launch poster v04</div>
+                          <div className="mt-1 max-w-[16ch] text-lg font-bold tracking-[-0.03em] leading-tight">
+                            Mastered launch poster v04
+                          </div>
                         </div>
-                        <Button size="sm" className="rounded-full bg-white px-4 text-xs font-bold text-black hover:bg-white/90">
+                        <Button size="sm" className="shrink-0 rounded-full bg-white px-4 text-xs font-bold text-black hover:bg-white/90">
                           Download
                         </Button>
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4">
                         <div className="text-[10px] font-semibold uppercase tracking-[0.28em] text-white/36">Queue status</div>
                         <div className="mt-2 flex items-center gap-2 text-sm text-white/72">
@@ -492,35 +496,28 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
           <div className="grid gap-4 rounded-[2rem] border border-white/8 bg-white/[0.03] p-5 sm:p-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-[1.35rem] border border-white/6 bg-black/20 p-5">
               <div className="text-[10px] font-semibold uppercase tracking-[0.34em] text-white/34">Trusted by teams at</div>
-              <div className="relative mt-4 overflow-hidden rounded-[1.6rem] border border-white/8 bg-white/[0.03] px-3 py-4">
-                <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-black/85 to-transparent" />
-                <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-black/85 to-transparent" />
-                <motion.div
-                  aria-label="Trusted brand logos"
-                  className="flex w-max items-center gap-3"
-                  animate={{ x: ['0%', '-50%'] }}
-                  transition={{ duration: 24, repeat: Infinity, ease: 'linear' }}
-                >
-                  {[...TRUSTED_BRAND_LOGOS, ...TRUSTED_BRAND_LOGOS].map((brand, index) => (
-                    <div
-                      key={`${brand.name}-${index}`}
-                      className="group flex h-14 min-w-[8.25rem] items-center gap-3 rounded-full border border-white/8 bg-white/[0.04] px-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.06]"
-                      title={brand.name}
+              <div className="mt-4 grid gap-3 rounded-[1.6rem] border border-white/8 bg-white/[0.03] p-3 sm:grid-cols-2 lg:grid-cols-5">
+                {TRUSTED_BRAND_LOGOS.map((brand, index) => (
+                  <div
+                    key={brand.name}
+                    className="flex h-14 items-center gap-3 rounded-full border border-white/8 bg-black/30 px-4 shadow-[0_0_0_1px_rgba(255,255,255,0.02)] backdrop-blur-sm transition-transform duration-300 hover:-translate-y-0.5 hover:bg-white/[0.06]"
+                    title={brand.name}
+                  >
+                    <span
+                      className={cn(
+                        'flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black uppercase tracking-[0.08em] text-white ring-1 ring-white/10',
+                        index === 0 && 'bg-sky-500/35',
+                        index === 1 && 'bg-emerald-500/35',
+                        index === 2 && 'bg-rose-500/35',
+                        index === 3 && 'bg-violet-500/35',
+                        index === 4 && 'bg-amber-500/35',
+                      )}
                     >
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/45 shadow-[0_0_24px_rgba(255,255,255,0.05)] ring-1 ring-white/10">
-                        <Image
-                          alt=""
-                          aria-hidden="true"
-                          src={brand.src}
-                          width={16}
-                          height={16}
-                          className="h-4 w-4 object-contain brightness-0 invert opacity-90"
-                        />
-                      </span>
-                      <span className="sr-only">{brand.name}</span>
-                    </div>
-                  ))}
-                </motion.div>
+                      {brand.mark}
+                    </span>
+                    <span className="text-sm font-medium text-white/74">{brand.name}</span>
+                  </div>
+                ))}
               </div>
             </div>
 

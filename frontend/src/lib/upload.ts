@@ -61,7 +61,7 @@ export async function uploadFileWithToast(
 export function getFileUrl(path: string): string {
     if (path.startsWith('http')) return path;
     // Use backend API to proxy MinIO files
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api/v1';
+    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8006/api/v1';
     return `${baseUrl}/files/${path}`;
 }
 

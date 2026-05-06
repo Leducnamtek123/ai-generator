@@ -5,15 +5,20 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "${API_PORT:-8000}:8000"
     env_file:
       - ./.env
       - ../backend/.env
     environment:
       - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_NAME=${DATABASE_NAME:-paintai}
       - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
       - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
       - APP_MODE=api
     depends_on:
@@ -32,8 +37,13 @@ services:
       - ../backend/.env
     environment:
       - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_NAME=${DATABASE_NAME:-paintai}
       - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
       - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
       - APP_MODE=worker
     depends_on:
@@ -47,11 +57,13 @@ services:
       context: ../frontend
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "${WEB_PORT:-3000}:3000"
     env_file:
       - ../frontend/.env
     environment:
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost}
+      - AUTH_URL=${AUTH_URL:-http://localhost}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
       - API_BACKEND_URL=${API_BACKEND_URL:-http://api:8000/api/v1}
       - BILLING_API_URL=${BILLING_API_URL:-http://billing-service:8001/api/v1}
       - GENERATION_API_URL=${GENERATION_API_URL:-http://generation-service:8002/api/v1}
@@ -86,21 +98,21 @@ services:
     container_name: ai-generator-postgres
     image: postgres:17-alpine
     restart: unless-stopped
-    ports:
-      - "${POSTGRES_PORT:-5432}:5432"
+    # ports:
+    #   - "${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres-data:/var/lib/postgresql/data
     environment:
       POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
       POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      POSTGRES_DB: ${DATABASE_NAME:-ai_generator}
+      POSTGRES_DB: ${DATABASE_NAME:-paintai}
 
   redis:
     container_name: ai-generator-redis
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
+    # ports:
+    #   - "${REDIS_PORT:-6379}:6379"
 
   sandbox:
     container_name: ai-generator-sandbox
@@ -125,15 +137,18 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "8001:8001"
     env_file:
       - ./.env
       - ../backend/.env
     environment:
       - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_NAME=${DATABASE_NAME:-paintai}
       - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
       - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
       - APP_MODE=billing
       - APP_PORT=8001
@@ -148,15 +163,18 @@ services:
       context: ../backend
       dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "8002:8002"
     env_file:
       - ./.env
       - ../backend/.env
     environment:
       - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - DATABASE_PORT=${DATABASE_PORT:-5432}
+      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - DATABASE_NAME=${DATABASE_NAME:-paintai}
       - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
       - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
       - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
       - APP_MODE=generation
       - APP_PORT=8002
