@@ -15,30 +15,53 @@ export class ImageGenerationService {
     private readonly eventsService: GenerationEventsService,
   ) {}
 
+  private getPreferredProvider(provider?: string, fallback?: string) {
+    return provider?.trim() || fallback || undefined;
+  }
+
   async generateImage(dto: GenerateImageDto, userId: string, projectId?: string): Promise<GenerationEntity> {
-    const provider = this.providerRegistry.getImageProvider();
-    const cost = await this.baseService.deductCredits(userId, 'image');
+    const preferredProvider = this.getPreferredProvider(
+      dto.provider,
+      this.providerRegistry.getImageProvider().name,
+    );
+    const reservation = await this.baseService.reserveCredits(userId, 'image');
 
-    const generation = await this.baseService.create({
+    let generation: GenerationEntity;
+    try {
+      generation = await this.baseService.create({
+        userId,
+        type: 'image',
+        status: 'pending',
+        prompt: dto.prompt,
+        model: dto.model,
+        cost: reservation.amount,
+        metadata: {
+          provider: preferredProvider,
+          aspectRatio: dto.aspectRatio,
+          quality: dto.quality,
+          negativePrompt: dto.negativePrompt,
+          seed: dto.seed,
+          projectId,
+          creditTransactionId: reservation.transactionId,
+          creditReservationId: reservation.referenceId,
+          ...(dto.metadata || {}),
+        },
+      });
+    } catch (error) {
+      await this.baseService.releaseCredits(userId, reservation.transactionId, 'image');
+      throw error;
+    }
+
+    this.executeImageGeneration(
+      generation,
+      dto,
+      preferredProvider,
       userId,
-      type: 'image',
-      status: 'pending',
-      prompt: dto.prompt,
-      model: dto.model,
-      cost: cost,
-      metadata: {
-        provider: provider.name,
-        aspectRatio: dto.aspectRatio,
-        quality: dto.quality,
-        negativePrompt: dto.negativePrompt,
-        seed: dto.seed,
-        projectId,
-        ...(dto.metadata || {}),
-      },
-    });
-
-    this.executeImageGeneration(generation, dto, provider, userId, cost, projectId)
-      .catch((error) => this.logger.error(`Image generation ${generation.id} failed: ${error.message}`));
+      reservation,
+      projectId,
+    ).catch((error) =>
+      this.logger.error(`Image generation ${generation.id} failed: ${error.message}`),
+    );
 
     return generation;
   }
@@ -46,67 +69,122 @@ export class ImageGenerationService {
   private async executeImageGeneration(
     generation: GenerationEntity,
     dto: GenerateImageDto,
-    provider: any,
+    preferredProvider: string | undefined,
     userId: string,
-    cost: number,
+    reservation: { transactionId: string; amount: number },
     projectId?: string,
   ): Promise<void> {
     try {
-      generation.status = 'processing';
-      await this.baseService.save(generation);
+      const result = await this.providerRegistry.executeWithFallback(
+        'image-generation',
+        async (provider) => {
+          generation.status = 'processing';
+          await this.baseService.save(generation);
 
-      const result = await provider.generateImage(dto.prompt, {
-        model: dto.model,
-        aspectRatio: dto.aspectRatio,
-        quality: dto.quality,
-        negativePrompt: dto.negativePrompt,
-        seed: dto.seed,
-      });
+          const providerResult = await provider.generateImage(dto.prompt, {
+            model: dto.model,
+            aspectRatio: dto.aspectRatio,
+            quality: dto.quality,
+            negativePrompt: dto.negativePrompt,
+            seed: dto.seed,
+          });
 
-      generation.status = result.status || 'completed';
-      if (result.resultUrl) generation.resultUrl = result.resultUrl;
-      if (result.metadata) generation.metadata = { ...generation.metadata, ...result.metadata };
+          generation.status = providerResult.status || 'completed';
+          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          generation.metadata = {
+            ...generation.metadata,
+            ...(providerResult.metadata || {}),
+            provider: provider.name,
+          };
 
-      await this.baseService.save(generation);
-      await this.baseService.saveAsset(generation, projectId);
-      this.eventsService.emitUpdate(generation, projectId);
+          await this.baseService.save(generation);
+          try {
+            await this.baseService.captureCredits(
+              userId,
+              reservation.transactionId,
+              'image',
+            );
+          } catch (captureError: any) {
+            this.logger.error(
+              `Failed to capture credits for image generation ${generation.id}: ${captureError.message}`,
+            );
+          }
+          await this.baseService.saveAsset(generation, projectId);
+          this.eventsService.emitUpdate(generation, projectId);
+          return providerResult;
+        },
+        preferredProvider,
+      );
+
+      if (!result) {
+        throw new Error('Image generation did not return a result');
+      }
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.baseService.save(generation);
-      await this.baseService.refundCredits(userId, cost, 'image');
+      try {
+        await this.baseService.releaseCredits(
+          userId,
+          reservation.transactionId,
+          'image',
+        );
+      } catch (releaseError: any) {
+        this.logger.error(
+          `Failed to release credits for image generation ${generation.id}: ${releaseError.message}`,
+        );
+      }
       this.eventsService.emitUpdate(generation, projectId);
     }
   }
 
   async upscaleImage(dto: UpscaleImageDto, userId: string, projectId?: string): Promise<GenerationEntity> {
-    const provider = this.providerRegistry.getUpscaleProvider();
-    const cost = await this.baseService.deductCredits(userId, 'upscale');
+    const preferredProvider = this.getPreferredProvider(
+      dto.provider,
+      this.providerRegistry.getUpscaleProvider().name,
+    );
+    const reservation = await this.baseService.reserveCredits(userId, 'upscale');
 
-    const generation = await this.baseService.create({
+    let generation: GenerationEntity;
+    try {
+      generation = await this.baseService.create({
+        userId,
+        type: 'upscale',
+        status: 'pending',
+        prompt: 'Upscale',
+        cost: reservation.amount,
+        metadata: {
+          provider: preferredProvider,
+          sourceUrl: dto.imageUrl,
+          scale: dto.scale,
+          mode: dto.mode,
+          model: dto.model,
+          optimization: dto.optimization,
+          creativity: dto.creativity,
+          hdr: dto.hdr,
+          resemblance: dto.resemblance,
+          fractality: dto.fractality,
+          engine: dto.engine,
+          prompt: dto.prompt,
+          creditTransactionId: reservation.transactionId,
+          creditReservationId: reservation.referenceId,
+        },
+      });
+    } catch (error) {
+      await this.baseService.releaseCredits(userId, reservation.transactionId, 'upscale');
+      throw error;
+    }
+
+    this.executeUpscale(
+      generation,
+      dto,
+      preferredProvider,
       userId,
-      type: 'upscale',
-      status: 'pending',
-      prompt: 'Upscale',
-      cost: cost,
-      metadata: {
-        provider: provider.name,
-        sourceUrl: dto.imageUrl,
-        scale: dto.scale,
-        mode: dto.mode,
-        model: dto.model,
-        optimization: dto.optimization,
-        creativity: dto.creativity,
-        hdr: dto.hdr,
-        resemblance: dto.resemblance,
-        fractality: dto.fractality,
-        engine: dto.engine,
-        prompt: dto.prompt,
-      },
-    });
-
-    this.executeUpscale(generation, dto, provider, userId, cost, projectId)
-      .catch((error) => this.logger.error(`Upscale ${generation.id} failed: ${error.message}`));
+      reservation,
+      projectId,
+    ).catch((error) =>
+      this.logger.error(`Upscale ${generation.id} failed: ${error.message}`),
+    );
 
     return generation;
   }
@@ -114,56 +192,115 @@ export class ImageGenerationService {
   private async executeUpscale(
     generation: GenerationEntity,
     dto: UpscaleImageDto,
-    provider: any,
+    preferredProvider: string | undefined,
     userId: string,
-    cost: number,
+    reservation: { transactionId: string; amount: number },
     projectId?: string,
   ): Promise<void> {
     try {
-      generation.status = 'processing';
-      await this.baseService.save(generation);
+      const result = await this.providerRegistry.executeWithFallback(
+        'upscale',
+        async (provider) => {
+          generation.status = 'processing';
+          await this.baseService.save(generation);
 
-      const result = await provider.upscaleImage(dto.imageUrl, {
-        scale: dto.scale || 2,
-        mode: dto.mode,
-        model: dto.model,
-        optimization: dto.optimization,
-        creativity: dto.creativity,
-        hdr: dto.hdr,
-        resemblance: dto.resemblance,
-        fractality: dto.fractality,
-        engine: dto.engine,
-        prompt: dto.prompt,
-      });
+          const providerResult = await provider.upscaleImage(dto.imageUrl, {
+            scale: dto.scale || 2,
+            mode: dto.mode,
+            model: dto.model,
+            optimization: dto.optimization,
+            creativity: dto.creativity,
+            hdr: dto.hdr,
+            resemblance: dto.resemblance,
+            fractality: dto.fractality,
+            engine: dto.engine,
+            prompt: dto.prompt,
+          });
 
-      generation.status = result.status || 'completed';
-      if (result.resultUrl) generation.resultUrl = result.resultUrl;
+          generation.status = providerResult.status || 'completed';
+          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          generation.metadata = {
+            ...generation.metadata,
+            ...(providerResult.metadata || {}),
+            provider: provider.name,
+          };
 
-      await this.baseService.save(generation);
-      await this.baseService.saveAsset(generation, projectId);
+          await this.baseService.save(generation);
+          try {
+            await this.baseService.captureCredits(
+              userId,
+              reservation.transactionId,
+              'upscale',
+            );
+          } catch (captureError: any) {
+            this.logger.error(
+              `Failed to capture credits for upscale ${generation.id}: ${captureError.message}`,
+            );
+          }
+          await this.baseService.saveAsset(generation, projectId);
+          return providerResult;
+        },
+        preferredProvider,
+      );
+
+      if (!result) {
+        throw new Error('Upscale did not return a result');
+      }
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.baseService.save(generation);
-      await this.baseService.refundCredits(userId, cost, 'upscale');
+      try {
+        await this.baseService.releaseCredits(
+          userId,
+          reservation.transactionId,
+          'upscale',
+        );
+      } catch (releaseError: any) {
+        this.logger.error(
+          `Failed to release credits for upscale ${generation.id}: ${releaseError.message}`,
+        );
+      }
     }
   }
 
   async processImage(dto: Record<string, any>, userId: string, type: string): Promise<GenerationEntity> {
-    const provider = this.providerRegistry.getImageProcessingProvider(type);
-    const cost = await this.baseService.deductCredits(userId, type);
+    const preferredProvider = this.getPreferredProvider(
+      dto.provider,
+      this.providerRegistry.getImageProcessingProvider(type).name,
+    );
+    const reservation = await this.baseService.reserveCredits(userId, type);
 
-    const generation = await this.baseService.create({
-      userId,
+    let generation: GenerationEntity;
+    try {
+      generation = await this.baseService.create({
+        userId,
+        type,
+        status: 'pending',
+        prompt: dto.prompt || type,
+        cost: reservation.amount,
+        metadata: {
+          ...dto,
+          provider: preferredProvider,
+          creditTransactionId: reservation.transactionId,
+          creditReservationId: reservation.referenceId,
+        },
+      });
+    } catch (error) {
+      await this.baseService.releaseCredits(userId, reservation.transactionId, type);
+      throw error;
+    }
+
+    this.executeImageProcessing(
+      generation,
+      dto,
+      preferredProvider,
       type,
-      status: 'pending',
-      prompt: dto.prompt || type,
-      cost,
-      metadata: { ...dto, provider: provider.name },
-    });
-
-    this.executeImageProcessing(generation, dto, provider, type, userId, cost)
-      .catch((error) => this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`));
+      userId,
+      reservation,
+    ).catch((error) =>
+      this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`),
+    );
 
     return generation;
   }
@@ -171,35 +308,71 @@ export class ImageGenerationService {
   private async executeImageProcessing(
     generation: GenerationEntity,
     dto: Record<string, any>,
-    provider: any,
+    preferredProvider: string | undefined,
     type: string,
     userId: string,
-    cost: number,
+    reservation: { transactionId: string; amount: number },
   ): Promise<void> {
     try {
-      generation.status = 'processing';
-      await this.baseService.save(generation);
+      const result = await this.providerRegistry.executeWithFallback(
+        type as any,
+        async (provider) => {
+          generation.status = 'processing';
+          await this.baseService.save(generation);
 
-      const result = await provider.processImage({
-        type,
-        imageUrl: dto.imageUrl,
-        prompt: dto.prompt,
-        strength: dto.strength,
-        ...dto,
-        ...(dto.metadata || {}),
-      });
+          const providerResult = await provider.processImage({
+            type,
+            imageUrl: dto.imageUrl,
+            prompt: dto.prompt,
+            strength: dto.strength,
+            ...dto,
+            ...(dto.metadata || {}),
+          });
 
-      generation.status = result.status || 'completed';
-      if (result.resultUrl) generation.resultUrl = result.resultUrl;
-      if (result.metadata) generation.metadata = { ...generation.metadata, ...result.metadata };
+          generation.status = providerResult.status || 'completed';
+          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          generation.metadata = {
+            ...generation.metadata,
+            ...(providerResult.metadata || {}),
+            provider: provider.name,
+          };
 
-      await this.baseService.save(generation);
-      await this.baseService.saveAsset(generation);
+          await this.baseService.save(generation);
+          try {
+            await this.baseService.captureCredits(
+              userId,
+              reservation.transactionId,
+              type,
+            );
+          } catch (captureError: any) {
+            this.logger.error(
+              `Failed to capture credits for ${type} processing ${generation.id}: ${captureError.message}`,
+            );
+          }
+          await this.baseService.saveAsset(generation);
+          return providerResult;
+        },
+        preferredProvider,
+      );
+
+      if (!result) {
+        throw new Error(`${type} processing did not return a result`);
+      }
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.baseService.save(generation);
-      await this.baseService.refundCredits(userId, cost, type);
+      try {
+        await this.baseService.releaseCredits(
+          userId,
+          reservation.transactionId,
+          type,
+        );
+      } catch (releaseError: any) {
+        this.logger.error(
+          `Failed to release credits for ${type} processing ${generation.id}: ${releaseError.message}`,
+        );
+      }
     }
   }
 }

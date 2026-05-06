@@ -2,8 +2,107 @@
 
 import { useCallback } from 'react';
 import { Node, Edge, useReactFlow } from '@xyflow/react';
-import { WorkflowNodeType, ConnectionType, NodeStatus } from '../types';
-import { generateImage, generateVideo, upscaleImage, enhancePrompt } from '@/lib/api/generations';
+import {
+  WorkflowNodeType,
+  ConnectionType,
+  NodeStatus,
+  ToolType,
+} from '../types';
+import {
+  generateImage,
+  generateVideo,
+  upscaleImage,
+  enhancePrompt,
+  generateMusic,
+  generateSfx,
+  generateVoice,
+  lipSync,
+  upscaleVideo,
+  removeBackground,
+  getGeneration,
+  type GenerateImageParams,
+  type GenerateVideoParams,
+  type UpscaleImageParams,
+  type EnhancePromptParams,
+  type GenerateMusicParams,
+  type GenerateSfxParams,
+  type GenerateVoiceParams,
+  type LipSyncParams,
+  type UpscaleVideoParams,
+  type RemoveBackgroundParams,
+  type GenerationResult as ApiGenerationResult,
+} from '@/lib/api/generations';
+
+const GENERATION_POLL_INTERVAL_MS = 2000;
+const GENERATION_POLL_TIMEOUT_MS = 10 * 60 * 1000;
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isTerminalStatus(status?: string) {
+  return status === 'completed' || status === 'failed';
+}
+
+function getGenerationErrorMessage(
+  generation: ApiGenerationResult,
+  fallback: string,
+) {
+  const metadata = generation.metadata as Record<string, unknown> | undefined;
+  const metadataError = metadata?.error;
+
+  if (typeof metadataError === 'string' && metadataError.trim()) {
+    return metadataError;
+  }
+
+  return fallback;
+}
+
+function safeParseAdvancedParams(input?: string) {
+  if (!input?.trim()) {
+    return {};
+  }
+
+  try {
+    const parsed = JSON.parse(input);
+    return parsed && typeof parsed === 'object' ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function mergeParams(base: Record<string, unknown>, advancedParams?: string) {
+  return {
+    ...base,
+    ...safeParseAdvancedParams(advancedParams),
+  };
+}
+
+function optionalString(value: unknown) {
+  return typeof value === 'string' && value.trim() !== '' ? value : undefined;
+}
+
+function getProviderValue(node: Node, params: Record<string, unknown>) {
+  return optionalString(params.provider ?? node.data.provider);
+}
+
+async function waitForGenerationCompletion(
+  generationId: string,
+): Promise<ApiGenerationResult> {
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < GENERATION_POLL_TIMEOUT_MS) {
+    const generation = await getGeneration(generationId);
+
+    if (isTerminalStatus(generation.status)) {
+      return generation;
+    }
+
+    await delay(GENERATION_POLL_INTERVAL_MS);
+  }
+
+  throw new Error(`Timed out waiting for generation ${generationId}`);
+}
 
 export function useWorkflowExecution(
   setNodes: (nds: any) => void,
@@ -29,6 +128,14 @@ export function useWorkflowExecution(
         return node.data.previewUrl ? { type: ConnectionType.VIDEO, value: node.data.previewUrl as string } : null;
       case WorkflowNodeType.ASSISTANT:
         return node.data.enhancedText ? { type: ConnectionType.TEXT, value: node.data.enhancedText as string } : null;
+      case WorkflowNodeType.TOOL:
+        if (node.data.resultText) {
+          return { type: ConnectionType.TEXT, value: node.data.resultText as string };
+        }
+        if (node.data.resultUrl) {
+          return { type: ConnectionType.IMAGE, value: node.data.resultUrl as string };
+        }
+        return node.data.previewUrl ? { type: ConnectionType.IMAGE, value: node.data.previewUrl as string } : null;
     }
     return null;
   }, []);
@@ -55,6 +162,7 @@ export function useWorkflowExecution(
     if (!node) return;
 
     const inputs = getNodeInputs(nodeId);
+    const advancedParams = safeParseAdvancedParams(node.data.advancedParams as string | undefined);
 
     setNodes((nds: any) =>
       nds.map((n: any) => n.id === nodeId ? { ...n, data: { ...n.data, status: NodeStatus.PROCESSING } } : n)
@@ -72,10 +180,21 @@ export function useWorkflowExecution(
                 prompt,
                 model: node.data.model as string,
                 aspectRatio: node.data.aspectRatio as string,
-                quality: 'standard'
+                quality: 'standard',
+                provider: getProviderValue(node, advancedParams),
             });
-            newData.previewUrl = result.resultUrl;
+
+            newData.generationId = result.id;
+            newData.status = result.status === 'failed' ? NodeStatus.ERROR : NodeStatus.QUEUED;
+
+            const completed = await waitForGenerationCompletion(result.id);
+            if (completed.status === 'failed') {
+                throw new Error(getGenerationErrorMessage(completed, 'Image generation failed'));
+            }
+
+            newData.previewUrl = completed.resultUrl;
             newData.usedPrompt = prompt;
+            newData.status = NodeStatus.SUCCESS;
         } else if (node.type === WorkflowNodeType.VIDEO_GEN) {
             const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
             const imageInput = inputs.find(i => i.type === ConnectionType.IMAGE);
@@ -86,9 +205,19 @@ export function useWorkflowExecution(
                 model: node.data.model as string,
                 duration: node.data.duration as string,
                 aspectRatio: node.data.aspectRatio as string,
-                startImageUrl: imageInput?.value
+                startImageUrl: imageInput?.value,
+                provider: getProviderValue(node, advancedParams),
             });
-            newData.previewUrl = result.resultUrl;
+            newData.generationId = result.id;
+            newData.status = result.status === 'failed' ? NodeStatus.ERROR : NodeStatus.QUEUED;
+
+            const completed = await waitForGenerationCompletion(result.id);
+            if (completed.status === 'failed') {
+                throw new Error(getGenerationErrorMessage(completed, 'Video generation failed'));
+            }
+
+            newData.previewUrl = completed.resultUrl;
+            newData.status = NodeStatus.SUCCESS;
         } else if (node.type === WorkflowNodeType.UPSCALE) {
             const imageInput = inputs.find(i => i.type === ConnectionType.IMAGE);
             const imageUrl = imageInput?.value || node.data.inputUrl;
@@ -97,9 +226,19 @@ export function useWorkflowExecution(
             const result = await upscaleImage({
                 imageUrl,
                 scale: (node.data.scale as number === 4 ? 4 : 2),
-                enhanceMode: node.data.enhanceMode as any || 'balanced'
+                enhanceMode: node.data.enhanceMode as any || 'balanced',
+                provider: getProviderValue(node, advancedParams),
             });
-            newData.previewUrl = result.resultUrl;
+            newData.generationId = result.id;
+            newData.status = result.status === 'failed' ? NodeStatus.ERROR : NodeStatus.QUEUED;
+
+            const completed = await waitForGenerationCompletion(result.id);
+            if (completed.status === 'failed') {
+                throw new Error(getGenerationErrorMessage(completed, 'Upscale failed'));
+            }
+
+            newData.previewUrl = completed.resultUrl;
+            newData.status = NodeStatus.SUCCESS;
         } else if (node.type === WorkflowNodeType.ASSISTANT) {
             const textInput = inputs.find(i => i.type === ConnectionType.TEXT);
             const originalText = textInput?.value || node.data.inputText;
@@ -108,9 +247,23 @@ export function useWorkflowExecution(
             newData.inputText = originalText;
             const res = await enhancePrompt({
                 prompt: originalText,
-                style: node.data.styleEmphasis as string || 'Photorealistic'
+                style: node.data.styleEmphasis as string || 'Photorealistic',
+                provider: getProviderValue(node, advancedParams),
             });
             newData.enhancedText = res.enhancedPrompt;
+        } else if (node.type === WorkflowNodeType.TOOL) {
+            const toolType = (node.data.toolType as ToolType) || ToolType.IMAGE_GEN;
+            const generated = await runGenericTool({
+                toolType,
+                node,
+                inputs,
+            });
+
+            newData = {
+                ...newData,
+                ...generated,
+                status: NodeStatus.SUCCESS,
+            };
         }
 
         setNodes((nds: any) => {
@@ -155,4 +308,189 @@ export function useWorkflowExecution(
   }, [getNodes, getEdges, runNode]);
 
   return { runNode, runWorkflow, getNodeOutput };
+}
+
+async function runGenericTool({
+  toolType,
+  node,
+  inputs,
+}: {
+  toolType: ToolType;
+  node: Node;
+  inputs: Array<{ type: string; value: string }>;
+}) {
+  const textInput = inputs.find((i) => i.type === ConnectionType.TEXT)?.value;
+  const imageInput = inputs.find((i) => i.type === ConnectionType.IMAGE)?.value;
+  const videoInput = inputs.find((i) => i.type === ConnectionType.VIDEO)?.value;
+  const params = mergeParams(
+    {
+      prompt: node.data.prompt || textInput || '',
+      imageUrl: node.data.primaryUrl || imageInput || '',
+      videoUrl: node.data.primaryUrl || videoInput || '',
+      audioUrl: node.data.secondaryUrl || '',
+      text: node.data.prompt || textInput || '',
+    },
+    node.data.advancedParams as string | undefined,
+  );
+
+  const asString = (value: unknown, fallback = '') =>
+    typeof value === 'string' ? value : fallback;
+
+  const asNumber = (value: unknown, fallback?: number) => {
+    if (typeof value === 'number' && !Number.isNaN(value)) return value;
+    if (typeof value === 'string' && value.trim() !== '') {
+      const parsed = Number(value);
+      return Number.isNaN(parsed) ? fallback : parsed;
+    }
+    return fallback;
+  };
+
+  let result: ApiGenerationResult | { enhancedPrompt: string };
+
+  switch (toolType) {
+    case ToolType.IMAGE_GEN: {
+      result = await generateImage({
+        prompt: asString(params.prompt, 'A detailed image'),
+        model: asString(params.model, 'seedream'),
+        aspectRatio: asString(params.aspectRatio, '1:1'),
+        quality: asString(params.quality, 'hd') as 'standard' | 'hd' | '4k',
+        negativePrompt: optionalString(params.negativePrompt),
+        seed: asNumber(params.seed),
+        provider: getProviderValue(node, params),
+      } as GenerateImageParams);
+      break;
+    }
+    case ToolType.VIDEO_GEN: {
+      result = await generateVideo({
+        prompt: asString(params.prompt, 'A cinematic video'),
+        model: asString(params.model, 'runway'),
+        duration: asString(params.duration, '8s'),
+        aspectRatio: asString(params.aspectRatio, '16:9'),
+        startImageUrl: optionalString(params.startImageUrl || params.imageUrl || node.data.primaryUrl || imageInput),
+        endImageUrl: optionalString(params.endImageUrl || node.data.secondaryUrl),
+        provider: getProviderValue(node, params),
+      } as GenerateVideoParams);
+      break;
+    }
+    case ToolType.UPSCALE: {
+      const imageUrl = asString(params.imageUrl || params.primaryUrl || node.data.primaryUrl || imageInput);
+      if (!imageUrl) throw new Error('Missing image for Upscale');
+      result = await upscaleImage({
+        imageUrl,
+        scale: asNumber(params.scale, 2) as 2 | 4,
+        enhanceMode: asString(params.enhanceMode || params.mode, 'balanced') as 'balanced' | 'creative' | 'faithful' | 'precision',
+        provider: getProviderValue(node, params),
+      } as UpscaleImageParams);
+      break;
+    }
+    case ToolType.ASSISTANT: {
+      const prompt = asString(
+        params.prompt,
+        typeof textInput === 'string'
+          ? textInput
+          : typeof node.data.prompt === 'string'
+            ? node.data.prompt
+            : '',
+      );
+      if (!prompt) throw new Error('Missing prompt for Assistant');
+      result = await enhancePrompt({
+        prompt,
+        style: asString(params.style, 'photorealistic'),
+        provider: getProviderValue(node, params),
+      } as EnhancePromptParams);
+      break;
+    }
+    case ToolType.MUSIC: {
+      result = await generateMusic({
+        prompt: asString(params.prompt, textInput || 'Ambient music'),
+        genre: optionalString(params.genre),
+        moods: Array.isArray(params.moods) ? params.moods : undefined,
+        instruments: Array.isArray(params.instruments) ? params.instruments : undefined,
+        duration: asNumber(params.duration, undefined),
+        tempo: asNumber(params.tempo, undefined),
+        provider: getProviderValue(node, params),
+      } as GenerateMusicParams);
+      break;
+    }
+    case ToolType.SFX: {
+      result = await generateSfx({
+        prompt: asString(params.prompt, textInput || 'Sound effect'),
+        category: optionalString(params.category),
+        duration: asNumber(params.duration, undefined),
+        provider: getProviderValue(node, params),
+      } as GenerateSfxParams);
+      break;
+    }
+    case ToolType.VOICE: {
+      result = await generateVoice({
+        text: asString(params.text || params.prompt, textInput || 'Hello world'),
+        mode: asString(params.mode, 'tts') as 'tts' | 'clone',
+        voiceId: optionalString(params.voiceId),
+        language: optionalString(params.language),
+        emotion: optionalString(params.emotion),
+        speed: asNumber(params.speed, undefined),
+        provider: getProviderValue(node, params),
+      } as GenerateVoiceParams);
+      break;
+    }
+    case ToolType.LIP_SYNC: {
+      result = await lipSync({
+        videoUrl: asString(params.videoUrl || params.primaryUrl || node.data.primaryUrl || videoInput, ''),
+        audioUrl: asString(params.audioUrl || params.secondaryUrl || node.data.secondaryUrl, ''),
+        syncMode: optionalString(params.syncMode),
+        accuracy: asNumber(params.accuracy, undefined),
+        smoothing: asNumber(params.smoothing, undefined),
+        provider: getProviderValue(node, params),
+      } as LipSyncParams);
+      break;
+    }
+    case ToolType.VIDEO_UPSCALE: {
+      result = await upscaleVideo({
+        videoUrl: asString(params.videoUrl || params.primaryUrl || node.data.primaryUrl || videoInput, ''),
+        targetResolution: optionalString(params.targetResolution),
+        model: optionalString(params.model),
+        denoise: asNumber(params.denoise, undefined),
+        sharpen: asNumber(params.sharpen, undefined),
+        fpsBoost: Boolean(params.fpsBoost),
+        provider: getProviderValue(node, params),
+      } as UpscaleVideoParams);
+      break;
+    }
+    case ToolType.BG_REMOVE: {
+      result = await removeBackground({
+        imageUrl: asString(params.imageUrl || params.primaryUrl || node.data.primaryUrl || imageInput, ''),
+        mode: optionalString(params.mode),
+        edgeRefinement: asNumber(params.edgeRefinement, undefined),
+        provider: getProviderValue(node, params),
+      } as RemoveBackgroundParams);
+      break;
+    }
+    case ToolType.SKETCH_TO_IMAGE:
+    case ToolType.VARIATIONS:
+    case ToolType.CAMERA_CHANGE:
+    case ToolType.ICON_GEN:
+    case ToolType.IMAGE_EXTEND:
+    case ToolType.MOCKUP:
+    case ToolType.SKIN_ENHANCE:
+      result = await generateImage({
+        prompt: asString(params.prompt, textInput || 'Create an image'),
+        model: asString(params.model, 'seedream'),
+        aspectRatio: asString(params.aspectRatio, '1:1'),
+        quality: asString(params.quality, 'hd') as 'standard' | 'hd' | '4k',
+        provider: getProviderValue(node, params),
+      } as GenerateImageParams);
+      break;
+    default:
+      throw new Error(`Unsupported tool type: ${toolType}`);
+  }
+
+  if ('enhancedPrompt' in result) {
+    return { resultText: result.enhancedPrompt };
+  }
+
+  return {
+    resultUrl: result.resultUrl || '',
+    previewUrl: result.resultUrl || '',
+    generationId: result.id,
+  };
 }

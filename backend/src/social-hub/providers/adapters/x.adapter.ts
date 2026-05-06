@@ -5,6 +5,7 @@ import {
   SocialProvider,
   AuthTokenDetails,
   PostDetails,
+  MediaContent,
   PostResponse,
   MetricsData,
   AnalyticsData,
@@ -188,8 +189,18 @@ export class XAdapter extends SocialAbstractBase implements SocialProvider {
 
       // Handle media upload
       if (details.media?.length) {
-        // TODO: Implement media upload via /2/media/upload chunked endpoint
-        this.logger.warn('Media upload for X not yet implemented');
+        const mediaIds: string[] = [];
+        for (const media of details.media) {
+          try {
+            const mediaId = await this.uploadMedia(accessToken, media);
+            if (mediaId) mediaIds.push(mediaId);
+          } catch (err) {
+            this.logger.error(`Failed to upload media to X: ${err.message}`);
+          }
+        }
+        if (mediaIds.length) {
+          tweetBody.media = { media_ids: mediaIds };
+        }
       }
 
       const response = await this.fetchWithRetry(
@@ -318,5 +329,104 @@ export class XAdapter extends SocialAbstractBase implements SocialProvider {
       this.logger.warn('Failed to fetch X post analytics:', error);
       return [];
     }
+  }
+
+  /**
+   * Upload media to X using the chunked upload API (v1.1).
+   * Note: X now supports OAuth 2.0 User Context for media uploads.
+   */
+  private async uploadMedia(accessToken: string, media: MediaContent): Promise<string> {
+    const uploadUrl = 'https://upload.twitter.com/1.1/media/upload.json';
+    
+    // 1. Download media binary
+    const fileRes = await this.httpService.axiosRef.get(media.path, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(fileRes.data);
+    const totalBytes = buffer.length;
+    const mediaType = media.type === 'video' ? 'video/mp4' : 'image/jpeg';
+    const mediaCategory = media.type === 'video' ? 'tweet_video' : 'tweet_image';
+
+    // 2. INIT
+    const initRes = await this.fetchWithRetry(
+      uploadUrl,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: new URLSearchParams({
+          command: 'INIT',
+          total_bytes: String(totalBytes),
+          media_type: mediaType,
+          media_category: mediaCategory,
+        }).toString(),
+      },
+      'media_init',
+    );
+    const { media_id_string: mediaId } = await initRes.json();
+
+    // 3. APPEND (Chunking if needed, but for now simple single chunk)
+    const formData = new FormData();
+    formData.append('command', 'APPEND');
+    formData.append('media_id', mediaId);
+    formData.append('segment_index', '0');
+    formData.append('media', new Blob([buffer]), 'media');
+
+    await this.fetchWithRetry(
+      uploadUrl,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: formData,
+      },
+      'media_append',
+    );
+
+    // 4. FINALIZE
+    await this.fetchWithRetry(
+      uploadUrl,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: new URLSearchParams({
+          command: 'FINALIZE',
+          media_id: mediaId,
+        }).toString(),
+      },
+      'media_finalize',
+    );
+
+    // 5. STATUS (Only for videos)
+    if (media.type === 'video') {
+      let succeeded = false;
+      let retries = 0;
+      while (!succeeded && retries < 10) {
+        const statusRes = await this.fetchWithRetry(
+          `${uploadUrl}?command=STATUS&media_id=${mediaId}`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          },
+          'media_status',
+        );
+        const statusData = await statusRes.json();
+        const state = statusData.processing_info?.state;
+
+        if (state === 'succeeded') {
+          succeeded = true;
+        } else if (state === 'failed') {
+          throw new Error(`X media processing failed: ${statusData.processing_info?.error?.message}`);
+        } else {
+          await new Promise(resolve => setTimeout(resolve, 5000));
+          retries++;
+        }
+      }
+    }
+
+    return mediaId;
   }
 }

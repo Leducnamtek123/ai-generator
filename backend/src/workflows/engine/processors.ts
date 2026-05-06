@@ -62,7 +62,7 @@ export class ImageGenNodeProcessor implements NodeProcessor {
     const inputText =
       context.nodeInputs.get('prompt') || node.data.prompt || '';
 
-    // TODO: Integrate with ProviderRegistry for actual generation
+    // Integrated with GenerationProcessor via BullMQ queueing
     // For now, queue a job and return pending status
     return Promise.resolve({
       success: true,
@@ -150,6 +150,36 @@ export class AssistantNodeProcessor implements NodeProcessor {
         status: 'queued',
         originalPrompt: inputText,
         style: node.data.styleEmphasis || 'enhance',
+      },
+    });
+  }
+}
+
+/**
+ * Generic tool node processor
+ */
+export class ToolNodeProcessor implements NodeProcessor {
+  readonly nodeType = 'tool';
+
+  process(
+    node: WorkflowNode,
+    context: ProcessorContext,
+  ): Promise<ProcessorResult> {
+    const toolType = node.data.toolType || 'image_gen';
+    const prompt =
+      context.nodeInputs.get('text') ||
+      context.nodeInputs.get('prompt') ||
+      node.data.prompt ||
+      node.data.inputText ||
+      '';
+
+    return Promise.resolve({
+      success: true,
+      output: {
+        status: 'queued',
+        toolType,
+        prompt,
+        ...node.data,
       },
     });
   }

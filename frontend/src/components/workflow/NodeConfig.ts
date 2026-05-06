@@ -17,6 +17,7 @@ import {
     Layers,
     Smile,
     MessageSquare,
+    Wand2,
 } from 'lucide-react';
 
 import {
@@ -39,6 +40,7 @@ import {
     CameraAngle,
     NoteColor,
     FileMediaType,
+    ToolType,
 } from './NodeEnums';
 
 import type {
@@ -50,6 +52,7 @@ import type {
     VideoGenNodeData,
     AssistantNodeData,
     UpscaleNodeData,
+    ToolNodeData,
     CameraNodeData,
     StickyNoteNodeData,
     GroupNodeData,
@@ -183,6 +186,31 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
             sharpness: 20,
             grain: 10,
         } as Partial<UpscaleNodeData>,
+    },
+    [WorkflowNodeType.TOOL]: {
+        type: WorkflowNodeType.TOOL,
+        label: 'Tool',
+        icon: Wand2,
+        category: NodeCategory.GENERATION,
+        description: 'Run any generation tool',
+        color: 'text-fuchsia-400',
+        connections: {
+            accepts: [
+                ConnectionType.TEXT,
+                ConnectionType.IMAGE,
+                ConnectionType.VIDEO,
+                ConnectionType.MEDIA,
+                ConnectionType.REFERENCE,
+            ],
+            outputs: ConnectionType.REFERENCE,
+            requiresInput: false,
+        },
+        defaultData: {
+            label: 'Tool Node',
+            status: NodeStatus.IDLE,
+            toolType: ToolType.IMAGE_GEN,
+            advancedParams: '{}',
+        } as Partial<ToolNodeData>,
     },
     [WorkflowNodeType.CAMERA]: {
         type: WorkflowNodeType.CAMERA,

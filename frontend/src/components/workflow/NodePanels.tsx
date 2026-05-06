@@ -31,3 +31,4 @@ export { ImageGenNodePanel } from './panels/ImageGenNodePanel';
 export { VideoGenNodePanel } from './panels/VideoGenNodePanel';
 export { UpscaleNodePanel } from './panels/UpscaleNodePanel';
 export { AssistantNodePanel } from './panels/AssistantNodePanel';
+export { ToolNodePanel } from './panels/ToolNodePanel';

@@ -12,6 +12,7 @@ This backend now supports a unified checkout flow for credits top-up:
 - `VNPAY`: implemented (signed checkout URL + signature verification for return/IPN).
 - `MoMo`: implemented (create order API + return/IPN signature verification).
 - `ZaloPay`: implemented (create order API + callback MAC verification + query status fallback).
+- `9Pay`: implemented (sandbox checkout URL at `/portal/create/order`, signed from `POST /payments/create`, return/IPN checksum verification).
 
 ## Required env vars
 
@@ -32,6 +33,19 @@ Use `.env.example` values:
 - `ZALOPAY_KEY1`
 - `ZALOPAY_KEY2`
 - `ZALOPAY_ENDPOINT`
+- `NINEPAY_MERCHANT_KEY`
+- `NINEPAY_SECRET_KEY`
+- `NINEPAY_CHECKSUM_KEY`
+- `NINEPAY_ENDPOINT`
+
+For the current sandbox sample, use `https://sand-payment.9pay.vn` unless your 9Pay merchant view tells you to use a different host.
+
+Website checkout details for this repo:
+
+- Sign the checkout request with `POST`, `/payments/create`, Unix time in seconds, and canonicalized sorted params.
+- Build the checkout URL from `baseEncode` + `signature` against `/portal/create/order` in sandbox and `/portal` in production.
+- Include `merchantKey`, `time`, `invoice_no`, `amount`, `description`, `back_url`, `return_url`, `lang`, and `currency`.
+- Keep `back_url` and `return_url` pointed at public web URLs for the browser checkout flow.
 
 ## Web flow
 

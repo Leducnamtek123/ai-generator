@@ -30,5 +30,7 @@ export type PaymentsConfig = {
     secretKey?: string;
     checksumKey?: string;
     endpoint?: string;
+    returnUrl?: string;
+    backUrl?: string;
   };
 };

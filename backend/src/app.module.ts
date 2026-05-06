@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import fs from 'fs';
 import { UsersModule } from './users/users.module';
 import { FilesModule } from './files/files.module';
 import { AuthModule } from './auth/auth.module';
@@ -67,6 +68,18 @@ import { HealthModule } from './health/health.module';
 import { SocialHubModule } from './social-hub/social-hub.module';
 import { PaymentsModule } from './payments/payments.module';
 import paymentsConfig from './payments/config/payments.config';
+import { CommunityMarketplaceModule } from './community-marketplace/community-marketplace.module';
+
+const resolveI18nPath = () => {
+  const candidates = [
+    path.resolve(process.cwd(), 'src', 'i18n'),
+    path.resolve(process.cwd(), 'dist', 'i18n'),
+    path.resolve(process.cwd(), 'backend', 'src', 'i18n'),
+    path.resolve(process.cwd(), 'backend', 'dist', 'i18n'),
+  ];
+
+  return candidates.find((candidate) => fs.existsSync(candidate)) ?? candidates[0];
+};
 
 @Module({
   imports: [
@@ -92,7 +105,7 @@ import paymentsConfig from './payments/config/payments.config';
         fallbackLanguage: configService.getOrThrow('app.fallbackLanguage', {
           infer: true,
         }),
-        loaderOptions: { path: path.join(__dirname, '/i18n/'), watch: true },
+        loaderOptions: { path: resolveI18nPath(), watch: true },
       }),
       resolvers: [
         {
@@ -139,6 +152,7 @@ import paymentsConfig from './payments/config/payments.config';
     HealthModule,
     SocialHubModule,
     PaymentsModule,
+    CommunityMarketplaceModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

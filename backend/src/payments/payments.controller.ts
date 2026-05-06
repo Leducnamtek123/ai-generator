@@ -37,7 +37,14 @@ export class PaymentsController {
   @ApiOperation({ summary: 'Create payment checkout session for credit topup' })
   @ApiResponse({ status: 201, description: 'Checkout URL created' })
   createCheckout(@Body() dto: CreateCheckoutDto, @Request() req: any) {
-    return this.paymentsService.createCheckout(req.user.id, dto);
+    const forwardedFor = req.headers?.['x-forwarded-for'];
+    const clientIp = Array.isArray(forwardedFor)
+      ? forwardedFor[0]
+      : String(forwardedFor || req.ip || req.socket?.remoteAddress || '')
+          .split(',')[0]
+          .trim();
+
+    return this.paymentsService.createCheckout(req.user.id, dto, clientIp);
   }
 
   @Get('status/:orderCode')

@@ -15,28 +15,50 @@ export class VideoGenerationService {
     private readonly eventsService: GenerationEventsService,
   ) {}
 
+  private getPreferredProvider(provider?: string, fallback?: string) {
+    return provider?.trim() || fallback || undefined;
+  }
+
   async generateVideo(dto: GenerateVideoDto, userId: string, projectId?: string): Promise<GenerationEntity> {
-    const provider = this.providerRegistry.getVideoProvider();
-    const cost = await this.baseService.deductCredits(userId, 'video');
+    const preferredProvider = this.getPreferredProvider(
+      dto.provider,
+      this.providerRegistry.getVideoProvider().name,
+    );
+    const reservation = await this.baseService.reserveCredits(userId, 'video');
 
-    const generation = await this.baseService.create({
+    let generation: GenerationEntity;
+    try {
+      generation = await this.baseService.create({
+        userId,
+        type: 'video',
+        status: 'pending',
+        prompt: dto.prompt,
+        model: dto.model,
+        cost: reservation.amount,
+        metadata: {
+          provider: preferredProvider,
+          duration: dto.duration,
+          aspectRatio: dto.aspectRatio,
+          startImageUrl: dto.startImageUrl,
+          projectId,
+          creditTransactionId: reservation.transactionId,
+          creditReservationId: reservation.referenceId,
+          ...(dto.metadata || {}),
+        },
+      });
+    } catch (error) {
+      await this.baseService.releaseCredits(userId, reservation.transactionId, 'video');
+      throw error;
+    }
+
+    this.executeVideoGeneration(
+      generation,
+      dto,
+      preferredProvider,
       userId,
-      type: 'video',
-      status: 'pending',
-      prompt: dto.prompt,
-      model: dto.model,
-      cost: cost,
-      metadata: {
-        provider: provider.name,
-        duration: dto.duration,
-        aspectRatio: dto.aspectRatio,
-        startImageUrl: dto.startImageUrl,
-        projectId,
-        ...(dto.metadata || {}),
-      },
-    });
-
-    this.executeVideoGeneration(generation, dto, provider, userId, cost, projectId)
+      reservation,
+      projectId,
+    )
       .catch((error) => this.logger.error(`Video generation ${generation.id} failed: ${error.message}`));
 
     return generation;
@@ -45,53 +67,101 @@ export class VideoGenerationService {
   private async executeVideoGeneration(
     generation: GenerationEntity,
     dto: GenerateVideoDto,
-    provider: any,
+    preferredProvider: string | undefined,
     userId: string,
-    cost: number,
+    reservation: { transactionId: string; amount: number },
     projectId?: string,
   ): Promise<void> {
     try {
-      generation.status = 'processing';
-      await this.baseService.save(generation);
+      const result = await this.providerRegistry.executeWithFallback(
+        'video-generation',
+        async (provider) => {
+          generation.status = 'processing';
+          await this.baseService.save(generation);
 
-      const result = await provider.generateVideo(dto.prompt, {
-        model: dto.model,
-        duration: dto.duration,
-        aspectRatio: dto.aspectRatio,
-        startImageUrl: dto.startImageUrl,
-        endImageUrl: dto.endImageUrl,
-      });
+          const providerResult = await provider.generateVideo(dto.prompt, {
+            model: dto.model,
+            duration: dto.duration,
+            aspectRatio: dto.aspectRatio,
+            startImageUrl: dto.startImageUrl,
+            endImageUrl: dto.endImageUrl,
+          });
 
-      generation.status = result.status || 'completed';
-      if (result.resultUrl) generation.resultUrl = result.resultUrl;
-      if (result.metadata) generation.metadata = { ...generation.metadata, ...result.metadata };
+          generation.status = providerResult.status || 'completed';
+          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          generation.metadata = {
+            ...generation.metadata,
+            ...(providerResult.metadata || {}),
+            provider: provider.name,
+          };
 
-      await this.baseService.save(generation);
-      await this.baseService.saveAsset(generation, projectId);
-      this.eventsService.emitUpdate(generation, projectId);
+          await this.baseService.save(generation);
+          try {
+            await this.baseService.captureCredits(
+              userId,
+              reservation.transactionId,
+              'video',
+            );
+          } catch (captureError: any) {
+            this.logger.error(
+              `Failed to capture credits for video generation ${generation.id}: ${captureError.message}`,
+            );
+          }
+          await this.baseService.saveAsset(generation, projectId);
+          this.eventsService.emitUpdate(generation, projectId);
+          return providerResult;
+        },
+        preferredProvider,
+      );
+
+      if (!result) {
+        throw new Error('Video generation did not return a result');
+      }
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.baseService.save(generation);
-      await this.baseService.refundCredits(userId, cost, 'video');
+      try {
+        await this.baseService.releaseCredits(
+          userId,
+          reservation.transactionId,
+          'video',
+        );
+      } catch (releaseError: any) {
+        this.logger.error(
+          `Failed to release credits for video generation ${generation.id}: ${releaseError.message}`,
+        );
+      }
       this.eventsService.emitUpdate(generation, projectId);
     }
   }
 
   async processVideo(dto: Record<string, any>, userId: string, type: 'lip-sync' | 'video-upscale'): Promise<GenerationEntity> {
-    const provider = this.providerRegistry.getProvider('replicate');
-    const cost = await this.baseService.deductCredits(userId, type);
+    const preferredProvider = this.getPreferredProvider(dto.provider, 'replicate');
+    const provider = this.providerRegistry.getProvider(preferredProvider || 'replicate');
+    const reservation = await this.baseService.reserveCredits(userId, type);
 
-    const generation = await this.baseService.create({
-      userId,
-      type,
-      status: 'pending',
-      prompt: dto.prompt || type,
-      cost,
-      metadata: { ...dto, provider: provider.name },
-    });
+    let generation: GenerationEntity;
+    try {
+      generation = await this.baseService.create({
+        userId,
+        type,
+        status: 'pending',
+        prompt: dto.prompt || type,
+        cost: reservation.amount,
+        metadata: {
+          ...dto,
+          provider: provider.name,
+          creditTransactionId: reservation.transactionId,
+          creditReservationId: reservation.referenceId,
+        },
+      });
+    } catch (error) {
+      await this.baseService.releaseCredits(userId, reservation.transactionId, type);
+      throw error;
+    }
 
-    this.executeVideoProcessing(generation, dto, provider, type, userId, cost)
+    this.executeVideoProcessing(generation, dto, provider, type, userId, reservation)
       .catch((error) => this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`));
 
     return generation;
@@ -103,7 +173,7 @@ export class VideoGenerationService {
     provider: any,
     type: string,
     userId: string,
-    cost: number,
+    reservation: { transactionId: string; amount: number },
   ): Promise<void> {
     try {
       generation.status = 'processing';
@@ -121,12 +191,33 @@ export class VideoGenerationService {
       if (result.metadata) generation.metadata = { ...generation.metadata, ...result.metadata };
 
       await this.baseService.save(generation);
+      try {
+        await this.baseService.captureCredits(
+          userId,
+          reservation.transactionId,
+          type,
+        );
+      } catch (captureError: any) {
+        this.logger.error(
+          `Failed to capture credits for ${type} processing ${generation.id}: ${captureError.message}`,
+        );
+      }
       await this.baseService.saveAsset(generation);
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;
       await this.baseService.save(generation);
-      await this.baseService.refundCredits(userId, cost, type);
+      try {
+        await this.baseService.releaseCredits(
+          userId,
+          reservation.transactionId,
+          type,
+        );
+      } catch (releaseError: any) {
+        this.logger.error(
+          `Failed to release credits for ${type} processing ${generation.id}: ${releaseError.message}`,
+        );
+      }
     }
   }
 }

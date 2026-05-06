@@ -68,6 +68,14 @@ export class GenerationsController {
     });
   }
 
+  @Get('providers')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'List available AI providers and their capabilities' })
+  listProviders() {
+    return this.generationsService.listProviders();
+  }
+
   @Get(':id')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()

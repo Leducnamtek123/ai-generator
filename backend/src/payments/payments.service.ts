@@ -52,7 +52,11 @@ export class PaymentsService {
     });
   }
 
-  async createCheckout(userId: string, dto: CreateCheckoutDto) {
+  async createCheckout(
+    userId: string,
+    dto: CreateCheckoutDto,
+    clientIp?: string,
+  ) {
     const provider = this.resolveProvider(dto.provider);
     const paymentPackage = this.getPackage(dto.packageId);
     const orderCode = this.generateOrderCode(provider);
@@ -72,7 +76,7 @@ export class PaymentsService {
       }),
     );
 
-    const checkout = await this.createProviderCheckout(order);
+    const checkout = await this.createProviderCheckout(order, clientIp);
     order.paymentUrl = checkout.paymentUrl;
     order.metadata = {
       ...(order.metadata || {}),
@@ -103,17 +107,13 @@ export class PaymentsService {
     query: Record<string, string | string[]>,
   ) {
     let normalizedQuery = this.normalizePayload(query);
-    
-    // 9Pay return URL uses ?d=base64&s=signature
-    if (provider === '9pay' && normalizedQuery.d && normalizedQuery.s) {
-      const decodedData = this.decodeNinePayData(normalizedQuery.d);
-      const verified = this.verifyNinePaySignature({
-        d: normalizedQuery.d,
-        s: normalizedQuery.s,
-      });
-      
-      if (!verified) throw new BadRequestException('Invalid 9Pay signature');
-      normalizedQuery = { ...normalizedQuery, ...decodedData };
+
+    if (provider === '9pay') {
+      const verified = this.verifyNinePayCallback(normalizedQuery);
+      if (!verified) {
+        throw new BadRequestException('Invalid 9Pay signature');
+      }
+      normalizedQuery = this.normalizeNinePayCallback(normalizedQuery);
     }
 
     const orderCode = this.extractOrderCode(provider, normalizedQuery);
@@ -180,6 +180,7 @@ export class PaymentsService {
 
   private async createProviderCheckout(
     order: PaymentOrderEntity,
+    clientIp?: string,
   ): Promise<{ paymentUrl: string; metadata?: Record<string, unknown> }> {
     switch (order.provider) {
       case 'vnpay':
@@ -189,7 +190,7 @@ export class PaymentsService {
       case 'zalopay':
         return this.createZaloPayCheckout(order);
       case '9pay':
-        return this.createNinePayCheckout(order);
+        return this.createNinePayCheckout(order, clientIp);
       default:
         throw new BadRequestException('Unsupported payment provider');
     }
@@ -398,7 +399,7 @@ export class PaymentsService {
     }
 
     if (provider === '9pay') {
-      return this.verifyNinePaySignature(payload);
+      return this.verifyNinePayCallback(payload);
     }
 
     return false;
@@ -470,7 +471,7 @@ export class PaymentsService {
       case 'zalopay':
         return this.resolveZaloPayStatus(payload, order);
       case '9pay':
-        return String(payload.status) === '1' ? 'paid' : 'failed';
+        return ['4', '5'].includes(String(payload.status)) ? 'paid' : 'failed';
       default:
         return 'failed';
     }
@@ -548,6 +549,9 @@ export class PaymentsService {
         userId: order.userId,
         amount: order.credits,
         type: 'topup',
+        status: 'posted',
+        referenceType: 'payment_order',
+        referenceId: order.orderCode,
         metadata: {
           paymentProvider: order.provider,
           orderCode: order.orderCode,
@@ -621,7 +625,12 @@ export class PaymentsService {
       case 'momo':
         return payload.orderId || payload.orderCode;
       case '9pay':
-        return payload.invoice_no || payload.orderId || payload.invoice;
+        return (
+          payload.invoice_no ||
+          payload.request_code ||
+          payload.orderId ||
+          payload.invoice
+        );
       case 'zalopay': {
         const appTransId = this.readZaloAppTransId(payload);
         if (!appTransId) return payload.paymentOrder || '';
@@ -661,7 +670,8 @@ export class PaymentsService {
     const packages = this.configService.get('payments.creditPackages', {
       infer: true,
     });
-    if (!packages) throw new BadRequestException('Credit packages not configured');
+    if (!packages)
+      throw new BadRequestException('Credit packages not configured');
     const paymentPackage = packages[packageId];
     if (!paymentPackage) throw new BadRequestException('Invalid package');
     return paymentPackage;
@@ -679,7 +689,9 @@ export class PaymentsService {
 
   private generateOrderCode(provider: PaymentProvider) {
     const random = crypto.randomBytes(4).toString('hex');
-    return `${provider}_${Date.now()}_${random}`;
+    const timestamp = Date.now().toString(36);
+    // 9Pay requires alphanumeric invoice_no (no underscores)
+    return `${provider}${timestamp}${random}`.toUpperCase();
   }
 
   private getProviderReturnUrl(provider: PaymentProvider) {
@@ -690,7 +702,9 @@ export class PaymentsService {
       infer: true,
     });
     if (!backendDomain || !apiPrefix) {
-      throw new BadRequestException('App backend domain or API prefix not configured');
+      throw new BadRequestException(
+        'App backend domain or API prefix not configured',
+      );
     }
     return `${backendDomain}/${apiPrefix}/v1/payments/return/${provider}`;
   }
@@ -703,7 +717,9 @@ export class PaymentsService {
       infer: true,
     });
     if (!backendDomain || !apiPrefix) {
-      throw new BadRequestException('App backend domain or API prefix not configured');
+      throw new BadRequestException(
+        'App backend domain or API prefix not configured',
+      );
     }
     return `${backendDomain}/${apiPrefix}/v1/payments/ipn/${provider}`;
   }
@@ -720,7 +736,9 @@ export class PaymentsService {
       infer: true,
     });
     if (!frontendDomain || !returnPath) {
-      throw new BadRequestException('App frontend domain or return path not configured');
+      throw new BadRequestException(
+        'App frontend domain or return path not configured',
+      );
     }
     const url = new URL(returnPath, frontendDomain);
     url.searchParams.set('paymentProvider', provider);
@@ -781,7 +799,10 @@ export class PaymentsService {
     return `${yy}${mm}${dd}`;
   }
 
-  private async createNinePayCheckout(order: PaymentOrderEntity) {
+  private async createNinePayCheckout(
+    order: PaymentOrderEntity,
+    clientIp?: string,
+  ) {
     const merchantKey = this.configService.get('payments.ninepay.merchantKey', {
       infer: true,
     });
@@ -791,47 +812,68 @@ export class PaymentsService {
     const endpoint = this.configService.get('payments.ninepay.endpoint', {
       infer: true,
     });
+    const returnUrl =
+      this.configService.get('payments.ninepay.returnUrl', {
+        infer: true,
+      }) || this.getProviderReturnUrl('9pay');
 
     if (!merchantKey || !secretKey || !endpoint) {
       throw new BadRequestException('9Pay is not configured');
     }
 
-    const payload = {
-      amount: order.amountVnd,
-      back_url: this.getFrontendReturnUrl('9pay', order.orderCode, 'pending'),
-      description: `AI Generator top up ${order.credits} credits`,
+    const requestedAt = String(Math.floor(Date.now() / 1000));
+    const checkoutPayload = {
+      merchantKey,
+      time: requestedAt,
       invoice_no: order.orderCode,
-      merchantKey: merchantKey,
-      return_url: this.getProviderReturnUrl('9pay'),
-      time: Math.floor(Date.now() / 1000),
+      amount: Math.round(order.amountVnd),
+      currency: 'VND',
+      description: `AI Generator top up ${order.credits} credits`,
+      back_url: returnUrl,
+      return_url: returnUrl,
+      lang: 'vi',
+      ...(clientIp ? { client_ip: clientIp } : {}),
     };
 
-    // Sort keys alphabetically - 9Pay requires specific order for some versions
-    const sortedPayload = Object.keys(payload)
-      .sort()
-      .reduce((obj, key) => {
-        obj[key] = payload[key];
-        return obj;
-      }, {});
+    const checkoutJson = JSON.stringify(checkoutPayload);
+    const baseEncode = Buffer.from(checkoutJson, 'utf8').toString('base64');
+    const endpointBase = endpoint.replace(/\/$/, '');
+    const checkoutPath = this.resolveNinePayCheckoutPath(endpointBase);
+    const xForwardUrl = `${endpointBase}/payments/create`;
+    const canonicalParams = Object.entries(checkoutPayload)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([key, value]) => `${this.phpUrlEncode(key)}=${this.phpUrlEncode(value)}`)
+      .join('&');
 
-    // Use JSON.stringify without extra spaces and encode to base64
-    const message = Buffer.from(JSON.stringify(sortedPayload)).toString('base64');
-    
-    // Sign the base64 message directly using HMAC-SHA256
+    const message = ['POST', xForwardUrl, requestedAt, canonicalParams].join('\n');
     const signature = crypto
       .createHmac('sha256', secretKey)
-      .update(message)
-      .digest('hex');
-
-    const portalUrl = endpoint.endsWith('/') ? endpoint.slice(0, -1) : endpoint;
-    const paymentUrl = `${portalUrl}/portal?d=${encodeURIComponent(message)}&s=${signature}`;
+      .update(message, 'utf8')
+      .digest('base64');
 
     return {
-      paymentUrl,
+      paymentUrl: `${endpointBase}${checkoutPath}?${new URLSearchParams({
+        baseEncode,
+        signature,
+      }).toString()}`,
       metadata: {
-        ninepayInvoice: payload.invoice_no,
+        ninepayInvoice: checkoutPayload.invoice_no,
+        ninepayRequestCode: order.orderCode,
+        ninepayCheckoutPath: checkoutPath,
       },
     };
+  }
+
+  private resolveNinePayCheckoutPath(endpointBase: string) {
+    if (/sand-payment\.9pay\.vn|dev-payment\.9pay\.mobi|gc-dev-payment\.9pay\.mobi/i.test(endpointBase)) {
+      return '/portal/create/order';
+    }
+
+    return '/portal';
+  }
+
+  private phpUrlEncode(value: string | number | boolean) {
+    return encodeURIComponent(String(value)).replace(/%20/g, '+');
   }
 
   private decodeNinePayData(base64Data: string) {
@@ -842,21 +884,60 @@ export class PaymentsService {
     }
   }
 
-  private verifyNinePaySignature(payload: Record<string, string>) {
+  private verifyNinePayCallback(payload: Record<string, string>) {
+    if (payload.result && payload.checksum) {
+      const checksumKey = this.configService.get(
+        'payments.ninepay.checksumKey',
+        {
+          infer: true,
+        },
+      );
+      if (!checksumKey) return false;
+
+      const expectedChecksum = crypto
+        .createHash('sha256')
+        .update(payload.result + checksumKey)
+        .digest('hex');
+
+      return expectedChecksum.toUpperCase() === payload.checksum.toUpperCase();
+    }
+
+    if ((payload.baseEncode && payload.signature) || (payload.d && payload.s)) {
+      return this.verifyLegacyNinePaySignature(payload);
+    }
+
+    return false;
+  }
+
+  private normalizeNinePayCallback(payload: Record<string, string>) {
+    if (!payload.result) {
+      if (!payload.d) {
+        return payload;
+      }
+      const decoded = this.decodeNinePayData(payload.d);
+      return { ...payload, ...decoded };
+    }
+
+    const decoded = this.decodeNinePayData(payload.result);
+    return { ...payload, ...decoded };
+  }
+
+  private verifyLegacyNinePaySignature(payload: Record<string, string>) {
     const secretKey = this.configService.get('payments.ninepay.secretKey', {
       infer: true,
     });
     if (!secretKey) return false;
 
-    const { d: message, s: signature } = payload;
+    const message = payload.baseEncode || payload.d;
+    const signature = payload.signature || payload.s;
     if (!message || !signature) return false;
 
     const expected = crypto
       .createHmac('sha256', secretKey)
       .update(message)
-      .digest('hex');
+      .digest('base64');
 
-    return expected.toLowerCase() === signature.toLowerCase();
+    return expected === signature;
   }
 
   private async handleNinePayIpn(payload: Record<string, string>) {
@@ -865,32 +946,30 @@ export class PaymentsService {
     });
     if (!checksumKey) return { status: 0, message: '9Pay is not configured' };
 
-    const resultStr = payload.result || '';
-    const checksum = payload.checksum || '';
-
-    if (!resultStr || !checksum) {
+    if (!payload.result || !payload.checksum) {
       return { status: 0, message: 'Invalid payload' };
     }
 
     const expectedChecksum = crypto
       .createHash('sha256')
-      .update(resultStr + checksumKey)
+      .update(payload.result + checksumKey)
       .digest('hex');
-      
-    if (expectedChecksum.toUpperCase() !== checksum.toUpperCase()) {
+
+    if (expectedChecksum.toUpperCase() !== payload.checksum.toUpperCase()) {
       return { status: 0, message: 'Invalid signature' };
     }
 
     let resultData: any;
     try {
-      resultData = JSON.parse(
-        Buffer.from(resultStr, 'base64').toString('utf-8'),
-      );
+      resultData = this.decodeNinePayData(payload.result);
     } catch {
       return { status: 0, message: 'Invalid result format' };
     }
 
-    const orderCode = resultData.invoice_no || resultData.invoice;
+    const orderCode =
+      resultData.invoice_no ||
+      resultData.request_code ||
+      resultData.invoice;
     if (!orderCode) {
       return { status: 0, message: 'Order not found' };
     }
@@ -898,13 +977,12 @@ export class PaymentsService {
     const order = await this.paymentOrderRepository.findOne({
       where: { orderCode, provider: '9pay' },
     });
-    
+
     if (!order) return { status: 0, message: 'Order not found' };
 
-    const status =
-      resultData.status === 1 || String(resultData.status) === '1'
-        ? 'paid'
-        : 'failed';
+    const status = ['4', '5'].includes(String(resultData.status))
+      ? 'paid'
+      : 'failed';
 
     const mergedPayload = { ...payload, ...resultData };
     await this.finalizeOrder(order, status, mergedPayload);

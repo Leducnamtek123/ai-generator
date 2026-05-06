@@ -23,6 +23,7 @@ import {
     NoteColor,
     ConnectionType,
     WorkflowNodeType,
+    ToolType,
 } from './NodeEnums';
 
 export type { MediaItem, MediaFolder, MediaLibraryResponse } from '@/types/media';
@@ -99,6 +100,16 @@ export interface UpscaleNodeData extends BaseNodeData {
     outputUrl?: string;
 }
 
+export interface ToolNodeData extends BaseNodeData {
+    toolType: ToolType;
+    prompt?: string;
+    primaryUrl?: string;
+    secondaryUrl?: string;
+    advancedParams?: string;
+    resultUrl?: string;
+    resultText?: string;
+}
+
 export interface CameraNodeData extends BaseNodeData {
     angle: CameraAngle;
     customRotation?: { x: number; y: number; z: number };
@@ -133,6 +144,7 @@ export type WorkflowNodeData =
     | VideoGenNodeData
     | AssistantNodeData
     | UpscaleNodeData
+    | ToolNodeData
     | CameraNodeData
     | StickyNoteNodeData
     | GroupNodeData

@@ -33,6 +33,11 @@ export class GenerateImageDto {
   @IsNumber()
   seed?: number;
 
+  @ApiPropertyOptional({ description: 'Preferred AI provider for image generation' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
+
   @ApiPropertyOptional({ description: 'Extra metadata to store with generation' })
   @IsOptional()
   metadata?: Record<string, any>;
@@ -71,6 +76,11 @@ export class GenerateVideoDto {
   @ApiPropertyOptional({ description: 'Extra metadata to store with generation' })
   @IsOptional()
   metadata?: Record<string, any>;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for video generation' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 import {
@@ -161,6 +171,11 @@ export class UpscaleImageDto {
   @IsOptional()
   @IsString()
   prompt?: string;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for image upscaling' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class EnhancePromptDto {
@@ -174,6 +189,11 @@ export class EnhancePromptDto {
   @IsOptional()
   @IsString()
   style?: string;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for prompt enhancement' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class GenerationCallbackDto {
@@ -229,6 +249,11 @@ export class GenerateMusicDto {
   @Min(60)
   @Max(200)
   tempo?: number;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for music generation' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class GenerateSfxDto {
@@ -247,6 +272,11 @@ export class GenerateSfxDto {
   @Min(0.5)
   @Max(30)
   duration?: number;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for sound effect generation' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class GenerateVoiceDto {
@@ -280,6 +310,11 @@ export class GenerateVoiceDto {
   @Min(0.5)
   @Max(2.0)
   speed?: number;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for voice generation' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 // ======== Video Processing DTOs ========
@@ -311,6 +346,11 @@ export class LipSyncDto {
   @Min(0)
   @Max(100)
   smoothing?: number;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for lip-sync' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class UpscaleVideoDto {
@@ -345,6 +385,11 @@ export class UpscaleVideoDto {
   @ApiPropertyOptional({ description: 'Enable FPS boosting to 60fps' })
   @IsOptional()
   fpsBoost?: boolean;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for video upscaling' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 // ======== Image Processing DTOs ========
@@ -365,6 +410,11 @@ export class RemoveBackgroundDto {
   @Min(0)
   @Max(100)
   edgeRefinement?: number;
+
+  @ApiPropertyOptional({ description: 'Preferred AI provider for image processing' })
+  @IsOptional()
+  @IsString()
+  provider?: string;
 }
 
 export class SketchToImageDto {
@@ -524,4 +574,3 @@ export class SkinEnhanceDto {
   @IsOptional()
   preserveDetails?: boolean;
 }
-

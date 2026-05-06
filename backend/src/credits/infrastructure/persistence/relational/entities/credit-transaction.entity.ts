@@ -5,7 +5,11 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
-import { CreditTransaction } from '../../../../domain/credit-transaction';
+import {
+  CreditTransaction,
+  CreditTransactionStatus,
+  CreditTransactionType,
+} from '../../../../domain/credit-transaction';
 
 @Entity({ name: 'credit_transaction' })
 export class CreditTransactionEntity
@@ -22,7 +26,16 @@ export class CreditTransactionEntity
   amount: number;
 
   @Column()
-  type: 'generation' | 'topup' | 'refund';
+  type: CreditTransactionType;
+
+  @Column({ default: 'posted' })
+  status: CreditTransactionStatus;
+
+  @Column({ nullable: true })
+  referenceType?: string;
+
+  @Column({ nullable: true })
+  referenceId?: string;
 
   @Column({ type: 'jsonb', nullable: true })
   metadata: any;

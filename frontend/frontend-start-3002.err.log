@@ -1,0 +1,21 @@
+⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.
+⨯ Error: Cannot find module 'C:\Users\leduc\Documents\ai-generator\frontend\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\server\next-server.js
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\server\next.js
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\server\lib\start-server.js
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\cli\next-start.js
+    at ignore-listed frames {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}
+⨯ Error: Cannot find module 'C:\Users\leduc\Documents\ai-generator\frontend\.next\server\middleware-manifest.json'
+Require stack:
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\server\next-server.js
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\server\next.js
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\server\lib\start-server.js
+- C:\Users\leduc\Documents\ai-generator\frontend\node_modules\next\dist\cli\next-start.js
+    at ignore-listed frames {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: [Array]
+}

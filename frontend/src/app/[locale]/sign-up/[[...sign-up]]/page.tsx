@@ -157,7 +157,7 @@ export default function SignUpPage() {
                     </p>
                     <div className="auth-footer__secured">
                         <Lock size={12} aria-hidden="true" />
-                        <span>Secured by NavAuth</span>
+                        <span>Secured by PaintAI</span>
                     </div>
                 </div>
             </div>

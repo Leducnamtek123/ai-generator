@@ -15,6 +15,7 @@ export interface GenerateImageParams {
     quality?: 'standard' | 'hd' | '4k';
     negativePrompt?: string;
     seed?: number;
+    provider?: string;
 }
 
 export interface GenerateVideoParams {
@@ -24,17 +25,20 @@ export interface GenerateVideoParams {
     aspectRatio?: string;
     startImageUrl?: string;
     endImageUrl?: string;
+    provider?: string;
 }
 
 export interface UpscaleImageParams {
     imageUrl: string;
     scale?: 2 | 4;
     enhanceMode?: 'balanced' | 'creative' | 'faithful' | 'precision';
+    provider?: string;
 }
 
 export interface EnhancePromptParams {
     prompt: string;
     style?: string;
+    provider?: string;
 }
 
 // ======== New Audio Params ========
@@ -46,12 +50,14 @@ export interface GenerateMusicParams {
     instruments?: string[];
     duration?: number;
     tempo?: number;
+    provider?: string;
 }
 
 export interface GenerateSfxParams {
     prompt: string;
     category?: string;
     duration?: number;
+    provider?: string;
 }
 
 export interface GenerateVoiceParams {
@@ -61,6 +67,7 @@ export interface GenerateVoiceParams {
     language?: string;
     emotion?: string;
     speed?: number;
+    provider?: string;
 }
 
 // ======== New Video Processing Params ========
@@ -71,6 +78,7 @@ export interface LipSyncParams {
     syncMode?: string;
     accuracy?: number;
     smoothing?: number;
+    provider?: string;
 }
 
 export interface UpscaleVideoParams {
@@ -80,6 +88,7 @@ export interface UpscaleVideoParams {
     denoise?: number;
     sharpen?: number;
     fpsBoost?: boolean;
+    provider?: string;
 }
 
 // ======== New Image Processing Params ========
@@ -88,6 +97,12 @@ export interface RemoveBackgroundParams {
     imageUrl: string;
     mode?: string;
     edgeRefinement?: number;
+    provider?: string;
+}
+
+export interface GenerationProviderInfo {
+    name: string;
+    capabilities: string[];
 }
 
 // ======== API Functions ========
@@ -140,6 +155,10 @@ export async function upscaleVideo(params: UpscaleVideoParams): Promise<Generati
 /** Remove background from an image */
 export async function removeBackground(params: RemoveBackgroundParams): Promise<GenerationResult> {
     return post<GenerationResult>('/generations/bg-remove', params);
+}
+
+export async function getGenerationProviders(): Promise<GenerationProviderInfo[]> {
+    return get<GenerationProviderInfo[]>('/generations/providers');
 }
 
 /** Get generation status by ID */

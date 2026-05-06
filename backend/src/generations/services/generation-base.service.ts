@@ -1,9 +1,18 @@
-import { Injectable, Logger, NotFoundException, BadRequestException, HttpStatus } from '@nestjs/common';
+import { randomUUID } from 'crypto';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { GenerationEntity } from '../entities/generation.entity';
-import { CreditsService } from '../../credits/credits.service';
 import { AssetsService } from '../../assets/assets.service';
+import { BillingCreditsClientService } from '../../billing-client/billing-credits-client.service';
+
+export type CreditReservation = {
+  transactionId: string;
+  amount: number;
+  balance: number;
+  status?: 'pending' | 'posted' | 'reversed';
+  referenceId?: string;
+};
 
 @Injectable()
 export class GenerationBaseService {
@@ -12,7 +21,7 @@ export class GenerationBaseService {
   constructor(
     @InjectRepository(GenerationEntity)
     private readonly generationsRepository: Repository<GenerationEntity>,
-    private readonly creditsService: CreditsService,
+    private readonly billingCreditsClient: BillingCreditsClientService,
     private readonly assetsService: AssetsService,
   ) {}
 
@@ -33,7 +42,7 @@ export class GenerationBaseService {
     return this.generationsRepository.save(generation);
   }
 
-  async deductCredits(userId: string, type: string) {
+  async reserveCredits(userId: string, type: string): Promise<CreditReservation> {
     const costs: Record<string, number> = {
       image: 1, video: 5, upscale: 1, music: 2, sfx: 1, voice: 1,
       'lip-sync': 3, 'video-upscale': 5, 'bg-remove': 1, 'sketch-to-image': 1,
@@ -41,29 +50,48 @@ export class GenerationBaseService {
       mockup: 1, 'skin-enhance': 1,
     };
     const cost = costs[type] || 1;
-
-    const balance = await this.creditsService.getBalance(userId);
-    if (balance < cost) {
-      throw new BadRequestException('Insufficient credits');
-    }
-
-    await this.creditsService.create({
+    const referenceId = randomUUID();
+    const response = await this.billingCreditsClient.reserveCredits(
       userId,
-      amount: -cost,
-      type: 'generation',
-      metadata: { generationType: type },
-    });
+      cost,
+      {
+        generationType: type,
+      },
+      'generation',
+      referenceId,
+    );
 
-    return cost;
+    return {
+      transactionId: response.transactionId || referenceId,
+      amount: cost,
+      balance: response.balance,
+      status: response.status,
+      referenceId,
+    };
+  }
+
+  async captureCredits(
+    userId: string,
+    transactionId: string,
+    type: string,
+  ) {
+    await this.billingCreditsClient.captureCredits(userId, transactionId, {
+      generationType: type,
+    });
+  }
+
+  async releaseCredits(userId: string, transactionId: string, type: string) {
+    await this.billingCreditsClient.releaseCredits(userId, transactionId, {
+      reason: 'generation_failed',
+      generationType: type,
+    });
   }
 
   async refundCredits(userId: string, amount: number, type: string) {
     if (amount <= 0) return;
-    await this.creditsService.create({
-      userId,
-      amount: amount,
-      type: 'refund',
-      metadata: { reason: 'generation_failed', generationType: type },
+    await this.billingCreditsClient.refundCredits(userId, amount, {
+      reason: 'generation_failed',
+      generationType: type,
     });
   }
 

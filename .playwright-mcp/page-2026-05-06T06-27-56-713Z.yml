@@ -1,0 +1,205 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - navigation [ref=e3]:
+      - generic [ref=e4]:
+        - generic [ref=e5]:
+          - img "PaintAI Logo" [ref=e7]
+          - generic [ref=e8]:
+            - generic [ref=e9]: PaintAI
+            - generic [ref=e10]: Your paint, your choice
+        - generic [ref=e11]:
+          - link "Assets" [ref=e12] [cursor=pointer]:
+            - /url: /
+          - link "AI Tools" [ref=e13] [cursor=pointer]:
+            - /url: /
+          - link "Collections" [ref=e14] [cursor=pointer]:
+            - /url: /
+          - link "Pricing" [ref=e15] [cursor=pointer]:
+            - /url: /
+        - generic [ref=e16]:
+          - link "Log in" [ref=e17] [cursor=pointer]:
+            - /url: /sign-in
+            - button "Log in" [ref=e18]
+          - link "Join Free" [ref=e19] [cursor=pointer]:
+            - /url: /sign-up
+            - button "Join Free" [ref=e21]
+    - generic [ref=e24]:
+      - generic [ref=e25]:
+        - generic [ref=e26]:
+          - img [ref=e27]
+          - text: Leading AI Asset Deck
+        - heading "Your paint, your choice." [level=1] [ref=e30]:
+          - text: Your paint,
+          - text: your choice.
+        - paragraph [ref=e31]: You are the artist. AI is your master brush. Co-create stunning assets with the world's most advanced AI creative engine.
+      - generic [ref=e32]:
+        - generic [ref=e34]:
+          - generic [ref=e35] [cursor=pointer]:
+            - img [ref=e36]
+            - generic [ref=e40]: Assets
+          - textbox "Search for images, videos, vectors..." [ref=e41]
+          - button [ref=e42] [cursor=pointer]:
+            - img
+        - generic [ref=e43]:
+          - button "Artificial Intelligence" [ref=e44] [cursor=pointer]
+          - button "Neon Textures" [ref=e45] [cursor=pointer]
+          - button "3D UI Kit" [ref=e46] [cursor=pointer]
+          - button "Cinematic LUTs" [ref=e47] [cursor=pointer]
+          - button "Minimal Logos" [ref=e48] [cursor=pointer]
+    - generic [ref=e49]:
+      - generic [ref=e50]:
+        - generic [ref=e51]:
+          - generic [ref=e52]: Fresh inspiration
+          - heading "Recently Generated" [level=2] [ref=e53]
+        - button "View all assets" [ref=e54] [cursor=pointer]:
+          - text: View all assets
+          - img
+      - generic [ref=e55]:
+        - generic [ref=e56] [cursor=pointer]:
+          - generic [ref=e58]:
+            - generic [ref=e59]:
+              - button [ref=e60]:
+                - img [ref=e61]
+              - button [ref=e63]:
+                - img [ref=e64]
+            - generic [ref=e70]:
+              - generic [ref=e71]:
+                - generic [ref=e72]: AI Gen
+                - generic [ref=e73]: AI Video
+              - generic [ref=e74]:
+                - heading "Cyberpunk Landscape" [level=3] [ref=e75]
+                - button [ref=e76]:
+                  - img [ref=e77]
+          - img [ref=e81]
+        - generic [ref=e83] [cursor=pointer]:
+          - img "Abstract 3D Shape" [ref=e84]
+          - generic [ref=e85]:
+            - generic [ref=e86]:
+              - button [ref=e87]:
+                - img [ref=e88]
+              - button [ref=e90]:
+                - img [ref=e91]
+            - generic [ref=e97]:
+              - generic [ref=e98]:
+                - generic [ref=e99]: AI Gen
+                - generic [ref=e100]: 3D Render
+              - generic [ref=e101]:
+                - heading "Abstract 3D Shape" [level=3] [ref=e102]
+                - button [ref=e103]:
+                  - img [ref=e104]
+        - generic [ref=e107] [cursor=pointer]:
+          - img "Future UI Elements" [ref=e108]
+          - generic [ref=e109]:
+            - generic [ref=e110]:
+              - button [ref=e111]:
+                - img [ref=e112]
+              - button [ref=e114]:
+                - img [ref=e115]
+            - generic [ref=e121]:
+              - generic [ref=e122]:
+                - generic [ref=e123]: AI Gen
+                - generic [ref=e124]: Vectors
+              - generic [ref=e125]:
+                - heading "Future UI Elements" [level=3] [ref=e126]
+                - button [ref=e127]:
+                  - img [ref=e128]
+        - generic [ref=e131] [cursor=pointer]:
+          - generic [ref=e133]:
+            - generic [ref=e134]:
+              - button [ref=e135]:
+                - img [ref=e136]
+              - button [ref=e138]:
+                - img [ref=e139]
+            - generic [ref=e145]:
+              - generic [ref=e146]:
+                - generic [ref=e147]: AI Gen
+                - generic [ref=e148]: AI Realism
+              - generic [ref=e149]:
+                - heading "Neon Portrait" [level=3] [ref=e150]
+                - button [ref=e151]:
+                  - img [ref=e152]
+          - img [ref=e156]
+        - generic [ref=e158] [cursor=pointer]:
+          - img "Surreal Nature" [ref=e159]
+          - generic [ref=e160]:
+            - generic [ref=e161]:
+              - button [ref=e162]:
+                - img [ref=e163]
+              - button [ref=e165]:
+                - img [ref=e166]
+            - generic [ref=e172]:
+              - generic [ref=e173]:
+                - generic [ref=e174]: AI Gen
+                - generic [ref=e175]: Illustration
+              - generic [ref=e176]:
+                - heading "Surreal Nature" [level=3] [ref=e177]
+                - button [ref=e178]:
+                  - img [ref=e179]
+        - generic [ref=e182] [cursor=pointer]:
+          - img "Vibrant Textures" [ref=e183]
+          - generic [ref=e184]:
+            - generic [ref=e185]:
+              - button [ref=e186]:
+                - img [ref=e187]
+              - button [ref=e189]:
+                - img [ref=e190]
+            - generic [ref=e196]:
+              - generic [ref=e197]:
+                - generic [ref=e198]: AI Gen
+                - generic [ref=e199]: Patterns
+              - generic [ref=e200]:
+                - heading "Vibrant Textures" [level=3] [ref=e201]
+                - button [ref=e202]:
+                  - img [ref=e203]
+    - generic [ref=e207]:
+      - generic [ref=e208]:
+        - generic [ref=e209]:
+          - img [ref=e210]
+          - text: Infinite Possibilities
+        - heading "Text to Everything." [level=2] [ref=e213]:
+          - text: Text to
+          - text: Everything.
+        - paragraph [ref=e214]: Generate unique images, high-definition videos, and high-fidelity audio assets with just a single prompt. No professional skills required.
+        - list [ref=e215]:
+          - listitem [ref=e216]:
+            - img [ref=e217]
+            - text: Next-gen Stable Diffusion 3.5 Models
+          - listitem [ref=e220]:
+            - img [ref=e221]
+            - text: Short Video Production in 4K
+          - listitem [ref=e224]:
+            - img [ref=e225]
+            - text: SVG & Vector Generation
+          - listitem [ref=e228]:
+            - img [ref=e229]
+            - text: AI Object Removal & Editing
+        - button "Start Creating Now" [ref=e234] [cursor=pointer]
+      - generic [ref=e235]:
+        - img [ref=e240]
+        - generic [ref=e245]:
+          - img [ref=e247]
+          - generic [ref=e250]: Asset Ready
+    - generic [ref=e252]:
+      - heading "Elevate your Design Game." [level=2] [ref=e255]:
+        - text: Elevate your
+        - text: Design Game.
+      - paragraph [ref=e256]: Join 2M+ creators who are building the future with PaintAI. Get started for free today.
+      - generic [ref=e257]:
+        - link "Create Account" [ref=e258] [cursor=pointer]:
+          - /url: /sign-up
+          - button "Create Account" [ref=e259]
+        - button "Check Pricing" [ref=e260] [cursor=pointer]
+    - contentinfo [ref=e261]:
+      - generic [ref=e262]:
+        - generic [ref=e263]:
+          - img "Logo" [ref=e265]
+          - generic [ref=e266]:
+            - generic [ref=e267]: PaintAI
+            - generic [ref=e268]: Your paint, your choice
+        - generic [ref=e269]:
+          - generic [ref=e270]: Terms
+          - generic [ref=e271]: Privacy
+          - generic [ref=e272]: Cookies
+          - generic [ref=e273]: Support
+        - generic [ref=e274]: © 2026 PaintAI. Your paint, your choice.
+  - region "Notifications alt+T"

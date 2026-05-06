@@ -7,12 +7,14 @@ import { RelationalPersistenceModule } from './infrastructure/persistence/relati
 import { WorkflowEngine } from './engine/workflow.engine';
 import { WorkflowProcessor } from './engine/workflow.processor';
 import { QueuesModule } from '../queues/queues.module';
+import { GenerationsModule } from '../generations/generations.module';
 import { WORKFLOW_QUEUE, GENERATION_QUEUE } from '../queues/queues.constants';
 
 @Module({
   imports: [
     RelationalPersistenceModule,
     forwardRef(() => QueuesModule),
+    GenerationsModule,
     BullModule.registerQueue(
       { name: WORKFLOW_QUEUE },
       { name: GENERATION_QUEUE },

@@ -1,0 +1,26 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - navigation [ref=e4]:
+      - link [ref=e6] [cursor=pointer]:
+        - /url: "#"
+      - button "VN" [ref=e10] [cursor=pointer]:
+        - img [ref=e11]
+        - text: VN
+        - img [ref=e12]
+  - generic [ref=e16]:
+    - img "logo" [ref=e18]
+    - generic [ref=e20]:
+      - generic [ref=e21]:
+        - textbox [ref=e22]
+        - generic: Tài khoản
+      - generic [ref=e23]:
+        - textbox [ref=e24]
+        - generic: Mật khẩu
+      - button "Đăng nhập" [ref=e26] [cursor=pointer]
+  - contentinfo [ref=e27]:
+    - generic [ref=e28]:
+      - generic [ref=e29]: Copyright © 2026 9Pay. All right reserved
+      - generic [ref=e30]:
+        - img "9pay" [ref=e31]
+        - img "pcidss" [ref=e32]
+        - img "secure" [ref=e33]

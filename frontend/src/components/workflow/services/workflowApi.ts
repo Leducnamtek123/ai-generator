@@ -3,9 +3,9 @@
  * 
  * This service handles all API calls related to the workflow system.
  * When integrating with a real backend:
- * 1. Replace mock implementations with actual API calls
+ * 1. Keep mock implementations only behind an explicit env flag
  * 2. Add proper error handling and retry logic
- * 3. Implement WebSocket for real-time status updates
+ * 3. Implement WebSocket or SSE for real-time status updates
  * 
  * Architecture:
  * - All API calls go through this service
@@ -28,8 +28,7 @@ import {
 // CONFIGURATION
 // ============================================
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || '/api';
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true' || true; // Default to mock for now
+const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
 
 // ============================================
 // HTTP CLIENT HELPERS
@@ -162,7 +161,7 @@ export const workflowApi = {
         }
 
         try {
-            const response = await api.post<GenerationResult>('/generate/image', request);
+            const response = await api.post<GenerationResult>('/generations/image', request);
             return response.data;
         } catch (error: any) {
             return {
@@ -184,7 +183,7 @@ export const workflowApi = {
         }
 
         try {
-            const response = await api.post<GenerationResult>('/generate/video', request);
+            const response = await api.post<GenerationResult>('/generations/video', request);
             return response.data;
         } catch (error: any) {
             return {
@@ -206,7 +205,7 @@ export const workflowApi = {
         }
 
         try {
-            const response = await api.post<{ enhancedText: string }>('/enhance/prompt', request);
+            const response = await api.post<{ enhancedText: string }>('/generations/enhance-prompt', request);
             return response.data;
         } catch (error: any) {
             return {
@@ -225,7 +224,7 @@ export const workflowApi = {
         }
 
         try {
-            const response = await api.post<GenerationResult>('/upscale/image', request);
+            const response = await api.post<GenerationResult>('/generations/upscale', request);
             return response.data;
         } catch (error: any) {
             return {
@@ -253,7 +252,7 @@ export const workflowApi = {
         }
 
         try {
-            const response = await api.get<GenerationResult>(`/generation/${generationId}/status`);
+            const response = await api.get<GenerationResult>(`/generations/${generationId}`);
             return response.data;
         } catch (error: any) {
             return {

@@ -2,9 +2,10 @@
 
 import * as React from 'react';
 import { Node } from '@xyflow/react';
-import { X, Settings2, Sparkles, Image as ImageIcon, Type, Scan, Upload, Video } from 'lucide-react';
+import { X, Settings2, Sparkles, Image as ImageIcon, Type, Scan, Upload, Video, Wand2 } from 'lucide-react';
 import { useGeneration } from '@/hooks/useGeneration';
 import { Button } from '@/ui/button';
+import { getGenerationProviders, type GenerationProviderInfo } from '@/lib/api/generations';
 import { WorkflowNodeType } from './types';
 import {
     TextNodePanel,
@@ -12,7 +13,8 @@ import {
     ImageGenNodePanel,
     VideoGenNodePanel,
     UpscaleNodePanel,
-    AssistantNodePanel
+    AssistantNodePanel,
+    ToolNodePanel
 } from './NodePanels';
 
 interface PropertiesPanelProps {
@@ -23,10 +25,52 @@ interface PropertiesPanelProps {
 
 export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesPanelProps) {
     const { isGenerating, handleGenerateImage, handleGenerateVideo, handleUpscaleImage, handleEnhancePrompt } = useGeneration();
+    const [providers, setProviders] = React.useState<GenerationProviderInfo[]>([]);
+    const [providersLoading, setProvidersLoading] = React.useState(false);
+    const selectedType = selectedNode?.type;
+    const nodeData = (selectedNode?.data ?? {}) as Record<string, unknown>;
+
+    React.useEffect(() => {
+        let cancelled = false;
+
+        const loadProviders = async () => {
+            const supportedNode =
+                selectedType === WorkflowNodeType.IMAGE_GEN ||
+                selectedType === WorkflowNodeType.VIDEO_GEN ||
+                selectedType === WorkflowNodeType.UPSCALE ||
+                selectedType === WorkflowNodeType.ASSISTANT ||
+                selectedType === WorkflowNodeType.TOOL;
+
+            if (!supportedNode) {
+                setProviders([]);
+                return;
+            }
+
+            setProvidersLoading(true);
+            try {
+                const list = await getGenerationProviders();
+                if (!cancelled) {
+                    setProviders(list);
+                }
+            } catch {
+                if (!cancelled) {
+                    setProviders([]);
+                }
+            } finally {
+                if (!cancelled) {
+                    setProvidersLoading(false);
+                }
+            }
+        };
+
+        void loadProviders();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [selectedType]);
 
     if (!selectedNode) return null;
-
-    const nodeData = selectedNode.data as Record<string, unknown>;
 
     const handleChange = (key: string, value: unknown) => {
         onChange(selectedNode.id, { ...nodeData, [key]: value });
@@ -40,6 +84,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
             case WorkflowNodeType.VIDEO_GEN: return <Video className="w-4 h-4 text-purple-400" />;
             case WorkflowNodeType.ASSISTANT: return <Sparkles className="w-4 h-4 text-emerald-400" />;
             case WorkflowNodeType.UPSCALE: return <Scan className="w-4 h-4 text-indigo-400" />;
+            case WorkflowNodeType.TOOL: return <Wand2 className="w-4 h-4 text-fuchsia-400" />;
             default: return <Settings2 className="w-4 h-4 text-white/60" />;
         }
     };
@@ -52,6 +97,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
             case WorkflowNodeType.VIDEO_GEN: return 'Video Generator';
             case WorkflowNodeType.ASSISTANT: return 'AI Assistant';
             case WorkflowNodeType.UPSCALE: return 'AI Upscaler';
+            case WorkflowNodeType.TOOL: return 'Tool Node';
             default: return 'Properties';
         }
     };
@@ -76,6 +122,29 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
             {/* Content */}
             <div className="p-4 flex-1 overflow-y-auto">
+                {(selectedNode.type === WorkflowNodeType.IMAGE_GEN ||
+                    selectedNode.type === WorkflowNodeType.VIDEO_GEN ||
+                    selectedNode.type === WorkflowNodeType.UPSCALE ||
+                    selectedNode.type === WorkflowNodeType.ASSISTANT ||
+                    selectedNode.type === WorkflowNodeType.TOOL) && (
+                    <div className="mb-4 space-y-2">
+                        <div className="text-xs font-medium text-white/60">Preferred Provider</div>
+                        <select
+                            value={(nodeData.provider as string) || ''}
+                            onChange={(e) => handleChange('provider', e.target.value)}
+                            className="w-full h-11 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
+                        >
+                            <option value="">Auto / Default</option>
+                            {providersLoading && <option value="">Loading providers...</option>}
+                            {providers.map((provider) => (
+                                <option key={provider.name} value={provider.name}>
+                                    {provider.name}
+                                    {provider.capabilities.length ? ` · ${provider.capabilities.join(', ')}` : ''}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <PropertiesContent
                     selectedNode={selectedNode}
                     nodeData={nodeData}
@@ -146,6 +215,8 @@ function PropertiesContent({
             return <AssistantNodePanel {...commonProps} />;
         case WorkflowNodeType.UPSCALE:
             return <UpscaleNodePanel {...commonProps} />;
+        case WorkflowNodeType.TOOL:
+            return <ToolNodePanel {...commonProps} />;
         default:
             return (
                 <div className="flex flex-col items-center justify-center py-8 text-center">

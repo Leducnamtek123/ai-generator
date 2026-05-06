@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Logger, OnModuleInit } from '@nestjs/common';
 import { CreateWorkflowDto } from './dto/create-workflow.dto';
 import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { WorkflowRepository } from './infrastructure/persistence/workflow.repository';
@@ -7,14 +7,63 @@ import { WorkflowGraph } from './engine/types';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { WORKFLOW_QUEUE } from '../queues/queues.constants';
+import { GenerationEventsService } from '../generations/services/generation-events.service';
+import { GenerationEntity } from '../generations/entities/generation.entity';
 
 @Injectable()
-export class WorkflowsService {
+export class WorkflowsService implements OnModuleInit {
+  private readonly logger = new Logger(WorkflowsService.name);
+
   constructor(
     private readonly workflowRepository: WorkflowRepository,
     private readonly workflowEngine: WorkflowEngine,
+    private readonly generationEventsService: GenerationEventsService,
     @InjectQueue(WORKFLOW_QUEUE) private workflowQueue: Queue,
   ) {}
+
+  onModuleInit() {
+    this.generationEventsService.generationUpdated.subscribe((data) => {
+      this.handleGenerationUpdate(data.generation).catch((err) =>
+        this.logger.error(`Error handling generation update for workflow: ${err.message}`),
+      );
+    });
+  }
+
+  private async handleGenerationUpdate(generation: GenerationEntity) {
+    const metadata = generation.metadata || {};
+    const { workflowId, nodeId } = metadata;
+
+    if (!workflowId || !nodeId) return;
+
+    this.logger.log(`Updating workflow ${workflowId} node ${nodeId} from generation ${generation.id}`);
+
+    const workflow = await this.findOne(workflowId, generation.userId);
+    if (!workflow) return;
+
+    const patchData: any = {
+      status: generation.status === 'completed' ? 'success' : generation.status === 'failed' ? 'error' : 'processing',
+    };
+
+    if (generation.resultUrl) {
+      patchData.resultUrl = generation.resultUrl;
+      patchData.previewUrl = generation.resultUrl;
+    }
+
+    if (generation.status === 'failed' && generation.error) {
+      patchData.errorMessage = generation.error;
+    }
+
+    await this.update(workflowId, generation.userId, {
+      nodes: workflow.nodes.map((node: any) =>
+        node.id === nodeId
+          ? {
+              ...node,
+              data: { ...node.data, ...patchData },
+            }
+          : node,
+      ),
+    } as any);
+  }
 
   create(createWorkflowDto: CreateWorkflowDto, userId?: string | number) {
     const clonedPayload = {

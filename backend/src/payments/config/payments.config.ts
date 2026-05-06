@@ -87,6 +87,14 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsOptional()
   NINEPAY_ENDPOINT: string;
+
+  @IsString()
+  @IsOptional()
+  NINEPAY_RETURN_URL: string;
+
+  @IsString()
+  @IsOptional()
+  NINEPAY_BACK_URL: string;
 }
 
 export default registerAs<PaymentsConfig>('payments', () => {
@@ -134,6 +142,8 @@ export default registerAs<PaymentsConfig>('payments', () => {
       checksumKey: process.env.NINEPAY_CHECKSUM_KEY,
       endpoint:
         process.env.NINEPAY_ENDPOINT ?? 'https://sand-payment.9pay.vn',
+      returnUrl: process.env.NINEPAY_RETURN_URL || undefined,
+      backUrl: process.env.NINEPAY_BACK_URL || undefined,
     },
   };
 });

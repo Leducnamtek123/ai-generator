@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
 
+export type CreditTransactionStatus = 'pending' | 'posted' | 'reversed';
+
+export type CreditTransactionType =
+  | 'generation'
+  | 'topup'
+  | 'refund'
+  | 'adjustment';
+
 export class CreditTransaction {
   @ApiProperty({ type: String })
   id: string;
@@ -11,7 +19,16 @@ export class CreditTransaction {
   amount: number;
 
   @ApiProperty({ type: String })
-  type: 'generation' | 'topup' | 'refund';
+  type: CreditTransactionType;
+
+  @ApiProperty({ type: String, enum: ['pending', 'posted', 'reversed'] })
+  status: CreditTransactionStatus;
+
+  @ApiProperty({ type: String, nullable: true })
+  referenceType?: string;
+
+  @ApiProperty({ type: String, nullable: true })
+  referenceId?: string;
 
   @ApiProperty({ type: Object, nullable: true })
   metadata?: any;

@@ -27,6 +27,7 @@ export {
     CameraAngle,
     NoteColor,
     ConnectionType,
+    ToolType,
 } from './NodeEnums';
 
 // Interfaces & Data Types
@@ -38,6 +39,7 @@ export type {
     VideoGenNodeData,
     AssistantNodeData,
     UpscaleNodeData,
+    ToolNodeData,
     CameraNodeData,
     StickyNoteNodeData,
     GroupNodeData,

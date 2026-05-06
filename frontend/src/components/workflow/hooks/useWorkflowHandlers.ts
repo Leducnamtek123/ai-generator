@@ -3,7 +3,7 @@
 import { useCallback, useState } from 'react';
 import { Node, Edge, useReactFlow, addEdge, Connection, SelectionMode } from '@xyflow/react';
 import { toast } from 'sonner';
-import { WorkflowNodeType, NodeStatus, ConnectionType } from '../types';
+import { WorkflowNodeType, NodeStatus, ConnectionType, NODE_CONFIG } from '../types';
 
 export function useWorkflowHandlers(
     nodes: Node[],
@@ -58,11 +58,12 @@ export function useWorkflowHandlers(
         const id = Math.random().toString(36).substr(2, 9);
         const position = { x: 500, y: 300 };
         const nodeType = type === 'upload' ? WorkflowNodeType.MEDIA : type;
+        const defaultData = NODE_CONFIG[nodeType as WorkflowNodeType]?.defaultData || {};
         const newNode: Node = {
             id,
             type: nodeType as any,
             position,
-            data: { label, status: NodeStatus.IDLE },
+            data: { ...defaultData, label, status: NodeStatus.IDLE },
         };
         setNodes((nds: Node[]) => nds.concat(newNode));
         saveToHistory([...nodes, newNode], getEdges());

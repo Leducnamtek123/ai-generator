@@ -62,6 +62,10 @@ export class GenerationsService {
     };
   }
 
+  listProviders() {
+    return this.providerRegistry.getProviderInfo();
+  }
+
   async remove(id: string, userId: string) {
     const generation = await this.findOne(id);
     if (generation.userId !== userId) {
@@ -109,12 +113,47 @@ export class GenerationsService {
 
     await this.baseService.save(generation);
 
+    const creditTransactionId = generation.metadata?.creditTransactionId as
+      | string
+      | undefined;
+
     if (status === 'completed' && resultUrl) {
+      if (creditTransactionId) {
+        try {
+          await this.baseService.captureCredits(
+            generation.userId,
+            creditTransactionId,
+            generation.type,
+          );
+        } catch (captureError: any) {
+          this.logger.error(
+            `Failed to capture credits for callback ${generation.id}: ${captureError.message}`,
+          );
+        }
+      }
       await this.baseService.saveAsset(generation);
     }
 
     if (status === 'failed' && generation.cost) {
-      await this.baseService.refundCredits(generation.userId, generation.cost, generation.type);
+      if (creditTransactionId) {
+        try {
+          await this.baseService.releaseCredits(
+            generation.userId,
+            creditTransactionId,
+            generation.type,
+          );
+        } catch (releaseError: any) {
+          this.logger.error(
+            `Failed to release credits for callback ${generation.id}: ${releaseError.message}`,
+          );
+        }
+      } else {
+        await this.baseService.refundCredits(
+          generation.userId,
+          generation.cost,
+          generation.type,
+        );
+      }
     }
 
     // Notify other services (e.g. VisualFlow)

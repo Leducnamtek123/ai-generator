@@ -15,6 +15,7 @@ import { CameraNode } from './nodes/CameraNode';
 import { StickyNoteNode } from './nodes/StickyNoteNode';
 import { StickerNode } from './nodes/StickerNode';
 import { GroupNode } from './nodes/GroupNode';
+import { ToolNode } from './nodes/ToolNode';
 
 export const nodeTypes = {
     [WorkflowNodeType.TEXT]: TextNode,
@@ -22,6 +23,7 @@ export const nodeTypes = {
     [WorkflowNodeType.VIDEO_GEN]: VideoNode,
     [WorkflowNodeType.ASSISTANT]: AssistantNode,
     [WorkflowNodeType.UPSCALE]: UpscaleNode,
+    [WorkflowNodeType.TOOL]: ToolNode,
     [WorkflowNodeType.MEDIA]: MediaNode,
     [WorkflowNodeType.COMMENT]: CommentNode,
     [WorkflowNodeType.CAMERA]: CameraNode,

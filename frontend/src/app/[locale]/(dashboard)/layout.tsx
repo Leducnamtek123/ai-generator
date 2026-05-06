@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { usePathname } from '@/i18n/navigation';
 import { Sidebar } from "@/components/layouts/Sidebar";
 import { MobileNav } from "@/components/layouts/MobileNav";
 import { MainLayout } from "@/components/layouts/MainLayout";
@@ -12,6 +13,11 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const pathname = usePathname();
+
+    if (pathname === '/community') {
+        return <>{children}</>;
+    }
 
     return (
         <ProtectedRoute>

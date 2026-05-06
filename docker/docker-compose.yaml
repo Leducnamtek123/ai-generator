@@ -1,0 +1,200 @@
+services:
+  api:
+    container_name: ai-generator-api
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${API_PORT:-8000}:8000"
+    env_file:
+      - ./.env
+      - ../backend/.env
+    environment:
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
+      - APP_MODE=api
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  worker:
+    container_name: ai-generator-worker
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ./.env
+      - ../backend/.env
+    environment:
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
+      - APP_MODE=worker
+    depends_on:
+      - postgres
+      - redis
+      - minio
+
+  web:
+    container_name: ai-generator-web
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-3000}:3000"
+    env_file:
+      - ../frontend/.env
+    environment:
+      - API_BACKEND_URL=${API_BACKEND_URL:-http://api:8000/api/v1}
+      - BILLING_API_URL=${BILLING_API_URL:-http://billing-service:8001/api/v1}
+      - GENERATION_API_URL=${GENERATION_API_URL:-http://generation-service:8002/api/v1}
+    depends_on:
+      - api
+      - billing-service
+      - generation-service
+
+  landing:
+    container_name: ai-generator-landing
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+
+  nginx:
+    container_name: ai-generator-nginx
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
+    volumes:
+      - ./nginx:/etc/nginx/templates:ro
+    depends_on:
+      - api
+      - web
+      - billing-service
+      - generation-service
+
+  postgres:
+    container_name: ai-generator-postgres
+    image: postgres:17-alpine
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    environment:
+      POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
+      POSTGRES_DB: ${DATABASE_NAME:-ai_generator}
+
+  redis:
+    container_name: ai-generator-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+
+  sandbox:
+    container_name: ai-generator-sandbox
+    image: alpine:3.20
+    command: ["sh", "-c", "sleep infinity"]
+    profiles: ["sandbox"]
+
+  ssrf_proxy:
+    container_name: ai-generator-ssrf-proxy
+    image: alpine/squid:latest
+    profiles: ["sandbox"]
+
+  plugin_daemon:
+    container_name: ai-generator-plugin-daemon
+    image: alpine:3.20
+    command: ["sh", "-c", "sleep infinity"]
+    profiles: ["plugins"]
+
+  billing-service:
+    container_name: ai-generator-billing-service
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    env_file:
+      - ./.env
+      - ../backend/.env
+    environment:
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
+      - APP_MODE=billing
+      - APP_PORT=8001
+    command: ["node", "dist/src/main.billing.js"]
+    depends_on:
+      - postgres
+      - redis
+
+  generation-service:
+    container_name: ai-generator-generation-service
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8002:8002"
+    env_file:
+      - ./.env
+      - ../backend/.env
+    environment:
+      - DATABASE_HOST=${DATABASE_HOST:-postgres}
+      - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
+      - APP_MODE=generation
+      - APP_PORT=8002
+      - BILLING_SERVICE_URL=${BILLING_SERVICE_URL:-http://billing-service:8001/api/v1}
+    command: ["node", "dist/src/main.generation.js"]
+    depends_on:
+      - postgres
+      - redis
+      - billing-service
+
+  minio:
+    container_name: ai-generator-minio
+    image: minio/minio:latest
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    environment:
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+    command: server /data --console-address ":9001"
+
+  minio-init:
+    container_name: ai-generator-minio-init
+    image: minio/mc:latest
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      sleep 3;
+      mc alias set myminio http://minio:9000 ${AWS_ACCESS_KEY_ID:-minioadmin} ${AWS_SECRET_ACCESS_KEY:-minioadmin};
+      mc mb myminio/${AWS_S3_BUCKET:-ai-generator} --ignore-existing;
+      mc anonymous set public myminio/${AWS_S3_BUCKET:-ai-generator};
+      exit 0;
+      "
+
+volumes:
+  postgres-data:
+  minio-data:

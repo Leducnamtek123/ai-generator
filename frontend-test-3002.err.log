@@ -1,0 +1,4 @@
+(node:26584) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+⨯ upstream image response failed for https://images.unsplash.com/photo-1614726365723-49cfae92782b?q=80&w=800&auto=format&fit=crop 404
+⨯ upstream image response failed for https://images.unsplash.com/photo-1655721868461-125032504859?q=80&w=800&auto=format&fit=crop 404

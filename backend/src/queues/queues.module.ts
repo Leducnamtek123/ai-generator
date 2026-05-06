@@ -9,7 +9,6 @@ import { WorkflowsModule } from '../workflows/workflows.module';
 import { GenerationsModule } from '../generations/generations.module';
 import { AllConfigType } from '../config/config.type';
 import { forwardRef } from '@nestjs/common';
-import { CreditsModule } from '../credits/credits.module';
 
 @Module({
   imports: [
@@ -33,7 +32,6 @@ import { CreditsModule } from '../credits/credits.module';
     ProvidersModule,
     GenerationsModule,
     forwardRef(() => WorkflowsModule),
-    CreditsModule,
   ],
   providers: [GenerationProcessor],
   exports: [BullModule],

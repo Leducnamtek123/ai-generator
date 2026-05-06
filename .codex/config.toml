@@ -1,0 +1,21 @@
+model = "gpt-5.4-mini"
+model_reasoning_effort = "medium"
+personality = "pragmatic"
+
+approval_policy = "never"
+
+[mcp_servers.filesystem]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-filesystem", "C:\\Users\\leduc\\Documents\\ai-generator"]
+
+[mcp_servers.github]
+url = "https://api.githubcopilot.com/mcp/"
+
+[mcp_servers.browser]
+command = "uvx"
+args = ["--from", "browser-use[cli]", "browser-use", "--mcp"]
+
+[mcp_servers.next-devtools]
+command = "npx"
+args = ["-y", "next-devtools-mcp@latest"]
+

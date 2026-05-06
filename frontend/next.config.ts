@@ -14,6 +14,22 @@ const nextConfig: NextConfig = {
   reactCompiler: true,
   htmlLimitedBots: /.*/,
   skipProxyUrlNormalize: true,
+  images: {
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'images.unsplash.com',
+      },
+      {
+        protocol: 'https',
+        hostname: 'picsum.photos',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.pixabay.com',
+      },
+    ],
+  },
 
 
   turbopack: {

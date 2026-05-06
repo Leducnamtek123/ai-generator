@@ -16,6 +16,7 @@ import {
   VideoGenNodeProcessor,
   UpscaleNodeProcessor,
   AssistantNodeProcessor,
+  ToolNodeProcessor,
 } from './processors';
 import { GENERATION_QUEUE } from 'src/queues/queues.constants';
 
@@ -32,6 +33,7 @@ export class WorkflowEngine {
     this.registerProcessor(new VideoGenNodeProcessor());
     this.registerProcessor(new UpscaleNodeProcessor());
     this.registerProcessor(new AssistantNodeProcessor());
+    this.registerProcessor(new ToolNodeProcessor());
   }
 
   private registerProcessor(processor: NodeProcessor): void {
@@ -169,7 +171,7 @@ export class WorkflowEngine {
     context: ProcessorContext,
     output: any,
   ): Promise<void> {
-    const jobType = this.getJobType(node.type);
+    const jobType = this.getJobType(node);
     if (!jobType) return;
 
     await this.generationQueue.add(jobType, {
@@ -185,15 +187,52 @@ export class WorkflowEngine {
   }
 
   private getJobType(
-    nodeType: string,
-  ): 'image' | 'video' | 'upscale' | 'enhance' | null {
-    const mapping: Record<string, 'image' | 'video' | 'upscale' | 'enhance'> = {
+    node: WorkflowNode,
+  ):
+    | 'image'
+    | 'video'
+    | 'upscale'
+    | 'enhance'
+    | 'music'
+    | 'sfx'
+    | 'voice'
+    | 'lip-sync'
+    | 'video-upscale'
+    | 'bg-remove'
+    | 'sketch-to-image'
+    | 'variations'
+    | 'camera-change'
+    | 'icon-gen'
+    | 'image-extend'
+  | 'mockup'
+  | 'skin-enhance'
+  | null {
+    const mapping: Record<string, any> = {
       image_gen: 'image',
       video_gen: 'video',
       upscale: 'upscale',
       assistant: 'enhance',
+      tool: {
+        image_gen: 'image',
+        video_gen: 'video',
+        upscale: 'upscale',
+        assistant: 'enhance',
+        music: 'music',
+        sfx: 'sfx',
+        voice: 'voice',
+        'lip-sync': 'lip-sync',
+        'video-upscale': 'video-upscale',
+        'bg-remove': 'bg-remove',
+        'sketch-to-image': 'sketch-to-image',
+        variations: 'variations',
+        'camera-change': 'camera-change',
+        'icon-gen': 'icon-gen',
+        'image-extend': 'image-extend',
+        mockup: 'mockup',
+        'skin-enhance': 'skin-enhance',
+      }[node.data.toolType || 'image_gen'],
     };
-    return mapping[nodeType] || null;
+    return mapping[node.type] || null;
   }
 
   /**
@@ -216,6 +255,10 @@ export class WorkflowEngine {
         if (sourceOutput.text) inputs.set('prompt', sourceOutput.text);
         if (sourceOutput.text) inputs.set('text', sourceOutput.text);
         if (sourceOutput.imageUrl) inputs.set('image', sourceOutput.imageUrl);
+        if (sourceOutput.previewUrl) inputs.set('previewUrl', sourceOutput.previewUrl);
+        if (sourceOutput.resultUrl) inputs.set('resultUrl', sourceOutput.resultUrl);
+        if (sourceOutput.resultText) inputs.set('resultText', sourceOutput.resultText);
+        if (sourceOutput.audioUrl) inputs.set('audio', sourceOutput.audioUrl);
         inputs.set(handleName, sourceOutput);
       }
     }

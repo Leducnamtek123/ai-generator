@@ -5,6 +5,7 @@ import {
   SocialProvider,
   AuthTokenDetails,
   PostDetails,
+  MediaContent,
   PostResponse,
   MetricsData,
   AnalyticsData,
@@ -177,29 +178,25 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
 
       // Handle media if present
       if (details.media?.length) {
-        // Register image upload
-        const registerResponse = await this.fetchWithRetry(
-          'https://api.linkedin.com/v2/assets?action=registerUpload',
-          {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              Authorization: `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({
-              registerUploadRequest: {
-                recipes: ['urn:li:digitalmediaRecipe:feedshare-image'],
-                owner: `urn:li:person:${platformId}`,
-                serviceRelationships: [{
-                  relationshipType: 'OWNER',
-                  identifier: 'urn:li:userGeneratedContent',
-                }],
-              },
-            }),
-          },
-          'register_media',
-        );
-        // TODO: Upload binary to upload URL, then include asset in post
+        const assets: string[] = [];
+        for (const media of details.media) {
+          try {
+            const assetId = await this.uploadMedia(accessToken, media, platformId);
+            if (assetId) assets.push(assetId);
+          } catch (err) {
+            this.logger.error(`Failed to upload media to LinkedIn: ${err.message}`);
+          }
+        }
+
+        if (assets.length) {
+          postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'IMAGE';
+          postBody.specificContent['com.linkedin.ugc.ShareContent'].media = assets.map(asset => ({
+            status: 'READY',
+            description: { text: details.message.substring(0, 200) },
+            media: asset,
+            title: { text: 'Shared via AI Generator' },
+          }));
+        }
       }
 
       const response = await this.fetchWithRetry(
@@ -270,5 +267,62 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
         shares: Math.floor(Math.random() * 15),
       };
     }
+  }
+
+  /**
+   * Upload media to LinkedIn using the Assets API.
+   * Steps: Register -> Binary Upload (PUT) -> Asset ID
+   */
+  private async uploadMedia(accessToken: string, media: MediaContent, platformId: string): Promise<string> {
+    const isVideo = media.type === 'video';
+    const recipe = isVideo 
+      ? 'urn:li:digitalmediaRecipe:feedshare-video' 
+      : 'urn:li:digitalmediaRecipe:feedshare-image';
+
+    // 1. Register Upload
+    const registerResponse = await this.fetchWithRetry(
+      'https://api.linkedin.com/v2/assets?action=registerUpload',
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({
+          registerUploadRequest: {
+            recipes: [recipe],
+            owner: `urn:li:person:${platformId}`,
+            serviceRelationships: [{
+              relationshipType: 'OWNER',
+              identifier: 'urn:li:userGeneratedContent',
+            }],
+          },
+        }),
+      },
+      'register_upload',
+    );
+    const registerData = await registerResponse.json();
+    const uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+    const assetId = registerData.value.asset;
+
+    // 2. Download Media binary
+    const fileRes = await this.httpService.axiosRef.get(media.path, { responseType: 'arraybuffer' });
+    const buffer = Buffer.from(fileRes.data);
+
+    // 3. Binary Upload (PUT)
+    await this.fetchWithRetry(
+      uploadUrl,
+      {
+        method: 'PUT',
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': isVideo ? 'video/mp4' : 'image/jpeg',
+        },
+        body: buffer,
+      },
+      'binary_upload',
+    );
+
+    return assetId;
   }
 }

@@ -38,6 +38,8 @@
     "start:swc": "nest start -b swc -w",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/main",
+    "start:billing": "node dist/src/main.billing.js",
+    "start:generation": "node dist/src/main.generation.js",
     "lint": "eslint \"{src,apps,libs,test}/**/*.ts\"",
     "test": "jest",
     "test:watch": "jest --watch",

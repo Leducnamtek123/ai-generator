@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ReactFlow, Background, Controls, useReactFlow, ReactFlowProvider, BackgroundVariant } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import '@xyflow/react/dist/style.css';
@@ -29,6 +29,62 @@ interface WorkflowCanvasProps {
     projectId?: string;
     templateId?: string;
     workflowId?: string;
+}
+
+function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanvasProps) {
+    const [isHydrated, setIsHydrated] = useState(false);
+    const { fetchWorkflow, fetchWorkflowByProject, loadTemplate } = useWorkflowStore();
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrate = async () => {
+            useWorkflowStore.setState({
+                workflow: null,
+                nodes: [],
+                edges: [],
+                isExecuting: false,
+                executionStatus: 'idle',
+                executionError: null,
+                lastExecutionResult: null,
+            });
+
+            try {
+                if (templateId) {
+                    await loadTemplate(templateId);
+                } else if (workflowId) {
+                    await fetchWorkflow(workflowId);
+                } else if (projectId) {
+                    await fetchWorkflowByProject(projectId);
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsHydrated(true);
+                }
+            }
+        };
+
+        if (!projectId && !templateId && !workflowId) {
+            setIsHydrated(true);
+            return;
+        }
+
+        void hydrate();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId, templateId, workflowId, fetchWorkflow, fetchWorkflowByProject, loadTemplate]);
+
+    if (!isHydrated) {
+        return (
+            <div className="flex h-full w-full items-center justify-center bg-[#0B0C0E] text-white/60">
+                Loading workflow...
+            </div>
+        );
+    }
+
+    return <WorkflowCanvasContent projectId={projectId} templateId={templateId} workflowId={workflowId} />;
 }
 
 function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCanvasProps) {
@@ -127,7 +183,7 @@ function WorkflowCanvasContent({ projectId, templateId, workflowId }: WorkflowCa
 export function WorkflowCanvas(props: WorkflowCanvasProps) {
     return (
         <ReactFlowProvider>
-            <WorkflowCanvasContent {...props} />
+            <WorkflowCanvasShell {...props} />
         </ReactFlowProvider>
     );
 }

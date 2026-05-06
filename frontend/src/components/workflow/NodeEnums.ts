@@ -12,11 +12,32 @@ export enum WorkflowNodeType {
     VIDEO_GEN = 'video_gen',
     ASSISTANT = 'assistant',
     UPSCALE = 'upscale',
+    TOOL = 'tool',
     CAMERA = 'camera',
     STICKY_NOTE = 'sticky_note',
     GROUP = 'group',
     STICKER = 'sticker',
     COMMENT = 'comment',
+}
+
+export enum ToolType {
+    IMAGE_GEN = 'image_gen',
+    VIDEO_GEN = 'video_gen',
+    UPSCALE = 'upscale',
+    ASSISTANT = 'assistant',
+    MUSIC = 'music',
+    SFX = 'sfx',
+    VOICE = 'voice',
+    LIP_SYNC = 'lip-sync',
+    VIDEO_UPSCALE = 'video-upscale',
+    BG_REMOVE = 'bg-remove',
+    SKETCH_TO_IMAGE = 'sketch-to-image',
+    VARIATIONS = 'variations',
+    CAMERA_CHANGE = 'camera-change',
+    ICON_GEN = 'icon-gen',
+    IMAGE_EXTEND = 'image-extend',
+    MOCKUP = 'mockup',
+    SKIN_ENHANCE = 'skin-enhance',
 }
 
 export enum NodeCategory {

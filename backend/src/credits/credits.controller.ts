@@ -33,6 +33,51 @@ class TopUpCreditsDto {
   paymentRef?: string;
 }
 
+class CreditReserveDto {
+  @ApiProperty({ description: 'User ID that owns the balance' })
+  @IsString()
+  userId: string;
+
+  @ApiProperty({ description: 'Amount of credits to mutate', minimum: 1 })
+  @IsNumber()
+  @Min(1)
+  amount: number;
+
+  @ApiPropertyOptional({ description: 'Optional metadata for audit' })
+  @IsOptional()
+  metadata?: Record<string, unknown>;
+
+  @ApiPropertyOptional({ description: 'External reference type' })
+  @IsOptional()
+  @IsString()
+  referenceType?: string;
+
+  @ApiPropertyOptional({ description: 'External reference ID' })
+  @IsOptional()
+  @IsString()
+  referenceId?: string;
+}
+
+class CreditCaptureDto {
+  @ApiProperty({ description: 'User ID that owns the balance' })
+  @IsString()
+  userId: string;
+
+  @ApiProperty({ description: 'Reserved transaction ID' })
+  @IsString()
+  transactionId: string;
+}
+
+class CreditReleaseDto {
+  @ApiProperty({ description: 'User ID that owns the balance' })
+  @IsString()
+  userId: string;
+
+  @ApiProperty({ description: 'Reserved transaction ID' })
+  @IsString()
+  transactionId: string;
+}
+
 @ApiTags('Credits')
 @Controller({ path: 'credits', version: '1' })
 export class CreditsController {
@@ -58,6 +103,9 @@ export class CreditsController {
       userId: req.user.id,
       amount: dto.amount,
       type: 'topup',
+      referenceType: 'manual_topup',
+      referenceId: dto.paymentRef || 'manual',
+      status: 'posted',
       metadata: { paymentRef: dto.paymentRef || 'manual' },
     });
     const newBalance = await this.creditsService.getBalance(req.user.id);
@@ -87,5 +135,88 @@ export class CreditsController {
   @ApiResponse({ status: 200, description: 'Returns the balance as a number' })
   getBalance(@Request() req: any) {
     return this.creditsService.getBalance(req.user.id);
+  }
+
+  @Post('deduct')
+  @ApiOperation({ summary: 'Deduct credits for generation or workflow usage' })
+  async deduct(@Body() dto: CreditReserveDto) {
+    await this.creditsService.reserve({
+      userId: dto.userId,
+      amount: dto.amount,
+      referenceType: dto.referenceType,
+      referenceId: dto.referenceId,
+      metadata: dto.metadata,
+    });
+
+    const balance = await this.creditsService.getBalance(dto.userId);
+    return {
+      success: true,
+      amount: dto.amount,
+      balance,
+    };
+  }
+
+  @Post('refund')
+  @ApiOperation({ summary: 'Refund credits after a failed generation' })
+  async refund(@Body() dto: CreditReserveDto) {
+    await this.creditsService.refund({
+      userId: dto.userId,
+      amount: dto.amount,
+      referenceType: dto.referenceType,
+      referenceId: dto.referenceId,
+      metadata: dto.metadata,
+    });
+
+    const balance = await this.creditsService.getBalance(dto.userId);
+    return {
+      success: true,
+      amount: dto.amount,
+      balance,
+    };
+  }
+
+  @Post('reserve')
+  @ApiOperation({ summary: 'Reserve credits before running a generation' })
+  async reserve(@Body() dto: CreditReserveDto) {
+    const reservation = await this.creditsService.reserve({
+      userId: dto.userId,
+      amount: dto.amount,
+      referenceType: dto.referenceType,
+      referenceId: dto.referenceId,
+      metadata: dto.metadata,
+    });
+
+    const balance = await this.creditsService.getBalance(dto.userId);
+    return {
+      success: true,
+      amount: Math.abs(reservation.amount),
+      balance,
+      transactionId: reservation.id,
+      status: reservation.status,
+    };
+  }
+
+  @Post('capture')
+  @ApiOperation({ summary: 'Confirm a reserved credit transaction' })
+  async capture(@Body() dto: CreditCaptureDto) {
+    await this.creditsService.capture(dto.transactionId, dto.userId);
+    const balance = await this.creditsService.getBalance(dto.userId);
+    return {
+      success: true,
+      transactionId: dto.transactionId,
+      balance,
+    };
+  }
+
+  @Post('release')
+  @ApiOperation({ summary: 'Release a reserved credit transaction' })
+  async release(@Body() dto: CreditReleaseDto) {
+    await this.creditsService.release(dto.transactionId, dto.userId);
+    const balance = await this.creditsService.getBalance(dto.userId);
+    return {
+      success: true,
+      transactionId: dto.transactionId,
+      balance,
+    };
   }
 }

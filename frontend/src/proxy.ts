@@ -32,9 +32,42 @@ export default async function proxy(req: NextRequest) {
 
   // Handle API proxying (exclude only NextAuth routes handled by Next.js)
   if (pathname.startsWith('/api') && !isNextAuthRoute(pathname)) {
-    // API_BACKEND_URL is a server-only runtime env var (not baked at build time)
-    const backendBase = process.env.API_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api/v1';
-    
+    const billingBase =
+      process.env.BILLING_API_URL ||
+      process.env.NEXT_PUBLIC_BILLING_API_URL ||
+      process.env.API_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:8000/api/v1';
+    const generationBase =
+      process.env.GENERATION_API_URL ||
+      process.env.NEXT_PUBLIC_GENERATION_API_URL ||
+      process.env.API_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:8000/api/v1';
+    const gatewayBase =
+      process.env.API_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      'http://localhost:8000/api/v1';
+    const communityBase =
+      process.env.COMMUNITY_API_URL ||
+      process.env.NEXT_PUBLIC_COMMUNITY_API_URL ||
+      'http://localhost:8001/api/v1';
+
+    const isBillingRoute =
+      pathname.startsWith('/api/payments') || pathname.startsWith('/api/credits');
+    const isGenerationRoute =
+      pathname.startsWith('/api/generations') ||
+      pathname.startsWith('/api/queues') ||
+      pathname.startsWith('/api/workflows');
+    const isCommunityRoute = pathname.startsWith('/api/community-marketplace');
+    const backendBase = isBillingRoute
+      ? billingBase
+      : isGenerationRoute
+        ? generationBase
+        : isCommunityRoute
+          ? communityBase
+        : gatewayBase;
+
     // Remove the local '/api' prefix and append to backend base
     const targetPath = pathname.replace(/^\/api/, '');
     const url = new URL(backendBase + targetPath);
