@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useReducer, useCallback, useRef } from 'react';
+import React, { useReducer, useCallback, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
     Search, Heart, Clock, Upload, Download, Folder,
@@ -105,6 +105,14 @@ export function MediaPickerModal({
         dispatch({ type: 'setLoading', loading: false });
     }, []);
 
+    useEffect(() => {
+        if (!isOpen) {
+            return;
+        }
+
+        void loadMedia(state.activeFolder);
+    }, [isOpen, loadMedia, state.activeFolder]);
+
     // Filter items by type and search
     const filteredItems = state.items.filter(item => {
         // Type filter
@@ -191,8 +199,6 @@ export function MediaPickerModal({
                     onClose();
                     return;
                 }
-
-                void loadMedia(state.activeFolder);
             }}
         >
             <DialogContent className="max-w-4xl h-[600px] p-0 shadow-2xl flex flex-col overflow-hidden gap-0">

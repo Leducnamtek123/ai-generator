@@ -16,6 +16,8 @@ import { ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { infinityPagination } from '../utils/infinity-pagination';
 import { InfinityPaginationResponseDto } from '../utils/dto/infinity-pagination-response.dto';
 import { Asset } from './domain/asset';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 
 // Assets API endpoints
 @ApiTags('Assets')
@@ -40,6 +42,7 @@ export class AssetsController {
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(10), ParseIntPipe) limit: number,
     @Query('mode') mode?: string,
+    @CurrentUser() user?: AuthenticatedUser,
   ): Promise<InfinityPaginationResponseDto<Asset>> {
     if (limit > 50) {
       limit = 50;
@@ -49,10 +52,9 @@ export class AssetsController {
     if (mode === 'public') {
       assets = await this.assetsService.findAllPublic({ page, limit });
     } else {
-      // Mock user ID for now, filtering by this ID implies only getting this user's assets
       assets = await this.assetsService.findAll(
         { page, limit },
-        'temp-user-id',
+        String(user?.id || 'temp-user-id'),
       );
     }
 

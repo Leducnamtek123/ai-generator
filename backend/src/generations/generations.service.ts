@@ -1,4 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { GenerationEntity } from './entities/generation.entity';
 import {
   GenerateImageDto,
@@ -12,6 +13,35 @@ import { VideoGenerationService } from './services/video-generation.service';
 import { AudioGenerationService } from './services/audio-generation.service';
 import { ProviderRegistry } from '../providers/provider.registry';
 import { GenerationEventsService } from './services/generation-events.service';
+import { AllConfigType } from '../config/config.type';
+import crypto from 'crypto';
+
+const GENERATION_TYPE_BY_ALIAS: Record<string, string | string[]> = {
+  image: 'image',
+  'image-generator': 'image',
+  video: 'video',
+  'video-generator': 'video',
+  music: 'music',
+  'music-generator': 'music',
+  voice: 'voice',
+  'voice-generator': 'voice',
+  sfx: 'sfx',
+  'sfx-generator': 'sfx',
+  upscale: 'upscale',
+  'image-upscaler': 'upscale',
+  'video-upscaler': 'video-upscale',
+  'bg-remover': 'bg-remove',
+  'sketch-to-image': 'sketch-to-image',
+  variations: 'variations',
+  'camera-change': 'camera-change',
+  'icon-generator': 'icon-gen',
+  'image-extend': 'image-extend',
+  mockup: 'mockup',
+  'mockup-generator': 'mockup',
+  'skin-enhance': 'skin-enhance',
+  audio: ['music', 'sfx', 'voice'],
+  all: '',
+};
 
 @Injectable()
 export class GenerationsService {
@@ -24,10 +54,17 @@ export class GenerationsService {
     private readonly audioService: AudioGenerationService,
     private readonly providerRegistry: ProviderRegistry,
     private readonly eventsService: GenerationEventsService,
+    private readonly configService: ConfigService<AllConfigType>,
   ) {}
 
-  async findOne(id: string): Promise<GenerationEntity> {
-    return this.baseService.findOne(id);
+  async findOne(id: string, userId?: string): Promise<GenerationEntity> {
+    const generation = await this.baseService.findOne(id);
+
+    if (userId && generation.userId !== userId) {
+      throw new NotFoundException('Generation not found');
+    }
+
+    return generation;
   }
 
   async findAll(userId: string, options: { page: number; limit: number; type?: string; search?: string }) {
@@ -37,11 +74,13 @@ export class GenerationsService {
       .where('generation.userId = :userId', { userId })
       .orderBy('generation.createdAt', 'DESC');
 
-    if (type) {
-      if (type === 'image') query.andWhere('generation.type LIKE :type', { type: '%image%' });
-      else if (type === 'video') query.andWhere('generation.type LIKE :type', { type: '%video%' });
-      else if (type === 'audio') query.andWhere('generation.type IN (:...types)', { types: ['music', 'sfx', 'voice'] });
-      else query.andWhere('generation.type = :type', { type });
+    if (type && type !== 'all') {
+      const mappedType = GENERATION_TYPE_BY_ALIAS[type] ?? type;
+      if (Array.isArray(mappedType)) {
+        query.andWhere('generation.type IN (:...types)', { types: mappedType });
+      } else if (mappedType) {
+        query.andWhere('generation.type = :type', { type: mappedType });
+      }
     }
 
     if (search) {
@@ -67,7 +106,7 @@ export class GenerationsService {
   }
 
   async remove(id: string, userId: string) {
-    const generation = await this.findOne(id);
+    const generation = await this.findOne(id, userId);
     if (generation.userId !== userId) {
       throw new Error('You do not have permission to delete this generation');
     }
@@ -105,11 +144,64 @@ export class GenerationsService {
     return provider.enhancePrompt(dto.prompt, dto.style);
   }
 
-  async handleCallback(id: string, status: string, resultUrl?: string, error?: string): Promise<void> {
+  async handleCallback(
+    id: string,
+    status: string,
+    resultUrl?: string,
+    error?: string,
+    callbackSecret?: string,
+  ): Promise<void> {
+    const expectedSecret = this.configService.get('app.generationCallbackSecret', {
+      infer: true,
+    });
+
+    if (expectedSecret) {
+      if (!callbackSecret || callbackSecret !== expectedSecret) {
+        throw new UnauthorizedException('Invalid generation callback secret');
+      }
+    }
+
     const generation = await this.findOne(id);
+    const callbackHash = crypto
+      .createHash('sha256')
+      .update(
+        JSON.stringify({
+          id,
+          status,
+          resultUrl: resultUrl ?? null,
+          error: error ?? null,
+        }),
+      )
+      .digest('hex');
+
+    const metadata = (generation.metadata ?? {}) as Record<string, any>;
+    const existingCallbackHash = metadata.callback?.hash;
+
+    if (existingCallbackHash === callbackHash) {
+      return;
+    }
+
+    if (generation.status === 'completed' || generation.status === 'failed') {
+      metadata.callback = {
+        ...(metadata.callback ?? {}),
+        hash: callbackHash,
+        ignoredAt: new Date().toISOString(),
+        ignoredReason: 'terminal_state',
+      };
+      generation.metadata = metadata;
+      await this.baseService.save(generation);
+      return;
+    }
+
     generation.status = status;
     if (resultUrl) generation.resultUrl = resultUrl;
     if (error) generation.error = error;
+    metadata.callback = {
+      ...(metadata.callback ?? {}),
+      hash: callbackHash,
+      receivedAt: new Date().toISOString(),
+    };
+    generation.metadata = metadata;
 
     await this.baseService.save(generation);
 

@@ -22,12 +22,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSocialSocket } from '@/providers/SocketProvider';
 import { cn } from '@/lib/utils';
 import { socialHubApi, type SocialInteraction } from '@/services/socialHubApi';
+import { toast } from 'sonner';
+
+type InboxFilter = 'all' | 'mention' | 'comment' | 'dm';
+
+const FILTERS: Array<{ key: InboxFilter; label: string }> = [
+    { key: 'all', label: 'All' },
+    { key: 'mention', label: 'Mentions' },
+    { key: 'comment', label: 'Comments' },
+    { key: 'dm', label: 'DMs' },
+];
 
 export default function InboxPage() {
     const [interactions, setInteractions] = React.useState<SocialInteraction[]>([]);
     const [selectedId, setSelectedId] = React.useState<number | string | null>(null);
+    const [searchQuery, setSearchQuery] = React.useState('');
+    const [replyText, setReplyText] = React.useState('');
+    const [typeFilter, setTypeFilter] = React.useState<InboxFilter>('all');
+    const [handledInteractionIds, setHandledInteractionIds] = React.useState<string[]>([]);
+    const [isReplying, setIsReplying] = React.useState(false);
 
     const { socket } = useSocialSocket();
+
+    const getInteractionKey = React.useCallback((item: SocialInteraction) => {
+        const accountId = item.accountId ?? 'global';
+        return `${accountId}:${String(item.id)}`;
+    }, []);
 
     React.useEffect(() => {
         const fetchInbox = async () => {
@@ -67,7 +87,100 @@ export default function InboxPage() {
         };
     }, [socket]);
 
-    const selectedInteraction = interactions.find(i => i.id === selectedId);
+    const visibleInteractions = React.useMemo(() => {
+        const normalizedQuery = searchQuery.trim().toLowerCase();
+
+        return interactions.filter((item) => {
+            const matchesSearch =
+                item.user.toLowerCase().includes(normalizedQuery) ||
+                item.content.toLowerCase().includes(normalizedQuery);
+            const matchesType =
+                typeFilter === 'all' ? true : item.type.toLowerCase().includes(typeFilter);
+            const isHandled = handledInteractionIds.includes(getInteractionKey(item));
+
+            return matchesSearch && matchesType && !isHandled;
+        });
+    }, [getInteractionKey, handledInteractionIds, interactions, searchQuery, typeFilter]);
+
+    const selectedInteraction = visibleInteractions.find(i => i.id === selectedId) ?? visibleInteractions[0] ?? null;
+
+    React.useEffect(() => {
+        if (!visibleInteractions.length) {
+            setSelectedId(null);
+            return;
+        }
+
+        if (!selectedInteraction || !visibleInteractions.some((item) => item.id === selectedId)) {
+            setSelectedId(visibleInteractions[0].id);
+        }
+    }, [selectedId, selectedInteraction, visibleInteractions]);
+
+    const hideInteractionLocally = React.useCallback((item: SocialInteraction) => {
+        setHandledInteractionIds((current) => {
+            const key = getInteractionKey(item);
+            return current.includes(key) ? current : [...current, key];
+        });
+        setInteractions((current) =>
+            current.filter((entry) => getInteractionKey(entry) !== getInteractionKey(item)),
+        );
+        setSelectedId((current) => (current === item.id ? null : current));
+    }, [getInteractionKey]);
+
+    const handleReply = async () => {
+        if (!replyText.trim()) {
+            toast.error('Please enter a reply message.');
+            return;
+        }
+        if (!selectedInteraction?.accountId) {
+            toast.error('This interaction cannot be replied to from the inbox.');
+            return;
+        }
+        if (selectedInteraction.canReply === false) {
+            toast.error('This platform does not support direct replies yet.');
+            return;
+        }
+
+        setIsReplying(true);
+        try {
+            await socialHubApi.replyToInboxInteraction({
+                accountId: selectedInteraction.accountId,
+                interactionId: String(selectedInteraction.id),
+                message: replyText.trim(),
+            });
+            toast.success('Response sent successfully!');
+            setReplyText('');
+            hideInteractionLocally(selectedInteraction);
+        } catch (err) {
+            console.error('Failed to send reply', err);
+            toast.error('Failed to send response.');
+        }
+        setIsReplying(false);
+    };
+
+    const handleMarkDone = async () => {
+        if (!selectedInteraction?.accountId) {
+            toast.error('This interaction cannot be marked done yet.');
+            return;
+        }
+
+        try {
+            await socialHubApi.markInboxInteractionHandled({
+                accountId: selectedInteraction.accountId,
+                interactionId: String(selectedInteraction.id),
+            });
+            toast.success('Interaction marked as done.');
+            hideInteractionLocally(selectedInteraction);
+        } catch (err) {
+            console.error('Failed to mark interaction handled', err);
+            toast.error('Failed to mark interaction as done.');
+        }
+    };
+
+    const cycleFilter = () => {
+        const currentIndex = FILTERS.findIndex((filter) => filter.key === typeFilter);
+        const nextFilter = FILTERS[(currentIndex + 1) % FILTERS.length];
+        setTypeFilter(nextFilter.key);
+    };
 
     return (
         <div className="flex h-full overflow-hidden">
@@ -76,13 +189,30 @@ export default function InboxPage() {
                 <div className="p-6 border-b border-border space-y-4">
                     <div className="flex items-center justify-between">
                         <h1 className="text-2xl font-bold">Social Inbox</h1>
-                        <Button variant="ghost" size="icon" className="h-8 w-8"><Filter className="w-4 h-4" /></Button>
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cycleFilter}>
+                            <Filter className="w-4 h-4" />
+                        </Button>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                        {FILTERS.map((filter) => (
+                            <Button
+                                key={filter.key}
+                                variant={typeFilter === filter.key ? 'default' : 'outline'}
+                                size="sm"
+                                className="h-8 text-xs"
+                                onClick={() => setTypeFilter(filter.key)}
+                            >
+                                {filter.label}
+                            </Button>
+                        ))}
                     </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input 
                             className="w-full bg-muted/50 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary"
                             placeholder="Search interactions..."
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
                 </div>
@@ -90,7 +220,7 @@ export default function InboxPage() {
                 <div className="flex-1 overflow-auto bg-sidebar p-4">
                     <div className="space-y-4">
                         <AnimatePresence initial={false}>
-                            {interactions.map((item) => (
+                            {visibleInteractions.map((item) => (
                                 <motion.div
                                     key={item.id}
                                     initial={{ opacity: 0, x: -20, height: 0 }}
@@ -129,6 +259,11 @@ export default function InboxPage() {
                                     </p>
                                 </motion.div>
                             ))}
+                            {visibleInteractions.length === 0 && (
+                                <div className="text-center text-sm text-muted-foreground p-8">
+                                    No interactions found.
+                                </div>
+                            )}
                         </AnimatePresence>
                     </div>
                 </div>
@@ -155,8 +290,12 @@ export default function InboxPage() {
                                     </Button>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-green-500"><CheckCircle className="w-5 h-5" /></Button>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9"><MoreHorizontal className="w-5 h-5" /></Button>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-green-500" onClick={() => void handleMarkDone()}>
+                                        <CheckCircle className="w-5 h-5" />
+                                    </Button>
+                                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => toast.info('More actions coming soon.')}>
+                                        <MoreHorizontal className="w-5 h-5" />
+                                    </Button>
                                 </div>
                             </div>
 
@@ -180,7 +319,7 @@ export default function InboxPage() {
                                             <span className="font-bold text-sm">PaintAI Assistant</span>
                                             <span className="text-[10px] opacity-70">Just now</span>
                                         </div>
-                                        <p className="text-sm leading-relaxed italic opacity-80">Replying as AI...</p>
+                                        <p className="text-sm leading-relaxed italic opacity-80">We can help you with that! Just let us know what you need.</p>
                                     </div>
                                 </div>
                             </div>
@@ -191,15 +330,17 @@ export default function InboxPage() {
                                     <textarea 
                                         className="w-full bg-transparent border-none focus:ring-0 text-sm resize-none min-h-[100px]"
                                         placeholder={`Reply to ${selectedInteraction.user}...`}
+                                        value={replyText}
+                                        onChange={(e) => setReplyText(e.target.value)}
                                     />
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center gap-1">
-                                            <Button variant="ghost" size="icon" className="h-8 w-8"><Plus className="w-4 h-4" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-8 w-8"><Smile className="w-4 h-4" /></Button>
-                                        </div>
-                                        <Button size="sm">
+                                    <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Attachments coming soon')}><Plus className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Emojis coming soon')}><Smile className="w-4 h-4" /></Button>
+                                    </div>
+                                        <Button size="sm" onClick={() => void handleReply()} disabled={isReplying}>
                                             <Reply className="w-4 h-4 mr-2" />
-                                            Send Response
+                                            {isReplying ? 'Sending...' : 'Send Response'}
                                         </Button>
                                     </div>
                                 </GlassCard>

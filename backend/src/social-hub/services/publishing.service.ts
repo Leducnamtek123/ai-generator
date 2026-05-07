@@ -3,10 +3,14 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { SocialPostEntity, SocialPostStatus } from '../infrastructure/persistence/relational/entities/social-post.entity';
+import {
+  SocialPostEntity,
+  SocialPostStatus,
+} from '../infrastructure/persistence/relational/entities/social-post.entity';
 import { SOCIAL_POSTING_QUEUE } from '../../queues/queues.constants';
 import { UserEntity } from '../../users/infrastructure/persistence/relational/entities/user.entity';
 import { SocialAccountEntity } from '../infrastructure/persistence/relational/entities/social-account.entity';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
 
 @Injectable()
 export class PublishingService {
@@ -21,11 +25,12 @@ export class PublishingService {
     private readonly socialPostingQueue: Queue,
   ) {}
 
-  async findAll(user: UserEntity) {
+  async findAll(user: AuthenticatedUser) {
+    const userId = Number(user.id);
     try {
       return this.socialPostRepository.find({
         where: {
-          user: { id: user.id },
+          user: { id: userId },
         },
         order: { scheduledAt: 'DESC' },
       });
@@ -37,10 +42,13 @@ export class PublishingService {
     }
   }
 
-  async create(user: UserEntity, data: any) {
+  async create(user: AuthenticatedUser, data: any) {
+    const userId = Number(user.id);
     const requestedAccountIds = [
       ...(Array.isArray(data.socialAccountIds) ? data.socialAccountIds : []),
-      ...(typeof data.socialAccountId === 'number' ? [data.socialAccountId] : []),
+      ...(typeof data.socialAccountId === 'number'
+        ? [data.socialAccountId]
+        : []),
     ]
       .map((id) => Number(id))
       .filter((id) => Number.isFinite(id));
@@ -51,31 +59,44 @@ export class PublishingService {
       ? await this.socialAccountRepository.find({
           where: uniqueAccountIds.map((id) => ({
             id,
-            user: { id: user.id },
+            user: { id: userId },
           })),
         })
       : [];
 
-    if (uniqueAccountIds.length > 0 && accounts.length !== uniqueAccountIds.length) {
-      throw new NotFoundException('One or more social accounts were not found for this user');
+    if (
+      uniqueAccountIds.length > 0 &&
+      accounts.length !== uniqueAccountIds.length
+    ) {
+      throw new NotFoundException(
+        'One or more social accounts were not found for this user',
+      );
     }
 
     const targetAccounts = accounts.length > 0 ? accounts : [null];
+    const userRef = { id: userId } as UserEntity;
     const postsToCreate = targetAccounts.map((account) =>
       this.socialPostRepository.create({
         content: data.content,
         mediaUrls: data.mediaUrls,
         scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
-        user,
+        user: userRef,
         socialAccount: account ?? undefined,
-        status: data.scheduledAt ? SocialPostStatus.SCHEDULED : SocialPostStatus.DRAFT,
+        status: data.scheduledAt
+          ? SocialPostStatus.SCHEDULED
+          : SocialPostStatus.DRAFT,
       }),
     );
 
-    const savedPosts = (await this.socialPostRepository.save(postsToCreate)) as unknown as SocialPostEntity[];
+    const savedPosts = (await this.socialPostRepository.save(
+      postsToCreate,
+    )) as unknown as SocialPostEntity[];
 
     for (const savedPost of savedPosts) {
-      if (savedPost.status === SocialPostStatus.SCHEDULED && savedPost.scheduledAt) {
+      if (
+        savedPost.status === SocialPostStatus.SCHEDULED &&
+        savedPost.scheduledAt
+      ) {
         const delay = new Date(savedPost.scheduledAt).getTime() - Date.now();
         await this.socialPostingQueue.add(
           'post',
@@ -103,12 +124,31 @@ export class PublishingService {
     return post;
   }
 
-  async updateStatus(id: number, status: SocialPostStatus, externalPostId?: string, error?: string) {
+  async findOwnedPost(id: number, userId: AuthenticatedUser['id']) {
+    const ownerId = Number(userId);
+    const post = await this.socialPostRepository.findOne({
+      where: { id, user: { id: ownerId } },
+    });
+
+    if (!post) {
+      throw new NotFoundException('Post not found');
+    }
+
+    return post;
+  }
+
+  async updateStatus(
+    id: number,
+    status: SocialPostStatus,
+    externalPostId?: string,
+    error?: string,
+  ) {
     await this.socialPostRepository.update(id, {
       status,
       externalPostId,
       error,
-      publishedAt: status === SocialPostStatus.PUBLISHED ? new Date() : undefined,
+      publishedAt:
+        status === SocialPostStatus.PUBLISHED ? new Date() : undefined,
     });
   }
 
@@ -116,9 +156,13 @@ export class PublishingService {
    * Update post content/settings.
    * New endpoint inspired by Postiz's post management patterns.
    */
-  async update(id: number, data: Partial<{ content: string; mediaUrls: string[] }>) {
-    const post = await this.findById(id);
-    
+  async update(
+    id: number,
+    userId: AuthenticatedUser['id'],
+    data: Partial<{ content: string; mediaUrls: string[] }>,
+  ) {
+    const post = await this.findOwnedPost(id, userId);
+
     if (post.status === SocialPostStatus.PUBLISHED) {
       throw new Error('Cannot update a published post');
     }
@@ -128,15 +172,19 @@ export class PublishingService {
       ...(data.mediaUrls ? { mediaUrls: data.mediaUrls } : {}),
     });
 
-    return this.findById(id);
+    return this.findOwnedPost(id, userId);
   }
 
   /**
    * Reschedule a post to a new date/time.
    * Inspired by Postiz's changeDate endpoint.
    */
-  async reschedule(id: number, newScheduledAt: Date) {
-    const post = await this.findById(id);
+  async reschedule(
+    id: number,
+    userId: AuthenticatedUser['id'],
+    newScheduledAt: Date,
+  ) {
+    const post = await this.findOwnedPost(id, userId);
 
     if (post.status === SocialPostStatus.PUBLISHED) {
       throw new Error('Cannot reschedule a published post');
@@ -152,22 +200,22 @@ export class PublishingService {
     await this.socialPostingQueue.add(
       'post',
       { postId: id },
-      { 
+      {
         delay: Math.max(0, delay),
         jobId: `reschedule_${id}_${Date.now()}`, // unique job ID
       },
     );
 
-    return this.findById(id);
+    return this.findOwnedPost(id, userId);
   }
 
   /**
    * Delete a post (soft delete or hard delete based on status).
    * Inspired by Postiz's deletePost.
    */
-  async delete(id: number) {
-    const post = await this.findById(id);
-    
+  async delete(id: number, userId: AuthenticatedUser['id']) {
+    const post = await this.findOwnedPost(id, userId);
+
     if (post.status === SocialPostStatus.PUBLISHED) {
       // Soft delete published posts (keep for analytics)
       await this.socialPostRepository.softRemove(post);

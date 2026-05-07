@@ -60,8 +60,10 @@ export class TTSService {
     this.defaultSpeed =
       this.configService.get<number>('TTS_DEFAULT_SPEED') || 1.0;
 
+    const openAIBaseUrl = this.getOpenAIBaseUrl();
+
     this.openaiClient = axios.create({
-      baseURL: 'https://api.openai.com/v1',
+      baseURL: openAIBaseUrl,
       timeout: 60_000,
       headers: {
         Authorization: `Bearer ${this.openaiKey}`,
@@ -75,6 +77,17 @@ export class TTSService {
         'xi-api-key': this.elevenLabsKey,
       },
     });
+  }
+
+  private getOpenAIBaseUrl(): string {
+    const configuredBaseUrl = this.configService.get<string>('OPENAI_BASE_URL');
+    const baseUrl = (configuredBaseUrl || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+
+    if (baseUrl.endsWith('/v1')) {
+      return baseUrl;
+    }
+
+    return `${baseUrl}/v1`;
   }
 
   private ensureDir(filePath: string): void {

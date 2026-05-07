@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Keyboard, Settings, ChevronRight } from 'lucide-react';
+import { Keyboard, Settings } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/ui/dialog';
+import { useWorkflowUIStore } from '@/stores/workflow-ui-store';
 
 // Simple Tab Interface
 type Tab = 'general' | 'shortcuts';
@@ -68,16 +69,27 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
 }
 
 function GeneralSettings() {
+    const helperLines = useWorkflowUIStore((state) => state.helperLines);
+    const richTooltips = useWorkflowUIStore((state) => state.richTooltips);
+    const experimentalTools = useWorkflowUIStore((state) => state.experimentalTools);
+    const autoplayVideos = useWorkflowUIStore((state) => state.autoplayVideos);
+    const mouseWheelMode = useWorkflowUIStore((state) => state.mouseWheelMode);
+    const setHelperLines = useWorkflowUIStore((state) => state.setHelperLines);
+    const setRichTooltips = useWorkflowUIStore((state) => state.setRichTooltips);
+    const setExperimentalTools = useWorkflowUIStore((state) => state.setExperimentalTools);
+    const setAutoplayVideos = useWorkflowUIStore((state) => state.setAutoplayVideos);
+    const setMouseWheelMode = useWorkflowUIStore((state) => state.setMouseWheelMode);
+
     return (
         <div className="space-y-8 max-w-lg">
             <Section title="General">
-                <ToggleItem label="Helper lines" defaultChecked />
-                <ToggleItem label="Rich tooltips" defaultChecked />
-                <ToggleItem label="Experimental tools" />
+                <ToggleItem label="Helper lines" checked={helperLines} onChange={setHelperLines} />
+                <ToggleItem label="Rich tooltips" checked={richTooltips} onChange={setRichTooltips} />
+                <ToggleItem label="Experimental tools" checked={experimentalTools} onChange={setExperimentalTools} />
             </Section>
 
             <Section title="Media">
-                <ToggleItem label="Autoplay videos" defaultChecked />
+                <ToggleItem label="Autoplay videos" checked={autoplayVideos} onChange={setAutoplayVideos} />
             </Section>
 
             <Section title="Navigation">
@@ -89,8 +101,16 @@ function GeneralSettings() {
                         </div>
                     </div>
                     <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
-                        <button className="px-3 py-1 bg-blue-600 text-white text-xs rounded shadow-sm">Pan</button>
-                        <button className="px-3 py-1 text-white/50 hover:text-white text-xs rounded">Zoom</button>
+                        <ModeButton
+                            label="Pan"
+                            active={mouseWheelMode === 'pan'}
+                            onClick={() => setMouseWheelMode('pan')}
+                        />
+                        <ModeButton
+                            label="Zoom"
+                            active={mouseWheelMode === 'zoom'}
+                            onClick={() => setMouseWheelMode('zoom')}
+                        />
                     </div>
                 </div>
             </Section>
@@ -141,14 +161,51 @@ function Section({ title, children }: { title: string, children: React.ReactNode
     );
 }
 
-function ToggleItem({ label, defaultChecked }: { label: string, defaultChecked?: boolean }) {
+function ToggleItem({
+    label,
+    checked,
+    onChange,
+}: {
+    label: string;
+    checked: boolean;
+    onChange: (value: boolean) => void;
+}) {
     return (
-        <div className="flex items-center justify-between py-2 group">
+        <button
+            type="button"
+            onClick={() => onChange(!checked)}
+            className="flex w-full items-center justify-between rounded-lg py-2 text-left group"
+            aria-pressed={checked}
+        >
             <span className="text-sm text-white/70 group-hover:text-white transition-colors">{label}</span>
-            <div className={`w-9 h-5 rounded-full relative transition-colors ${defaultChecked ? 'bg-blue-600' : 'bg-white/20'}`}>
-                <div className={`absolute top-1 w-3 h-3 rounded-full bg-white transition-transform ${defaultChecked ? 'left-5' : 'left-1'}`} />
+            <div className={cn("w-9 h-5 rounded-full relative transition-colors", checked ? 'bg-blue-600' : 'bg-white/20')}>
+                <div className={cn("absolute top-1 w-3 h-3 rounded-full bg-white transition-transform", checked ? 'left-5' : 'left-1')} />
             </div>
-        </div>
+        </button>
+    );
+}
+
+function ModeButton({
+    label,
+    active,
+    onClick,
+}: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            onClick={onClick}
+            className={cn(
+                "px-3 py-1 text-xs rounded transition-colors",
+                active ? "bg-blue-600 text-white shadow-sm" : "text-white/50 hover:text-white"
+            )}
+            aria-pressed={active}
+        >
+            {label}
+        </button>
     );
 }
 

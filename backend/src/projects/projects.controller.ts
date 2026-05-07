@@ -37,7 +37,11 @@ export class ProjectsController {
 
   @Post()
   create(@Request() req, @Body() createProjectDto: CreateProjectDto) {
-    return this.projectsService.create(createProjectDto, req.user.id);
+    return this.projectsService.create(
+      createProjectDto,
+      req.user.id,
+      createProjectDto.organizationId,
+    );
   }
 
   @ApiOkResponse({
@@ -58,6 +62,7 @@ export class ProjectsController {
     return infinityPagination(
       await this.projectsService.findManyWithPagination({
         userId: req.user.id,
+        organizationId: query?.filters?.organizationId,
         filterOptions: query?.filters,
         sortOptions: query?.sort,
         paginationOptions: {

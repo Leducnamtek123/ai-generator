@@ -10,29 +10,33 @@ interface ToolbarButtonProps {
     active?: boolean;
     disabled?: boolean;
     shortcut?: string;
+    tooltipEnabled?: boolean;
 }
 
-export function ToolbarButton({ icon, label, onClick, active, disabled }: ToolbarButtonProps) {
+export function ToolbarButton({ icon, label, onClick, active, disabled, tooltipEnabled = true }: ToolbarButtonProps) {
     return (
         <button
+            type="button"
+            aria-label={label}
             onClick={onClick}
             disabled={disabled}
             className={cn(
-                "p-3 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-all relative group",
-                active && "bg-white/10 text-white",
-                disabled && "opacity-30 cursor-not-allowed hover:bg-transparent hover:text-white/50"
+                "p-3 rounded-xl text-muted-foreground hover:text-foreground hover:bg-accent transition-all relative group",
+                active && "bg-accent text-foreground",
+                disabled && "opacity-30 cursor-not-allowed hover:bg-transparent hover:text-muted-foreground"
             )}
         >
             {icon}
 
-            {/* Tooltip */}
-            <span className="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 bg-[#1A1B1F] border border-white/10 rounded-lg text-[11px] text-white opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-xl">
-                {label}
-            </span>
+            {tooltipEnabled && (
+                <span className="absolute left-full top-1/2 -translate-y-1/2 ml-3 px-2.5 py-1.5 bg-popover border border-border rounded-lg text-[11px] text-popover-foreground opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none z-50 shadow-xl">
+                    {label}
+                </span>
+            )}
 
             {/* Active indicator */}
             {active && (
-                <div className="absolute -left-0.5 top-1/2 -translate-y-1/2 w-1 h-4 bg-blue-500 rounded-full" />
+                <div className="absolute -left-0.5 top-1/2 -translate-y-1/2 w-1 h-4 bg-primary rounded-full" />
             )}
         </button>
     );

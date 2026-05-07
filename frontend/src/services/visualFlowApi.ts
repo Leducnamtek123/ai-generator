@@ -229,12 +229,19 @@ export const visualFlowApi = {
       return res.data;
     },
 
+
     generateVideos: async (projectId: string, videoId: string, orientation: Orientation = 'BOTH', sceneIds?: string[]) => {
       const res = await api.post(`${BASE}/projects/${projectId}/videos/${videoId}/gen-videos`, { orientation, sceneIds });
       return res.data;
     },
 
+    suggestScenes: async (projectId: string, videoId: string, options?: { count?: number; instructions?: string }) => {
+      const res = await api.post(`${BASE}/projects/${projectId}/videos/${videoId}/suggest-scenes`, options ?? {});
+      return res.data;
+    },
+
     status: async (projectId: string, videoId: string): Promise<PipelineStatus> => {
+
       const res = await api.get(`${BASE}/projects/${projectId}/videos/${videoId}/status`);
       return res.data;
     },

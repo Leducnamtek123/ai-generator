@@ -73,7 +73,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
     if (!selectedNode) return null;
 
     const handleChange = (key: string, value: unknown) => {
-        onChange(selectedNode.id, { ...nodeData, [key]: value });
+        onChange(selectedNode.id, { [key]: value });
     };
 
     const getIcon = () => {
@@ -103,18 +103,18 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
     };
 
     return (
-        <div className="w-80 h-full border-l border-white/5 bg-[#0B0C0E] flex flex-col">
+        <div className="w-80 h-full border-l border-border bg-popover flex flex-col">
             {/* Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between shrink-0">
+            <div className="p-4 border-b border-border flex items-center justify-between shrink-0">
                 <div className="flex items-center gap-2">
                     {getIcon()}
-                    <span className="font-semibold text-sm text-white">{getTitle()}</span>
+                    <span className="font-semibold text-sm text-foreground">{getTitle()}</span>
                 </div>
                 <Button
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
-                    className="h-8 w-8 text-white/40 hover:text-white hover:bg-white/5 rounded-lg"
+                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg"
                 >
                     <X className="w-4 h-4" />
                 </Button>
@@ -128,11 +128,11 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     selectedNode.type === WorkflowNodeType.ASSISTANT ||
                     selectedNode.type === WorkflowNodeType.TOOL) && (
                     <div className="mb-4 space-y-2">
-                        <div className="text-xs font-medium text-white/60">Preferred Provider</div>
+                        <div className="text-xs font-medium text-muted-foreground">Preferred Provider</div>
                         <select
                             value={(nodeData.provider as string) || ''}
                             onChange={(e) => handleChange('provider', e.target.value)}
-                            className="w-full h-11 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
+                            className="w-full h-11 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
                         >
                             <option value="">Auto / Default</option>
                             {providersLoading && <option value="">Loading providers...</option>}
@@ -158,8 +158,8 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/5 shrink-0">
-                <div className="flex items-center justify-between text-[10px] text-white/30">
+            <div className="p-4 border-t border-border shrink-0">
+                <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                     <span>Node ID: {selectedNode.id.slice(0, 8)}</span>
                     <span>Status: {String(nodeData.status || 'idle')}</span>
                 </div>

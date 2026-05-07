@@ -19,8 +19,9 @@ import {
 import { post } from '@/lib/api';
 import { Button } from '@/ui/button';
 import { cn, getAssetUrl } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { useWorkflowStore, Workflow } from '@/stores/workflow-store';
-import { WorkflowMiniPreview } from '@/components/workflow/WorkflowMiniPreview';
+import { WorkflowCard } from '@/components/workflow/WorkflowCard';
 import { Input } from '@/components/ui/input';
 import {
     DropdownMenu,
@@ -104,6 +105,7 @@ export default function CreativeStudioPage() {
     const router = useRouter();
     const { workflows, fetchWorkflows, createWorkflow, duplicateWorkflow, updateWorkflow, deleteWorkflow } = useWorkflowStore();
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [workflowToDelete, setWorkflowToDelete] = React.useState<Workflow | null>(null);
 
     useEffect(() => {
         fetchWorkflows();
@@ -137,11 +139,10 @@ export default function CreativeStudioPage() {
         }
     };
 
-    const handleDelete = async (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        if (window.confirm('Are you sure you want to delete this studio? This action cannot be undone.')) {
-            await deleteWorkflow(id);
-        }
+    const handleDelete = async () => {
+        if (!workflowToDelete) return;
+        await deleteWorkflow(workflowToDelete.id);
+        setWorkflowToDelete(null);
     };
 
     const handleUploadInit = (e: React.MouseEvent, id: string) => {
@@ -240,101 +241,36 @@ export default function CreativeStudioPage() {
                 )}
 
                 {workflows.map((workflow) => (
-                    <div
+                    <WorkflowCard
                         key={workflow.id}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === ' ') {
-                                router.push(`/creator/workflow-editor?workflowId=${workflow.id}`);
-                            }
-                        }}
-                        className="group cursor-pointer"
-                    >
-                        <div
-                            role="button"
-                            tabIndex={0}
-                            onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}`)}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === ' ') {
-                                    router.push(`/creator/workflow-editor?workflowId=${workflow.id}`);
-                                }
-                            }}
-                            className="aspect-[4/3] bg-card rounded-xl overflow-hidden border border-border group-hover:border-border/80 transition-all relative mb-3"
-                        >
-                            {state.uploadingWorkflowId === workflow.id && (
-                                <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
-                                    <div className="flex flex-col items-center gap-2">
-                                        <Loader2 className="w-6 h-6 text-foreground animate-spin" />
-                                        <span className="text-xs text-foreground/80 font-medium">Uploading...</span>
-                                    </div>
-                                </div>
-                            )}
-                            {workflow.previewUrl ? (
-                                <div className="relative w-full h-full">
-                                    <Image
-                                        src={getAssetUrl(workflow.previewUrl)}
-                                        alt={workflow.name}
-                                        fill
-                                        className="object-cover group-hover:scale-105 transition-transform duration-500"
-                                        sizes="(max-width: 1024px) 100vw, 20vw"
-                                    />
-                                </div>
-                            ) : workflow.nodes && workflow.nodes.length > 0 ? (
-                                <div className="w-full h-full bg-muted relative overflow-hidden group-hover:scale-105 transition-transform duration-500">
-                                    <WorkflowMiniPreview nodes={workflow.nodes} edges={workflow.edges} />
-                                    <div className="absolute inset-0 bg-background/10 backdrop-blur-[0.5px] pointer-events-none" />
-                                </div>
-                            ) : (
-                                <div className="w-full h-full relative group-hover:scale-105 transition-transform duration-500">
-                                    <Image
-                                        src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop"
-                                        alt="Empty Studio"
-                                        fill
-                                        className="object-cover opacity-50 group-hover:opacity-80 transition-opacity"
-                                        sizes="(max-width: 1024px) 100vw, 20vw"
-                                    />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-10 h-10 rounded-lg bg-muted/80 backdrop-blur-sm flex items-center justify-center mb-2 group-hover:bg-muted transition-colors">
-                                            <Plus className="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <button className="p-1.5 bg-background/60 backdrop-blur rounded-lg text-foreground hover:bg-background/80">
-                                            <MoreHorizontal className="w-4 h-4" />
-                                        </button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48">
-                                        <DropdownMenuItem onClick={(e) => handleRenameInit(e, workflow)} className="cursor-pointer">
-                                            <Edit className="w-4 h-4 mr-2" /> Rename
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => handleDuplicate(e, workflow.id)} className="cursor-pointer">
-                                            <Copy className="w-4 h-4 mr-2" /> Duplicate
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={(e) => handleUploadInit(e, workflow.id)} className="cursor-pointer">
-                                            <ImageIcon className="w-4 h-4 mr-2" /> Upload image
-                                        </DropdownMenuItem>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem onClick={(e) => handleDelete(e, workflow.id)} className="text-destructive cursor-pointer">
-                                            <Trash2 className="w-4 h-4 mr-2" /> Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </div>
-
-                        <div>
-                            <h3 className="text-sm font-medium group-hover:text-foreground truncate">{workflow.name}</h3>
-                            <p className="text-xs text-muted-foreground mt-1">
-                                {new Date(workflow.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ago
-                            </p>
-                        </div>
-                    </div>
+                        workflow={workflow}
+                        href={`/creator/workflow-editor?workflowId=${workflow.id}`}
+                        isUploading={state.uploadingWorkflowId === workflow.id}
+                        actions={
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <button className="p-1.5 bg-background/60 backdrop-blur rounded-lg text-foreground hover:bg-background/80">
+                                        <MoreHorizontal className="w-4 h-4" />
+                                    </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem onClick={(e) => handleRenameInit(e, workflow)} className="cursor-pointer">
+                                        <Edit className="w-4 h-4 mr-2" /> Rename
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => handleDuplicate(e, workflow.id)} className="cursor-pointer">
+                                        <Copy className="w-4 h-4 mr-2" /> Duplicate
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={(e) => handleUploadInit(e, workflow.id)} className="cursor-pointer">
+                                        <ImageIcon className="w-4 h-4 mr-2" /> Upload image
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setWorkflowToDelete(workflow); }} className="text-destructive cursor-pointer">
+                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        }
+                    />
                 ))}
             </div>
 
@@ -391,6 +327,21 @@ export default function CreativeStudioPage() {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <ConfirmDialog
+                open={!!workflowToDelete}
+                onOpenChange={(open) => {
+                    if (!open) setWorkflowToDelete(null);
+                }}
+                title="Delete studio?"
+                description={
+                    workflowToDelete
+                        ? `Delete "${workflowToDelete.name}" permanently? This action cannot be undone.`
+                        : 'Delete this studio permanently? This action cannot be undone.'
+                }
+                confirmText="Delete"
+                onConfirm={handleDelete}
+            />
 
             <input type="file" id="thumbnail-upload" className="hidden" accept="image/*" onChange={handleFileChange} />
         </div>

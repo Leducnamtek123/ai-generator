@@ -135,13 +135,20 @@ export class GenerationProcessor extends WorkerHost {
         case 'image': {
           const gen = await this.generationsService.generateImage(
             {
-              prompt: params.prompt,
+              prompt: params.prompt || params.text,
               model: params.model,
               aspectRatio: params.aspectRatio,
+              quality: params.quality,
+              negativePrompt: params.negativePrompt,
+              seed: params.seed,
+              referenceImageUrl:
+                params.referenceImageUrl || params.inputImageUrl,
               provider: params.provider,
               metadata: {
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
+                referenceImageUrl:
+                  params.referenceImageUrl || params.inputImageUrl,
               },
             },
             data.userId,
@@ -254,10 +261,13 @@ export class GenerationProcessor extends WorkerHost {
         case 'video': {
           const gen = await this.generationsService.generateVideo(
             {
-              prompt: params.prompt,
+              prompt: params.prompt || params.text,
               model: params.model,
               duration: params.duration,
               aspectRatio: params.aspectRatio,
+              startImageUrl:
+                params.startImageUrl || params.inputImageUrl || params.imageUrl,
+              endImageUrl: params.endImageUrl,
               provider: params.provider,
               metadata: {
                 workflowId: data.workflowId,
@@ -273,8 +283,17 @@ export class GenerationProcessor extends WorkerHost {
         case 'upscale': {
           const gen = await this.generationsService.upscaleImage(
             {
-              imageUrl: params.imageUrl,
+              imageUrl: params.imageUrl || params.inputImageUrl,
               scale: params.scale,
+              mode: params.mode,
+              model: params.model,
+              optimization: params.optimization,
+              creativity: params.creativity,
+              hdr: params.hdr,
+              resemblance: params.resemblance,
+              fractality: params.fractality,
+              engine: params.engine,
+              prompt: params.prompt || params.text,
               provider: params.provider,
               metadata: {
                 workflowId: data.workflowId,
@@ -290,7 +309,7 @@ export class GenerationProcessor extends WorkerHost {
         case 'enhance': {
           const enhanced = await this.generationsService.enhancePrompt(
             {
-              prompt: params.originalPrompt,
+              prompt: params.originalPrompt || params.prompt || params.text,
               style: params.style,
             },
             data.userId,

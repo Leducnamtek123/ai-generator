@@ -23,6 +23,7 @@ interface ToolNodeProps {
         onRun?: (id: string, mode?: ExecutionMode) => void;
         onDuplicate?: () => void;
         onSettings?: () => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
     selected?: boolean;
@@ -99,14 +100,16 @@ export function ToolNode({ id, data, selected }: ToolNodeProps) {
                     type="target"
                     position={Position.Left}
                     id="input"
-                    className="!h-3 !w-3 !border-2 !border-background !bg-fuchsia-500 z-50 transform -translate-x-1.5"
+                    onClick={(e) => data.onHandleClick?.(e, 'input', 'target')}
+                    className="!border-2 !border-background !bg-fuchsia-500 z-50"
                 />
 
                 <Handle
                     type="source"
                     position={Position.Right}
                     id="output"
-                    className="!h-3 !w-3 !border-2 !border-background !bg-fuchsia-500 z-50 transform translate-x-1.5"
+                    onClick={(e) => data.onHandleClick?.(e, 'output', 'source')}
+                    className="!border-2 !border-background !bg-fuchsia-500 z-50"
                 />
             </BaseNode>
         </>

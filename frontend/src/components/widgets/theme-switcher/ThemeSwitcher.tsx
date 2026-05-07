@@ -8,11 +8,11 @@ import { useTheme } from "next-themes";
 import { Button } from "@/ui";
 
 export const ThemeSwitcher = () => {
-  const { setTheme, theme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme();
 
   const toggleTheme = useCallback(() => {
-    setTheme(theme === "dark" ? "light" : "dark");
-  }, [setTheme, theme]);
+    setTheme(resolvedTheme === "dark" ? "light" : "dark");
+  }, [setTheme, resolvedTheme]);
 
   return (
     <Button variant="ghost" size="icon" onClick={toggleTheme}>

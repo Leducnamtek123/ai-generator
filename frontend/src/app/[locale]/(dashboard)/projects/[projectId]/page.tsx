@@ -12,6 +12,7 @@ import {
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
 import { useWorkflowStore, Workflow } from '@/stores/workflow-store';
+import { WorkflowCard } from '@/components/workflow/WorkflowCard';
 import { useProjectStore } from '@/stores/project-store';
 import { CreateWorkflowDialog } from '@/components/projects/create-workflow-dialog';
 
@@ -123,7 +124,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                             </div>
                         ) : (
                             workflows.map((workflow) => (
-                                <StudioCard key={workflow.id} workflow={workflow} projectId={projectId} />
+                                <WorkflowCard key={workflow.id} workflow={workflow} href={`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`} />
                             ))
                         )}
                     </div>
@@ -138,39 +139,4 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
             </div>
         </div>
     );
-}
-
-function StudioCard({ workflow, projectId }: { workflow: Workflow; projectId: string }) {
-    const router = useRouter();
-    return (
-        <div
-            role="button"
-            tabIndex={0}
-            onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/creator/workflow-editor?workflowId=${workflow.id}&projectId=${projectId}`); }}
-            className="group cursor-pointer"
-        >
-            <div className="aspect-[4/3] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
-                <Image
-                    src={workflow.previewUrl || 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&h=300&fit=crop'}
-                    alt={workflow.name}
-                    fill
-                    className="object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-                    sizes="(max-width: 1024px) 100vw, 25vw"
-                />
-                <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-between p-4">
-                    <span className="text-xs font-medium text-foreground px-2 py-1 bg-background/80 rounded-full backdrop-blur-md">
-                        Open Editor
-                    </span>
-                </div>
-            </div>
-            <div className="mt-3">
-                <p className="text-sm font-medium group-hover:text-foreground transition-colors">{workflow.name}</p>
-                <div className="flex items-center gap-2 mt-0.5">
-                    <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50"></span>
-                    <p className="text-xs text-muted-foreground">{new Date(workflow.updatedAt).toLocaleDateString()}</p>
-                </div>
-            </div>
-        </div>
-    );
-}
+}

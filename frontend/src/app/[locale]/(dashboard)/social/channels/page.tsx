@@ -71,10 +71,9 @@ export default function ChannelsPage() {
   const [providers, setProviders] = React.useState<SocialProvider[]>([]);
   const [isLoading, setIsLoading] = React.useState(true);
   const [isFacebookDialogOpen, setIsFacebookDialogOpen] = React.useState(false);
-  const [facebookCreds, setFacebookCreds] = React.useState({
-    appId: "",
-    appSecret: ""
-  });
+  const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
+  const [facebookAppId, setFacebookAppId] = React.useState("");
+  const [platformRequest, setPlatformRequest] = React.useState("");
 
   const fetchAccounts = React.useCallback(async () => {
     try {
@@ -108,12 +107,12 @@ export default function ChannelsPage() {
   };
 
   const handleFacebookConnect = async () => {
-    if (!facebookCreds.appId || !facebookCreds.appSecret) {
-      toast.error("Please enter both App ID and App Secret");
+    if (!facebookAppId) {
+      toast.error("Please enter your Facebook App ID");
       return;
     }
 
-    await handleConnect("facebook", facebookCreds);
+    await handleConnect("facebook", { appId: facebookAppId });
     setIsFacebookDialogOpen(false);
   };
 
@@ -126,6 +125,17 @@ export default function ChannelsPage() {
       },
       error: "Failed to disconnect channel"
     });
+  };
+
+  const handlePlatformRequestSubmit = () => {
+    if (!platformRequest.trim()) {
+      toast.error("Please describe the platform you need.");
+      return;
+    }
+
+    toast.success("Request recorded. Our team will review the platform for future integration!");
+    setPlatformRequest("");
+    setIsRequestDialogOpen(false);
   };
 
   return (
@@ -233,7 +243,7 @@ export default function ChannelsPage() {
               We&apos;re constantly adding new integrations. Let us know which one you need!
             </p>
           </div>
-          <Button variant="ghost" className="ml-auto">
+          <Button variant="ghost" className="ml-auto" onClick={() => setIsRequestDialogOpen(true)}>
             Send Request
           </Button>
         </div>
@@ -244,8 +254,8 @@ export default function ChannelsPage() {
           <DialogHeader>
             <DialogTitle>Connect Facebook Page</DialogTitle>
             <DialogDescription>
-              Enter your Meta App credentials so the backend can generate the OAuth URL and exchange
-              the code for an access token.
+              Enter your Meta App ID so the backend can generate the OAuth URL using server-side
+              credentials.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
@@ -254,18 +264,8 @@ export default function ChannelsPage() {
               <Input
                 id="facebookAppId"
                 placeholder="123456789012345"
-                value={facebookCreds.appId}
-                onChange={(e) => setFacebookCreds({ ...facebookCreds, appId: e.target.value })}
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label htmlFor="facebookAppSecret">App Secret</Label>
-              <Input
-                id="facebookAppSecret"
-                type="password"
-                placeholder="**************"
-                value={facebookCreds.appSecret}
-                onChange={(e) => setFacebookCreds({ ...facebookCreds, appSecret: e.target.value })}
+                value={facebookAppId}
+                onChange={(e) => setFacebookAppId(e.target.value)}
               />
             </div>
           </div>
@@ -274,6 +274,31 @@ export default function ChannelsPage() {
               Cancel
             </Button>
             <Button onClick={() => void handleFacebookConnect()}>Connect & Authorize</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+        <DialogContent className="sm:max-w-[520px]">
+          <DialogHeader>
+            <DialogTitle>Request a new platform</DialogTitle>
+            <DialogDescription>
+              Tell us which social platform you need and why it matters for your workflow.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <textarea
+              className="min-h-[140px] w-full rounded-md border border-border bg-background p-3 text-sm"
+              placeholder="Example: TikTok business account support for scheduling and analytics."
+              value={platformRequest}
+              onChange={(e) => setPlatformRequest(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handlePlatformRequestSubmit}>Submit Request</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

@@ -12,6 +12,7 @@ import { ShortcutsModal } from './ShortcutsModal';
 import { ToolbarButton } from './components/ToolbarButton';
 import { useToolbarShortcuts } from './hooks/useToolbarShortcuts';
 import { WorkflowNodeType } from './types';
+import { useWorkflowUIStore } from '@/stores/workflow-ui-store';
 
 export type ToolMode = 'select' | 'pan' | 'comment';
 
@@ -48,6 +49,7 @@ export function FloatingToolbar({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
+    const richTooltips = useWorkflowUIStore((state) => state.richTooltips);
 
     // Close menu on outside click
     useEffect(() => {
@@ -80,31 +82,33 @@ export function FloatingToolbar({
 
     return (
         <>
-            <div className="absolute left-6 top-6 flex flex-col gap-3 z-50">
+            <div className="absolute left-5 top-5 z-50 flex flex-col gap-3">
                 {/* Main Toolbar */}
-                <div className="flex flex-col p-2 rounded-2xl border border-white/10 bg-[#1A1B1F]/95 backdrop-blur-sm shadow-xl w-14 items-center gap-1.5">
+                <div className="flex w-14 flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-[#0b0e13]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-xl">
                     <ToolbarButton
                         icon={<MousePointer2 className="w-5 h-5" />}
                         label="Select (V)"
                         active={activeTool === 'select'}
                         onClick={() => handleToolChange('select')}
+                        tooltipEnabled={richTooltips}
                     />
                     <ToolbarButton
                         icon={<Hand className="w-5 h-5" />}
                         label="Pan (H)"
                         active={activeTool === 'pan'}
                         onClick={() => handleToolChange('pan')}
+                        tooltipEnabled={richTooltips}
                     />
 
-                    <div className="w-6 h-px bg-white/10 my-1" />
+                    <div className="w-6 h-px bg-border my-1" />
 
                     {/* Add Node */}
                     <div className="relative" ref={menuRef}>
                         <button
                             onClick={() => setIsMenuOpen(!isMenuOpen)}
                             className={cn(
-                                "p-2.5 rounded-full text-black bg-white hover:bg-white/90 transition-all shadow-[0_0_15px_rgba(255,255,255,0.2)] hover:shadow-[0_0_20px_rgba(255,255,255,0.3)] hover:scale-105",
-                                isMenuOpen && "bg-blue-500 text-white"
+                                "p-2.5 rounded-full bg-primary text-primary-foreground hover:bg-primary/90 transition-all shadow-[0_0_15px_rgba(47,102,255,0.25)] hover:shadow-[0_0_20px_rgba(47,102,255,0.32)]",
+                                isMenuOpen && "bg-primary/90 text-primary-foreground"
                             )}
                         >
                             <Plus className={cn("w-5 h-5 transition-transform duration-200", isMenuOpen && "rotate-45")} />
@@ -118,29 +122,29 @@ export function FloatingToolbar({
                         icon={<MessageSquare className="w-5 h-5" />}
                         label="Add Comment (C)"
                         active={activeTool === 'comment'}
-                        onClick={() => handleToolChange('comment')}
+                        onClick={() => {
+                            handleToolChange('comment');
+                            onOpenComments?.();
+                        }}
+                        tooltipEnabled={richTooltips}
                     />
-                    <ToolbarButton
-                        icon={<Sparkles className="w-5 h-5 text-blue-400" />}
-                        label="Open Reviews"
-                        onClick={onOpenComments}
-                    />
+                    <ToolbarButton icon={<Sparkles className="w-5 h-5 text-blue-400" />} label="Open Reviews" onClick={onOpenComments} tooltipEnabled={richTooltips} />
 
-                    <div className="w-6 h-px bg-white/10 my-1" />
+                    <div className="w-6 h-px bg-border my-1" />
 
-                    <ToolbarButton icon={<Undo2 className="w-5 h-5" />} label="Undo (Ctrl+Z)" onClick={onUndo} disabled={!canUndo} />
-                    <ToolbarButton icon={<Redo2 className="w-5 h-5" />} label="Redo (Ctrl+Shift+Z)" onClick={onRedo} disabled={!canRedo} />
+                    <ToolbarButton icon={<Undo2 className="w-5 h-5" />} label="Undo (Ctrl+Z)" onClick={onUndo} disabled={!canUndo} tooltipEnabled={richTooltips} />
+                    <ToolbarButton icon={<Redo2 className="w-5 h-5" />} label="Redo (Ctrl+Shift+Z)" onClick={onRedo} disabled={!canRedo} tooltipEnabled={richTooltips} />
 
-                    <div className="w-6 h-px bg-white/10 my-1" />
+                    <div className="w-6 h-px bg-border my-1" />
 
-                    <ToolbarButton icon={<Settings className="w-5 h-5" />} label="Shortcuts" onClick={() => setIsShortcutsOpen(true)} />
+                    <ToolbarButton icon={<Settings className="w-5 h-5" />} label="Shortcuts" onClick={() => setIsShortcutsOpen(true)} tooltipEnabled={richTooltips} />
                 </div>
 
                 {/* Zoom Controls */}
-                <div className="flex flex-col p-2 rounded-2xl border border-white/10 bg-[#1A1B1F]/95 backdrop-blur-sm shadow-xl w-14 items-center gap-1.5">
-                    <ToolbarButton icon={<ZoomIn className="w-5 h-5" />} label="Zoom In (Ctrl+)" onClick={onZoomIn} />
-                    <ToolbarButton icon={<ZoomOut className="w-5 h-5" />} label="Zoom Out (Ctrl-)" onClick={onZoomOut} />
-                    <ToolbarButton icon={<Maximize2 className="w-5 h-5" />} label="Fit View (Ctrl+0)" onClick={onFitView} />
+                <div className="flex w-14 flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-[#0b0e13]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+                    <ToolbarButton icon={<ZoomIn className="w-5 h-5" />} label="Zoom In (Ctrl+)" onClick={onZoomIn} tooltipEnabled={richTooltips} />
+                    <ToolbarButton icon={<ZoomOut className="w-5 h-5" />} label="Zoom Out (Ctrl-)" onClick={onZoomOut} tooltipEnabled={richTooltips} />
+                    <ToolbarButton icon={<Maximize2 className="w-5 h-5" />} label="Fit View (Ctrl+0)" onClick={onFitView} tooltipEnabled={richTooltips} />
                 </div>
             </div>
 

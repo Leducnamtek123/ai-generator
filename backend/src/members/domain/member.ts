@@ -1,9 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum OrgRole {
+  OWNER = 'OWNER',
   ADMIN = 'ADMIN',
   MEMBER = 'MEMBER',
   BILLING = 'BILLING',
+  VIEWER = 'VIEWER',
 }
 
 export class Member {

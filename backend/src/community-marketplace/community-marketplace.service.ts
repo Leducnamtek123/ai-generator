@@ -57,7 +57,15 @@ export class CommunityMarketplaceService {
       .take(paginationOptions.limit);
 
     if (filters.type && filters.type !== 'all') {
-      qb.andWhere('template.type = :type', { type: filters.type });
+      const typeByAlias: Record<string, string> = {
+        image: 'image-generator',
+        video: 'video-generator',
+        music: 'music-generator',
+        voice: 'voice-generator',
+        sfx: 'sfx-generator',
+      };
+      const mappedType = typeByAlias[filters.type] ?? filters.type;
+      qb.andWhere('template.type = :type', { type: mappedType });
     }
 
     if (filters.authorId) {
@@ -254,11 +262,9 @@ export class CommunityMarketplaceService {
     const creatorPayoutCredits =
       marketplace.priceCredits - platformFeeCredits;
 
-    await this.creditsService.create({
+    const purchaseReservation = await this.creditsService.reserve({
       userId,
-      amount: -marketplace.priceCredits,
-      type: 'adjustment',
-      status: 'posted',
+      amount: marketplace.priceCredits,
       referenceType: 'template_purchase',
       referenceId: template.id,
       metadata: {
@@ -270,12 +276,11 @@ export class CommunityMarketplaceService {
         creatorPayoutCredits,
       },
     });
+    await this.creditsService.capture(purchaseReservation.id, userId);
 
-    await this.creditsService.create({
+    await this.creditsService.addTopUpCredits({
       userId: template.authorId,
       amount: creatorPayoutCredits,
-      type: 'adjustment',
-      status: 'posted',
       referenceType: 'template_sale',
       referenceId: template.id,
       metadata: {
@@ -289,11 +294,9 @@ export class CommunityMarketplaceService {
     });
 
     if (platformFeeCredits > 0) {
-      await this.creditsService.create({
+      await this.creditsService.addTopUpCredits({
         userId: 'platform',
         amount: platformFeeCredits,
-        type: 'adjustment',
-        status: 'posted',
         referenceType: 'template_fee',
         referenceId: template.id,
         metadata: {
@@ -303,8 +306,8 @@ export class CommunityMarketplaceService {
           priceCredits: marketplace.priceCredits,
           platformFeeCredits,
           creatorPayoutCredits,
-        },
-      });
+      },
+    });
     }
 
     template.usageCount = (template.usageCount || 0) + 1;

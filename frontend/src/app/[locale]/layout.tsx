@@ -19,10 +19,11 @@ import "@/tailwind";
 
 export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
+  const localeUrl = siteConfig.languages[locale] ?? siteConfig.url;
   return {
     ...seoConfig,
     alternates: {
-      canonical: `/${locale}`,
+      canonical: localeUrl,
       languages: siteConfig.languages
     }
   } satisfies Metadata;
@@ -48,7 +49,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} suppressHydrationWarning>
       <body
-        className="flex min-h-screen w-full flex-col antialiased bg-background text-foreground font-sans"
+        className="flex min-h-screen w-full flex-col bg-background font-sans text-foreground antialiased"
         suppressHydrationWarning
       >
         <Providers messages={messages} locale={locale}>

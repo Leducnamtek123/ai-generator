@@ -28,6 +28,9 @@ export class Organization {
   @ApiProperty({ type: Number })
   ownerId: number;
 
+  @ApiProperty({ type: String, enum: ['PERSONAL', 'TEAM'], default: 'TEAM' })
+  type: 'PERSONAL' | 'TEAM';
+
   @ApiProperty()
   createdAt: Date;
 

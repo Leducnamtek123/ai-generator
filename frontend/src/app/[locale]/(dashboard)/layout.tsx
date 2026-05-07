@@ -13,11 +13,6 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-    const pathname = usePathname();
-
-    if (pathname === '/community') {
-        return <>{children}</>;
-    }
 
     return (
         <ProtectedRoute>

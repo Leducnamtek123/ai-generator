@@ -5,6 +5,7 @@ import { AIProvider, ProviderType, ProviderCapability } from './provider.interfa
 import { ReplicateAdapter } from './adapters/replicate.adapter';
 import { StabilityAdapter } from './adapters/stability.adapter';
 import { OpenAIAdapter } from './adapters/openai.adapter';
+import { ComfyUIAdapter } from './adapters/comfyui.adapter';
 import { LeonardoAdapter } from './adapters/leonardo.adapter';
 import { RunwayAdapter } from './adapters/runway.adapter';
 import { ElevenLabsAdapter } from './adapters/elevenlabs.adapter';
@@ -24,6 +25,7 @@ export class ProviderRegistry {
     private readonly replicateAdapter: ReplicateAdapter,
     private readonly stabilityAdapter: StabilityAdapter,
     private readonly openaiAdapter: OpenAIAdapter,
+    private readonly comfyuiAdapter: ComfyUIAdapter,
     private readonly leonardoAdapter: LeonardoAdapter,
     private readonly runwayAdapter: RunwayAdapter,
     private readonly elevenlabsAdapter: ElevenLabsAdapter,
@@ -32,6 +34,7 @@ export class ProviderRegistry {
     this.providers.set('replicate', replicateAdapter);
     this.providers.set('stability', stabilityAdapter);
     this.providers.set('openai', openaiAdapter);
+    this.providers.set('comfyui', comfyuiAdapter);
     this.providers.set('leonardo', leonardoAdapter);
     this.providers.set('runway', runwayAdapter);
     this.providers.set('elevenlabs', elevenlabsAdapter);

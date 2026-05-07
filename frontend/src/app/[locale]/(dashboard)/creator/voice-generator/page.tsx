@@ -1,7 +1,10 @@
 'use client';
 
-import { useReducer } from 'react';
+import { useReducer, useEffect, useState } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
+import { useTemplateStore } from '@/stores/template-store';
+import { TemplateTypeEnum } from '@/lib/api/templates';
+import { CONTENT_TABS, COMMUNITY_TAB, TEMPLATES_TAB } from '@/components/layouts/navigation-data';
 import { VoiceGeneratorView } from './view';
 
 export type VoiceGeneratorState = {
@@ -12,9 +15,8 @@ export type VoiceGeneratorState = {
     speed: number;
     pitch: number;
     stability: number;
-    isGenerating: boolean;
     activeTab: 'tts' | 'clone';
-    contentTab: 'history' | 'voices';
+    activeContentTab: string;
 };
 
 export type VoiceGeneratorAction =
@@ -25,9 +27,8 @@ export type VoiceGeneratorAction =
     | { type: 'setSpeed'; speed: number }
     | { type: 'setPitch'; pitch: number }
     | { type: 'setStability'; stability: number }
-    | { type: 'setIsGenerating'; isGenerating: boolean }
     | { type: 'setActiveTab'; activeTab: 'tts' | 'clone' }
-    | { type: 'setContentTab'; contentTab: 'history' | 'voices' };
+    | { type: 'setActiveContentTab'; tab: string };
 
 const initialState: VoiceGeneratorState = {
     text: '',
@@ -37,9 +38,8 @@ const initialState: VoiceGeneratorState = {
     speed: 100,
     pitch: 0,
     stability: 50,
-    isGenerating: false,
     activeTab: 'tts',
-    contentTab: 'history',
+    activeContentTab: TEMPLATES_TAB,
 };
 
 function reducer(state: VoiceGeneratorState, action: VoiceGeneratorAction): VoiceGeneratorState {
@@ -58,12 +58,10 @@ function reducer(state: VoiceGeneratorState, action: VoiceGeneratorAction): Voic
             return { ...state, pitch: action.pitch };
         case 'setStability':
             return { ...state, stability: action.stability };
-        case 'setIsGenerating':
-            return { ...state, isGenerating: action.isGenerating };
         case 'setActiveTab':
             return { ...state, activeTab: action.activeTab };
-        case 'setContentTab':
-            return { ...state, contentTab: action.contentTab };
+        case 'setActiveContentTab':
+            return { ...state, activeContentTab: action.tab };
         default:
             return state;
     }
@@ -71,11 +69,34 @@ function reducer(state: VoiceGeneratorState, action: VoiceGeneratorAction): Voic
 
 export default function VoiceGeneratorPage() {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const { generateVoice } = useGenerationStore();
+    const { generateVoice, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
+    const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
+    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+
+    useEffect(() => {
+        if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
+            fetchGenerations({ type: TemplateTypeEnum.VOICE_GENERATOR, limit: 12 });
+        } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
+            const fetchCommunity = async () => {
+                setIsCommunityLoading(true);
+                try {
+                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.VOICE_GENERATOR}&limit=12`));
+                    setCommunityListings(res.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch community listings', err);
+                } finally {
+                    setIsCommunityLoading(false);
+                }
+            };
+            fetchCommunity();
+        } else if (state.activeContentTab === TEMPLATES_TAB) { // Templates
+            fetchTemplates(TemplateTypeEnum.VOICE_GENERATOR);
+        }
+    }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     const handleGenerate = async () => {
         if (!state.text.trim()) return;
-        dispatch({ type: 'setIsGenerating', isGenerating: true });
         await generateVoice({
             text: state.text,
             mode: state.activeTab,
@@ -84,8 +105,20 @@ export default function VoiceGeneratorPage() {
             emotion: state.selectedEmotion,
             speed: state.speed / 100,
         });
-        dispatch({ type: 'setIsGenerating', isGenerating: false });
     };
 
-    return <VoiceGeneratorView state={state} dispatch={dispatch} onGenerate={handleGenerate} />;
+    return (
+        <VoiceGeneratorView 
+            state={state} 
+            dispatch={dispatch} 
+            onGenerate={handleGenerate}
+            isGenerating={isGenerating}
+            generations={generations}
+            isGenerationsLoading={isGenerationsLoading}
+            templates={templates}
+            isTemplatesLoading={isTemplatesLoading}
+            communityListings={communityListings}
+            isCommunityLoading={isCommunityLoading}
+        />
+    );
 }

@@ -13,6 +13,11 @@ export class FilterProjectDto {
   @IsOptional()
   @IsString()
   name?: string | null;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  organizationId?: string | null;
 }
 
 export class SortProjectDto {

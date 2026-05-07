@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer } from 'react';
+import { useEffect, useReducer } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
     Shapes,
@@ -46,13 +46,6 @@ const colorPalettes = [
 
 const sizes = ['16x16', '32x32', '64x64', '128x128', '256x256', '512x512', '1024x1024'];
 
-const mockResults = [
-    'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1633167606207-d840b5070fc2?q=80&w=200&h=200&fit=crop',
-    'https://images.unsplash.com/photo-1605721911519-3dfeb3be25e7?q=80&w=200&h=200&fit=crop',
-];
-
 type IconGeneratorState = {
     prompt: string;
     selectedStyle: string;
@@ -63,6 +56,7 @@ type IconGeneratorState = {
     cornerRadius: number;
     isGenerating: boolean;
     results: string[];
+    error: string | null;
 };
 
 type IconGeneratorAction =
@@ -74,7 +68,8 @@ type IconGeneratorAction =
     | { type: 'setCount'; count: number }
     | { type: 'setCornerRadius'; cornerRadius: number }
     | { type: 'setGenerating'; isGenerating: boolean }
-    | { type: 'setResults'; results: string[] };
+    | { type: 'setResults'; results: string[] }
+    | { type: 'setError'; error: string | null };
 
 const initialState: IconGeneratorState = {
     prompt: '',
@@ -86,6 +81,7 @@ const initialState: IconGeneratorState = {
     cornerRadius: 20,
     isGenerating: false,
     results: [],
+    error: null,
 };
 
 function reducer(state: IconGeneratorState, action: IconGeneratorAction): IconGeneratorState {
@@ -108,6 +104,8 @@ function reducer(state: IconGeneratorState, action: IconGeneratorAction): IconGe
             return { ...state, isGenerating: action.isGenerating };
         case 'setResults':
             return { ...state, results: action.results };
+        case 'setError':
+            return { ...state, error: action.error };
         default:
             return state;
     }
@@ -115,24 +113,45 @@ function reducer(state: IconGeneratorState, action: IconGeneratorAction): IconGe
 
 export default function IconGeneratorPage() {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const { iconGenerator } = useGenerationStore();
+    const { iconGenerator, currentGeneration, error } = useGenerationStore();
 
     const handleGenerate = async () => {
         if (!state.prompt.trim()) return;
         dispatch({ type: 'setGenerating', isGenerating: true });
+        dispatch({ type: 'setError', error: null });
+        dispatch({ type: 'setResults', results: [] });
+
         try {
             await iconGenerator({
-                prompt: state.prompt,
+                prompt: `${state.prompt}. Style: ${state.selectedStyle}. Shape: ${state.selectedShape}. Palette: ${state.selectedPalette}. Size: ${state.selectedSize}. Corner radius: ${state.cornerRadius}%`,
                 style: state.selectedStyle,
                 size: state.selectedSize.split('x')[0],
                 color: colorPalettes.find((palette) => palette.id === state.selectedPalette)?.colors[0],
             });
-            dispatch({ type: 'setResults', results: mockResults });
         } catch (error) {
             console.error('Failed to generate icons', error);
+            dispatch({ type: 'setError', error: 'Failed to start icon generation.' });
+            dispatch({ type: 'setGenerating', isGenerating: false });
         }
-        dispatch({ type: 'setGenerating', isGenerating: false });
     };
+
+    useEffect(() => {
+        if (!currentGeneration || !state.isGenerating || currentGeneration.type !== 'icon-gen') {
+            return;
+        }
+
+        if (currentGeneration.status === 'completed') {
+            dispatch({
+                type: 'setResults',
+                results: currentGeneration.resultUrl ? [currentGeneration.resultUrl] : [],
+            });
+            dispatch({ type: 'setGenerating', isGenerating: false });
+            dispatch({ type: 'setError', error: null });
+        } else if (currentGeneration.status === 'failed') {
+            dispatch({ type: 'setError', error: currentGeneration.error || error || 'Icon generation failed.' });
+            dispatch({ type: 'setGenerating', isGenerating: false });
+        }
+    }, [currentGeneration, error, state.isGenerating]);
 
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">
@@ -299,6 +318,11 @@ export default function IconGeneratorPage() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-8">
+                    {state.error && (
+                        <div className="mb-6 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                            {state.error}
+                        </div>
+                    )}
                     {state.isGenerating ? (
                         <div className="flex flex-col items-center justify-center h-full gap-4">
                             <div className="relative">

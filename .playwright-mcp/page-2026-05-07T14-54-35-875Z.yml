@@ -1,0 +1,48 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e3]:
+      - generic [ref=e5]:
+        - img [ref=e7]
+        - heading [level=2] [ref=e14]: Welcome Back
+        - paragraph [ref=e15]: Your creative workspace is waiting. Sign in to continue building amazing things.
+        - generic [ref=e16]:
+          - generic [ref=e17]: AI Generation
+          - generic [ref=e19]: Smart Workflows
+          - generic [ref=e21]: Real-time Editor
+      - generic [ref=e23]: PaintAI
+    - main [ref=e24]:
+      - generic [ref=e26]:
+        - generic [ref=e27]:
+          - img "PaintAI" [ref=e29]
+          - generic [ref=e30]:
+            - heading "PaintAI" [level=1] [ref=e31]
+            - paragraph [ref=e32]: Your paint, your choice
+        - button "Sign in with Google" [ref=e33] [cursor=pointer]:
+          - img [ref=e34]
+          - text: Sign in with Google
+        - generic [ref=e39]:
+          - separator [ref=e40]
+          - generic [ref=e41]: or
+        - generic [ref=e42]:
+          - generic [ref=e43]:
+            - generic [ref=e44]: Email address
+            - textbox "Email address" [ref=e45]:
+              - /placeholder: Enter your email
+          - generic [ref=e46]:
+            - generic [ref=e47]:
+              - generic [ref=e48]: Password
+              - link "Forgot?" [ref=e49] [cursor=pointer]:
+                - /url: "#"
+            - textbox "Password" [ref=e50]:
+              - /placeholder: ••••••••
+          - button "Continue" [ref=e51] [cursor=pointer]
+        - generic [ref=e52]:
+          - paragraph [ref=e53]:
+            - text: Don't have an account?
+            - link "Sign up" [ref=e54] [cursor=pointer]:
+              - /url: /sign-up
+          - generic [ref=e55]:
+            - img [ref=e56]
+            - generic [ref=e59]: Secured by PaintAI
+  - region "Notifications alt+T"
+  - alert [ref=e60]

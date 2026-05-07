@@ -1,21 +1,28 @@
 import { Button } from '@/ui/button';
-import { Grid3X3, ImageIcon, Clock, Repeat, FileText, Video, Sparkles, Folder, Download, ChevronDown } from 'lucide-react';
+import { Grid3X3, ImageIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { GALLERY_TABS } from '@/components/layouts/navigation-data';
 
 export function PersonalGallery() {
     return (
         <div className="flex-1 p-6 overflow-y-auto w-full">
             <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                    <Button variant="secondary" size="sm" className="rounded-full bg-foreground text-background hover:bg-foreground/90 font-medium px-4">
-                        Personal
-                    </Button>
-                    <Button variant="ghost" size="sm" className="rounded-full font-medium text-muted-foreground hover:text-foreground px-4">
-                        Community
-                    </Button>
-                    <Button variant="ghost" size="sm" className="rounded-full font-medium text-muted-foreground hover:text-foreground px-4">
-                        Tutorials
-                    </Button>
+                    {GALLERY_TABS.map((tab, index) => (
+                        <Button
+                            key={tab}
+                            variant={index === 0 ? 'secondary' : 'ghost'}
+                            size="sm"
+                            className={cn(
+                                'rounded-full font-medium px-4',
+                                index === 0
+                                    ? 'bg-foreground text-background hover:bg-foreground/90'
+                                    : 'text-muted-foreground hover:text-foreground'
+                            )}
+                        >
+                            {tab}
+                        </Button>
+                    ))}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="h-8 rounded-lg gap-2">

@@ -182,8 +182,8 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                                 key={type}
                                 onClick={() => onAddNode(config.type, config.label)}
                                 className={cn(
-                                    "flex flex-col items-center justify-center gap-3 w-28 md:w-32 h-28 md:h-32",
-                                    "rounded-xl border transition-all duration-200 shadow-sm",
+                                    "flex h-28 w-28 flex-col items-center justify-center gap-3 md:h-32 md:w-32",
+                                    "rounded-lg border transition-all duration-200 shadow-sm",
                                     "hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/20",
                                     "active:scale-95 group",
                                     colors.bg,

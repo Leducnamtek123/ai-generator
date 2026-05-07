@@ -12,6 +12,7 @@ import {
   NodeProcessor,
   ProcessorContext,
   TextNodeProcessor,
+  ReferenceNodeProcessor,
   ImageGenNodeProcessor,
   VideoGenNodeProcessor,
   UpscaleNodeProcessor,
@@ -19,6 +20,16 @@ import {
   ToolNodeProcessor,
 } from './processors';
 import { GENERATION_QUEUE } from 'src/queues/queues.constants';
+
+function firstString(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+  }
+  return '';
+}
 
 @Injectable()
 export class WorkflowEngine {
@@ -29,6 +40,13 @@ export class WorkflowEngine {
     // Register all node processors
     this.processors = new Map();
     this.registerProcessor(new TextNodeProcessor());
+    this.registerProcessor(new ReferenceNodeProcessor('input'));
+    this.registerProcessor(new ReferenceNodeProcessor('process'));
+    this.registerProcessor(new ReferenceNodeProcessor('output'));
+    this.registerProcessor(new ReferenceNodeProcessor('sticky_note'));
+    this.registerProcessor(new ReferenceNodeProcessor('group'));
+    this.registerProcessor(new ReferenceNodeProcessor('sticker'));
+    this.registerProcessor(new ReferenceNodeProcessor('comment'));
     this.registerProcessor(new ImageGenNodeProcessor());
     this.registerProcessor(new VideoGenNodeProcessor());
     this.registerProcessor(new UpscaleNodeProcessor());
@@ -204,9 +222,9 @@ export class WorkflowEngine {
     | 'camera-change'
     | 'icon-gen'
     | 'image-extend'
-  | 'mockup'
-  | 'skin-enhance'
-  | null {
+    | 'mockup'
+    | 'skin-enhance'
+    | null {
     const mapping: Record<string, any> = {
       image_gen: 'image',
       video_gen: 'video',
@@ -252,12 +270,64 @@ export class WorkflowEngine {
       if (sourceOutput) {
         // Map outputs to inputs based on handle names or use defaults
         const handleName = edge.targetHandle || 'default';
-        if (sourceOutput.text) inputs.set('prompt', sourceOutput.text);
-        if (sourceOutput.text) inputs.set('text', sourceOutput.text);
-        if (sourceOutput.imageUrl) inputs.set('image', sourceOutput.imageUrl);
-        if (sourceOutput.previewUrl) inputs.set('previewUrl', sourceOutput.previewUrl);
-        if (sourceOutput.resultUrl) inputs.set('resultUrl', sourceOutput.resultUrl);
-        if (sourceOutput.resultText) inputs.set('resultText', sourceOutput.resultText);
+        const textValue = firstString(
+          sourceOutput.text,
+          sourceOutput.prompt,
+          sourceOutput.originalPrompt,
+          sourceOutput.enhancedText,
+          sourceOutput.outputText,
+          sourceOutput.content,
+          sourceOutput.label,
+          sourceOutput.name,
+          sourceOutput.reference,
+        );
+        const imageValue = firstString(
+          sourceOutput.imageUrl,
+          sourceOutput.inputImageUrl,
+          sourceOutput.startImageUrl,
+          sourceOutput.previewUrl,
+          sourceOutput.resultUrl,
+          sourceOutput.mediaUrl,
+        );
+        const videoValue = firstString(
+          sourceOutput.videoUrl,
+          sourceOutput.inputVideoUrl,
+          sourceOutput.startVideoUrl,
+          sourceOutput.previewUrl,
+          sourceOutput.resultUrl,
+        );
+        const referenceValue = firstString(
+          sourceOutput.reference,
+          sourceOutput.name,
+          sourceOutput.label,
+          sourceOutput.content,
+        );
+
+        if (textValue) {
+          inputs.set('prompt', textValue);
+          inputs.set('text', textValue);
+          inputs.set('inputText', textValue);
+        }
+        if (imageValue) {
+          inputs.set('image', imageValue);
+          inputs.set('imageUrl', imageValue);
+          inputs.set('inputImageUrl', imageValue);
+          inputs.set('startImageUrl', imageValue);
+        }
+        if (videoValue) {
+          inputs.set('video', videoValue);
+          inputs.set('videoUrl', videoValue);
+          inputs.set('inputVideoUrl', videoValue);
+        }
+        if (referenceValue) {
+          inputs.set('reference', referenceValue);
+        }
+        if (sourceOutput.previewUrl)
+          inputs.set('previewUrl', sourceOutput.previewUrl);
+        if (sourceOutput.resultUrl)
+          inputs.set('resultUrl', sourceOutput.resultUrl);
+        if (sourceOutput.resultText)
+          inputs.set('resultText', sourceOutput.resultText);
         if (sourceOutput.audioUrl) inputs.set('audio', sourceOutput.audioUrl);
         inputs.set(handleName, sourceOutput);
       }

@@ -8,6 +8,7 @@ import {
   Query,
   UseGuards,
   Request,
+  Headers,
   Response,
   HttpCode,
   HttpStatus,
@@ -18,8 +19,11 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBearerAuth,
+  ApiSecurity,
 } from '@nestjs/swagger';
 import { GenerationsService } from './generations.service';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 import {
   GenerateImageDto,
   GenerateVideoDto,
@@ -40,27 +44,27 @@ import {
   MockupGeneratorDto,
   SkinEnhanceDto,
 } from './dto/generate.dto';
-
 import { Throttle } from '@nestjs/throttler';
 
+@ApiSecurity('api-key')
 @ApiTags('Generations')
 @Controller({ path: 'generations', version: '1' })
 export class GenerationsController {
   constructor(private readonly generationsService: GenerationsService) {}
 
   @Get()
-  @UseGuards(AuthGuard('jwt'))
+  @UseGuards(AuthGuard(['jwt', 'api-key']))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'List user generations with pagination' })
   @ApiResponse({ status: 200, description: 'Generation list' })
   findAll(
-    @Request() req: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('type') type?: string,
     @Query('search') search?: string,
   ) {
-    return this.generationsService.findAll(req.user.id, {
+    return this.generationsService.findAll(String(user.id), {
       page: parseInt(page || '1', 10),
       limit: parseInt(limit || '20', 10),
       type,
@@ -71,7 +75,9 @@ export class GenerationsController {
   @Get('providers')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'List available AI providers and their capabilities' })
+  @ApiOperation({
+    summary: 'List available AI providers and their capabilities',
+  })
   listProviders() {
     return this.generationsService.listProviders();
   }
@@ -81,8 +87,8 @@ export class GenerationsController {
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get generation status and result' })
   @ApiResponse({ status: 200, description: 'Generation details' })
-  findOne(@Param('id') id: string) {
-    return this.generationsService.findOne(id);
+  findOne(@Param('id') id: string, @CurrentUser() user: AuthenticatedUser) {
+    return this.generationsService.findOne(id, String(user.id));
   }
 
   @Delete(':id')
@@ -90,8 +96,11 @@ export class GenerationsController {
   @ApiBearerAuth()
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Delete a generation' })
-  async remove(@Param('id') id: string, @Request() req: any) {
-    return this.generationsService.remove(id, req.user.id);
+  async remove(
+    @Param('id') id: string,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.remove(id, String(user.id));
   }
 
   @Post('image')
@@ -100,8 +109,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate an image from text prompt' })
   @ApiResponse({ status: 201, description: 'Generation started' })
-  async generateImage(@Body() dto: GenerateImageDto, @Request() req: any) {
-    return this.generationsService.generateImage(dto, req.user.id);
+  async generateImage(
+    @Body() dto: GenerateImageDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.generateImage(dto, String(user.id));
   }
 
   @Post('video')
@@ -110,8 +122,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate a video from text prompt' })
   @ApiResponse({ status: 201, description: 'Generation started' })
-  async generateVideo(@Body() dto: GenerateVideoDto, @Request() req: any) {
-    return this.generationsService.generateVideo(dto, req.user.id);
+  async generateVideo(
+    @Body() dto: GenerateVideoDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.generateVideo(dto, String(user.id));
   }
 
   @Post('upscale')
@@ -120,8 +135,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Upscale an existing image' })
   @ApiResponse({ status: 201, description: 'Upscale started' })
-  async upscaleImage(@Body() dto: UpscaleImageDto, @Request() req: any) {
-    return this.generationsService.upscaleImage(dto, req.user.id);
+  async upscaleImage(
+    @Body() dto: UpscaleImageDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.upscaleImage(dto, String(user.id));
   }
 
   @Post('enhance-prompt')
@@ -130,10 +148,13 @@ export class GenerationsController {
   @ApiOperation({ summary: 'Enhance a prompt using AI' })
   @ApiResponse({ status: 200, description: 'Enhanced prompt returned' })
   @HttpCode(HttpStatus.OK)
-  async enhancePrompt(@Body() dto: EnhancePromptDto, @Request() req: any) {
+  async enhancePrompt(
+    @Body() dto: EnhancePromptDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
     const enhanced = await this.generationsService.enhancePrompt(
       dto,
-      req.user.id,
+      String(user.id),
     );
     return { enhancedPrompt: enhanced };
   }
@@ -146,8 +167,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate music from text prompt' })
   @ApiResponse({ status: 201, description: 'Music generation started' })
-  async generateMusic(@Body() dto: GenerateMusicDto, @Request() req: any) {
-    return this.generationsService.generateAudio(dto, req.user.id, 'music');
+  async generateMusic(
+    @Body() dto: GenerateMusicDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.generateAudio(dto, String(user.id), 'music');
   }
 
   @Post('sfx')
@@ -156,8 +180,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate a sound effect from text' })
   @ApiResponse({ status: 201, description: 'SFX generation started' })
-  async generateSfx(@Body() dto: GenerateSfxDto, @Request() req: any) {
-    return this.generationsService.generateAudio(dto, req.user.id, 'sfx');
+  async generateSfx(
+    @Body() dto: GenerateSfxDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.generateAudio(dto, String(user.id), 'sfx');
   }
 
   @Post('voice')
@@ -166,8 +193,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate voice audio (TTS or clone)' })
   @ApiResponse({ status: 201, description: 'Voice generation started' })
-  async generateVoice(@Body() dto: GenerateVoiceDto, @Request() req: any) {
-    return this.generationsService.generateAudio(dto, req.user.id, 'voice');
+  async generateVoice(
+    @Body() dto: GenerateVoiceDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.generateAudio(dto, String(user.id), 'voice');
   }
 
   // ======== Video Processing Endpoints ========
@@ -178,8 +208,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 5, ttl: 60000 } })
   @ApiOperation({ summary: 'Synchronize lip movements to audio' })
   @ApiResponse({ status: 201, description: 'Lip sync processing started' })
-  async lipSync(@Body() dto: LipSyncDto, @Request() req: any) {
-    return this.generationsService.processVideo(dto, req.user.id, 'lip-sync');
+  async lipSync(
+    @Body() dto: LipSyncDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processVideo(
+      dto,
+      String(user.id),
+      'lip-sync',
+    );
   }
 
   @Post('video-upscale')
@@ -188,8 +225,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Upscale a video to higher resolution' })
   @ApiResponse({ status: 201, description: 'Video upscale started' })
-  async upscaleVideo(@Body() dto: UpscaleVideoDto, @Request() req: any) {
-    return this.generationsService.processVideo(dto, req.user.id, 'video-upscale');
+  async upscaleVideo(
+    @Body() dto: UpscaleVideoDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processVideo(
+      dto,
+      String(user.id),
+      'video-upscale',
+    );
   }
 
   // ======== Image Processing Endpoints ========
@@ -200,8 +244,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Remove background from an image' })
   @ApiResponse({ status: 201, description: 'Background removal started' })
-  async removeBackground(@Body() dto: RemoveBackgroundDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'bg-remove');
+  async removeBackground(
+    @Body() dto: RemoveBackgroundDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'bg-remove',
+    );
   }
 
   @Post('sketch-to-image')
@@ -209,9 +260,19 @@ export class GenerationsController {
   @ApiBearerAuth()
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Convert a sketch/drawing into a full image' })
-  @ApiResponse({ status: 201, description: 'Sketch-to-image generation started' })
-  async sketchToImage(@Body() dto: SketchToImageDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'sketch-to-image');
+  @ApiResponse({
+    status: 201,
+    description: 'Sketch-to-image generation started',
+  })
+  async sketchToImage(
+    @Body() dto: SketchToImageDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'sketch-to-image',
+    );
   }
 
   @Post('variations')
@@ -220,8 +281,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate variations of an existing image' })
   @ApiResponse({ status: 201, description: 'Image variations started' })
-  async imageVariations(@Body() dto: ImageVariationsDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'variations');
+  async imageVariations(
+    @Body() dto: ImageVariationsDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'variations',
+    );
   }
 
   @Post('camera-change')
@@ -230,8 +298,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Change camera angle/perspective of an image' })
   @ApiResponse({ status: 201, description: 'Camera change started' })
-  async cameraChange(@Body() dto: CameraChangeDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'camera-change');
+  async cameraChange(
+    @Body() dto: CameraChangeDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'camera-change',
+    );
   }
 
   @Post('icon-gen')
@@ -240,8 +315,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate an icon from text description' })
   @ApiResponse({ status: 201, description: 'Icon generation started' })
-  async iconGenerator(@Body() dto: IconGeneratorDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'icon-gen');
+  async iconGenerator(
+    @Body() dto: IconGeneratorDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'icon-gen',
+    );
   }
 
   @Post('image-extend')
@@ -250,8 +332,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Extend/outpaint an image in a direction' })
   @ApiResponse({ status: 201, description: 'Image extension started' })
-  async imageExtend(@Body() dto: ImageExtendDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'image-extend');
+  async imageExtend(
+    @Body() dto: ImageExtendDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'image-extend',
+    );
   }
 
   @Post('mockup')
@@ -260,8 +349,11 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Generate a product mockup with your design' })
   @ApiResponse({ status: 201, description: 'Mockup generation started' })
-  async mockupGenerator(@Body() dto: MockupGeneratorDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'mockup');
+  async mockupGenerator(
+    @Body() dto: MockupGeneratorDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(dto, String(user.id), 'mockup');
   }
 
   @Post('skin-enhance')
@@ -270,8 +362,15 @@ export class GenerationsController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   @ApiOperation({ summary: 'Enhance skin quality in a portrait' })
   @ApiResponse({ status: 201, description: 'Skin enhancement started' })
-  async skinEnhance(@Body() dto: SkinEnhanceDto, @Request() req: any) {
-    return this.generationsService.processImage(dto, req.user.id, 'skin-enhance');
+  async skinEnhance(
+    @Body() dto: SkinEnhanceDto,
+    @CurrentUser() user: AuthenticatedUser,
+  ) {
+    return this.generationsService.processImage(
+      dto,
+      String(user.id),
+      'skin-enhance',
+    );
   }
 
   // ======== Real-time Status (SSE) ========
@@ -280,7 +379,12 @@ export class GenerationsController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Stream generation status updates via SSE' })
-  async streamStatus(@Param('id') id: string, @Request() req: any, @Response() res: any) {
+  streamStatus(
+    @Param('id') id: string,
+    @Request() req: any,
+    @CurrentUser() user: AuthenticatedUser,
+    @Response() res: any,
+  ) {
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -295,7 +399,7 @@ export class GenerationsController {
     let lastStatus = '';
     const pollInterval = setInterval(async () => {
       try {
-        const gen = await this.generationsService.findOne(id);
+        const gen = await this.generationsService.findOne(id, String(user.id));
         if (!gen) {
           send({ error: 'Generation not found' });
           clearInterval(pollInterval);
@@ -336,12 +440,16 @@ export class GenerationsController {
   })
   @ApiResponse({ status: 200, description: 'Callback processed' })
   @HttpCode(HttpStatus.OK)
-  async handleCallback(@Body() dto: GenerationCallbackDto) {
+  async handleCallback(
+    @Body() dto: GenerationCallbackDto,
+    @Headers('x-generation-callback-secret') callbackSecret?: string,
+  ) {
     await this.generationsService.handleCallback(
       dto.id,
       dto.status,
       dto.resultUrl,
       dto.error,
+      callbackSecret,
     );
     return { success: true };
   }

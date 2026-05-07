@@ -4,6 +4,7 @@ import { ProviderRegistry } from './provider.registry';
 import { ReplicateAdapter } from './adapters/replicate.adapter';
 import { StabilityAdapter } from './adapters/stability.adapter';
 import { OpenAIAdapter } from './adapters/openai.adapter';
+import { ComfyUIAdapter } from './adapters/comfyui.adapter';
 import { LeonardoAdapter } from './adapters/leonardo.adapter';
 import { RunwayAdapter } from './adapters/runway.adapter';
 import { ElevenLabsAdapter } from './adapters/elevenlabs.adapter';
@@ -21,6 +22,7 @@ import { FalAdapter } from './adapters/fal.adapter';
     ReplicateAdapter,
     StabilityAdapter,
     OpenAIAdapter,
+    ComfyUIAdapter,
     LeonardoAdapter,
     RunwayAdapter,
     ElevenLabsAdapter,

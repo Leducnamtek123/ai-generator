@@ -1,18 +1,19 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { signIn } from 'next-auth/react';
 import AuthLayout from '@/components/auth/AuthLayout';
 
 const loginSchema = z.object({
-    email: z.email("Invalid email address"),
+    email: z.string().email("Invalid email address"),
     password: z.string().min(6, "Password must be at least 6 characters"),
 });
 
@@ -20,12 +21,33 @@ type LoginValues = z.infer<typeof loginSchema>;
 
 export default function SignInPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const nextPath = searchParams.get('next') || '/dashboard';
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: { email: "", password: "" }
     });
+
+    useEffect(() => {
+        const error = searchParams.get('error');
+        if (error) {
+            if (error === 'OAuthAccountNotLinked') {
+                toast.error("Account exists", {
+                    description: "An account with this email already exists with a different login method."
+                });
+            } else if (error === 'CredentialsSignin') {
+                toast.error("Login Failed", {
+                    description: "Invalid email or password."
+                });
+            } else {
+                toast.error("Authentication failed", {
+                    description: "Something went wrong during login. Please try again."
+                });
+            }
+        }
+    }, [searchParams]);
 
     const onSubmit = async (data: LoginValues) => {
         setIsLoading(true);
@@ -44,7 +66,7 @@ export default function SignInPage() {
                 toast.success("Welcome back!", {
                     description: "You have successfully logged in."
                 });
-                router.push('/dashboard');
+                router.push(nextPath);
             }
         } catch (error) {
             toast.error("Login Failed", {
@@ -71,7 +93,7 @@ export default function SignInPage() {
                 {/* Google OAuth */}
                 <button
                     type="button"
-                    onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                    onClick={() => signIn('google', { callbackUrl: nextPath })}
                     className="auth-social"
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">

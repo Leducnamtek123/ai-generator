@@ -96,7 +96,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                         onClick={() => setIsOpen(false)}
                     />
                     <div className="absolute left-0 right-0 top-full mt-1.5 z-50 bg-popover border border-border rounded-xl shadow-2xl overflow-hidden animate-in fade-in-0 zoom-in-95">
-                        {/* Org list */}
+                        {/* Workspace list */}
                         <div className="p-1.5 max-h-48 overflow-y-auto">
                             {organizations.map((org) => (
                                 <button
@@ -175,7 +175,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                 onClick={() => setIsOpen(false)}
                             >
                                 <Plus className="w-4 h-4" />
-                                Create Organization
+                                Create Workspace
                             </Link>
                         </div>
                     </div>

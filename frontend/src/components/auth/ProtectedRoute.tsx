@@ -22,7 +22,8 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     useEffect(() => {
         if (status === 'loading') return;
         if (!typedSession || !hasAccessToken) {
-            window.location.replace('/sign-in');
+            const nextPath = `${window.location.pathname}${window.location.search}`;
+            window.location.replace(`/sign-in?next=${encodeURIComponent(nextPath)}`);
         }
     }, [typedSession, status, hasAccessToken]);
 

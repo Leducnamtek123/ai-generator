@@ -1,0 +1,40 @@
+{
+  "Landing": {
+    "navLinks": [
+      { "label": "Tính năng", "href": "/features" },
+      { "label": "Quy trình", "href": "/workflow" },
+      { "label": "Bảng giá", "href": "/pricing" },
+      { "label": "Câu hỏi", "href": "/faq" }
+    ],
+    "auth": {
+      "login": "Đăng nhập",
+      "join": "Tham gia miễn phí",
+      "create": "Tạo tài khoản",
+      "explore": "Khám phá tính năng"
+    },
+    "hero": {
+      "title": ["Ý tưởng.", "Được tạo.", "Làm chủ."],
+      "description": "PaintAI giữ toàn bộ vòng sáng tạo trong một nơi: tạo, tinh chỉnh và xuất bản đầu ra sẵn sàng cho chiến dịch mà không phải chuyển qua nhiều công cụ hay mất định hướng ban đầu.",
+      "trust": ["Không cần thẻ tín dụng", "Xuất bản sẵn sàng thương mại", "Nhanh và an toàn thương hiệu"]
+    },
+    "workspace": {
+      "creative": "Không gian sáng tạo",
+      "live": "Xem trước trực tiếp",
+      "prompt": "Prompt",
+      "promptBody": "Tạo một cảnh ra mắt sản phẩm điện ảnh, ánh sáng phòng tối, viền xanh điện, điểm nhấn hổ phách nhẹ và kiểu chữ sắc nét.",
+      "selected": "Thiết lập đã chọn",
+      "generated": "Tài sản đã tạo",
+      "assetName": "Poster ra mắt v04",
+      "download": "Tải xuống",
+      "queue": "Trạng thái hàng đợi",
+      "queueValue": "Sẵn sàng 2 bản render",
+      "nextAction": "Bước tiếp theo",
+      "nextValue": "Phóng to và xuất cho định dạng mạng xã hội",
+      "stats": [
+        { "value": "2M+", "label": "người sáng tạo" },
+        { "value": "18M+", "label": "lượt xuất" },
+        { "value": "98%", "label": "tỷ lệ duyệt" }
+      ]
+    }
+  }
+}

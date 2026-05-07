@@ -1,8 +1,11 @@
-import { Controller, Get, Param, Query, Res, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Param, Query, Res, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { SocialAuthService } from '../services/auth.service';
 import { Response } from 'express';
+import { CurrentUser } from '../../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
+import { UserEntity } from '../../users/infrastructure/persistence/relational/entities/user.entity';
 
 @ApiTags('Social Auth')
 @Controller({
@@ -27,15 +30,22 @@ export class SocialAuthController {
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   async callback(
-    @Request() req: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('platform') platform: string,
     @Query('code') code: string,
     @Query('state') state: string,
     @Res() res: Response,
-  ) {
-    const result = await this.authService.handleCallback(req.user, platform, code, state);
-    
+  ): Promise<void> {
+    await this.authService.handleCallback(
+      user as unknown as UserEntity,
+      platform,
+      code,
+      state,
+    );
+
     // Redirect back to frontend with status
-    return res.redirect(`${process.env.FRONTEND_DOMAIN}/settings?tab=account&status=success&platform=${platform}`);
+    void res.redirect(
+      `${process.env.FRONTEND_DOMAIN}/settings?tab=account&status=success&platform=${platform}`,
+    );
   }
 }

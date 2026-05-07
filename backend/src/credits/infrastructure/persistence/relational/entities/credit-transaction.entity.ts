@@ -2,6 +2,7 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  Index,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
@@ -9,6 +10,7 @@ import {
   CreditTransaction,
   CreditTransactionStatus,
   CreditTransactionType,
+  CreditTransactionScopeType,
 } from '../../../../domain/credit-transaction';
 
 @Entity({ name: 'credit_transaction' })
@@ -21,6 +23,14 @@ export class CreditTransactionEntity
 
   @Column()
   userId: string;
+
+  @Column({ type: 'varchar', default: 'user' })
+  @Index()
+  scopeType: CreditTransactionScopeType;
+
+  @Column({ type: 'varchar', nullable: true })
+  @Index()
+  scopeId?: string;
 
   @Column('int')
   amount: number;

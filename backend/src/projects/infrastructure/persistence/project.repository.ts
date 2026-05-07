@@ -9,15 +9,20 @@ export abstract class ProjectRepository {
     data: Omit<Project, 'id' | 'createdAt' | 'deletedAt' | 'updatedAt'>,
   ): Promise<Project>;
 
-  abstract findAll(userId: string | number): Promise<Project[]>;
+  abstract findAll(
+    userId: string | number,
+    organizationId?: string | null,
+  ): Promise<Project[]>;
 
   abstract findManyWithPagination({
     userId,
+    organizationId,
     filterOptions,
     sortOptions,
     paginationOptions,
   }: {
     userId: string | number;
+    organizationId?: string | null;
     filterOptions?: FilterProjectDto | null;
     sortOptions?: SortProjectDto[] | null;
     paginationOptions: IPaginationOptions;

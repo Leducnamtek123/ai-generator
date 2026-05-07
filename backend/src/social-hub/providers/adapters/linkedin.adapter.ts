@@ -114,14 +114,8 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
       };
     } catch (error) {
       if (error instanceof RefreshTokenError) throw error;
-      this.logger.warn('LinkedIn auth failed, using dev fallback:', error);
-      return {
-        id: `li_${Date.now()}`,
-        name: 'LinkedIn User (Dev)',
-        accessToken: `la_dev_${Math.random().toString(36).substring(7)}`,
-        refreshToken: `lr_dev_${Math.random().toString(36).substring(7)}`,
-        expiresIn: 5183999,
-      };
+      this.logger.error('LinkedIn authentication failed:', error);
+      throw new Error('LinkedIn authentication failed');
     }
   }
 

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Organization, Member } from "@/services/orgApi";
 
-export type UserRole = "ADMIN" | "MEMBER" | "BILLING";
+export type UserRole = "OWNER" | "ADMIN" | "MEMBER" | "BILLING" | "VIEWER";
 
 interface OrgState {
   // Current selected organization
@@ -21,22 +21,33 @@ interface OrgState {
 
 // Simple permission check based on role
 const rolePermissions: Record<UserRole, Record<string, string[]>> = {
+  OWNER: {
+    all: ["manage"],
+  },
   ADMIN: {
-    Organization: ["create", "read", "update", "delete", "transfer_ownership"],
+    Organization: ["read", "update"],
     Project: ["create", "read", "update", "delete"],
     User: ["read", "update", "delete"],
     Invite: ["create", "read", "delete"],
     Billing: ["read"],
+    all: ["manage"],
   },
   MEMBER: {
-    Organization: ["create", "read"],
-    Project: ["create", "read"],
+    Organization: ["read"],
+    Project: ["create", "read", "update", "delete"],
+    User: ["read"],
+    Invite: [],
+    Billing: [],
+  },
+  VIEWER: {
+    Organization: ["read"],
+    Project: ["read"],
     User: ["read"],
     Invite: [],
     Billing: [],
   },
   BILLING: {
-    Organization: ["create", "read"],
+    Organization: ["read"],
     Project: ["read"],
     User: [],
     Invite: [],

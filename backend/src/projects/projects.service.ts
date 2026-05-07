@@ -10,34 +10,42 @@ import { Project } from './domain/project';
 export class ProjectsService {
   constructor(private readonly projectRepository: ProjectRepository) {}
 
-  create(createProjectDto: CreateProjectDto, userId: string | number) {
+  create(
+    createProjectDto: CreateProjectDto,
+    userId: string | number,
+    organizationId?: string | null,
+  ) {
     const clonedPayload = {
       name: createProjectDto.name,
       description: createProjectDto.description,
       content: createProjectDto.content,
       userId: String(userId),
+      organizationId: organizationId || undefined,
     };
 
     return this.projectRepository.create(clonedPayload);
   }
 
-  findAll(userId: string | number) {
-    return this.projectRepository.findAll(userId);
+  findAll(userId: string | number, organizationId?: string | null) {
+    return this.projectRepository.findAll(userId, organizationId);
   }
 
   findManyWithPagination({
     userId,
+    organizationId,
     filterOptions,
     sortOptions,
     paginationOptions,
   }: {
     userId: string | number;
+    organizationId?: string | null;
     filterOptions?: FilterProjectDto | null;
     sortOptions?: SortProjectDto[] | null;
     paginationOptions: IPaginationOptions;
   }): Promise<Project[]> {
     return this.projectRepository.findManyWithPagination({
       userId,
+      organizationId,
       filterOptions,
       sortOptions,
       paginationOptions,

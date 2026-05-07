@@ -136,15 +136,8 @@ export class XAdapter extends SocialAbstractBase implements SocialProvider {
       if (error instanceof RefreshTokenError || error instanceof BadBodyError) {
         throw error;
       }
-      this.logger.warn('X authentication failed, using dev fallback:', error);
-      return {
-        id: `x_${Date.now()}`,
-        name: 'X User (Dev)',
-        accessToken: `xa_dev_${Math.random().toString(36).substring(7)}`,
-        refreshToken: `xr_dev_${Math.random().toString(36).substring(7)}`,
-        expiresIn: 7200,
-        username: 'paint_ai_dev',
-      };
+      this.logger.error('X authentication failed:', error);
+      throw new Error('X authentication failed');
     }
   }
 

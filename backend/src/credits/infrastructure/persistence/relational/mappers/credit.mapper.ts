@@ -12,6 +12,8 @@ export class CreditMapper {
     const domainEntity = new CreditTransaction();
     domainEntity.id = raw.id;
     domainEntity.userId = raw.userId;
+    domainEntity.scopeType = raw.scopeType;
+    domainEntity.scopeId = raw.scopeId;
     domainEntity.amount = raw.amount;
     domainEntity.type = raw.type;
     domainEntity.status = raw.status;
@@ -31,6 +33,8 @@ export class CreditMapper {
       persistenceEntity.id = domainEntity.id;
     }
     persistenceEntity.userId = domainEntity.userId;
+    persistenceEntity.scopeType = domainEntity.scopeType || 'user';
+    persistenceEntity.scopeId = domainEntity.scopeId;
     persistenceEntity.amount = domainEntity.amount;
     persistenceEntity.type = domainEntity.type;
     persistenceEntity.status = domainEntity.status ?? 'posted';

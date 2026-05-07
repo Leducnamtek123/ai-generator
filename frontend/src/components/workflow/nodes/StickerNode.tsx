@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BaseNode } from './BaseNode';
 import { Smile, ThumbsUp, ThumbsDown, Heart, Flame, PartyPopper, Rocket, TriangleAlert, Check, X, HelpCircle, Lightbulb, Skull } from 'lucide-react';
+import { Handle, Position } from '@xyflow/react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { NodeStatus } from '../types';
@@ -16,6 +16,7 @@ interface StickerNodeProps {
         onDelete?: (id: string) => void;
         onSelect?: (id: string, sticker: string) => void;
         onDuplicate?: () => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
     selected?: boolean;
@@ -91,6 +92,15 @@ export function StickerNode({ id, data, selected }: StickerNodeProps) {
                     </div>
                 )}
             </div>
+            {!data.isPreview && (
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    id="reference-output"
+                    onClick={(e) => data.onHandleClick?.(e, 'reference-output', 'source')}
+                    className="!border-2 !border-background !bg-pink-500 z-50 cursor-pointer hover:!bg-pink-400"
+                />
+            )}
         </div>
     );
 }

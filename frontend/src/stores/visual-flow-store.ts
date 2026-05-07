@@ -78,8 +78,11 @@ interface VisualFlowState {
   loadPipelineStatus: (projectId: string, videoId: string) => Promise<void>;
   generateRefs: (projectId: string, characterIds?: string[]) => Promise<void>;
   generateImages: (projectId: string, videoId: string) => Promise<void>;
+
   generateVideos: (projectId: string, videoId: string) => Promise<void>;
+  suggestScenes: (projectId: string, videoId: string, dto?: { count?: number; instructions?: string }) => Promise<void>;
   concatScenes: (projectId: string, videoId: string, options?: {
+
     orientation?: 'VERTICAL' | 'HORIZONTAL';
     musicUrl?: string;
     musicVolume?: number;
@@ -334,6 +337,7 @@ export const useVisualFlowStore = create<VisualFlowState>((set, get) => ({
     set({ runningStep: null });
   },
 
+
   generateVideos: async (projectId, videoId) => {
     set({ runningStep: 'videos' });
     try {
@@ -347,7 +351,22 @@ export const useVisualFlowStore = create<VisualFlowState>((set, get) => ({
     set({ runningStep: null });
   },
 
+  suggestScenes: async (projectId, videoId, dto) => {
+    set({ isLoading: true });
+    try {
+      await visualFlowApi.pipeline.suggestScenes(projectId, videoId, dto);
+      toast.success('AI Suggested scenes created');
+      await get().loadScenes(projectId, videoId);
+      await get().loadPipelineStatus(projectId, videoId);
+    } catch (error) {
+      console.error('Failed to suggest scenes', error);
+      toast.error('Failed to suggest scenes');
+    }
+    set({ isLoading: false });
+  },
+
   concatScenes: async (projectId, videoId, options) => {
+
     set({ runningStep: 'concat' });
     try {
       await visualFlowApi.pipeline.concat(projectId, videoId, options);

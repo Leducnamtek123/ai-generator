@@ -9,6 +9,9 @@ import { Queue } from 'bullmq';
 import { WORKFLOW_QUEUE } from '../queues/queues.constants';
 import { GenerationEventsService } from '../generations/services/generation-events.service';
 import { GenerationEntity } from '../generations/entities/generation.entity';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory } from '../notifications/notifications.types';
+import { NotificationType } from '../notifications/infrastructure/persistence/relational/entities/notification.entity';
 
 @Injectable()
 export class WorkflowsService implements OnModuleInit {
@@ -18,6 +21,7 @@ export class WorkflowsService implements OnModuleInit {
     private readonly workflowRepository: WorkflowRepository,
     private readonly workflowEngine: WorkflowEngine,
     private readonly generationEventsService: GenerationEventsService,
+    private readonly notificationsService: NotificationsService,
     @InjectQueue(WORKFLOW_QUEUE) private workflowQueue: Queue,
   ) {}
 
@@ -56,13 +60,36 @@ export class WorkflowsService implements OnModuleInit {
     await this.update(workflowId, generation.userId, {
       nodes: workflow.nodes.map((node: any) =>
         node.id === nodeId
-          ? {
+        ? {
               ...node,
               data: { ...node.data, ...patchData },
             }
           : node,
       ),
     } as any);
+
+    if (generation.status === 'completed' || generation.status === 'failed') {
+      await this.notificationsService.notifyUser({
+        userId: generation.userId,
+        category: NotificationCategory.WORKFLOW,
+        type:
+          generation.status === 'completed'
+            ? NotificationType.SUCCESS
+            : NotificationType.ERROR,
+        title:
+          generation.status === 'completed'
+            ? 'Workflow step completed'
+            : 'Workflow step failed',
+        message:
+          generation.status === 'completed'
+            ? `Workflow "${workflow.name}" finished processing generation ${generation.id}.`
+            : `Workflow "${workflow.name}" failed while processing generation ${generation.id}${generation.error ? `: ${generation.error}` : ''}.`,
+        emailSubject:
+          generation.status === 'completed'
+            ? `Workflow completed: ${workflow.name}`
+            : `Workflow failed: ${workflow.name}`,
+      });
+    }
   }
 
   create(createWorkflowDto: CreateWorkflowDto, userId?: string | number) {

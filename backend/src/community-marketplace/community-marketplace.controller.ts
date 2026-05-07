@@ -11,18 +11,14 @@ import {
   Patch,
   Post,
   Query,
-  Request,
   UseGuards,
 } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
-import {
-  ApiBearerAuth,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiTags } from '@nestjs/swagger';
 import { infinityPagination } from '../utils/infinity-pagination';
 import { InfinityPaginationResponseDto } from '../utils/dto/infinity-pagination-response.dto';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
 import { QueryCommunityListingsDto } from './dto/query-community-listings.dto';
 import { CreateCommunityListingDto } from './dto/create-community-listing.dto';
 import { UpdateCommunityListingDto } from './dto/update-community-listing.dto';
@@ -62,22 +58,23 @@ export class CommunityMarketplaceController {
   }
 
   @Get('listings/me')
+  @ApiBearerAuth()
+  @UseGuards(AuthGuard('jwt'))
   @ApiOkResponse({ type: InfinityPaginationResponseDto })
   @HttpCode(HttpStatus.OK)
   async findMine(
-    @Request() req: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Query('page', new DefaultValuePipe(1), ParseIntPipe) page: number,
     @Query('limit', new DefaultValuePipe(12), ParseIntPipe) limit: number,
   ): Promise<InfinityPaginationResponseDto<TemplateEntity>> {
     if (limit > 50) limit = 50;
 
-    if (!req.user?.id) {
-      return infinityPagination([], { page, limit });
-    }
-
     const listings = await this.communityMarketplaceService.findMine(
-      req.user.id,
-      { page, limit },
+      String(user.id),
+      {
+        page,
+        limit,
+      },
     );
 
     return infinityPagination(listings as TemplateEntity[], { page, limit });
@@ -92,32 +89,35 @@ export class CommunityMarketplaceController {
   @Post('listings')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
-  create(@Request() req: any, @Body() dto: CreateCommunityListingDto) {
-    return this.communityMarketplaceService.create(req.user.id, dto);
+  create(
+    @CurrentUser() user: AuthenticatedUser,
+    @Body() dto: CreateCommunityListingDto,
+  ) {
+    return this.communityMarketplaceService.create(String(user.id), dto);
   }
 
   @Patch('listings/:id')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
   update(
-    @Request() req: any,
+    @CurrentUser() user: AuthenticatedUser,
     @Param('id') id: string,
     @Body() dto: UpdateCommunityListingDto,
   ) {
-    return this.communityMarketplaceService.update(req.user.id, id, dto);
+    return this.communityMarketplaceService.update(String(user.id), id, dto);
   }
 
   @Delete('listings/:id')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
-  remove(@Request() req: any, @Param('id') id: string) {
-    return this.communityMarketplaceService.remove(req.user.id, id);
+  remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.communityMarketplaceService.remove(String(user.id), id);
   }
 
   @Post('listings/:id/purchase')
   @ApiBearerAuth()
   @UseGuards(AuthGuard('jwt'))
-  purchase(@Request() req: any, @Param('id') id: string) {
-    return this.communityMarketplaceService.purchase(req.user.id, id);
+  purchase(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
+    return this.communityMarketplaceService.purchase(String(user.id), id);
   }
 }

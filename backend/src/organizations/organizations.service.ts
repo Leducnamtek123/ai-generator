@@ -178,4 +178,21 @@ export class OrganizationsService {
     if (!updated) throw new NotFoundException('Organization not found');
     return updated;
   }
+
+  async autoJoinByDomain(userId: number, domain: string): Promise<void> {
+    const orgs = await this.orgRepository.findManyByDomain(domain);
+    for (const org of orgs) {
+      if (org.shouldAttachUsersByDomain) {
+        // Check if already a member
+        const member = await this.memberRepository.findByUserAndOrg(userId, org.id);
+        if (!member) {
+          await this.memberRepository.create({
+            userId,
+            organizationId: org.id,
+            role: OrgRole.MEMBER,
+          } as any);
+        }
+      }
+    }
+  }
 }

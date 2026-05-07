@@ -391,7 +391,7 @@ class WebSocketService {
             return;
         }
 
-        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8006';
+        const wsUrl = process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost';
         this.ws = new WebSocket(wsUrl);
 
         this.ws.onopen = () => {

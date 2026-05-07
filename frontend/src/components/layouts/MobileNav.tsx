@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import { useLocale } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useAuth } from '@/providers';
 import {
@@ -10,15 +11,18 @@ import {
     MoreHorizontal,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { canAccessAdmin } from '@/lib/access-control';
 import { Button } from '@/ui/button';
 import type { LucideIcon } from 'lucide-react';
 
 import {
-    navItems,
-    bottomItems,
-    ALL_TOOLS_LIST,
-    INITIAL_PINNED_IDS
-} from './Sidebar';
+    DEFAULT_PINNED_TOOL_IDS,
+    PINNED_STORAGE_KEY,
+    WORKSPACE_ROOT,
+    mergeNavigationData,
+    type NavigationConfig,
+} from './navigation-data';
+import { useSiteConfig } from '@/hooks/queries/useSiteConfig';
 
 interface MobileNavItem {
     icon: LucideIcon;
@@ -58,19 +62,24 @@ interface MobileNavProps {
 export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
     const pathname = usePathname();
     const { user } = useAuth();
+    const locale = useLocale();
+    const navigationConfig = useSiteConfig('navigation', locale);
+    const navigationData = mergeNavigationData(
+        navigationConfig.data?.value as NavigationConfig | undefined,
+    );
 
     const [pinnedIds] = useState<string[]>(() => {
-        if (typeof window === 'undefined') return INITIAL_PINNED_IDS;
+        if (typeof window === 'undefined') return DEFAULT_PINNED_TOOL_IDS;
 
-        const saved = localStorage.getItem('pinned-tools');
+        const saved = localStorage.getItem(PINNED_STORAGE_KEY);
         if (saved) {
             return JSON.parse(saved) as string[];
         }
 
-        return INITIAL_PINNED_IDS;
+        return DEFAULT_PINNED_TOOL_IDS;
     });
 
-    const pinnedTools = ALL_TOOLS_LIST.filter(tool => pinnedIds.includes(tool.id || ''));
+    const pinnedTools = navigationData.allToolsList.filter(tool => pinnedIds.includes(tool.id || ''));
 
     useEffect(() => {
         if (isOpen) {
@@ -86,6 +95,8 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
     }, [pathname, onOpenChange]);
 
     if (!user) return null;
+
+    const visibleBottomItems = navigationData.bottomItems.filter((item) => item.href !== '/admin' || canAccessAdmin(user));
 
     return (
         <div className="md:hidden">
@@ -127,16 +138,16 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                             <div>
                                 <button className="flex items-center gap-2 text-sm text-foreground bg-muted px-3 py-2 rounded-lg w-full">
                                     <div className="w-5 h-5 rounded bg-destructive flex items-center justify-center text-[10px] font-bold text-destructive-foreground">
-                                        P
+                                        {WORKSPACE_ROOT.label.slice(0, 1)}
                                     </div>
-                                    <span className="flex-1 text-left">Personal</span>
+                                    <span className="flex-1 text-left">{WORKSPACE_ROOT.label}</span>
                                     <ChevronDown className="w-4 h-4 text-muted-foreground" />
                                 </button>
                             </div>
 
                             {/* Main Nav */}
                             <div className="space-y-1">
-                                {navItems.map((item) => (
+                                {navigationData.navItems.map((item) => (
                                     <NavItem key={item.label} item={item} pathname={pathname} />
                                 ))}
                             </div>
@@ -153,7 +164,7 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
 
                             {/* Bottom */}
                             <div className="space-y-1 pt-4 border-t border-border">
-                                {bottomItems.map((item) => (
+                                {visibleBottomItems.map((item) => (
                                     <NavItem key={item.label} item={item} pathname={pathname} />
                                 ))}
                             </div>
@@ -162,8 +173,8 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                         {/* Footer */}
                         <div className="p-4 border-t border-border bg-card">
                             <div className="rounded-xl bg-pricing/10 p-4 border border-pricing/20 mb-4">
-                                <h4 className="text-sm font-bold text-pricing">Get a plan</h4>
-                                <p className="text-xs text-muted-foreground mt-1">Unlock more features</p>
+                                <h4 className="text-sm font-bold text-pricing">Upgrade plan</h4>
+                                <p className="text-xs text-muted-foreground mt-1">Unlock more credits and team features</p>
                             </div>
 
                             <div className="flex items-center justify-between text-muted-foreground">

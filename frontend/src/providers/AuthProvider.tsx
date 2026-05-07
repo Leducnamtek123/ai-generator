@@ -11,6 +11,10 @@ interface User {
     avatar?: string;
     firstName?: string;
     lastName?: string;
+    role?: {
+        id?: string | number | null;
+        name?: string | null;
+    } | null;
 }
 
 interface AuthContextType {
@@ -39,6 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             avatar: u.image || u.avatar || `https://ui-avatars.com/api/?name=${u.name || u.email}`,
             firstName: u.firstName,
             lastName: u.lastName,
+            role: u.role ?? null,
         };
     }, [session, hasAccessToken]);
 

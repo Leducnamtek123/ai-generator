@@ -5,10 +5,12 @@ import { z } from "zod";
 export const env = createEnv({
   server: {
     GOOGLE_CLIENT_ID: z.string().min(1),
-    GOOGLE_CLIENT_SECRET: z.string().min(1),
+    GOOGLE_CLIENT_SECRET: z.string().min(1)
   },
   client: {
     NEXT_PUBLIC_SITE_URL: z.url(),
+    NEXT_PUBLIC_SITE_URL_EN: z.url().optional(),
+    NEXT_PUBLIC_SITE_URL_VI: z.url().optional(),
     NEXT_PUBLIC_API_URL: z.url(),
     NEXT_PUBLIC_GITHUB_URL: z.url(),
     NEXT_PUBLIC_GA_ID: z.string().optional()
@@ -17,6 +19,8 @@ export const env = createEnv({
     GOOGLE_CLIENT_ID: process.env.GOOGLE_CLIENT_ID,
     GOOGLE_CLIENT_SECRET: process.env.GOOGLE_CLIENT_SECRET,
     NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL,
+    NEXT_PUBLIC_SITE_URL_EN: process.env.NEXT_PUBLIC_SITE_URL_EN,
+    NEXT_PUBLIC_SITE_URL_VI: process.env.NEXT_PUBLIC_SITE_URL_VI,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_GITHUB_URL: process.env.NEXT_PUBLIC_GITHUB_URL,
     NEXT_PUBLIC_GA_ID: process.env.NEXT_PUBLIC_GA_ID

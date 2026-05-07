@@ -1,8 +1,8 @@
-import { auth } from "@/auth";
 import createMiddleware from "next-intl/middleware";
 import { routing } from "@/i18n/routing";
 import { NextRequest, NextResponse } from "next/server";
 import { getToken } from "next-auth/jwt";
+import { isAdminRole } from "@/lib/access-control";
 
 const intlMiddleware = createMiddleware(routing);
 
@@ -24,34 +24,64 @@ function isNextAuthRoute(pathname: string): boolean {
   return !action || NEXT_AUTH_ACTIONS.has(action);
 }
 
+function isAdminRoute(pathname: string): boolean {
+  return pathname === "/admin" || pathname.startsWith("/admin/");
+}
+
+function getRedirectUrl(req: NextRequest, pathname: string) {
+  const url = req.nextUrl.clone();
+  url.pathname = pathname;
+  url.search = "";
+  return url;
+}
 
 // Do not rely on auth wrapper which causes weird redirect loop with next-intl.
 // Manually get session.
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
+  if (isAdminRoute(pathname)) {
+    const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+
+    if (!token?.accessToken) {
+      const signInUrl = getRedirectUrl(req, "/sign-in");
+      signInUrl.searchParams.set("callbackUrl", req.nextUrl.pathname);
+      return NextResponse.redirect(signInUrl);
+    }
+
+    if (!isAdminRole(token.role)) {
+      return NextResponse.redirect(getRedirectUrl(req, "/dashboard"));
+    }
+  }
+
   // Handle API proxying (exclude only NextAuth routes handled by Next.js)
   if (pathname.startsWith('/api') && !isNextAuthRoute(pathname)) {
     const billingBase =
       process.env.BILLING_API_URL ||
       process.env.NEXT_PUBLIC_BILLING_API_URL ||
+      process.env.INTERNAL_API_URL ||
       process.env.API_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:8000/api/v1';
+      'http://localhost/api/v1';
     const generationBase =
       process.env.GENERATION_API_URL ||
       process.env.NEXT_PUBLIC_GENERATION_API_URL ||
+      process.env.INTERNAL_API_URL ||
       process.env.API_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
-      'http://localhost:8000/api/v1';
+      'http://localhost/api/v1';
     const gatewayBase =
+      process.env.INTERNAL_API_URL ||
       process.env.API_BACKEND_URL ||
       process.env.NEXT_PUBLIC_API_URL ||
       'http://localhost:8000/api/v1';
     const communityBase =
       process.env.COMMUNITY_API_URL ||
       process.env.NEXT_PUBLIC_COMMUNITY_API_URL ||
-      'http://localhost:8001/api/v1';
+      process.env.INTERNAL_API_URL ||
+      process.env.API_BACKEND_URL ||
+      process.env.NEXT_PUBLIC_API_URL ||
+      gatewayBase;
 
     const isBillingRoute =
       pathname.startsWith('/api/payments') || pathname.startsWith('/api/credits');

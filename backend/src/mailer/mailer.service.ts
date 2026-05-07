@@ -27,15 +27,15 @@ export class MailerService {
     context,
     ...mailOptions
   }: nodemailer.SendMailOptions & {
-    templatePath: string;
-    context: Record<string, unknown>;
+    templatePath?: string;
+    context?: Record<string, unknown>;
   }): Promise<void> {
     let html: string | undefined;
     if (templatePath) {
       const template = await fs.readFile(templatePath, 'utf-8');
       html = Handlebars.compile(template, {
         strict: true,
-      })(context);
+      })(context ?? {});
     }
 
     await this.transporter.sendMail({

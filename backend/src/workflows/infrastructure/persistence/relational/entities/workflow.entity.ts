@@ -36,6 +36,9 @@ export class WorkflowEntity extends EntityRelationalHelper implements Workflow {
   @Column()
   projectId: string;
 
+  @Column({ name: 'organization_id', nullable: true })
+  organizationId: string;
+
   @Column({ nullable: true })
   previewUrl?: string;
 

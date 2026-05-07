@@ -1,12 +1,17 @@
 'use client';
 
-import { useReducer } from 'react';
+import { useReducer, useEffect, useState } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
-import { Zap, Download, Loader2, Play, Pause, Folder, Leaf, Cog, Bomb, User, Smartphone, Rocket, Waves, Music2 } from 'lucide-react';
+import { useTemplateStore } from '@/stores/template-store';
+import { TemplateTypeEnum } from '@/lib/api/templates';
+import { CONTENT_TABS, COMMUNITY_TAB, TEMPLATES_TAB } from '@/components/layouts/navigation-data';
+import { Zap, Download, Loader2, Play, Pause, Folder, Leaf, Cog, Bomb, User, Smartphone, Rocket, Waves, Music2, Search, Sparkles } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
+import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
+import Image from 'next/image';
 
 const sfxCategories = [
     { id: 'nature', label: 'Nature', icon: Leaf, examples: ['Rain', 'Thunder', 'Wind', 'Ocean'] },
@@ -28,7 +33,7 @@ type SfxState = {
     variations: number;
     intensity: number;
     playingId: string | null;
-    contentTab: 'results' | 'library';
+    activeContentTab: string;
 };
 
 type SfxAction =
@@ -38,7 +43,7 @@ type SfxAction =
     | { type: 'setVariations'; variations: number }
     | { type: 'setIntensity'; intensity: number }
     | { type: 'togglePlaying'; playingId: string }
-    | { type: 'setContentTab'; contentTab: 'results' | 'library' };
+    | { type: 'setActiveContentTab'; tab: string };
 
 const initialState: SfxState = {
     prompt: '',
@@ -47,7 +52,7 @@ const initialState: SfxState = {
     variations: 4,
     intensity: 50,
     playingId: null,
-    contentTab: 'results',
+    activeContentTab: TEMPLATES_TAB,
 };
 
 function reducer(state: SfxState, action: SfxAction): SfxState {
@@ -67,8 +72,8 @@ function reducer(state: SfxState, action: SfxAction): SfxState {
             return { ...state, intensity: action.intensity };
         case 'togglePlaying':
             return { ...state, playingId: state.playingId === action.playingId ? null : action.playingId };
-        case 'setContentTab':
-            return { ...state, contentTab: action.contentTab };
+        case 'setActiveContentTab':
+            return { ...state, activeContentTab: action.tab };
         default:
             return state;
     }
@@ -76,8 +81,31 @@ function reducer(state: SfxState, action: SfxAction): SfxState {
 
 export default function SfxGeneratorPage() {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const { generateSfx, currentGeneration, isGenerating } = useGenerationStore();
-    const isProcessing = isGenerating;
+    const { generateSfx, currentGeneration, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
+    const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
+    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+
+    useEffect(() => {
+        if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
+            fetchGenerations({ type: TemplateTypeEnum.SOUND_EFFECT_GENERATOR, limit: 12 });
+        } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
+            const fetchCommunity = async () => {
+                setIsCommunityLoading(true);
+                try {
+                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.SOUND_EFFECT_GENERATOR}&limit=12`));
+                    setCommunityListings(res.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch community listings', err);
+                } finally {
+                    setIsCommunityLoading(false);
+                }
+            };
+            fetchCommunity();
+        } else if (state.activeContentTab === TEMPLATES_TAB) { // Templates
+            fetchTemplates(TemplateTypeEnum.SOUND_EFFECT_GENERATOR);
+        }
+    }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     const handleGenerate = async () => {
         if (!state.prompt.trim()) return;
@@ -88,8 +116,6 @@ export default function SfxGeneratorPage() {
         });
     };
 
-    const generatedResult = currentGeneration?.status === 'completed' ? currentGeneration : null;
-
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
@@ -97,14 +123,14 @@ export default function SfxGeneratorPage() {
                     <h2 className="font-bold text-muted-foreground">SFX Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
-                    <div className="space-y-3">
+                <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+                    <div className="space-y-3 text-left">
                         <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Describe the Sound</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
                                 onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                                placeholder="e.g., Heavy rain on a tin roof, thunder rumbling in the distance..."
+                                placeholder="e.g., Heavy rain on a tin roof..."
                                 className="w-full h-28 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
@@ -118,9 +144,7 @@ export default function SfxGeneratorPage() {
                                     key={cat.id}
                                     onClick={() => {
                                         dispatch({ type: 'toggleCategory', categoryId: cat.id });
-                                        if (!state.prompt) {
-                                            dispatch({ type: 'setPrompt', prompt: cat.examples[0] });
-                                        }
+                                        if (!state.prompt) dispatch({ type: 'setPrompt', prompt: cat.examples[0] });
                                     }}
                                     className={cn(
                                         'flex flex-col items-center gap-1 p-2 rounded-xl border transition-all',
@@ -132,19 +156,6 @@ export default function SfxGeneratorPage() {
                                 </button>
                             ))}
                         </div>
-                        {state.selectedCategory && (
-                            <div className="flex flex-wrap gap-1.5">
-                                {sfxCategories.find((c) => c.id === state.selectedCategory)?.examples.map((ex) => (
-                                    <button
-                                        key={ex}
-                                        onClick={() => dispatch({ type: 'setPrompt', prompt: ex })}
-                                        className="px-2.5 py-1 rounded-lg bg-muted border border-border text-[10px] font-medium hover:bg-accent transition-colors"
-                                    >
-                                        {ex}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                     </div>
 
                     <div className="space-y-3">
@@ -164,122 +175,149 @@ export default function SfxGeneratorPage() {
                             ))}
                         </div>
                     </div>
-
-                    <div className="space-y-5">
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Variations</Label>
-                                <span className="text-[11px] font-mono">{state.variations}</span>
-                            </div>
-                            <Slider min={1} max={8} step={1} value={[state.variations]} onValueChange={([v]) => dispatch({ type: 'setVariations', variations: v })} />
-                        </div>
-
-                        <div className="space-y-3">
-                            <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Intensity</Label>
-                                <span className="text-[11px] font-mono">{state.intensity}%</span>
-                            </div>
-                            <Slider min={0} max={100} step={5} value={[state.intensity]} onValueChange={([v]) => dispatch({ type: 'setIntensity', intensity: v })} />
-                        </div>
-                    </div>
                 </div>
 
                 <div className="p-4 border-t border-border space-y-3">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
-                        <span>Cost:</span>
-                        <span className="font-medium text-foreground">{state.variations} Credits</span>
-                    </div>
                     <Button onClick={handleGenerate} disabled={isGenerating || !state.prompt.trim()} className="w-full h-12 font-bold rounded-xl gap-2">
-                        {isGenerating ? (
-                            <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                                Generating...
-                            </>
-                        ) : (
-                            <>
-                                <Zap className="w-5 h-5" />
-                                Generate SFX
-                            </>
-                        )}
+                        {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Zap className="w-5 h-5" />}
+                        {isGenerating ? 'Generating...' : 'Generate SFX'}
                     </Button>
                 </div>
             </div>
 
             <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
-                    <div className="flex items-center gap-1">
-                        {(['results', 'library'] as const).map((tab) => (
+                    <div className="flex items-center gap-2">
+                        {CONTENT_TABS.map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => dispatch({ type: 'setContentTab', contentTab: tab })}
+                                onClick={() => dispatch({ type: 'setActiveContentTab', tab })}
                                 className={cn(
-                                    'px-4 py-2 text-sm font-medium rounded-full transition-colors capitalize',
-                                    state.contentTab === tab ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
+                                    'px-4 py-2 text-sm font-medium rounded-full transition-colors',
+                                    state.activeContentTab === tab ? 'bg-accent text-accent-foreground' : 'text-muted-foreground hover:text-foreground',
                                 )}
                             >
-                                {tab === 'results' ? 'Generated' : 'Sound Library'}
+                                {tab}
                             </button>
                         ))}
                     </div>
-                    {generatedResult && <Button size="sm" className="gap-2"><Download className="w-4 h-4" /> Export All</Button>}
+                    <div className="flex items-center gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input placeholder="Search" className="w-56 h-9 pl-10 pr-4" />
+                        </div>
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">
-                    {isProcessing ? (
-                        <div className="flex flex-col items-center justify-center h-full gap-4">
-                            <div className="relative">
-                                <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                <Zap className="w-6 h-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
-                            </div>
-                            <p className="text-sm text-muted-foreground animate-pulse">Generating sound effects...</p>
-                        </div>
-                    ) : generatedResult ? (
-                        <div className="space-y-3 max-w-3xl mx-auto">
-                            {[{
-                                id: generatedResult.id,
-                                name: state.prompt.slice(0, 30) || 'Generated SFX',
-                                duration: state.duration,
-                                category: state.selectedCategory || 'Custom',
-                            }].map((sfx) => (
-                                <div key={sfx.id} className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group">
-                                    <button
-                                        onClick={() => dispatch({ type: 'togglePlaying', playingId: sfx.id })}
-                                        className="w-12 h-12 rounded-full bg-muted flex items-center justify-center hover:bg-accent transition-colors shrink-0"
-                                    >
-                                        {state.playingId === sfx.id ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 fill-current" />}
-                                    </button>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium">{sfx.name}</p>
-                                        <p className="text-xs text-muted-foreground">{sfx.category} • {sfx.duration}</p>
-                                    </div>
-                                    <div className="hidden md:flex items-center gap-[2px] h-8">
-                                        {Array.from({ length: 40 }).map((_, i) => (
-                                            <div
-                                                key={i}
-                                                className={cn('w-[2px] rounded-full transition-colors', state.playingId === sfx.id ? 'bg-primary' : 'bg-muted-foreground/20')}
-                                                style={{ height: `${6 + (i % 8) * 2}px` }}
-                                            />
-                                        ))}
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <Button variant="outline" size="icon" className="w-8 h-8"><Download className="w-4 h-4" /></Button>
-                                    </div>
+                    {state.activeContentTab === CONTENT_TABS[0] && ( // Personal
+                        <section className="space-y-6">
+                            <h2 className="text-lg font-semibold text-left">Your History</h2>
+                            {isGenerationsLoading ? (
+                                <LoadingGrid />
+                            ) : generations.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {generations.map((gen) => (
+                                        <GenerationCard key={gen.id} generation={gen} onPlay={() => dispatch({ type: 'togglePlaying', playingId: gen.id })} isPlaying={state.playingId === gen.id} />
+                                    ))}
                                 </div>
-                            ))}
-                        </div>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-                            <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                                <Folder className="w-8 h-8 text-muted-foreground" />
-                            </div>
-                            <div>
-                                <h3 className="font-semibold">Generate Sound Effects</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Describe any sound and AI will create it for you</p>
-                            </div>
-                        </div>
+                            ) : (
+                                <EmptyState message="No sound effects yet. Start creating!" />
+                            )}
+                        </section>
+                    )}
+
+                    {state.activeContentTab === COMMUNITY_TAB && ( // Community
+                        <section className="space-y-6">
+                            <h2 className="text-lg font-semibold text-left">Community SFX</h2>
+                            {isCommunityLoading ? (
+                                <LoadingGrid />
+                            ) : communityListings.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {communityListings.map((listing) => (
+                                        <TemplateCard key={listing.id} template={listing} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState message="No community sound effects found." />
+                            )}
+                        </section>
+                    )}
+
+                    {state.activeContentTab === TEMPLATES_TAB && ( // Templates
+                        <section className="space-y-6">
+                            <h2 className="text-lg font-semibold text-left">SFX Presets</h2>
+                            {isTemplatesLoading ? (
+                                <LoadingGrid />
+                            ) : templates.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {templates.map((template) => (
+                                        <TemplateCard key={template.id} template={template} onClick={() => dispatch({ type: 'setPrompt', prompt: template.title })} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState message="No sound effect templates available." />
+                            )}
+                        </section>
                     )}
                 </div>
             </div>
         </div>
+    );
+}
+
+function LoadingGrid() {
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="aspect-[3/4] rounded-xl bg-muted animate-pulse" />
+            ))}
+        </div>
+    );
+}
+
+function EmptyState({ message }: { message: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-muted-foreground/30" />
+            </div>
+            <p className="text-muted-foreground">{message}</p>
+        </div>
+    );
+}
+
+function GenerationCard({ generation, onPlay, isPlaying }: { generation: any; onPlay: () => void; isPlaying: boolean }) {
+    return (
+        <div className="group text-left p-4 bg-card rounded-xl border border-border hover:border-border/80 transition-all relative">
+            <div className="flex items-center gap-3">
+                <button
+                    onClick={onPlay}
+                    className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-accent transition-colors shrink-0"
+                >
+                    {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4 fill-current" />}
+                </button>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{generation.prompt}</p>
+                    <p className="text-[10px] text-muted-foreground capitalize">{generation.status}</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function TemplateCard({ template, onClick }: { template: any; onClick?: () => void }) {
+    return (
+        <button type="button" className="group text-left cursor-pointer p-4 bg-card rounded-xl border border-border group-hover:border-border/80 transition-all relative w-full" onClick={onClick}>
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                    <Waves className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{template.title}</p>
+                    <p className="text-[10px] text-muted-foreground line-clamp-1">{template.description || 'Sound effect preset'}</p>
+                </div>
+            </div>
+        </button>
     );
 }

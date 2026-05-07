@@ -8,7 +8,7 @@ import {
   Min,
   Max,
 } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, ApiSchema } from '@nestjs/swagger';
 
 // ─────────────────────────────────────────────
 // Material DTOs
@@ -145,6 +145,7 @@ export class ReviewVideoDto {
 // Music Generation DTOs
 // ─────────────────────────────────────────────
 
+@ApiSchema({ name: 'VisualFlowGenerateMusicDto' })
 export class GenerateMusicDto {
   @ApiProperty({ description: 'Lyrics with [Verse]/[Chorus] tags (custom mode) or description' })
   @IsString()

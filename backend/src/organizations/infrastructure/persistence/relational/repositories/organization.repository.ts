@@ -42,6 +42,11 @@ export class OrganizationsRelationalRepository
     return entity ? OrganizationMapper.toDomain(entity) : null;
   }
 
+  async findManyByDomain(domain: string): Promise<Organization[]> {
+    const entities = await this.orgRepo.find({ where: { domain } });
+    return entities.map((e) => OrganizationMapper.toDomain(e));
+  }
+
   async findByOwnerId(ownerId: number): Promise<Organization[]> {
     const entities = await this.orgRepo.find({ where: { ownerId } });
     return entities.map((e) => OrganizationMapper.toDomain(e));

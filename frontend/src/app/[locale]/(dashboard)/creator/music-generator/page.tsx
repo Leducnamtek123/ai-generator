@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
+import { useTemplateStore } from '@/stores/template-store';
+import { useState, useEffect } from 'react';
 import {
     Upload,
     Sparkles,
@@ -35,8 +36,8 @@ import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
-
-const contentTabs = ['My Creations', 'Community', 'Templates', 'Tutorials'];
+import { MUSIC_CONTENT_TABS } from '@/components/layouts/navigation-data';
+import { TemplateTypeEnum } from '@/lib/api/templates';
 
 const genres = [
     { id: 'pop', name: 'Pop', icon: Music2 },
@@ -83,7 +84,19 @@ const sampleTracks = [
 ];
 
 export default function MusicGeneratorPage() {
-    const [activeContentTab, setActiveContentTab] = useState('Templates');
+    const { 
+        generateMusic, 
+        isGenerating, 
+        generations, 
+        fetchGenerations, 
+        isLoading: isGenerationsLoading 
+    } = useGenerationStore();
+    const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
+    
+    const [activeContentTab, setActiveContentTab] = useState<string>(MUSIC_CONTENT_TABS[0]); // Default to My Creations
+    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+    
     const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
     const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
     const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
@@ -91,7 +104,27 @@ export default function MusicGeneratorPage() {
     const [duration, setDuration] = useState('30');
     const [tempo, setTempo] = useState(120);
     const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-    const { generateMusic, isGenerating } = useGenerationStore();
+
+    useEffect(() => {
+        if (activeContentTab === MUSIC_CONTENT_TABS[0]) { // My Creations
+            fetchGenerations({ type: TemplateTypeEnum.MUSIC_GENERATOR, limit: 12 });
+        } else if (activeContentTab === MUSIC_CONTENT_TABS[1]) { // Community
+            const fetchCommunity = async () => {
+                setIsCommunityLoading(true);
+                try {
+                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.MUSIC_GENERATOR}&limit=12`));
+                    setCommunityListings(res.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch community listings', err);
+                } finally {
+                    setIsCommunityLoading(false);
+                }
+            };
+            fetchCommunity();
+        } else if (activeContentTab === MUSIC_CONTENT_TABS[2]) { // Templates
+            fetchTemplates(TemplateTypeEnum.MUSIC_GENERATOR);
+        }
+    }, [activeContentTab, fetchGenerations, fetchTemplates]);
 
     const toggleMood = (id: string) => {
         setSelectedMoods(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
@@ -123,7 +156,10 @@ export default function MusicGeneratorPage() {
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
                     {/* Browse Presets */}
-                    <button className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group">
+                    <button 
+                        onClick={() => setActiveContentTab(MUSIC_CONTENT_TABS[2])} // Templates
+                        className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
+                    >
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
                                 <Music className="w-5 h-5 text-muted-foreground" />
@@ -276,7 +312,7 @@ export default function MusicGeneratorPage() {
                 {/* Content Header */}
                 <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm px-6 h-14 flex items-center justify-between border-b border-border">
                     <div className="flex items-center gap-1">
-                        {contentTabs.map((tab) => (
+                        {MUSIC_CONTENT_TABS.map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveContentTab(tab)}
@@ -293,96 +329,200 @@ export default function MusicGeneratorPage() {
                     </div>
                 </div>
 
-                <div className="p-6 space-y-8">
-                    {/* Generated / Sample Tracks */}
-                    <section>
-                        <h3 className="text-lg font-semibold mb-4">
-                            {isGenerating ? 'Composing...' : 'Sample Tracks'}
-                        </h3>
-                        {isGenerating ? (
-                            <div className="flex flex-col items-center justify-center py-16 gap-4">
-                                <div className="relative">
-                                    <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                    <Music className="w-6 h-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                <div className="p-6">
+                    {activeContentTab === MUSIC_CONTENT_TABS[0] && ( // My Creations
+                        <section>
+                            <h3 className="text-lg font-semibold mb-4">My Creations</h3>
+                            {isGenerationsLoading ? (
+                                <LoadingList />
+                            ) : generations.length > 0 ? (
+                                <div className="space-y-3">
+                                    {generations.map((gen) => (
+                                        <TrackRow 
+                                            key={gen.id} 
+                                            track={{
+                                                id: gen.id,
+                                                title: gen.prompt,
+                                                genre: gen.metadata?.genre || 'AI Generated',
+                                                duration: `${gen.metadata?.duration || 0}s`,
+                                                bpm: gen.metadata?.tempo || 120,
+                                                time: 'Just now'
+                                            }}
+                                            isPlaying={playingTrackId === gen.id}
+                                            onTogglePlay={() => setPlayingTrackId(playingTrackId === gen.id ? null : gen.id)}
+                                        />
+                                    ))}
                                 </div>
-                                <p className="text-sm text-muted-foreground animate-pulse">AI is composing your track...</p>
-                            </div>
-                        ) : (
-                            <div className="space-y-3">
-                                {sampleTracks.map((track) => (
-                                    <div
-                                        key={track.id}
-                                        className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group cursor-pointer"
-                                    >
-                                        <button
-                                            onClick={() => setPlayingTrackId(playingTrackId === track.id ? null : track.id)}
-                                            className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent transition-colors shrink-0"
-                                        >
-                                            {playingTrackId === track.id ? (
-                                                <Pause className="w-5 h-5" />
-                                            ) : (
-                                                <Play className="w-5 h-5 fill-current" />
-                                            )}
-                                        </button>
-                                        <div className="flex-1 min-w-0">
-                                            <h4 className="text-sm font-medium truncate">{track.title}</h4>
-                                            <p className="text-xs text-muted-foreground">{track.genre} • {track.duration} • {track.bpm} BPM</p>
-                                        </div>
-                                        {/* Waveform */}
-                                        <div className="hidden md:flex items-center gap-[2px] h-8 flex-1 max-w-[300px]">
-                                            {Array.from({ length: 50 }).map((_, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={cn(
-                                                        "w-[2px] rounded-full transition-colors",
-                                                        playingTrackId === track.id ? "bg-primary" : "bg-muted-foreground/20"
-                                                    )}
-                                                    style={{ height: `${Math.sin(i * 0.3) * 12 + 16}px` }}
-                                                />
-                                            ))}
-                                        </div>
-                                        <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                            <Clock className="w-3 h-3" />
-                                            <span>{track.time}</span>
-                                        </div>
-                                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                                            <Button variant="outline" size="icon" className="w-8 h-8"><Folder className="w-4 h-4" /></Button>
-                                            <Button variant="outline" size="icon" className="w-8 h-8"><Download className="w-4 h-4" /></Button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </section>
+                            ) : (
+                                <EmptyState message="No music generated yet." />
+                            )}
+                        </section>
+                    )}
 
-                    {/* Getting Started */}
-                    <section>
-                        <h3 className="text-lg font-semibold mb-4">Getting Started</h3>
-                        <div className="grid grid-cols-3 gap-4">
-                            <div className="p-6 bg-card rounded-2xl border border-border hover:bg-accent/50 transition-colors cursor-pointer">
-                                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                                    <Mic className="w-6 h-6 text-muted-foreground" />
+                    {activeContentTab === MUSIC_CONTENT_TABS[1] && ( // Community
+                        <section>
+                            <h3 className="text-lg font-semibold mb-4">Community Showcase</h3>
+                            {isCommunityLoading ? (
+                                <LoadingList />
+                            ) : communityListings.length > 0 ? (
+                                <div className="space-y-3">
+                                    {communityListings.map((listing) => (
+                                        <TrackRow 
+                                            key={listing.id} 
+                                            track={{
+                                                id: listing.id,
+                                                title: listing.title,
+                                                genre: listing.metadata?.genre || 'Community',
+                                                duration: listing.metadata?.duration || '3:00',
+                                                bpm: listing.metadata?.bpm || 120,
+                                                time: 'Recently'
+                                            }}
+                                            isPlaying={playingTrackId === listing.id}
+                                            onTogglePlay={() => setPlayingTrackId(playingTrackId === listing.id ? null : listing.id)}
+                                        />
+                                    ))}
                                 </div>
-                                <h4 className="font-semibold mb-2">Voice Cloning</h4>
-                                <p className="text-sm text-muted-foreground">Clone any voice and use it in your projects</p>
-                            </div>
-                            <div className="p-6 bg-card rounded-2xl border border-border hover:bg-accent/50 transition-colors cursor-pointer">
-                                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                                    <Music className="w-6 h-6 text-muted-foreground" />
+                            ) : (
+                                <EmptyState message="No community tracks found." />
+                            )}
+                        </section>
+                    )}
+
+                    {activeContentTab === MUSIC_CONTENT_TABS[2] && ( // Templates
+                        <section>
+                            <h3 className="text-lg font-semibold mb-4">Music Presets</h3>
+                            {isTemplatesLoading ? (
+                                <LoadingList />
+                            ) : templates.length > 0 ? (
+                                <div className="space-y-3">
+                                    {templates.map((track) => (
+                                        <TrackRow 
+                                            key={track.id} 
+                                            track={{
+                                                id: track.id,
+                                                title: track.title,
+                                                genre: track.type,
+                                                duration: '0:30',
+                                                bpm: 120,
+                                                time: 'Preset'
+                                            }}
+                                            isPlaying={playingTrackId === track.id}
+                                            onTogglePlay={() => setPlayingTrackId(playingTrackId === track.id ? null : track.id)}
+                                        />
+                                    ))}
                                 </div>
-                                <h4 className="font-semibold mb-2">Custom Soundtracks</h4>
-                                <p className="text-sm text-muted-foreground">Generate unique music for videos and games</p>
-                            </div>
-                            <div className="p-6 bg-card rounded-2xl border border-border hover:bg-accent/50 transition-colors cursor-pointer">
-                                <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
-                                    <Volume2 className="w-6 h-6 text-muted-foreground" />
+                            ) : (
+                                <div className="space-y-3">
+                                    {sampleTracks.map((track) => (
+                                        <TrackRow 
+                                            key={track.id} 
+                                            track={track}
+                                            isPlaying={playingTrackId === track.id}
+                                            onTogglePlay={() => setPlayingTrackId(playingTrackId === track.id ? null : track.id)}
+                                        />
+                                    ))}
                                 </div>
-                                <h4 className="font-semibold mb-2">Sound Effects</h4>
-                                <p className="text-sm text-muted-foreground">Create custom sound effects from text</p>
-                            </div>
+                            )}
+                        </section>
+                    )}
+
+                    {activeContentTab === MUSIC_CONTENT_TABS[3] && ( // Tutorials
+                        <div className="space-y-8">
+                            <section>
+                                <h3 className="text-lg font-semibold mb-4">Getting Started</h3>
+                                <div className="grid grid-cols-3 gap-4">
+                                    <div className="p-6 bg-card rounded-2xl border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+                                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                                            <Mic className="w-6 h-6 text-muted-foreground" />
+                                        </div>
+                                        <h4 className="font-semibold mb-2">Voice Cloning</h4>
+                                        <p className="text-sm text-muted-foreground">Clone any voice and use it in your projects</p>
+                                    </div>
+                                    <div className="p-6 bg-card rounded-2xl border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+                                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                                            <Music className="w-6 h-6 text-muted-foreground" />
+                                        </div>
+                                        <h4 className="font-semibold mb-2">Custom Soundtracks</h4>
+                                        <p className="text-sm text-muted-foreground">Generate unique music for videos and games</p>
+                                    </div>
+                                    <div className="p-6 bg-card rounded-2xl border border-border hover:bg-accent/50 transition-colors cursor-pointer">
+                                        <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center mb-4">
+                                            <Volume2 className="w-6 h-6 text-muted-foreground" />
+                                        </div>
+                                        <h4 className="font-semibold mb-2">Sound Effects</h4>
+                                        <p className="text-sm text-muted-foreground">Create custom sound effects from text</p>
+                                    </div>
+                                </div>
+                            </section>
                         </div>
-                    </section>
+                    )}
                 </div>
+            </div>
+        </div>
+    );
+}
+
+function LoadingList() {
+    return (
+        <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+                <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            ))}
+        </div>
+    );
+}
+
+function EmptyState({ message }: { message: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Music className="w-8 h-8 text-muted-foreground/30" />
+            </div>
+            <p className="text-muted-foreground">{message}</p>
+        </div>
+    );
+}
+
+function TrackRow({ track, isPlaying, onTogglePlay }: { track: any, isPlaying: boolean, onTogglePlay: () => void }) {
+    return (
+        <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group cursor-pointer">
+            <button
+                onClick={(e) => {
+                    e.stopPropagation();
+                    onTogglePlay();
+                }}
+                className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent transition-colors shrink-0"
+            >
+                {isPlaying ? (
+                    <Pause className="w-5 h-5" />
+                ) : (
+                    <Play className="w-5 h-5 fill-current" />
+                )}
+            </button>
+            <div className="flex-1 min-w-0">
+                <h4 className="text-sm font-medium truncate">{track.title}</h4>
+                <p className="text-xs text-muted-foreground">{track.genre} • {track.duration} • {track.bpm} BPM</p>
+            </div>
+            {/* Waveform */}
+            <div className="hidden md:flex items-center gap-[2px] h-8 flex-1 max-w-[300px]">
+                {Array.from({ length: 50 }).map((_, i) => (
+                    <div
+                        key={i}
+                        className={cn(
+                            "w-[2px] rounded-full transition-colors",
+                            isPlaying ? "bg-primary" : "bg-muted-foreground/20"
+                        )}
+                        style={{ height: `${Math.sin(i * 0.3) * 12 + 16}px` }}
+                    />
+                ))}
+            </div>
+            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="w-3 h-3" />
+                <span>{track.time}</span>
+            </div>
+            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-all">
+                <Button variant="outline" size="icon" className="w-8 h-8"><Folder className="w-4 h-4" /></Button>
+                <Button variant="outline" size="icon" className="w-8 h-8"><Download className="w-4 h-4" /></Button>
             </div>
         </div>
     );

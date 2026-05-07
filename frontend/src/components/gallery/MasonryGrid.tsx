@@ -22,6 +22,7 @@ function GalleryCard({ item }: { item: GalleryItem }) {
                     src={item.url}
                     alt={item.prompt}
                     fill
+                    unoptimized
                     className="object-cover transition-transform duration-700 group-hover:scale-105"
                     loading="lazy"
                     sizes="(max-width: 768px) 100vw, 25vw"

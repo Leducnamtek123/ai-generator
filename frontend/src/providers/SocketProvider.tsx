@@ -39,6 +39,39 @@ const updateSocketSnapshot = (nextSnapshot: SocketSnapshot) => {
   socketListeners.forEach((listener) => listener());
 };
 
+const resolveSocketOrigin = () => {
+  const explicitSocketUrl = process.env.NEXT_PUBLIC_WS_URL;
+  if (explicitSocketUrl) return explicitSocketUrl;
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  
+  if (typeof window !== 'undefined') {
+    const windowOrigin = window.location.origin;
+    
+    // If we are on localhost (standard port 80/443) but API is set to localhost:8000,
+    // we should use the current window origin instead as it's likely proxied via Nginx.
+    if (window.location.hostname === 'localhost' && 
+        (window.location.port === '' || window.location.port === '80' || window.location.port === '443') && 
+        apiUrl?.includes('localhost:8000')) {
+      return windowOrigin;
+    }
+
+    // If API URL is relative or points to the current host, use window origin
+    if (!apiUrl || apiUrl.startsWith('/') || apiUrl.includes(window.location.host)) {
+      return windowOrigin;
+    }
+
+    try {
+      return new URL(apiUrl).origin;
+    } catch {
+      return windowOrigin;
+    }
+  }
+
+  // Server-side fallback
+  return apiUrl ? new URL(apiUrl).origin : 'http://localhost:3000';
+};
+
 export const useSocialSocket = () => useContext(SocketContext);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
@@ -54,10 +87,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       return;
     }
 
-    const socketUrl = process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:8000';
-    
-    // Connect to the 'social-hub' namespace
-    const socketInstance = io(`${socketUrl}/social-hub`, {
+    const socketOrigin = resolveSocketOrigin();
+
+    // Connect to the backend social-hub namespace, not the frontend origin.
+    const socketInstance = io(`${socketOrigin}/social-hub`, {
       auth: {
         token: session.accessToken,
       },
@@ -69,7 +102,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     socketInstance.on('connect', () => {
-      console.log('Connected to Social Hub WebSocket');
+      console.debug('Connected to Social Hub WebSocket');
       updateSocketSnapshot({
         socket: socketInstance,
         isConnected: true,
@@ -77,7 +110,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     socketInstance.on('disconnect', () => {
-      console.log('Disconnected from Social Hub WebSocket');
+      console.debug('Disconnected from Social Hub WebSocket');
       updateSocketSnapshot({
         socket: socketInstance,
         isConnected: false,
@@ -85,7 +118,7 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     socketInstance.on('connect_error', (err) => {
-      console.error('Socket Connection Error:', err.message);
+      console.warn('Social Hub WebSocket connection failed:', err.message);
       updateSocketSnapshot({
         socket: socketInstance,
         isConnected: false,

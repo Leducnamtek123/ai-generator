@@ -31,6 +31,7 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -489,6 +490,7 @@ export default function VisualFlowPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showWizard, setShowWizard] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState<VisualProject | null>(null);
 
   const loadProjects = useCallback(async () => {
     try {
@@ -504,10 +506,11 @@ export default function VisualFlowPage() {
     queueMicrotask(() => { void loadProjects(); });
   }, [loadProjects]);
 
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Delete this project? This cannot be undone.')) return;
-    await visualFlowApi.projects.delete(id);
-    setProjects((p) => p.filter((proj) => proj.id !== id));
+  const handleDelete = async () => {
+    if (!projectToDelete) return;
+    await visualFlowApi.projects.delete(projectToDelete.id);
+    setProjects((p) => p.filter((proj) => proj.id !== projectToDelete.id));
+    setProjectToDelete(null);
   };
 
   const filtered = projects.filter((p) =>
@@ -601,7 +604,7 @@ export default function VisualFlowPage() {
               key={project.id}
               project={project}
               onClick={() => router.push(`/visual-flow/projects/${project.id}`)}
-              onDelete={() => handleDelete(project.id)}
+              onDelete={() => setProjectToDelete(project)}
             />
           ))}
         </div>
@@ -619,6 +622,21 @@ export default function VisualFlowPage() {
           <p className="text-sm">No projects yet. Create your first VisualFlow project!</p>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!projectToDelete}
+        onOpenChange={(open) => {
+          if (!open) setProjectToDelete(null);
+        }}
+        title="Delete project?"
+        description={
+          projectToDelete
+            ? `Delete "${projectToDelete.name}" permanently? This cannot be undone.`
+            : 'Delete this project permanently? This cannot be undone.'
+        }
+        confirmText="Delete"
+        onConfirm={handleDelete}
+      />
 
       {/* Create Wizard */}
       <CreateProjectWizard

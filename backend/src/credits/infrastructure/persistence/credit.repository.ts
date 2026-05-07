@@ -13,6 +13,11 @@ export abstract class CreditRepository {
     status: CreditTransactionStatus,
   ): Promise<CreditTransaction | null>;
 
+  abstract findById(
+    transactionId: string,
+    userId: string,
+  ): Promise<CreditTransaction | null>;
+
   abstract findAllWithPagination(
     paginationOptions: IPaginationOptions,
     userId: string,

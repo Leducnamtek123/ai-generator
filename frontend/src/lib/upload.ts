@@ -7,6 +7,8 @@ export interface UploadedFile {
     url: string;
 }
 
+const DEFAULT_API_URL = 'http://localhost:8000/api/v1';
+
 /**
  * Upload a file to MinIO via the backend S3 endpoint.
  * Returns the file path that can be used as a URL for generation APIs.
@@ -59,10 +61,35 @@ export async function uploadFileWithToast(
  *  - Or through the backend proxy at /api/v1/files/:path
  */
 export function getFileUrl(path: string): string {
-    if (path.startsWith('http')) return path;
-    // Use backend API to proxy MinIO files
-    const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8006/api/v1';
-    return `${baseUrl}/files/${path}`;
+    if (!path) return '';
+
+    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
+    const origin = baseUrl.replace(/\/api\/v1$/, '');
+
+    if (/^https?:\/\//i.test(path)) {
+        try {
+            const url = new URL(path);
+            if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
+                return `${origin}${url.pathname}${url.search}${url.hash}`;
+            }
+        } catch {
+            // Fall through and return the original path below.
+        }
+
+        return path;
+    }
+
+    const normalizedPath = path.replace(/^\/+/, '');
+
+    if (normalizedPath.startsWith('api/')) {
+        return `${origin}/${normalizedPath}`;
+    }
+
+    if (normalizedPath.startsWith('files/')) {
+        return `${baseUrl}/${normalizedPath}`;
+    }
+
+    return `${baseUrl}/files/${normalizedPath}`;
 }
 
 /**

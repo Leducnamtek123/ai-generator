@@ -46,3 +46,10 @@ build/
 .idea/
 *.swp
 *.swo
+
+# AI / ComfyUI
+docker/comfyui/
+docker/comfyui-workflows/
+scripts/download-local-ai-models.ps1
+scripts/start-local-ai.ps1
+backend/src/providers/adapters/comfyui.adapter.ts

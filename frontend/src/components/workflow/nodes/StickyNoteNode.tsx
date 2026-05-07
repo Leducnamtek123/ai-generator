@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { Handle, Position } from '@xyflow/react';
 import { Palette } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
@@ -18,6 +19,7 @@ interface StickyNoteNodeProps {
         onColorChange?: (id: string, color: NoteColor) => void;
         onDuplicate?: () => void;
         onSettings?: () => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
     selected?: boolean;
@@ -125,6 +127,16 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
                     </div>
                 )}
             </div>
+
+            {!data.isPreview && (
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    id="reference-output"
+                    onClick={(e) => data.onHandleClick?.(e, 'reference-output', 'source')}
+                    className="!border-2 !border-background !bg-yellow-500 z-50 cursor-pointer hover:!bg-yellow-400"
+                />
+            )}
         </div>
     );
 }

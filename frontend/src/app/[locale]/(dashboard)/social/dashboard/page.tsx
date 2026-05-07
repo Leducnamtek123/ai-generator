@@ -29,11 +29,20 @@ import { socialHubApi, type SocialAnalytics } from '@/services/socialHubApi';
 export default function SocialDashboardPage() {
     const [stats, setStats] = React.useState<SocialAnalytics | null>(null);
     const [isLoading, setIsLoading] = React.useState(true);
+    const [daysRange, setDaysRange] = React.useState<7 | 30>(7);
+    const platformMeta = {
+        facebook: { icon: Facebook, color: '#1877F2', label: 'Facebook' },
+        x: { icon: Twitter, color: '#000000', label: 'X (Twitter)' },
+        twitter: { icon: Twitter, color: '#000000', label: 'X (Twitter)' },
+        linkedin: { icon: Linkedin, color: '#0A66C2', label: 'LinkedIn' },
+        instagram: { icon: Instagram, color: '#E4405F', label: 'Instagram' },
+    } as const;
 
     React.useEffect(() => {
         const fetchStats = async () => {
+            setIsLoading(true);
             try {
-                const data = await socialHubApi.getAnalytics();
+                const data = await socialHubApi.getAnalytics(daysRange);
                 setStats(data);
             } catch (err) {
                 console.error('Failed to fetch analytics', err);
@@ -41,10 +50,10 @@ export default function SocialDashboardPage() {
             setIsLoading(false);
         };
         fetchStats();
-    }, []);
+    }, [daysRange]);
 
     if (isLoading || !stats) {
-        return <div className="p-8">Loading analytics...</div>;
+        return <div className="p-8 text-muted-foreground">Loading analytics...</div>;
     }
 
     const DISPLAY_STATS = [
@@ -53,6 +62,23 @@ export default function SocialDashboardPage() {
         { label: 'Total Comments', value: stats.totals.comments, change: '+5.1%', type: 'up', icon: MessageSquare },
         { label: 'Total Shares', value: stats.totals.shares, change: '-2.4%', type: 'down', icon: Share2 },
     ];
+    const platformBreakdown = stats.platformBreakdown ?? {};
+    const totalPosts =
+        stats.totals.totalPosts ??
+        Object.values(platformBreakdown).reduce((sum, item) => sum + (item.posts || 0), 0);
+    const audienceDistribution = Object.entries(platformBreakdown)
+        .map(([platform, value]) => {
+            const meta = platformMeta[platform as keyof typeof platformMeta];
+            const share = totalPosts > 0 ? Math.round((value.posts / totalPosts) * 100) : 0;
+            return {
+                platform,
+                label: meta?.label ?? platform,
+                icon: meta?.icon ?? MessageSquare,
+                color: meta?.color ?? 'var(--primary)',
+                share,
+            };
+        })
+        .sort((a, b) => b.share - a.share);
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8">
             <div className="flex flex-col gap-2">
@@ -94,8 +120,22 @@ export default function SocialDashboardPage() {
                     <div className="flex items-center justify-between p-6">
                         <h3 className="font-bold text-lg">Engagement Overview</h3>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm">7 Days</Button>
-                            <Button variant="outline" size="sm" className="bg-primary/5 border-primary/20 text-primary">30 Days</Button>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setDaysRange(7)}
+                                className={daysRange === 7 ? "bg-primary/5 border-primary/20 text-primary" : ""}
+                            >
+                                7 Days
+                            </Button>
+                            <Button 
+                                variant="outline" 
+                                size="sm" 
+                                onClick={() => setDaysRange(30)}
+                                className={daysRange === 30 ? "bg-primary/5 border-primary/20 text-primary" : ""}
+                            >
+                                30 Days
+                            </Button>
                         </div>
                     </div>
                     <div className="flex-1 w-full min-h-[260px] pb-6 pr-6">
@@ -151,32 +191,33 @@ export default function SocialDashboardPage() {
                 {/* Platform Distribution */}
                 <GlassCard variant="morphism" className="lg:col-span-4 h-[400px] border border-white/10">
                     <h3 className="font-bold text-lg mb-8">Audience Distribution</h3>
-                    <div className="space-y-6">
-                        {[
-                            { name: 'Facebook', icon: Facebook, color: '#1877F2', pct: 45 },
-                            { name: 'X (Twitter)', icon: Twitter, color: '#000000', pct: 25 },
-                            { name: 'LinkedIn', icon: Linkedin, color: '#0A66C2', pct: 20 },
-                            { name: 'Instagram', icon: Instagram, color: '#E4405F', pct: 10 },
-                        ].map((p) => (
-                            <div key={p.name} className="space-y-2">
-                                <div className="flex items-center justify-between text-sm">
-                                    <div className="flex items-center gap-2">
-                                        <p.icon className="w-4 h-4" style={{ color: p.color }} />
-                                        <span className="font-medium">{p.name}</span>
+                    {audienceDistribution.length > 0 ? (
+                        <div className="space-y-6">
+                            {audienceDistribution.map((item) => (
+                                <div key={item.platform} className="space-y-2">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                                            <span className="font-medium">{item.label}</span>
+                                        </div>
+                                        <span className="font-bold">{item.share}%</span>
                                     </div>
-                                    <span className="font-bold">{p.pct}%</span>
+                                    <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
+                                        <motion.div 
+                                            initial={{ width: 0 }}
+                                            animate={{ width: `${item.share}%` }}
+                                            className="h-full bg-primary"
+                                            style={{ backgroundColor: item.color }}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                    <motion.div 
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${p.pct}%` }}
-                                        className="h-full bg-primary"
-                                        style={{ backgroundColor: p.color }}
-                                    />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="rounded-xl border border-dashed border-white/10 p-6 text-sm text-muted-foreground">
+                            Connect and publish to social channels to see audience distribution here.
+                        </div>
+                    )}
                 </GlassCard>
             </div>
         </div>

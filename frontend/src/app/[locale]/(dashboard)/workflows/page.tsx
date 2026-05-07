@@ -14,6 +14,7 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { useWorkflowStore, type Workflow as WorkflowType } from '@/stores/workflow-store';
 import { useProjectStore } from '@/stores/project-store';
 import {
@@ -44,6 +45,7 @@ export default function WorkflowsPage() {
     const [showCreateModal, setShowCreateModal] = useState(false);
     const [workflowName, setWorkflowName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
+    const [workflowToDelete, setWorkflowToDelete] = useState<WorkflowType | null>(null);
 
     useEffect(() => {
         // Pre-fetch projects to ensure we have a default project ID for new workflows
@@ -73,11 +75,10 @@ export default function WorkflowsPage() {
         }
     };
 
-    const handleDelete = async (e: React.MouseEvent, id: string) => {
-        e.stopPropagation();
-        if (confirm('Are you sure you want to delete this workflow?')) {
-            await deleteWorkflow(id);
-        }
+    const handleDelete = async () => {
+        if (!workflowToDelete) return;
+        await deleteWorkflow(workflowToDelete.id);
+        setWorkflowToDelete(null);
     };
 
     const filteredWorkflows = workflows.filter(w =>
@@ -155,7 +156,7 @@ export default function WorkflowsPage() {
                             <WorkflowCard
                                 key={workflow.id}
                                 workflow={workflow}
-                                onDelete={handleDelete}
+                                onDelete={() => setWorkflowToDelete(workflow)}
                             />
                         ))
                     )}
@@ -199,6 +200,21 @@ export default function WorkflowsPage() {
                     </div>
                 </div>
             )}
+
+            <ConfirmDialog
+                open={!!workflowToDelete}
+                onOpenChange={(open) => {
+                    if (!open) setWorkflowToDelete(null);
+                }}
+                title="Delete workflow?"
+                description={
+                    workflowToDelete
+                        ? `Delete "${workflowToDelete.name}" permanently? This action cannot be undone.`
+                        : 'Delete this workflow permanently? This action cannot be undone.'
+                }
+                confirmText="Delete"
+                onConfirm={handleDelete}
+            />
         </div>
     );
 }
@@ -208,7 +224,7 @@ function WorkflowCard({
     onDelete
 }: {
     workflow: WorkflowType;
-    onDelete: (e: React.MouseEvent, id: string) => void;
+    onDelete: () => void;
 }) {
     const router = useRouter();
 
@@ -263,7 +279,7 @@ function WorkflowCard({
                                 Duplicate
                             </DropdownMenuItem>
                             <DropdownMenuItem
-                                onClick={(e) => onDelete(e, workflow.id)}
+                                onClick={onDelete}
                                 className="text-red-500 focus:text-red-500 focus:bg-red-500/10"
                             >
                                 Delete

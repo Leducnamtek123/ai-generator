@@ -1,6 +1,11 @@
 import { create } from 'zustand';
 import { Node, Edge, OnNodesChange, OnEdgesChange, applyNodeChanges, applyEdgeChanges, addEdge, Connection } from '@xyflow/react';
 import { get as apiGet, post as apiPost, patch as apiPatch, del as apiDel } from '@/lib/api';
+import {
+    buildWorkflowBody,
+    buildWorkflowEdgeBody,
+    buildWorkflowNodeBody,
+} from '@/components/workflow/workflow-payload';
 
 export interface Workflow {
     id: string;
@@ -36,6 +41,7 @@ interface WorkflowState {
     updateWorkflow: (id: string, payload: Partial<Workflow>) => Promise<void>;
     deleteWorkflow: (id: string) => Promise<void>;
     saveWorkflow: () => Promise<void>;
+    flushWorkflowSave: () => Promise<void>;
 
     // Actions
     onNodesChange: OnNodesChange;
@@ -248,11 +254,12 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                 throw new Error('No project available. Please create a project first.');
             }
 
+            const workflowBody = buildWorkflowBody(payload.nodes || [], payload.edges || []);
             const newWorkflow = await apiPost<Workflow>('/workflows', {
                 ...payload,
                 projectId,
-                nodes: payload.nodes || [],
-                edges: payload.edges || [],
+                nodes: workflowBody.nodes,
+                edges: workflowBody.edges,
             });
 
             // Refresh list
@@ -370,10 +377,18 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
 
     updateWorkflow: async (id: string, payload: Partial<Workflow>) => {
         try {
-            await apiPatch(`/workflows/${id}`, payload);
+            const nextPayload: Partial<Workflow> = { ...payload };
+            if ('nodes' in payload && payload.nodes) {
+                nextPayload.nodes = buildWorkflowNodeBody(payload.nodes as Node[]);
+            }
+            if ('edges' in payload && payload.edges) {
+                nextPayload.edges = buildWorkflowEdgeBody(payload.edges as Edge[]);
+            }
+
+            await apiPatch(`/workflows/${id}`, nextPayload);
             set((state) => ({
-                workflow: state.workflow && state.workflow.id === id ? { ...state.workflow, ...payload } : state.workflow,
-                workflows: state.workflows.map(w => w.id === id ? { ...w, ...payload } : w)
+                workflow: state.workflow && state.workflow.id === id ? { ...state.workflow, ...nextPayload } : state.workflow,
+                workflows: state.workflows.map(w => w.id === id ? { ...w, ...nextPayload } : w)
             }));
         } catch (error) {
             console.error('Failed to update workflow:', error);
@@ -396,12 +411,28 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         if (!workflow) return;
 
         try {
+            const payload = buildWorkflowBody(nodes, edges);
             await apiPatch(`/workflows/${workflow.id}`, {
-                nodes,
-                edges
+                nodes: payload.nodes,
+                edges: payload.edges
             });
         } catch (error) {
             console.error('Failed to save workflow', error);
+        }
+    },
+
+    flushWorkflowSave: async () => {
+        const { saveTimeout, saveWorkflow } = get();
+        if (saveTimeout) {
+            clearTimeout(saveTimeout);
+            set({ saveTimeout: null });
+        }
+
+        set({ isSaving: true });
+        try {
+            await saveWorkflow();
+        } finally {
+            set({ isSaving: false });
         }
     },
 

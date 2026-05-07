@@ -6,6 +6,7 @@ import { NODE_CONFIG, NodeCategory, WorkflowNodeType } from './types';
 import { cn } from '@/lib/utils';
 
 import { Input } from '@/ui/input';
+import { useWorkflowUIStore } from '@/stores/workflow-ui-store';
 
 interface NodeSelectorProps {
     onSelect: (type: WorkflowNodeType, label: string) => void;
@@ -14,14 +15,21 @@ interface NodeSelectorProps {
 
 export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
     const [search, setSearch] = useState('');
+    const experimentalTools = useWorkflowUIStore((state) => state.experimentalTools);
 
     const filteredNodes = useMemo(() => {
         const query = search.toLowerCase();
-        return Object.values(NODE_CONFIG).filter(node =>
-            node.label.toLowerCase().includes(query) ||
-            node.description.toLowerCase().includes(query)
-        );
-    }, [search]);
+        return Object.values(NODE_CONFIG).filter((node) => {
+            if (!experimentalTools && node.type === WorkflowNodeType.TOOL) {
+                return false;
+            }
+
+            return (
+                node.label.toLowerCase().includes(query) ||
+                node.description.toLowerCase().includes(query)
+            );
+        });
+    }, [search, experimentalTools]);
 
     // Group nodes by category, excluding utility nodes for main list
     const mainNodes = useMemo(() => {
@@ -136,6 +144,12 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                 {filteredNodes.length === 0 && (
                     <div className="p-4 text-center text-xs text-muted-foreground">
                         No nodes found
+                    </div>
+                )}
+
+                {!experimentalTools && (
+                    <div className="px-3 py-2 text-[11px] text-muted-foreground border-t border-border mt-2">
+                        Enable Experimental tools in settings to show advanced nodes.
                     </div>
                 )}
             </div>

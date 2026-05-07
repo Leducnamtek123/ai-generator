@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
 import { projectApi, type Project, type CreateProjectData } from '@/services/projectApi';
 import { useOrgStore } from '@/stores/org-store';
 import {
@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Link } from '@/i18n/navigation';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 
 type State = {
     projects: Project[];
@@ -75,6 +76,7 @@ function reducer(state: State, action: Action): State {
 export default function ProjectsPage() {
     const { currentOrg, hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
     const canCreate = hasPermission('create', 'Project');
 
     const loadProjects = useCallback(async () => {
@@ -114,15 +116,15 @@ export default function ProjectsPage() {
         dispatch({ type: 'setSubmitting', submitting: false });
     };
 
-    const handleDelete = async (projectId: string) => {
-        if (!confirm('Are you sure you want to delete this project?')) return;
-
+    const handleDelete = async () => {
+        if (!projectToDelete) return;
         try {
-            await projectApi.delete(projectId);
+            await projectApi.delete(projectToDelete.id);
             dispatch({
                 type: 'setProjects',
-                projects: state.projects.filter((p) => p.id !== projectId),
+                projects: state.projects.filter((p) => p.id !== projectToDelete.id),
             });
+            setProjectToDelete(null);
         } catch (err: unknown) {
             const apiErr = err as { response?: { data?: { message?: string } } };
             dispatch({ type: 'setError', error: apiErr?.response?.data?.message || 'Failed to delete project' });
@@ -248,9 +250,9 @@ export default function ProjectsPage() {
                                             />
                                             <div className="absolute right-0 top-full mt-1 z-50 bg-popover border border-border rounded-xl shadow-xl w-36 p-1.5">
                                                 <button
-                                                    type="button"
-                                                    onClick={() => {
-                                                        void handleDelete(project.id);
+                                                type="button"
+                                                onClick={() => {
+                                                        setProjectToDelete(project);
                                                         dispatch({ type: 'setMenuId', menuId: null });
                                                     }}
                                                     className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
@@ -302,6 +304,21 @@ export default function ProjectsPage() {
                     </div>
                 )}
             </div>
+
+            <ConfirmDialog
+                open={!!projectToDelete}
+                onOpenChange={(open) => {
+                    if (!open) setProjectToDelete(null);
+                }}
+                title="Delete project?"
+                description={
+                    projectToDelete
+                        ? `Delete "${projectToDelete.name}" permanently? This action cannot be undone.`
+                        : 'Delete this project permanently? This action cannot be undone.'
+                }
+                confirmText="Delete"
+                onConfirm={handleDelete}
+            />
         </div>
     );
 }

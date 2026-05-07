@@ -9,6 +9,7 @@ export abstract class OrganizationRepository {
   abstract findById(id: string): Promise<NullableType<Organization>>;
   abstract findBySlug(slug: string): Promise<NullableType<Organization>>;
   abstract findByDomain(domain: string): Promise<NullableType<Organization>>;
+  abstract findManyByDomain(domain: string): Promise<Organization[]>;
   abstract findByOwnerId(ownerId: number): Promise<Organization[]>;
   abstract findByUserId(userId: number): Promise<Organization[]>;
 

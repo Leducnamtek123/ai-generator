@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   Controller,
   Get,
   Post,
@@ -10,6 +11,8 @@ import {
   Logger,
   NotFoundException,
   ForbiddenException,
+  Headers,
+  Req,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { MessengerService } from '../services/messenger.service';
@@ -17,6 +20,8 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SocialAccountEntity } from '../infrastructure/persistence/relational/entities/social-account.entity';
 import { ConfigService } from '@nestjs/config';
+import crypto from 'crypto';
+import type { Request } from 'express';
 
 @ApiTags('Social Hub - Triggers')
 @Controller({
@@ -48,7 +53,10 @@ export class FacebookMessengerController {
     this.logger.log(`Verifying webhook for channel ${channelId}`);
 
     // Check if the trigger is enabled globally
-    const isEnabled = this.configService.get('MESSENGER_TRIGGER_ENABLED') === 'true';
+    const isEnabled =
+      this.configService.get('MESSENGER_TRIGGER_ENABLED', {
+        infer: true,
+      }) === 'true';
     if (!isEnabled) {
       throw new ForbiddenException('Messenger trigger is disabled');
     }
@@ -82,9 +90,10 @@ export class FacebookMessengerController {
   async handleWebhook(
     @Param('channelId') channelId: string,
     @Body() payload: any,
+    @Headers('x-hub-signature-256') signature?: string,
+    @Req() req?: Request & { rawBody?: Buffer },
   ) {
-    // Note: In production, you should validate X-Hub-Signature-256 here
-    // using the App Secret and raw body.
+    this.verifyWebhookSignature(req?.rawBody ?? Buffer.from(JSON.stringify(payload ?? {})), signature);
 
     const account = await this.socialAccountRepository.findOne({
       where: { id: parseInt(channelId) },
@@ -95,10 +104,33 @@ export class FacebookMessengerController {
     }
 
     // Process events asynchronously to return 200 OK to Meta quickly
-    this.messengerService.parseAndProcessEvents(payload, account).catch((err) => {
-      this.logger.error(`Error processing webhook events: ${err.message}`);
-    });
+    this.messengerService
+      .parseAndProcessEvents(payload, account)
+      .catch((err) => {
+        this.logger.error(`Error processing webhook events: ${err.message}`);
+      });
 
     return { status: 'received' };
+  }
+
+  private verifyWebhookSignature(body: Buffer, signature?: string) {
+    if (!signature) {
+      throw new BadRequestException('Missing webhook signature');
+    }
+
+    const appSecret = this.configService.get<string>('facebook.appSecret', {
+      infer: true,
+    });
+    if (!appSecret) {
+      throw new BadRequestException('Webhook verification is not configured');
+    }
+
+    const expectedSignature =
+      'sha256=' +
+      crypto.createHmac('sha256', appSecret).update(body).digest('hex');
+
+    if (signature !== expectedSignature) {
+      throw new ForbiddenException('Invalid webhook signature');
+    }
   }
 }

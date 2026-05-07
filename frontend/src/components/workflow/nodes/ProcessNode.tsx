@@ -3,10 +3,27 @@
 import * as React from 'react';
 import { BaseNode } from './BaseNode';
 import { Cpu } from 'lucide-react';
-import { useReactFlow } from '@xyflow/react';
+import { Handle, Position, useReactFlow } from '@xyflow/react';
 import { NodeStatus } from '../types';
 
-export function ProcessNode({ id, data, selected }: any) {
+type LegacyHandleClick = (
+    event: React.MouseEvent,
+    handleId: string,
+    handleType: 'source' | 'target',
+) => void;
+
+interface ProcessNodeProps {
+    id: string;
+    data: {
+        label?: string;
+        progress?: number;
+        status?: NodeStatus;
+        onHandleClick?: LegacyHandleClick;
+    };
+    selected?: boolean;
+}
+
+export function ProcessNode({ id, data, selected }: ProcessNodeProps) {
     const { deleteElements } = useReactFlow();
     const status = data.status || NodeStatus.IDLE;
 
@@ -34,6 +51,20 @@ export function ProcessNode({ id, data, selected }: any) {
                     </div>
                 )}
             </div>
+            <Handle
+                type="target"
+                position={Position.Left}
+                id="reference-input"
+                onClick={(e) => data.onHandleClick?.(e, 'reference-input', 'target')}
+                className="!border-2 !border-background !bg-fuchsia-500 z-50 cursor-pointer hover:!bg-fuchsia-400"
+            />
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="reference-output"
+                onClick={(e) => data.onHandleClick?.(e, 'reference-output', 'source')}
+                className="!border-2 !border-background !bg-fuchsia-500 z-50 cursor-pointer hover:!bg-fuchsia-400"
+            />
         </BaseNode>
     );
 }

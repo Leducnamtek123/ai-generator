@@ -30,7 +30,7 @@ const createAppAbility = createMongoAbility as CreateAbility<AppAbility>;
 
 export interface PermissionUser {
   id: number;
-  role: 'ADMIN' | 'MEMBER' | 'BILLING';
+  role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'BILLING' | 'VIEWER';
   ownerId?: number; // org owner id for context
 }
 
@@ -39,29 +39,38 @@ export function defineAbilityFor(user: PermissionUser): AppAbility {
     createAppAbility,
   );
 
+  // If the user is the explicit owner, they get everything
+  if (user.id === user.ownerId || user.role === 'OWNER') {
+    can(OrgAction.Manage, 'all');
+  }
+
   switch (user.role) {
+    case 'OWNER':
+      // Handled above, but explicitly adding for clarity
+      can(OrgAction.Manage, 'all');
+      break;
+
     case 'ADMIN':
       can(OrgAction.Manage, 'all');
-      // Only owner can transfer/update/delete org
+      // Admin cannot delete the organization or transfer ownership
       cannot(
-        [OrgAction.TransferOwnership, OrgAction.Update, OrgAction.Delete],
+        [OrgAction.Delete, OrgAction.TransferOwnership],
         'Organization',
       );
-      if (user.ownerId === user.id) {
-        can(
-          [OrgAction.TransferOwnership, OrgAction.Update, OrgAction.Delete],
-          'Organization',
-        );
-      }
-      can(OrgAction.Read, 'User');
       break;
 
     case 'MEMBER':
-      can(OrgAction.Read, 'User');
-      can([OrgAction.Create, OrgAction.Read], 'Project');
-      // Members can only update/delete their own projects
-      // (ownership checked at service level)
       can(OrgAction.Read, 'Organization');
+      can(OrgAction.Read, 'User');
+      can([OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete], 'Project');
+      can([OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete], 'Workflow' as any);
+      break;
+
+    case 'VIEWER':
+      can(OrgAction.Read, 'Organization');
+      can(OrgAction.Read, 'User');
+      can(OrgAction.Read, 'Project');
+      can(OrgAction.Read, 'Workflow' as any);
       break;
 
     case 'BILLING':

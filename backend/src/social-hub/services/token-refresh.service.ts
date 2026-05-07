@@ -8,6 +8,7 @@ import { SocialProviderRegistry } from '../providers/social-provider.registry';
 import { encrypt, decrypt } from '../utils/encryption.helper';
 import { SOCIAL_ANALYTICS_QUEUE } from '../../queues/queues.constants';
 import { SocialHubGateway } from '../gateways/social-hub.gateway';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
 
 /**
  * Token Refresh Service.
@@ -150,9 +151,13 @@ export class TokenRefreshService implements OnModuleInit {
   /**
    * Force refresh for a specific account (manual trigger).
    */
-  async forceRefresh(accountId: number): Promise<boolean> {
+  async forceRefresh(
+    accountId: number,
+    userId: AuthenticatedUser['id'],
+  ): Promise<boolean> {
+    const ownerId = Number(userId);
     const account = await this.socialAccountRepository.findOne({
-      where: { id: accountId },
+      where: { id: accountId, user: { id: ownerId } },
       relations: ['user'],
     });
 

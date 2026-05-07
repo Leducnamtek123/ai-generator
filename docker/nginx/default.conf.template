@@ -9,6 +9,19 @@ server {
     proxy_pass $api_upstream;
   }
 
+  # Socket.IO gateway for social hub realtime updates
+  location ^~ /socket.io/ {
+    set $api_upstream http://api:8000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_read_timeout 86400;
+    proxy_pass $api_upstream;
+  }
+
   # Compatibility for old console routes
   location /console/api/ {
     set $api_upstream http://api:8000;
@@ -27,10 +40,10 @@ server {
     proxy_pass $api_upstream;
   }
 
-  # 9Pay IPN Callback
+  # 9Pay IPN Callback (Redirected to main API)
   location /webhooks/9pay/ipn {
-    set $billing_upstream http://billing-service:8001;
-    proxy_pass $billing_upstream;
+    set $api_upstream http://api:8000;
+    proxy_pass $api_upstream;
   }
 
   # Everything else (including /api/auth and other /api/ routes) goes to Frontend

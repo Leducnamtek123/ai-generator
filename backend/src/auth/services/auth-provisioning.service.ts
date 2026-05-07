@@ -15,13 +15,26 @@ export class AuthProvisioningService {
   async ensureDefaultOrganization(userId: User['id']): Promise<void> {
     const numericId = Number(userId);
     try {
+      const user = await this.usersService.findById(userId);
+      if (!user) return;
+
       const orgs = await this.organizationsService.findByUserId(numericId);
+      
+      // If user has a domain, try to find organizations to auto-join
+      if (user.email && user.email.includes('@')) {
+        const domain = user.email.split('@')[1];
+        // Note: You would need a method in OrganizationsService to find by domain and autoAttach
+        // For now, let's assume we can query them.
+        // This is a placeholder for actual domain-based join logic which should be in OrganizationsService
+        await this.organizationsService.autoJoinByDomain(numericId, domain);
+      }
+
       if (orgs.length === 0) {
-        const user = await this.usersService.findById(userId);
         await this.organizationsService.create(
           {
-            name: user?.firstName ? `${user.firstName}'s Org` : 'Personal',
+            name: user?.firstName ? `${user.firstName}'s Personal Space` : 'Personal Workspace',
             description: 'Default personal organization',
+            type: 'PERSONAL',
           } as any,
           numericId,
         );

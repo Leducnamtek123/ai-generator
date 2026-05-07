@@ -1,12 +1,14 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { SocialProviderRegistry } from '../providers/social-provider.registry';
 import { ChannelsService } from './channels.service';
 import { UserEntity } from '../../users/infrastructure/persistence/relational/entities/user.entity';
+import crypto from 'crypto';
 
 @Injectable()
 export class SocialAuthService {
   private readonly logger = new Logger(SocialAuthService.name);
+  private readonly stateTtlMs = 10 * 60 * 1000;
 
   constructor(
     private configService: ConfigService,
@@ -15,16 +17,22 @@ export class SocialAuthService {
   ) {}
 
   async getAuthUrl(platform: string, extraParams: Record<string, string> = {}): Promise<string> {
-    const provider = this.socialProviderRegistry.getProvider(platform);
-    
+    this.socialProviderRegistry.getProvider(platform);
+    const safeExtraParams: Record<string, string> = extraParams.appId
+      ? { appId: extraParams.appId }
+      : {};
+
     // Fallback to manual URL construction
-    const clientId = extraParams.appId || this.configService.get(`${platform.toUpperCase()}_APP_ID`) || this.configService.get(`${platform.toUpperCase()}_CLIENT_ID`);
+    const clientId =
+      safeExtraParams.appId ||
+      this.configService.get(`${platform.toUpperCase()}_APP_ID`) ||
+      this.configService.get(`${platform.toUpperCase()}_CLIENT_ID`);
     const redirectUri = `${this.configService.get('BACKEND_DOMAIN')}/api/v1/social-hub/auth/${platform}/callback`;
 
     this.logger.log(`Generating auth URL for ${platform}`);
 
     // Encode extra params in state
-    const state = Buffer.from(JSON.stringify(extraParams)).toString('base64');
+    const state = this.buildState(safeExtraParams);
 
     switch (platform.toLowerCase()) {
       case 'facebook':
@@ -54,12 +62,62 @@ export class SocialAuthService {
     let extraParams: Record<string, string> = {};
     if (state) {
       try {
-        extraParams = JSON.parse(Buffer.from(state, 'base64').toString());
+        extraParams = this.verifyState(state);
       } catch (e) {
         this.logger.warn(`Failed to parse state: ${e.message}`);
+        throw new BadRequestException('Invalid OAuth state');
       }
     }
 
     return this.channelsService.connect(user, platform, code, extraParams);
+  }
+
+  private buildState(extraParams: Record<string, string>): string {
+    const issuedAt = Date.now();
+    const payload = {
+      extraParams,
+      issuedAt,
+    };
+
+    const payloadString = JSON.stringify(payload);
+    const secret = this.configService.getOrThrow('auth.secret', { infer: true });
+    const signature = crypto
+      .createHmac('sha256', secret)
+      .update(payloadString)
+      .digest('hex');
+
+    return Buffer.from(
+      JSON.stringify({
+        payload,
+        signature,
+      }),
+    ).toString('base64url');
+  }
+
+  private verifyState(state: string): Record<string, string> {
+    const secret = this.configService.getOrThrow('auth.secret', { infer: true });
+    const decoded = JSON.parse(Buffer.from(state, 'base64url').toString('utf8')) as {
+      payload?: { extraParams?: Record<string, string>; issuedAt?: number };
+      signature?: string;
+    };
+
+    if (!decoded.payload?.issuedAt || !decoded.signature) {
+      throw new Error('Missing OAuth state signature');
+    }
+
+    if (Date.now() - decoded.payload.issuedAt > this.stateTtlMs) {
+      throw new Error('OAuth state expired');
+    }
+
+    const expectedSignature = crypto
+      .createHmac('sha256', secret)
+      .update(JSON.stringify(decoded.payload))
+      .digest('hex');
+
+    if (expectedSignature !== decoded.signature) {
+      throw new Error('OAuth state signature mismatch');
+    }
+
+    return decoded.payload.extraParams ?? {};
   }
 }

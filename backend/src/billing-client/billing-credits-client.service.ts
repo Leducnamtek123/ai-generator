@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 
 export interface CreditMutationResponse {
   success: boolean;
@@ -11,21 +11,10 @@ export interface CreditMutationResponse {
 
 @Injectable()
 export class BillingCreditsClientService {
-  private readonly client: AxiosInstance;
+  private readonly baseURLs: string[];
 
   constructor() {
-    const baseURL =
-      process.env.BILLING_SERVICE_URL ||
-      process.env.BILLING_API_URL ||
-      'http://localhost:8001/api/v1';
-
-    this.client = axios.create({
-      baseURL,
-      timeout: 30000,
-      headers: {
-        Accept: 'application/json',
-      },
-    });
+    this.baseURLs = this.resolveBaseURLs();
   }
 
   async reserveCredits(
@@ -44,11 +33,7 @@ export class BillingCreditsClientService {
     });
   }
 
-  async captureCredits(
-    userId: string,
-    transactionId: string,
-    metadata?: any,
-  ) {
+  async captureCredits(userId: string, transactionId: string, metadata?: any) {
     return this.request<CreditMutationResponse>('/credits/capture', {
       userId,
       transactionId,
@@ -56,11 +41,7 @@ export class BillingCreditsClientService {
     });
   }
 
-  async releaseCredits(
-    userId: string,
-    transactionId: string,
-    metadata?: any,
-  ) {
+  async releaseCredits(userId: string, transactionId: string, metadata?: any) {
     return this.request<CreditMutationResponse>('/credits/release', {
       userId,
       transactionId,
@@ -93,7 +74,50 @@ export class BillingCreditsClientService {
   }
 
   private async request<T>(path: string, body: Record<string, unknown>) {
-    const response = await this.client.post<T>(path, body);
-    return response.data;
+    let lastError: unknown;
+
+    for (const baseURL of this.baseURLs) {
+      try {
+        const client = axios.create({
+          baseURL,
+          timeout: 30000,
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        const response = await client.post<T>(path, body);
+        return response.data;
+      } catch (error) {
+        lastError = error;
+
+        if (this.hasResponse(error) || baseURL === this.baseURLs.at(-1)) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError;
+  }
+
+  private hasResponse(error: unknown): boolean {
+    if (typeof error !== 'object' || error === null) {
+      return false;
+    }
+
+    return Boolean((error as { response?: unknown }).response);
+  }
+
+  private resolveBaseURLs(): string[] {
+    return [
+      ...new Set(
+        [
+          process.env.BILLING_SERVICE_URL,
+          process.env.BILLING_API_URL,
+          'http://billing-service:8001/api/v1',
+          'http://localhost:8001/api/v1',
+        ].filter((value): value is string => Boolean(value)),
+      ),
+    ];
   }
 }

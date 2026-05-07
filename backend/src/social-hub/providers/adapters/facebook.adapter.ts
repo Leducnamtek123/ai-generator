@@ -157,13 +157,7 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
         throw error;
       }
       this.logger.error('Facebook authentication failed:', error);
-      // Fallback to mock for development
-      return {
-        id: `fb_${Date.now()}`,
-        name: 'Facebook User (Dev)',
-        accessToken: `fa_dev_${Math.random().toString(36).substring(7)}`,
-        expiresIn: 3600,
-      };
+      throw new Error('Facebook authentication failed');
     }
   }
 

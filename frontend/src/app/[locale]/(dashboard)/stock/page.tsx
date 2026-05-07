@@ -2,21 +2,38 @@
 
 import { useState, FormEvent, Suspense } from 'react';
 import Image from 'next/image';
-import { Search, ArrowRight, Download, Heart, Loader2 } from 'lucide-react';
+import { 
+    Search as SearchIcon, 
+    ArrowRight, 
+    Download, 
+    Heart, 
+    Loader2, 
+    Image as ImageIcon, 
+    Video, 
+    Box, 
+    LayoutGrid, 
+    Type, 
+    MousePointer2, 
+    Sparkles 
+} from 'lucide-react';
 import { Input } from '@/ui/input';
 import { Button } from '@/ui/button';
 import { toast } from 'sonner';
 import { useSearchParams } from 'next/navigation';
+import { useLocale } from 'next-intl';
+import { useSiteConfig } from '@/hooks/queries/useSiteConfig';
+import { mergeDeep } from '@/lib/site-config';
+import { STOCK_DEFAULTS, type StockContent } from '@/content/stock-content';
 
 const CATEGORIES = [
-    { title: 'Vectors', color: 'from-chart-1/20 to-chart-1/10' },
-    { title: 'Photos', color: 'from-chart-2/20 to-chart-2/10' },
-    { title: 'AI Images', color: 'from-chart-3/20 to-chart-3/10' },
-    { title: 'Icons', color: 'from-chart-4/20 to-chart-4/10' },
-    { title: 'Videos', color: 'from-chart-5/20 to-chart-5/10' },
-    { title: 'PSD', color: 'from-chart-1/20 to-chart-1/10' },
-    { title: '3D', color: 'from-chart-5/20 to-chart-5/10' },
-    { title: 'Fonts', color: 'from-muted to-muted/50' },
+    { title: 'Vectors', color: 'from-chart-1/20 to-chart-1/10', icon: MousePointer2 },
+    { title: 'Photos', color: 'from-chart-2/20 to-chart-2/10', icon: ImageIcon },
+    { title: 'AI Images', color: 'from-chart-3/20 to-chart-3/10', icon: Sparkles },
+    { title: 'Icons', color: 'from-chart-4/20 to-chart-4/10', icon: LayoutGrid },
+    { title: 'Videos', color: 'from-chart-5/20 to-chart-5/10', icon: Video },
+    { title: 'PSD', color: 'from-chart-1/20 to-chart-1/10', icon: Box },
+    { title: '3D', color: 'from-chart-5/20 to-chart-5/10', icon: Box },
+    { title: 'Fonts', color: 'from-muted to-muted/50', icon: Type },
 ];
 
 const FEATURED_COLLECTIONS = [
@@ -43,6 +60,12 @@ export default function StockPage() {
 
 function StockPageContent() {
     const searchParams = useSearchParams();
+    const locale = useLocale();
+    const stockConfig = useSiteConfig('stock', locale);
+    const stockContent = mergeDeep(
+        STOCK_DEFAULTS,
+        stockConfig.data?.value as Partial<StockContent> | undefined,
+    );
     const [query, setQuery] = useState(() => {
         const category = searchParams.get('category');
         const view = searchParams.get('view');
@@ -111,8 +134,8 @@ function StockPageContent() {
                     )}
 
                     <form onSubmit={handleSearch} className="relative max-w-xl mx-auto w-full group">
-                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none">
-                            <Search className="h-5 w-5 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+                        <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
+                            <SearchIcon className="h-5 w-5 text-muted-foreground group-focus-within:text-foreground transition-colors" />
                         </div>
                         <Input
                             type="text"
@@ -124,10 +147,10 @@ function StockPageContent() {
                         <div className="absolute inset-y-2 right-2 flex items-center">
                             <Button 
                                 type="submit" 
-                                className="h-full rounded-full px-6" 
+                                className="h-full rounded-full px-6 gap-2" 
                                 disabled={isSearching || !query.trim()}
                             >
-                                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Search'}
+                                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchIcon className="w-4 h-4" />}
                             </Button>
                         </div>
                     </form>
@@ -198,7 +221,11 @@ function StockPageContent() {
                         <section>
                             <h2 className="text-lg font-semibold mb-6">Explore by category</h2>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                                {CATEGORIES.map((cat) => (
+                                {stockContent.categories.map((cat, index) => {
+                                    const fallbackCategory = STOCK_DEFAULTS.categories[index] ?? cat;
+                                    const CategoryIcon = cat.icon ?? fallbackCategory.icon ?? Sparkles;
+
+                                    return (
                                     <div
                                         key={cat.title}
                                         role="button"
@@ -207,14 +234,16 @@ function StockPageContent() {
                                         onClick={() => { setQuery(cat.title); void handleSearch(cat.title); }}
                                         className={`h-24 rounded-xl relative overflow-hidden group cursor-pointer border border-border bg-gradient-to-br ${cat.color} opacity-80 hover:opacity-100 transition-opacity`}
                                     >
-                                        <div className="absolute inset-0 flex items-center justify-start p-6">
+                                        <div className="absolute inset-0 flex items-center justify-start p-6 gap-3">
+                                            <CategoryIcon className="w-6 h-6 text-foreground/70 group-hover:text-foreground transition-colors" />
                                             <span className="font-semibold text-lg">{cat.title}</span>
                                         </div>
                                         <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0 duration-300">
                                             <ArrowRight className="w-5 h-5" />
                                         </div>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </section>
 
@@ -225,7 +254,7 @@ function StockPageContent() {
                                 <button className="text-sm text-muted-foreground hover:text-foreground transition-colors">Explore collections</button>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                                {FEATURED_COLLECTIONS.map((col) => (
+                            {stockContent.featuredCollections.map((col) => (
                                     <div
                                         key={col.id}
                                         role="button"

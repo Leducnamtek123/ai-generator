@@ -22,16 +22,16 @@ export function TextNodePanel({ nodeData, onChange }: NodePanelProps) {
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Prompt Text</div>
+                <div className="text-xs font-medium text-muted-foreground">Prompt Text</div>
                 <textarea
                     value={(nodeData.text as string) || ''}
                     onChange={(e) => onChange('text', e.target.value)}
-                    className="w-full h-32 bg-gray-950/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-green-500/50 resize-none"
+                    className="w-full h-32 bg-background border border-input rounded-lg p-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-green-500/50 resize-none"
                     placeholder="Describe what you want to create..."
                 />
                 <div className="flex items-center justify-between">
-                    <p className="text-[10px] text-white/30">{((nodeData.text as string) || '').length} characters</p>
-                    <button onClick={() => onChange('text', '')} className="text-[10px] text-white/40 hover:text-white transition-colors">
+                    <p className="text-[10px] text-muted-foreground">{((nodeData.text as string) || '').length} characters</p>
+                    <button onClick={() => onChange('text', '')} className="text-[10px] text-muted-foreground hover:text-foreground transition-colors">
                         Clear
                     </button>
                 </div>
@@ -40,14 +40,14 @@ export function TextNodePanel({ nodeData, onChange }: NodePanelProps) {
             <ConnectionInfo accepts={['None (Input Node)']} outputs="Text Prompt" />
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Quick Starters</div>
+                <div className="text-xs font-medium text-muted-foreground">Quick Starters</div>
                 <div className="grid grid-cols-2 gap-2">
                     {['Portrait photo of a person', 'Beautiful landscape scene', 'Professional product shot', 'Abstract art composition'].map((p) => (
                         <Button
                             key={p}
                             variant="outline"
                             onClick={() => onChange('text', p)}
-                            className="h-auto py-2 bg-white/5 hover:bg-white/10 border-white/10 rounded-lg text-xs text-white/60 hover:text-white transition-colors justify-start text-left whitespace-normal"
+                            className="h-auto py-2 bg-background hover:bg-accent border-border rounded-lg text-xs text-muted-foreground hover:text-foreground transition-colors justify-start text-left whitespace-normal"
                         >
                             {p}
                         </Button>
@@ -56,7 +56,7 @@ export function TextNodePanel({ nodeData, onChange }: NodePanelProps) {
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Style Presets</div>
+                <div className="text-xs font-medium text-muted-foreground">Style Presets</div>
                 <div className="flex flex-wrap gap-2">
                     {['Photorealistic', 'Cinematic', 'Anime', 'Digital Art', '3D Render', 'Watercolor'].map((style) => (
                         <Button
@@ -64,7 +64,7 @@ export function TextNodePanel({ nodeData, onChange }: NodePanelProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => onChange('text', `${(nodeData.text as string) || ''}, ${style.toLowerCase()} style`)}
-                            className="h-7 px-2 bg-white/5 hover:bg-green-500/20 hover:text-green-400 rounded text-[10px] text-white/60 transition-colors"
+                            className="h-7 px-2 bg-background hover:bg-green-500/20 hover:text-green-600 rounded text-[10px] text-muted-foreground transition-colors"
                         >
                             {style}
                         </Button>

@@ -1,11 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { Link, useRouter } from '@/i18n/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { post } from '@/lib/api';
@@ -15,7 +16,7 @@ import AuthLayout from '@/components/auth/AuthLayout';
 const registerSchema = z.object({
     firstName: z.string().min(2, "First name is too short"),
     lastName: z.string().min(2, "Last name is too short"),
-    email: z.email("Invalid email address"),
+    email: z.string().email("Invalid email address"),
     password: z.string().min(8, "Must be at least 8 characters"),
 });
 
@@ -23,12 +24,28 @@ type RegisterValues = z.infer<typeof registerSchema>;
 
 export default function SignUpPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<RegisterValues>({
         resolver: zodResolver(registerSchema),
         defaultValues: { firstName: "", lastName: "", email: "", password: "" }
     });
+
+    useEffect(() => {
+        const error = searchParams.get('error');
+        if (error) {
+            if (error === 'OAuthAccountNotLinked') {
+                toast.error("Account exists", {
+                    description: "An account with this email already exists with a different login method."
+                });
+            } else {
+                toast.error("Authentication failed", {
+                    description: "Something went wrong during social login. Please try again."
+                });
+            }
+        }
+    }, [searchParams]);
 
     const onSubmit = async (data: RegisterValues) => {
         setIsLoading(true);
@@ -40,8 +57,17 @@ export default function SignUpPage() {
             });
             router.push('/sign-in');
         } catch (error: any) {
+            console.error("Signup error:", error.response?.data);
+            
+            let description = "Please check your details and try again.";
+            if (error.response?.data?.errors?.email === 'emailAlreadyExists') {
+                description = "An account with this email already exists. Please sign in instead.";
+            } else if (error.response?.data?.message) {
+                description = error.response.data.message;
+            }
+
             toast.error("Registration failed", {
-                description: error.response?.data?.message || error.message || "Please check your details and try again."
+                description
             });
         }
         setIsLoading(false);
@@ -64,7 +90,7 @@ export default function SignUpPage() {
                 {/* Google OAuth */}
                 <button
                     type="button"
-                    onClick={() => signIn('google')}
+                    onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
                     className="auth-social"
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">

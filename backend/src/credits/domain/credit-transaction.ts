@@ -5,8 +5,11 @@ export type CreditTransactionStatus = 'pending' | 'posted' | 'reversed';
 export type CreditTransactionType =
   | 'generation'
   | 'topup'
+  | 'grant'
   | 'refund'
   | 'adjustment';
+
+export type CreditTransactionScopeType = 'user' | 'organization';
 
 export class CreditTransaction {
   @ApiProperty({ type: String })
@@ -14,6 +17,12 @@ export class CreditTransaction {
 
   @ApiProperty({ type: String })
   userId: string;
+
+  @ApiProperty({ type: String, enum: ['user', 'organization'] })
+  scopeType: CreditTransactionScopeType;
+
+  @ApiProperty({ type: String, nullable: true })
+  scopeId?: string;
 
   @ApiProperty({ type: Number })
   amount: number;

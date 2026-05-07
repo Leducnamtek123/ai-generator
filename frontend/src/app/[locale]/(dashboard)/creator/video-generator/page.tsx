@@ -1,8 +1,9 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef } from 'react';
+import { useReducer, useRef, useState, useEffect } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
+import { useTemplateStore } from '@/stores/template-store';
 import {
     ChevronDown,
     Upload,
@@ -22,8 +23,12 @@ import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
+import { CONTENT_TABS } from '@/components/layouts/navigation-data';
+import { TemplateTypeEnum } from '@/lib/api/templates';
 
-const contentTabs = ['Personal', 'Community', 'Templates', 'Tutorials'];
+const COMMUNITY_TAB = CONTENT_TABS[1];
+const TEMPLATES_TAB = CONTENT_TABS[2];
+const TUTORIALS_TAB = CONTENT_TABS[3];
 
 const models = [
     { id: 'auto', label: 'Auto', description: 'Best model for your prompt' },
@@ -98,7 +103,7 @@ type VideoPageAction =
     | { type: 'resetImages' };
 
 const initialState: VideoPageState = {
-    activeContentTab: 'Tutorials',
+    activeContentTab: TUTORIALS_TAB,
     selectedModel: 'auto',
     showModelPicker: false,
     prompt: '',
@@ -143,11 +148,36 @@ function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState
 }
 
 export default function VideoPage() {
-    const { generateVideo, isGenerating, currentGeneration, reset } = useGenerationStore();
+    const { generateVideo, isGenerating, currentGeneration, reset, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
+    const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+    
     const startImageRef = useRef<HTMLInputElement>(null);
     const endImageRef = useRef<HTMLInputElement>(null);
     const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
+
+    useEffect(() => {
+        if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
+            fetchGenerations({ type: TemplateTypeEnum.VIDEO_GENERATOR, limit: 12 });
+        } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
+            const fetchCommunity = async () => {
+                setIsCommunityLoading(true);
+                try {
+                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.VIDEO_GENERATOR}&limit=12`));
+                    setCommunityListings(res.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch community listings', err);
+                } finally {
+                    setIsCommunityLoading(false);
+                }
+            };
+            fetchCommunity();
+        } else if (state.activeContentTab === TEMPLATES_TAB) { // Templates
+            fetchTemplates(TemplateTypeEnum.VIDEO_GENERATOR);
+        }
+    }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     const handleGenerate = async () => {
         if (!state.prompt.trim()) return;
@@ -184,7 +214,10 @@ export default function VideoPage() {
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
                     {/* Browse Templates */}
-                    <button className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
+                    <button 
+                        onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: TEMPLATES_TAB })}
+                        className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                    >
                         <Grid3X3 className="w-5 h-5" />
                         <span>Browse templates</span>
                     </button>
@@ -415,7 +448,7 @@ export default function VideoPage() {
                             {/* Content Header */}
                             <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm border-b border-border px-6 h-14 flex items-center justify-between">
                                 <div className="flex items-center gap-1">
-                                    {contentTabs.map((tab) => (
+                                    {CONTENT_TABS.map((tab) => (
                                         <button
                                             key={tab}
                                             onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: tab })}
@@ -426,73 +459,179 @@ export default function VideoPage() {
                                                     : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
-                                            {tab === 'Community' && <Globe className="w-4 h-4" />}
-                                            {tab === 'Templates' && <LayoutGrid className="w-4 h-4" />}
+                                            {tab === COMMUNITY_TAB && <Globe className="w-4 h-4" />}
+                                            {tab === TEMPLATES_TAB && <LayoutGrid className="w-4 h-4" />}
                                             {tab}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
-                            {/* Tutorials Content */}
-                            <div className="p-6 space-y-8">
-                                <section>
-                                    <h3 className="text-lg font-semibold mb-4">Getting started</h3>
-                                    <div className="grid grid-cols-2 gap-6">
-                                        {tutorials.map((tutorial) => (
-                                            <div key={tutorial.id} className="group cursor-pointer relative rounded-2xl overflow-hidden">
-                                                <div className="aspect-[16/9] relative">
-                                                    <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
-                                                    <div className="absolute inset-0 bg-gray-950/40" />
-                                                    <div className="absolute bottom-6 left-6">
-                                                        <div className="w-12 h-12 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-foreground/30 transition-colors">
-                                                            <Play className="w-6 h-6 text-white fill-white" />
-                                                        </div>
-                                                    </div>
-                                                    <div className="absolute bottom-6 left-20">
-                                                        <p className="text-xs text-white/60 mb-1">Tutorials</p>
-                                                        <h4 className="text-xl font-semibold text-white">{tutorial.title}</h4>
-                                                    </div>
-                                                </div>
+                            {/* Dynamic Content Area */}
+                            <div className="p-6">
+                                {state.activeContentTab === CONTENT_TABS[0] && ( // Personal
+                                    <section>
+                                        <h3 className="text-lg font-semibold mb-6">Your Videos</h3>
+                                        {isGenerationsLoading ? (
+                                            <LoadingGrid />
+                                        ) : generations.length > 0 ? (
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {generations.map((gen) => (
+                                                    <VideoCard key={gen.id} generation={gen} />
+                                                ))}
                                             </div>
-                                        ))}
-                                    </div>
-                                </section>
+                                        ) : (
+                                            <EmptyState message="No videos generated yet." />
+                                        )}
+                                    </section>
+                                )}
 
-                                <section>
-                                    <div className="flex items-center justify-between mb-4">
-                                        <h3 className="text-lg font-semibold">More tutorials</h3>
-                                        <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                            Featured
-                                            <ChevronDown className="w-4 h-4" />
-                                        </button>
-                                    </div>
-                                    <div className="grid grid-cols-4 gap-4">
-                                        {moreTutorials.map((tutorial) => (
-                                            <div key={tutorial.id} className="group cursor-pointer">
-                                                <div className="aspect-video rounded-xl overflow-hidden relative bg-muted">
-                                                    <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
-                                                    <div className="absolute inset-0 bg-gray-950/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                        <div className="w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center">
-                                                            <Play className="w-5 h-5 text-white fill-white" />
+                                {state.activeContentTab === COMMUNITY_TAB && ( // Community
+                                    <section>
+                                        <h3 className="text-lg font-semibold mb-6">Community Showcase</h3>
+                                        {isCommunityLoading ? (
+                                            <LoadingGrid />
+                                        ) : communityListings.length > 0 ? (
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {communityListings.map((listing) => (
+                                                    <VideoCard key={listing.id} generation={{ resultUrl: listing.thumbnail, prompt: listing.title }} />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <EmptyState message="No community videos found." />
+                                        )}
+                                    </section>
+                                )}
+
+                                {state.activeContentTab === TEMPLATES_TAB && ( // Templates
+                                    <section>
+                                        <h3 className="text-lg font-semibold mb-6">Video Templates</h3>
+                                        {isTemplatesLoading ? (
+                                            <LoadingGrid />
+                                        ) : templates.length > 0 ? (
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {templates.map((t) => (
+                                                    <VideoCard key={t.id} generation={{ resultUrl: t.thumbnail, prompt: t.title }} />
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                                                {tutorials.map((t) => (
+                                                    <VideoCard key={t.id} generation={{ resultUrl: t.thumbnail, prompt: t.title }} />
+                                                ))}
+                                            </div>
+                                        )}
+                                    </section>
+                                )}
+
+                                {state.activeContentTab === TUTORIALS_TAB && ( // Tutorials
+                                    <div className="space-y-8">
+                                        <section>
+                                            <h3 className="text-lg font-semibold mb-4">Getting started</h3>
+                                            <div className="grid grid-cols-2 gap-6">
+                                                {tutorials.map((tutorial) => (
+                                                    <div key={tutorial.id} className="group cursor-pointer relative rounded-2xl overflow-hidden">
+                                                        <div className="aspect-[16/9] relative">
+                                                            <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
+                                                            <div className="absolute inset-0 bg-gray-950/40" />
+                                                            <div className="absolute bottom-6 left-6">
+                                                                <div className="w-12 h-12 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-foreground/30 transition-colors">
+                                                                    <Play className="w-6 h-6 text-white fill-white" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute bottom-6 left-20">
+                                                                <p className="text-xs text-white/60 mb-1">Tutorials</p>
+                                                                <h4 className="text-xl font-semibold text-white">{tutorial.title}</h4>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                    <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white">
-                                                        {tutorial.duration}
-                                                    </div>
-                                                </div>
-                                                <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2">
-                                                    {tutorial.title}
-                                                </p>
+                                                ))}
                                             </div>
-                                        ))}
+                                        </section>
+
+                                        <section>
+                                            <div className="flex items-center justify-between mb-4">
+                                                <h3 className="text-lg font-semibold">More tutorials</h3>
+                                                <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
+                                                    Featured
+                                                    <ChevronDown className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                            <div className="grid grid-cols-4 gap-4">
+                                                {moreTutorials.map((tutorial) => (
+                                                    <div key={tutorial.id} className="group cursor-pointer">
+                                                        <div className="aspect-video rounded-xl overflow-hidden relative bg-muted">
+                                                            <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
+                                                            <div className="absolute inset-0 bg-gray-950/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                <div className="w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center">
+                                                                    <Play className="w-5 h-5 text-white fill-white" />
+                                                                </div>
+                                                            </div>
+                                                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white">
+                                                                {tutorial.duration}
+                                                            </div>
+                                                        </div>
+                                                        <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2">
+                                                            {tutorial.title}
+                                                        </p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </section>
                                     </div>
-                                </section>
+                                )}
                             </div>
                         </>
                     )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function LoadingGrid() {
+    return (
+        <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map(i => (
+                <div key={i} className="aspect-video rounded-2xl bg-muted animate-pulse" />
+            ))}
+        </div>
+    );
+}
+
+function EmptyState({ message }: { message: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Video className="w-8 h-8 text-muted-foreground/30" />
+            </div>
+            <p className="text-muted-foreground">{message}</p>
+        </div>
+    );
+}
+
+function VideoCard({ generation }: { generation: any }) {
+    return (
+        <div className="group cursor-pointer">
+            <div className="aspect-video rounded-xl overflow-hidden relative bg-muted border border-border group-hover:border-primary/20 transition-all">
+                {generation.resultUrl ? (
+                    <>
+                        <Image src={generation.resultUrl} alt={generation.prompt} fill className="object-cover transition-transform group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 25vw" />
+                        <div className="absolute inset-0 bg-gray-950/20 group-hover:bg-gray-950/40 transition-colors flex items-center justify-center">
+                            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100 duration-300">
+                                <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                            </div>
+                        </div>
+                    </>
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                )}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
+                {generation.prompt}
+            </p>
         </div>
     );
 }

@@ -16,44 +16,56 @@ import { cn } from '@/lib/utils';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
 import { useCreditStore } from '@/stores/credit-store';
+import { formatCredits } from '@/lib/format-credits';
+import { CONTENT_TABS, IMAGE_GENERATOR_PRESET_TEMPLATES } from '@/components/layouts/navigation-data';
+import { TemplateTypeEnum } from '@/lib/api/templates';
 
-// Mock template data (kept for UI completeness)
-const mockTemplates = {
-    new: [
-        { id: '1', title: 'Create funny Valentine costume', thumbnail: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop' },
-        { id: '2', title: 'Create Valentine photobooth...', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop' },
-        { id: '3', title: 'Create a close-up confession', thumbnail: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=300&h=400&fit=crop' },
-        { id: '4', title: 'Create a thriller scene', thumbnail: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300&h=400&fit=crop' },
-        { id: '5', title: 'Capture an epic wide shot', thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop' },
-        { id: '6', title: 'Frame an over-the-shoulder d...', thumbnail: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=400&fit=crop' },
-    ],
-    featured: [
-        { id: 'f1', title: 'Turn character into realistic p...', thumbnail: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=300&h=400&fit=crop' },
-        { id: 'f2', title: 'Turn product image into a ca...', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop' },
-        { id: 'f3', title: 'Create analog-style photos', thumbnail: 'https://images.unsplash.com/photo-1524504388940-b1c1722653e1?w=300&h=400&fit=crop' },
-        { id: 'f4', title: 'Swap character', thumbnail: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&h=400&fit=crop' },
-        { id: 'f5', title: 'Create cinematic frame', thumbnail: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=400&fit=crop' },
-        { id: 'f6', title: 'Reveal scene behind the shot', thumbnail: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=300&h=400&fit=crop' },
-    ],
+type GalleryListing = {
+    id: string;
+    title: string;
+    thumbnail: string;
 };
 
-const tabs = ['Image', 'Video', 'Audio', 'Tools'];
-const contentTabs = ['Personal', 'Community', 'Templates', 'Tutorials'];
+type GeneratedCardData = {
+    prompt: string;
+    resultUrl?: string;
+};
 
 export default function StudioPage() {
-    const [activeTab, setActiveTab] = useState('Image');
-    const [activeContentTab, setActiveContentTab] = useState('Templates');
-    const [selectedModel, setSelectedModel] = useState('flux');
+    const [activeContentTab, setActiveContentTab] = useState<string>(CONTENT_TABS[2]);
+    const [selectedModel] = useState('flux');
     const [prompt, setPrompt] = useState('');
+    const [communityListings, setCommunityListings] = useState<GalleryListing[]>([]);
+    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
 
-    const { generateImage, isGenerating, currentGeneration, error } = useGenerationStore();
-    const { templates, fetchTemplates } = useTemplateStore();
+    const { generateImage, isGenerating, currentGeneration, error, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
+    const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const { balance, fetchBalance } = useCreditStore();
 
     useEffect(() => {
-        fetchTemplates();
         fetchBalance();
-    }, [fetchTemplates, fetchBalance]);
+    }, [fetchBalance]);
+
+    useEffect(() => {
+        if (activeContentTab === CONTENT_TABS[0]) { // Personal
+            fetchGenerations({ type: TemplateTypeEnum.IMAGE_GENERATOR, limit: 20 });
+        } else if (activeContentTab === CONTENT_TABS[1]) { // Community
+            const fetchCommunity = async () => {
+                setIsCommunityLoading(true);
+                try {
+                    const res = await import('@/lib/api').then((m) => m.get<{ data: GalleryListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.IMAGE_GENERATOR}&limit=20`));
+                    setCommunityListings(res.data || []);
+                } catch (err) {
+                    console.error('Failed to fetch community listings', err);
+                } finally {
+                    setIsCommunityLoading(false);
+                }
+            };
+            fetchCommunity();
+        } else if (activeContentTab === CONTENT_TABS[2]) { // Templates
+            fetchTemplates(TemplateTypeEnum.IMAGE_GENERATOR);
+        }
+    }, [activeContentTab, fetchGenerations, fetchTemplates]);
 
     const handleGenerate = async () => {
         if (!prompt.trim()) return;
@@ -67,7 +79,8 @@ export default function StudioPage() {
         setTimeout(() => fetchBalance(), 3000);
     };
 
-    const displayTemplates = templates.length > 0 ? templates : mockTemplates.new;
+    const displayTemplates = templates.length > 0 ? templates : IMAGE_GENERATOR_PRESET_TEMPLATES.new;
+    const featuredTemplates = templates.length > 0 ? templates.slice(0, 6) : IMAGE_GENERATOR_PRESET_TEMPLATES.featured;
 
     return (
         <div className="min-h-screen bg-background text-foreground flex">
@@ -79,14 +92,17 @@ export default function StudioPage() {
                     <h2 className="font-bold text-muted-foreground">Image Generator</h2>
                     <div className="flex items-center gap-2 text-xs font-medium bg-secondary/50 px-3 py-1.5 rounded-full ring-1 ring-border" title="Your Credit Balance">
                         <Sparkles className="w-3 h-3 text-primary" />
-                        <span>{balance !== null ? balance : '...'} Credits</span>
+                        <span>{formatCredits(balance)} Credits</span>
                     </div>
                 </div>
 
                 {/* Control Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
                     {/* Browse Templates Button */}
-                    <button className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group">
+                    <button 
+                        onClick={() => setActiveContentTab(CONTENT_TABS[2])}
+                        className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
+                    >
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-chart-3/20 to-chart-2/20 flex items-center justify-center">
                                 <Grid3X3 className="w-5 h-5 text-chart-3" />
@@ -155,7 +171,7 @@ export default function StudioPage() {
             </div>
 
             {/* Main Content Grid */}
-            <div className="flex-1 overflow-y-auto bg-background">
+            <div className="flex-1 overflow-y-auto bg-background flex flex-col">
                 {/* Generation Result View */}
                 {currentGeneration && (
                     <div className="p-6 pb-0">
@@ -192,7 +208,7 @@ export default function StudioPage() {
                 {/* Content Header */}
                 <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md px-6 h-14 flex items-center justify-between border-b border-border">
                     <div className="flex items-center gap-1">
-                        {contentTabs.map((tab) => (
+                        {CONTENT_TABS.map((tab) => (
                             <button
                                 key={tab}
                                 onClick={() => setActiveContentTab(tab)}
@@ -213,40 +229,163 @@ export default function StudioPage() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                             <Input
                                 type="text"
-                                placeholder="Search templates"
+                                placeholder="Search"
                                 className="w-56 h-9 pl-10 pr-4"
                             />
                         </div>
                     </div>
                 </div>
 
-                {/* Templates Grid */}
-                <div className="p-6 space-y-8">
-                    {/* New Section */}
-                    <section>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold">New Templates</h2>
-                        </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            {displayTemplates.map((template) => (
-                                <TemplateCard key={template.id} template={template} onClick={() => setPrompt(template.title)} />
-                            ))}
-                        </div>
-                    </section>
+                {/* Content Area */}
+                <div className="p-6 flex-1">
+                    {activeContentTab === CONTENT_TABS[0] && ( // Personal
+                        <section className="space-y-6">
+                            <h2 className="text-lg font-semibold">Your History</h2>
+                            {isGenerationsLoading ? (
+                                <LoadingGrid />
+                            ) : generations.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {generations.map((gen) => (
+                                        <GenerationCard key={gen.id} generation={gen} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState message="No generations yet. Start creating!" />
+                            )}
+                        </section>
+                    )}
 
-                    {/* Featured Section */}
-                    <section>
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="text-lg font-semibold">Featured</h2>
+                    {activeContentTab === CONTENT_TABS[1] && ( // Community
+                        <section className="space-y-6">
+                            <h2 className="text-lg font-semibold">Community Creations</h2>
+                            {isCommunityLoading ? (
+                                <LoadingGrid />
+                            ) : communityListings.length > 0 ? (
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {communityListings.map((listing) => (
+                                        <TemplateCard key={listing.id} template={listing} onClick={() => setPrompt(listing.title)} />
+                                    ))}
+                                </div>
+                            ) : (
+                                <EmptyState message="Community is quiet today." />
+                            )}
+                        </section>
+                    )}
+
+                    {activeContentTab === CONTENT_TABS[2] && ( // Templates
+                        <div className="space-y-8">
+                            <section>
+                                <h2 className="text-lg font-semibold mb-4">New Templates</h2>
+                                {isTemplatesLoading ? (
+                                    <LoadingGrid />
+                                ) : (
+                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                        {displayTemplates.map((template) => (
+                                            <TemplateCard key={template.id} template={template} onClick={() => setPrompt(template.title)} />
+                                        ))}
+                                    </div>
+                                )}
+                            </section>
+
+                            <section>
+                                <h2 className="text-lg font-semibold mb-4">Featured</h2>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                    {featuredTemplates.map((template) => (
+                                        <TemplateCard key={template.id} template={template} onClick={() => setPrompt(template.title)} />
+                                    ))}
+                                </div>
+                            </section>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                            {mockTemplates.featured.map((template) => (
-                                <TemplateCard key={template.id} template={template} onClick={() => setPrompt(template.title)} />
-                            ))}
-                        </div>
-                    </section>
+                    )}
+
+                    {activeContentTab === CONTENT_TABS[3] && ( // Tutorials
+                        <section className="space-y-6">
+                            <h2 className="text-lg font-semibold">Tutorials & Help</h2>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold">Quick start</h3>
+                                        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">3 steps</span>
+                                    </div>
+                                    <ol className="space-y-3 text-sm text-muted-foreground">
+                                        <li className="flex gap-3">
+                                            <span className="font-semibold text-foreground">1.</span>
+                                            Pick a template or start from a blank prompt.
+                                        </li>
+                                        <li className="flex gap-3">
+                                            <span className="font-semibold text-foreground">2.</span>
+                                            Add style, model, and aspect-ratio details.
+                                        </li>
+                                        <li className="flex gap-3">
+                                            <span className="font-semibold text-foreground">3.</span>
+                                            Generate, review the result, then save it to your library.
+                                        </li>
+                                    </ol>
+                                </div>
+                                <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
+                                    <div className="flex items-center justify-between">
+                                        <h3 className="font-semibold">Production tips</h3>
+                                        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Best practice</span>
+                                    </div>
+                                    <ul className="space-y-3 text-sm text-muted-foreground">
+                                        <li>Use a specific subject, lighting, and composition to reduce retries.</li>
+                                        <li>Keep the prompt focused and use negative prompts for unwanted artifacts.</li>
+                                        <li>Review generations in Personal, then promote the best ones to Community or Templates.</li>
+                                    </ul>
+                                </div>
+                            </div>
+                        </section>
+                    )}
                 </div>
             </div>
+        </div>
+    );
+}
+
+function LoadingGrid() {
+    return (
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+            {[1, 2, 3, 4, 5].map(i => (
+                <div key={i} className="aspect-[3/4] rounded-xl bg-muted animate-pulse" />
+            ))}
+        </div>
+    );
+}
+
+function EmptyState({ message }: { message: string }) {
+    return (
+        <div className="flex flex-col items-center justify-center py-20 text-center">
+            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Sparkles className="w-8 h-8 text-muted-foreground/30" />
+            </div>
+            <p className="text-muted-foreground">{message}</p>
+        </div>
+    );
+}
+
+function GenerationCard({ generation }: { generation: GeneratedCardData }) {
+    return (
+        <div className="group text-left">
+            <div className="aspect-[3/4] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
+                {generation.resultUrl ? (
+                    <Image
+                        src={generation.resultUrl}
+                        alt={generation.prompt}
+                        fill
+                        className="object-cover transition-transform duration-500 group-hover:scale-105"
+                        loading="lazy"
+                        sizes="(max-width: 1024px) 100vw, 20vw"
+                    />
+                ) : (
+                    <div className="absolute inset-0 flex items-center justify-center bg-muted/50">
+                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                    </div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
+                {generation.prompt}
+            </p>
         </div>
     );
 }

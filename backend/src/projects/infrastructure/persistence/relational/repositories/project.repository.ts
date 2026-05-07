@@ -28,20 +28,33 @@ export class ProjectsRelationalRepository implements ProjectRepository {
     return ProjectMapper.toDomain(newEntity);
   }
 
-  async findAll(userId: string | number): Promise<Project[]> {
+  async findAll(
+    userId: string | number,
+    organizationId?: string | null,
+  ): Promise<Project[]> {
+    const where: FindOptionsWhere<ProjectEntity> = {
+      userId: String(userId),
+    };
+
+    if (organizationId) {
+      where.organizationId = organizationId;
+    }
+
     const entities = await this.projectsRepository.find({
-      where: { userId: String(userId) },
+      where: where,
     });
     return entities.map((entity) => ProjectMapper.toDomain(entity));
   }
 
   async findManyWithPagination({
     userId,
+    organizationId,
     filterOptions,
     sortOptions,
     paginationOptions,
   }: {
     userId: string | number;
+    organizationId?: string | null;
     filterOptions?: FilterProjectDto | null;
     sortOptions?: SortProjectDto[] | null;
     paginationOptions: IPaginationOptions;
@@ -49,6 +62,14 @@ export class ProjectsRelationalRepository implements ProjectRepository {
     const where: FindOptionsWhere<ProjectEntity> = {
       userId: String(userId),
     };
+
+    if (organizationId) {
+      where.organizationId = organizationId;
+    }
+
+    if (filterOptions?.organizationId) {
+      where.organizationId = filterOptions.organizationId;
+    }
 
     if (filterOptions?.name) {
       where.name = ILike(`%${filterOptions.name}%`);

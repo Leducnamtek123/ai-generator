@@ -1,5 +1,10 @@
 import "next-auth";
 
+type SessionRole = {
+  id?: string | number | null;
+  name?: string | null;
+};
+
 declare module "next-auth" {
   interface Session {
     accessToken?: string;
@@ -10,6 +15,7 @@ declare module "next-auth" {
       name?: string | null;
       email?: string | null;
       image?: string | null;
+      role?: SessionRole | null;
     };
   }
 
@@ -17,6 +23,7 @@ declare module "next-auth" {
     accessToken?: string;
     refreshToken?: string;
     tokenExpires?: number | string;
+    role?: SessionRole | null;
   }
 }
 
@@ -26,6 +33,7 @@ declare module "next-auth/jwt" {
     refreshToken?: string;
     tokenExpires?: number | string;
     userId?: string;
+    role?: SessionRole | null;
     error?: string;
   }
 }

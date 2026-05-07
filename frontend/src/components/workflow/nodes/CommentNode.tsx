@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useRef, useEffect, useCallback, memo } from 'react';
-import { NodeProps } from '@xyflow/react';
+import { Handle, NodeProps, Position } from '@xyflow/react';
 import { MessageSquare, Trash2, MoreHorizontal, User, ChevronDown, ChevronUp, Pin, PinOff } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
@@ -25,6 +25,7 @@ interface CommentData {
     onColorChange?: (nodeId: string, color: string) => void;
     onToggleMinimize?: (nodeId: string) => void;
     onTogglePin?: (nodeId: string) => void;
+    onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
 }
 
 const colorStyles = {
@@ -269,6 +270,14 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                     </div>
                 </div>
             )}
+
+            <Handle
+                type="source"
+                position={Position.Right}
+                id="reference-output"
+                onClick={(e) => commentData.onHandleClick?.(e, 'reference-output', 'source')}
+                className="!border-2 !border-background !bg-yellow-500 z-50 cursor-pointer hover:!bg-yellow-400"
+            />
 
             {isEditing && (
                 <div className="absolute bottom-1 right-2 text-[10px] text-muted-foreground">

@@ -180,14 +180,14 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                     position={Position.Left}
                     id="input"
                     onClick={(e) => data.onHandleClick?.(e, 'input', 'target')}
-                    className="!h-3 !w-3 !border-2 !border-background !bg-amber-500 z-50 transform -translate-x-1.5 cursor-pointer hover:!bg-amber-400"
+                    className="!border-2 !border-background !bg-amber-500 z-50 cursor-pointer hover:!bg-amber-400"
                 />
                 <Handle
                     type="source"
                     position={Position.Right}
                     id="output"
                     onClick={(e) => data.onHandleClick?.(e, 'output', 'source')}
-                    className="!h-3 !w-3 !border-2 !border-background !bg-amber-500 z-50 transform translate-x-1.5 cursor-pointer hover:!bg-amber-400"
+                    className="!border-2 !border-background !bg-amber-500 z-50 cursor-pointer hover:!bg-amber-400"
                 />
             </BaseNode>
         </>

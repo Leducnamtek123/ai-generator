@@ -23,12 +23,14 @@ export class FileType {
   })
   @Transform(
     ({ value }) => {
-      if ((fileConfig() as FileConfig).driver === FileDriver.LOCAL) {
-        return (appConfig() as AppConfig).backendDomain + value;
-      } else if (
-        [FileDriver.S3_PRESIGNED, FileDriver.S3].includes(
-          (fileConfig() as FileConfig).driver,
-        )
+      if (!value) return value;
+      if (value.startsWith('http')) return value;
+
+      const fileDriver = (fileConfig() as FileConfig).driver;
+
+      if (
+        [FileDriver.S3_PRESIGNED, FileDriver.S3].includes(fileDriver) &&
+        process.env.S3_USE_SIGNED_URL === 'true'
       ) {
         const s3 = new S3Client({
           region: (fileConfig() as FileConfig).awsS3Region ?? '',
@@ -36,6 +38,8 @@ export class FileType {
             accessKeyId: (fileConfig() as FileConfig).accessKeyId ?? '',
             secretAccessKey: (fileConfig() as FileConfig).secretAccessKey ?? '',
           },
+          endpoint: (fileConfig() as FileConfig).awsS3Endpoint,
+          forcePathStyle: true,
         });
 
         const command = new GetObjectCommand({
@@ -46,7 +50,14 @@ export class FileType {
         return getSignedUrl(s3, command, { expiresIn: 3600 });
       }
 
-      return value;
+      const appCfg = appConfig() as AppConfig;
+      const baseUrl = appCfg.backendDomain?.replace(/\/$/, '') ?? 'http://localhost';
+      
+      if (value.startsWith('/')) {
+        return baseUrl + value;
+      }
+
+      return `${baseUrl}/${appCfg.apiPrefix}/v1/files/${value}`;
     },
     {
       toPlainOnly: true,

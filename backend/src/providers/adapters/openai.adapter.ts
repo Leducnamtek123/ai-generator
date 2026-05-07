@@ -8,8 +8,6 @@ import {
   ProviderCapability,
 } from '../provider.interface';
 
-const OPENAI_API_BASE = 'https://api.openai.com/v1';
-
 import { AllConfigType } from '../../config/config.type';
 
 /**
@@ -30,6 +28,17 @@ export class OpenAIAdapter extends BaseProvider {
     private readonly configService: ConfigService<AllConfigType>,
   ) {
     super();
+  }
+
+  private getApiBaseUrl(): string {
+    const configuredBaseUrl = process.env.OPENAI_BASE_URL;
+    const baseUrl = (configuredBaseUrl || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+
+    if (baseUrl.endsWith('/v1')) {
+      return baseUrl;
+    }
+
+    return `${baseUrl}/v1`;
   }
 
   private getApiKey(): string {
@@ -56,7 +65,7 @@ export class OpenAIAdapter extends BaseProvider {
   ): Promise<GenerationResult> {
     try {
       const response = await this.httpService.axiosRef.post(
-        `${OPENAI_API_BASE}/images/generations`,
+        `${this.getApiBaseUrl()}/images/generations`,
         {
           model: options?.model || 'dall-e-3',
           prompt,
@@ -67,7 +76,12 @@ export class OpenAIAdapter extends BaseProvider {
         { headers: this.getHeaders(), timeout: 120000 },
       );
 
-      const imageUrl = response.data?.data?.[0]?.url;
+      const imageData = response.data?.data?.[0] || {};
+      const imageUrl = imageData.url || (
+        imageData.b64_json
+          ? `data:image/png;base64,${imageData.b64_json}`
+          : undefined
+      );
       this.logger.log(`DALL-E 3 image generated`);
 
       return {
@@ -85,7 +99,7 @@ export class OpenAIAdapter extends BaseProvider {
   async enhancePrompt(prompt: string, style?: string): Promise<string> {
     try {
       const response = await this.httpService.axiosRef.post(
-        `${OPENAI_API_BASE}/chat/completions`,
+        `${this.getApiBaseUrl()}/chat/completions`,
         {
           model: 'gpt-4o-mini',
           messages: [

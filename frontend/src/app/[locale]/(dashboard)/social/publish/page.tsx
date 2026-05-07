@@ -2,12 +2,14 @@
 
 import React from 'react';
 import { toast } from 'sonner';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 import { socialHubApi, type SocialChannel } from '@/services/socialHubApi';
 import { PublishPageView } from './view';
 import type { PublishAction, PublishState } from './publish.types';
 
 export default function PublishPage() {
     const scheduleAnchorRef = React.useRef(new Date());
+    const [isClearDraftDialogOpen, setIsClearDraftDialogOpen] = React.useState(false);
     const [state, dispatch] = React.useReducer(
         (
             current: PublishState,
@@ -127,28 +129,44 @@ export default function PublishPage() {
         );
     };
 
+    const handleClearDraftConfirm = () => {
+        dispatch({ type: 'setContent', content: '' });
+        setIsClearDraftDialogOpen(false);
+    };
+
     return (
-        <PublishPageView
-            state={state}
-            selectedAccounts={selectedAccounts}
-            onToggleAccount={toggleAccount}
-            onToggleScheduling={() => {
-                dispatch({
-                    type: 'toggleScheduling',
-                    anchor: scheduleAnchorRef.current,
-                });
-            }}
-            onPublish={handlePublish}
-            onOpenAiModal={() => dispatch({ type: 'openAiModal' })}
-            onCloseAiModal={() => dispatch({ type: 'closeAiModal' })}
-            onSetContent={(content) => dispatch({ type: 'setContent', content })}
-            onSetScheduledAt={(scheduledAt) => dispatch({ type: 'setScheduledAt', scheduledAt })}
-            onSetPreviewPlatform={(platform) => dispatch({ type: 'setPreviewPlatform', platform })}
-            onClearDraft={() => {
-                if (state.content && confirm('Are you sure you want to clear the draft?')) {
-                    dispatch({ type: 'setContent', content: '' });
-                }
-            }}
-        />
+        <>
+            <PublishPageView
+                state={state}
+                selectedAccounts={selectedAccounts}
+                onToggleAccount={toggleAccount}
+                onToggleScheduling={() => {
+                    dispatch({
+                        type: 'toggleScheduling',
+                        anchor: scheduleAnchorRef.current,
+                    });
+                }}
+                onPublish={handlePublish}
+                onOpenAiModal={() => dispatch({ type: 'openAiModal' })}
+                onCloseAiModal={() => dispatch({ type: 'closeAiModal' })}
+                onSetContent={(content) => dispatch({ type: 'setContent', content })}
+                onSetScheduledAt={(scheduledAt) => dispatch({ type: 'setScheduledAt', scheduledAt })}
+                onSetPreviewPlatform={(platform) => dispatch({ type: 'setPreviewPlatform', platform })}
+                onClearDraft={() => {
+                    if (state.content) {
+                        setIsClearDraftDialogOpen(true);
+                    }
+                }}
+            />
+
+            <ConfirmDialog
+                open={isClearDraftDialogOpen}
+                onOpenChange={setIsClearDraftDialogOpen}
+                title="Clear draft?"
+                description="This will remove the current draft content."
+                confirmText="Clear Draft"
+                onConfirm={handleClearDraftConfirm}
+            />
+        </>
     );
 }

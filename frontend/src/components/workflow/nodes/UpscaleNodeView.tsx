@@ -20,6 +20,7 @@ type UpscaleNodeViewProps = {
     data: {
         label?: string;
         inputUrl?: string;
+        connectedImageSource?: string;
         previewUrl?: string;
         status?: NodeStatus;
         onDelete?: (id: string) => void;
@@ -194,10 +195,19 @@ export function UpscaleNodeView({
                         ) : (
                             <div className="flex flex-col items-center justify-center gap-4 py-8">
                                 <FreepikPlaceholder />
-                                {!data.inputUrl && (
+                                {!data.inputUrl ? (
                                     <div className="text-center space-y-1">
                                         <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Image Upscaler</p>
                                         <p className="text-[9px] text-white/10 italic">Waiting for input...</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center space-y-1">
+                                        <p className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest">Input connected</p>
+                                        {data.connectedImageSource && (
+                                            <p className="text-[9px] text-white/40 italic">
+                                                From {data.connectedImageSource}
+                                            </p>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -341,14 +351,14 @@ export function UpscaleNodeView({
                     position={Position.Left}
                     id="input"
                     onClick={(e) => data.onHandleClick?.(e, 'input', 'target')}
-                    className="!h-3.5 !w-3.5 !border-2 !border-background !bg-[#F4B43B] z-50 transform -translate-x-1.5 cursor-pointer hover:!bg-yellow-400"
+                    className="!border-2 !border-background !bg-[#F4B43B] z-50 cursor-pointer hover:!bg-yellow-400"
                 />
                 <Handle
                     type="source"
                     position={Position.Right}
                     id="output"
                     onClick={(e) => data.onHandleClick?.(e, 'output', 'source')}
-                    className="!h-3.5 !w-3.5 !border-2 !border-background !bg-[#F4B43B] z-50 transform translate-x-1.5 cursor-pointer hover:!bg-yellow-400"
+                    className="!border-2 !border-background !bg-[#F4B43B] z-50 cursor-pointer hover:!bg-yellow-400"
                 />
             </BaseNode>
 

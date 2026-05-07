@@ -19,7 +19,11 @@ export class ImageGenerationService {
     return provider?.trim() || fallback || undefined;
   }
 
-  async generateImage(dto: GenerateImageDto, userId: string, projectId?: string): Promise<GenerationEntity> {
+  async generateImage(
+    dto: GenerateImageDto,
+    userId: string,
+    projectId?: string,
+  ): Promise<GenerationEntity> {
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getImageProvider().name,
@@ -41,6 +45,7 @@ export class ImageGenerationService {
           quality: dto.quality,
           negativePrompt: dto.negativePrompt,
           seed: dto.seed,
+          referenceImageUrl: dto.referenceImageUrl,
           projectId,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
@@ -48,7 +53,11 @@ export class ImageGenerationService {
         },
       });
     } catch (error) {
-      await this.baseService.releaseCredits(userId, reservation.transactionId, 'image');
+      await this.baseService.releaseCredits(
+        userId,
+        reservation.transactionId,
+        'image',
+      );
       throw error;
     }
 
@@ -60,7 +69,9 @@ export class ImageGenerationService {
       reservation,
       projectId,
     ).catch((error) =>
-      this.logger.error(`Image generation ${generation.id} failed: ${error.message}`),
+      this.logger.error(
+        `Image generation ${generation.id} failed: ${error.message}`,
+      ),
     );
 
     return generation;
@@ -90,7 +101,8 @@ export class ImageGenerationService {
           });
 
           generation.status = providerResult.status || 'completed';
-          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          if (providerResult.resultUrl)
+            generation.resultUrl = providerResult.resultUrl;
           generation.metadata = {
             ...generation.metadata,
             ...(providerResult.metadata || {}),
@@ -138,12 +150,19 @@ export class ImageGenerationService {
     }
   }
 
-  async upscaleImage(dto: UpscaleImageDto, userId: string, projectId?: string): Promise<GenerationEntity> {
+  async upscaleImage(
+    dto: UpscaleImageDto,
+    userId: string,
+    projectId?: string,
+  ): Promise<GenerationEntity> {
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getUpscaleProvider().name,
     );
-    const reservation = await this.baseService.reserveCredits(userId, 'upscale');
+    const reservation = await this.baseService.reserveCredits(
+      userId,
+      'upscale',
+    );
 
     let generation: GenerationEntity;
     try {
@@ -171,7 +190,11 @@ export class ImageGenerationService {
         },
       });
     } catch (error) {
-      await this.baseService.releaseCredits(userId, reservation.transactionId, 'upscale');
+      await this.baseService.releaseCredits(
+        userId,
+        reservation.transactionId,
+        'upscale',
+      );
       throw error;
     }
 
@@ -218,7 +241,8 @@ export class ImageGenerationService {
           });
 
           generation.status = providerResult.status || 'completed';
-          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          if (providerResult.resultUrl)
+            generation.resultUrl = providerResult.resultUrl;
           generation.metadata = {
             ...generation.metadata,
             ...(providerResult.metadata || {}),
@@ -264,7 +288,11 @@ export class ImageGenerationService {
     }
   }
 
-  async processImage(dto: Record<string, any>, userId: string, type: string): Promise<GenerationEntity> {
+  async processImage(
+    dto: Record<string, any>,
+    userId: string,
+    type: string,
+  ): Promise<GenerationEntity> {
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getImageProcessingProvider(type).name,
@@ -287,7 +315,11 @@ export class ImageGenerationService {
         },
       });
     } catch (error) {
-      await this.baseService.releaseCredits(userId, reservation.transactionId, type);
+      await this.baseService.releaseCredits(
+        userId,
+        reservation.transactionId,
+        type,
+      );
       throw error;
     }
 
@@ -299,7 +331,9 @@ export class ImageGenerationService {
       userId,
       reservation,
     ).catch((error) =>
-      this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`),
+      this.logger.error(
+        `${type} processing ${generation.id} failed: ${error.message}`,
+      ),
     );
 
     return generation;
@@ -330,7 +364,8 @@ export class ImageGenerationService {
           });
 
           generation.status = providerResult.status || 'completed';
-          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          if (providerResult.resultUrl)
+            generation.resultUrl = providerResult.resultUrl;
           generation.metadata = {
             ...generation.metadata,
             ...(providerResult.metadata || {}),

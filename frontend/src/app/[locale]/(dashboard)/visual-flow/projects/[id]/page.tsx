@@ -20,6 +20,7 @@ import {
   PanelRightOpen,
   SlidersHorizontal,
   Activity,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -251,6 +252,7 @@ export default function VisualProjectDetailPage() {
     generateRefs,
     generateImages,
     generateVideos,
+    suggestScenes,
     concatScenes,
     startPolling,
     stopPolling,
@@ -395,6 +397,23 @@ export default function VisualProjectDetailPage() {
             <TooltipContent>{rightPanelOpen ? 'Close panel' : 'Open panel'}</TooltipContent>
           </Tooltip>
 
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                onClick={() => activeVideo && suggestScenes(projectId, activeVideo.id)}
+                disabled={!activeVideo || isLoading}
+                size="sm"
+                variant="outline"
+                className="border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-violet-300 text-xs h-7 rounded-lg mr-1"
+              >
+                {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                AI Suggest
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Suggest 5 scenes from story</TooltipContent>
+          </Tooltip>
+
           <Button
             onClick={() => setShowAddScene(true)}
             disabled={!activeVideo}
@@ -404,6 +423,7 @@ export default function VisualProjectDetailPage() {
             <Plus className="w-3.5 h-3.5 mr-1" />
             Scene
           </Button>
+
         </div>
       </div>
 

@@ -1,0 +1,40 @@
+{
+  "Landing": {
+    "navLinks": [
+      { "label": "Features", "href": "/features" },
+      { "label": "Workflow", "href": "/workflow" },
+      { "label": "Pricing", "href": "/pricing" },
+      { "label": "FAQ", "href": "/faq" }
+    ],
+    "auth": {
+      "login": "Log in",
+      "join": "Join free",
+      "create": "Create account",
+      "explore": "Explore Features"
+    },
+    "hero": {
+      "title": ["Ideas.", "Generated.", "Mastered."],
+      "description": "PaintAI keeps the whole creative loop in one place: generate, refine, and export campaign-ready output without bouncing between tools or losing the original direction.",
+      "trust": ["No credit card required", "Commercial-ready export", "Fast brand-safe iteration"]
+    },
+    "workspace": {
+      "creative": "Creative workspace",
+      "live": "Live preview",
+      "prompt": "Prompt",
+      "promptBody": "Generate a cinematic product launch scene, dark studio lighting, electric blue edge glow, subtle amber accents, and crisp typography.",
+      "selected": "Selected controls",
+      "generated": "Generated asset",
+      "assetName": "Mastered launch poster v04",
+      "download": "Download",
+      "queue": "Queue status",
+      "queueValue": "2 renders ready",
+      "nextAction": "Next action",
+      "nextValue": "Upscale and export to social formats",
+      "stats": [
+        { "value": "2M+", "label": "creators" },
+        { "value": "18M+", "label": "exports" },
+        { "value": "98%", "label": "approval rate" }
+      ]
+    }
+  }
+}

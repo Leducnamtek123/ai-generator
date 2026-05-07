@@ -13,6 +13,7 @@ export class OrganizationMapper {
     domain.shouldAttachUsersByDomain = raw.shouldAttachUsersByDomain;
     domain.avatarUrl = raw.avatarUrl;
     domain.ownerId = raw.ownerId;
+    domain.type = raw.type;
     domain.createdAt = raw.createdAt;
     domain.updatedAt = raw.updatedAt;
     return domain;
@@ -29,6 +30,7 @@ export class OrganizationMapper {
     entity.shouldAttachUsersByDomain = domain.shouldAttachUsersByDomain || false;
     entity.avatarUrl = domain.avatarUrl || '';
     entity.ownerId = domain.ownerId;
+    entity.type = domain.type || 'TEAM';
     entity.createdAt = domain.createdAt;
     entity.updatedAt = domain.updatedAt;
     return entity;

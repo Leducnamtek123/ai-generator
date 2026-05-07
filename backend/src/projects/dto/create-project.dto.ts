@@ -15,4 +15,8 @@ export class CreateProjectDto {
 
   @IsOptional()
   content?: any;
+
+  @IsOptional()
+  @IsString()
+  organizationId?: string;
 }

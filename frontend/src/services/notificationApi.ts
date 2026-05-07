@@ -1,12 +1,27 @@
 import { api } from '@/lib/api';
 
+export type NotificationCategory =
+  | 'payment'
+  | 'workflow'
+  | 'social'
+  | 'moderation'
+  | 'system';
+
 export interface Notification {
   id: string;
   title: string;
   message: string;
   type: 'success' | 'info' | 'warning' | 'error';
+  category: NotificationCategory;
   isRead: boolean;
   createdAt: string;
+}
+
+export interface NotificationPreference {
+  category: NotificationCategory;
+  emailEnabled: boolean;
+  inAppEnabled: boolean;
+  adminAlertsEnabled: boolean;
 }
 
 export const notificationApi = {
@@ -19,6 +34,18 @@ export const notificationApi = {
 
   getUnreadCount: async () => {
     const response = await api.get<{ count: number }>('/notifications/unread-count');
+    return response.data;
+  },
+
+  getPreferences: async () => {
+    const response = await api.get<NotificationPreference[]>('/notifications/preferences');
+    return response.data;
+  },
+
+  updatePreferences: async (preferences: NotificationPreference[]) => {
+    const response = await api.patch<NotificationPreference[]>('/notifications/preferences', {
+      preferences,
+    });
     return response.data;
   },
 

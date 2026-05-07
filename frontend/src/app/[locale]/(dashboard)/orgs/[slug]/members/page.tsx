@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { memberApi, type UpdateMemberData } from '@/services/memberApi';
 import type { Member } from '@/services/orgApi';
@@ -20,6 +20,7 @@ import {
 import { Button } from '@/ui/button';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
+import { ConfirmDialog } from '@/components/common/confirm-dialog';
 
 const roleConfig = {
     ADMIN: { label: 'Admin', icon: ShieldCheck, color: 'text-violet-500 bg-violet-500/10' },
@@ -72,6 +73,7 @@ export default function MembersPage() {
     const slug = params?.slug as string;
     const { hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [memberToRemove, setMemberToRemove] = useState<Member | null>(null);
 
     const canManage = hasPermission('update', 'User');
 
@@ -102,12 +104,12 @@ export default function MembersPage() {
         }
     };
 
-    const removeMember = async (memberId: string) => {
-        if (!confirm('Are you sure you want to remove this member?')) return;
-
+    const removeMember = async () => {
+        if (!memberToRemove) return;
         try {
-            await memberApi.remove(slug, memberId);
-            dispatch({ type: 'setMembers', members: state.members.filter((member) => member.id !== memberId) });
+            await memberApi.remove(slug, memberToRemove.id);
+            dispatch({ type: 'setMembers', members: state.members.filter((member) => member.id !== memberToRemove.id) });
+            setMemberToRemove(null);
         } catch (err: unknown) {
             const apiErr = err as { response?: { data?: { message?: string } } };
             dispatch({ type: 'setError', error: apiErr?.response?.data?.message || 'Failed to remove member' });
@@ -229,7 +231,7 @@ export default function MembersPage() {
                                                     </button>
                                                     <button
                                                         onClick={() => {
-                                                            void removeMember(member.id);
+                                                            setMemberToRemove(member);
                                                             dispatch({ type: 'setMenuId', menuId: null });
                                                         }}
                                                         className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
@@ -254,6 +256,21 @@ export default function MembersPage() {
                     )}
                 </div>
             </div>
+
+            <ConfirmDialog
+                open={!!memberToRemove}
+                onOpenChange={(open) => {
+                    if (!open) setMemberToRemove(null);
+                }}
+                title="Remove member?"
+                description={
+                    memberToRemove
+                        ? `Remove ${memberToRemove.user?.name || memberToRemove.user?.email || 'this member'} from the organization?`
+                        : 'Remove this member from the organization?'
+                }
+                confirmText="Remove"
+                onConfirm={removeMember}
+            />
         </div>
     );
 }

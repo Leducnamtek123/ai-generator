@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Search, Image as ImageIcon, Video, Sparkles, LayoutGrid, Wand2, Music, Box } from 'lucide-react';
+import { LayoutGrid, Sparkles } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { ToolCard } from '@/components/dashboard/ToolCard';
 import { TemplateGallery } from '@/components/gallery/TemplateGallery';
@@ -11,13 +11,15 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { Skeleton } from '@/ui/skeleton';
 import { useDashboardStats } from '@/hooks/queries/useDashboardStats';
 import { useOrganizations } from '@/hooks/queries/useOrganizations';
+import { WorkflowCard as DashboardWorkflowCard } from '@/components/workflow/WorkflowCard';
+import { CREATOR_TOOL_HIGHLIGHTS, DASHBOARD_TAGS } from '@/components/layouts/navigation-data';
 
 export default function DashboardPage() {
     const router = useRouter();
     
     // Modern Server State Management
     const { data: stats, isPending: isStatsLoading } = useDashboardStats();
-    const { data: organizations, isPending: isOrgsLoading } = useOrganizations();
+    const { isPending: isOrgsLoading } = useOrganizations();
 
     const isLoading = isStatsLoading || isOrgsLoading;
 
@@ -31,9 +33,9 @@ export default function DashboardPage() {
                     </h1>
                     <div className="flex items-center gap-4">
                         {stats && (
-                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-pricing/10 border border-pricing/20">
-                                <Sparkles className="w-3.5 h-3.5 text-pricing" />
-                                <span className="text-xs font-semibold text-pricing">{stats.creditBalance} credits</span>
+                            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-credits/10 border border-credits/20">
+                                <Sparkles className="w-3.5 h-3.5 text-credits" />
+                                <span className="text-xs font-semibold text-credits">{stats.creditBalance} credits</span>
                             </div>
                         )}
                         <Button variant="ghost" size="sm">All tools</Button>
@@ -42,14 +44,16 @@ export default function DashboardPage() {
 
                 {/* Main Tools Grid */}
                 <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-3 mb-12 animate-in fade-in duration-700">
-                    <ToolCard icon={Search} label="Find assets" href="/stock" />
-                    <ToolCard icon={LayoutGrid} label="Spaces" href="/creator/workflow-editor" isNew color="text-chart-1" />
-                    <ToolCard icon={ImageIcon} label="Image Gen" href="/creator/image-generator" color="text-chart-2" />
-                    <ToolCard icon={Video} label="Video Gen" href="/creator/video-generator" color="text-chart-3" />
-                    <ToolCard icon={Wand2} label="Editor" href="/creator/image-editor" />
-                    <ToolCard icon={Sparkles} label="Upscaler" href="/creator/image-upscaler" color="text-chart-4" />
-                    <ToolCard icon={Box} label="3D Models" href="/stock" />
-                    <ToolCard icon={Music} label="Audio" href="/creator/music-generator" />
+                    {CREATOR_TOOL_HIGHLIGHTS.map((tool) => (
+                        <ToolCard
+                            key={tool.label}
+                            icon={tool.icon}
+                            label={tool.label}
+                            href={tool.href}
+                            isNew={tool.isNew}
+                            color={tool.color}
+                        />
+                    ))}
                 </div>
 
                 {/* Recent Creations */}
@@ -73,24 +77,13 @@ export default function DashboardPage() {
                             </div>
                         ) : (
                             stats?.recentWorkflows.map((workflow) => (
-                                <Link 
-                                    key={workflow.id} 
+                                <DashboardWorkflowCard
+                                    key={workflow.id}
+                                    workflow={workflow as any}
                                     href={`/creator/workflow-editor?workflowId=${workflow.id}`}
-                                    className="min-w-[200px] h-[140px] bg-card rounded-xl border border-border flex flex-col justify-end p-4 relative group cursor-pointer hover:border-border/80 transition-colors overflow-hidden"
-                                >
-                                    {workflow.previewUrl ? (
-                                        <Image src={workflow.previewUrl} alt={workflow.name} fill className="object-cover opacity-50 group-hover:opacity-70 transition-opacity" sizes="200px" />
-                                    ) : (
-                                        <div className="absolute inset-0 flex items-center justify-center opacity-30 group-hover:opacity-50 transition-opacity">
-                                            <LayoutGrid className="w-8 h-8" />
-                                        </div>
-                                    )}
-                                    <div className="absolute inset-0 bg-gradient-to-t from-gray-950/80 via-gray-950/20 to-transparent" />
-                                    <div className="relative z-10">
-                                        <div className="text-xs font-medium text-white">{workflow.name}</div>
-                                        <div className="text-[10px] text-white/60">{new Date(workflow.createdAt).toLocaleDateString()}</div>
-                                    </div>
-                                </Link>
+                                    className="w-[200px] min-w-[200px] shrink-0"
+                                    variant="compact"
+                                />
                             ))
                         )}
                     </div>
@@ -102,7 +95,7 @@ export default function DashboardPage() {
                         <div className="flex items-center gap-4">
                             <h2 className="text-lg font-semibold">Get Inspired</h2>
                             <div className="flex gap-2">
-                                {['Templates', 'Community', 'Tutorials'].map(tag => (
+                                {DASHBOARD_TAGS.map(tag => (
                                     <button key={tag} className="px-3 py-1.5 rounded-full bg-muted border border-border text-xs text-muted-foreground hover:bg-accent hover:text-foreground transition-colors">
                                         {tag}
                                     </button>

@@ -9,6 +9,7 @@ import {
 } from 'typeorm';
 import { UserEntity } from '../../../../../users/infrastructure/persistence/relational/entities/user.entity';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
+import { NotificationCategory } from '../../../../notifications.types';
 
 export enum NotificationType {
   SUCCESS = 'success',
@@ -38,6 +39,13 @@ export class NotificationEntity extends EntityRelationalHelper {
 
   @Column({ type: 'text' })
   message: string;
+
+  @Column({
+    type: 'enum',
+    enum: NotificationCategory,
+    default: NotificationCategory.SYSTEM,
+  })
+  category: NotificationCategory;
 
   @Column({
     type: 'enum',

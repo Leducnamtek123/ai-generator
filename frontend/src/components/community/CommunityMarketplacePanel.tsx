@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import axios from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   ArrowRight,
@@ -48,7 +49,7 @@ const TEMPLATE_TYPES = [
   { value: TemplateTypeEnum.DESIGN_EDITOR, label: 'Design' },
 ] as const;
 
-const TOOL_ROUTES: Record<string, string> = {
+const TOOL_ROUTES: Partial<Record<TemplateTypeEnum, string>> = {
   [TemplateTypeEnum.IMAGE_GENERATOR]: '/creator/image-generator',
   [TemplateTypeEnum.VIDEO_GENERATOR]: '/creator/video-generator',
   [TemplateTypeEnum.WORKFLOW_EDITOR]: '/creator/workflow-editor',
@@ -57,10 +58,9 @@ const TOOL_ROUTES: Record<string, string> = {
   [TemplateTypeEnum.VIDEO_UPSCALER]: '/creator/video-generator',
   [TemplateTypeEnum.MUSIC_GENERATOR]: '/creator/music-generator',
   [TemplateTypeEnum.VOICE_GENERATOR]: '/creator/voice-generator',
-  default: '/creator/image-generator',
 };
 
-const getToolRoute = (type: string) => TOOL_ROUTES[type] || TOOL_ROUTES.default;
+const getToolRoute = (type: TemplateTypeEnum) => TOOL_ROUTES[type] ?? '/creator/image-generator';
 
 const formatType = (type: string) =>
   type.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
@@ -72,19 +72,59 @@ const parseTags = (value: string) =>
     .filter(Boolean)
     .slice(0, 12);
 
+const getApiErrorMessage = (error: unknown, fallback: string) => {
+  if (axios.isAxiosError(error)) {
+    const responseData = error.response?.data as
+      | {
+          message?: string | string[];
+          error?: string;
+          errors?: Record<string, unknown>;
+        }
+      | undefined;
+
+    if (typeof responseData?.message === 'string') {
+      return responseData.message;
+    }
+
+    if (Array.isArray(responseData?.message) && responseData.message.length > 0) {
+      return responseData.message.join(', ');
+    }
+
+    if (typeof responseData?.error === 'string') {
+      return responseData.error;
+    }
+
+    if (responseData?.errors && typeof responseData.errors === 'object') {
+      const flattened = Object.values(responseData.errors)
+        .flatMap((value) => (Array.isArray(value) ? value : [value]))
+        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+
+      if (flattened.length > 0) {
+        return flattened.join(', ');
+      }
+    }
+
+    return error.message || fallback;
+  }
+
+  if (error instanceof Error) {
+    return error.message || fallback;
+  }
+
+  return fallback;
+};
+
 export function CommunityMarketplacePanel() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { balance, fetchBalance } = useCreditStore();
   const [page, setPage] = React.useState(1);
   const [search, setSearch] = React.useState('');
-  const [typeFilter, setTypeFilter] = React.useState('all');
+  const [typeFilter, setTypeFilter] = React.useState<'all' | TemplateTypeEnum>('all');
   const [title, setTitle] = React.useState('');
   const [description, setDescription] = React.useState('');
   const [thumbnail, setThumbnail] = React.useState('');
-  const [templateType, setTemplateType] = React.useState<TemplateTypeEnum | string>(
-    TemplateTypeEnum.IMAGE_GENERATOR,
-  );
+  const [templateType, setTemplateType] = React.useState<TemplateTypeEnum>(TemplateTypeEnum.IMAGE_GENERATOR);
   const [prompt, setPrompt] = React.useState('');
   const [priceCredits, setPriceCredits] = React.useState(25);
   const [platformFeeBps, setPlatformFeeBps] = React.useState(1500);
@@ -130,8 +170,8 @@ export function CommunityMarketplacePanel() {
       await queryClient.invalidateQueries({ queryKey: ['community-marketplace'] });
       await queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] });
     },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Failed to create listing');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Failed to create listing'));
     },
   });
 
@@ -146,8 +186,8 @@ export function CommunityMarketplacePanel() {
       await queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] });
       router.push(`${getToolRoute(result.purchasedTemplate.type)}?templateId=${result.purchasedTemplate.id}`);
     },
-    onError: (error: Error) => {
-      toast.error(error.message || 'Unable to purchase template');
+    onError: (error) => {
+      toast.error(getApiErrorMessage(error, 'Unable to purchase template'));
     },
   });
 
@@ -187,6 +227,7 @@ export function CommunityMarketplacePanel() {
               src={listing.thumbnail}
               alt={listing.title}
               fill
+              unoptimized
               className="object-cover transition-transform duration-700 hover:scale-105"
               sizes="(max-width: 1024px) 100vw, 33vw"
             />
@@ -446,7 +487,7 @@ export function CommunityMarketplacePanel() {
                   </label>
                   <select
                     value={templateType}
-                    onChange={(event) => setTemplateType(event.target.value)}
+                    onChange={(event) => setTemplateType(event.target.value as TemplateTypeEnum)}
                     className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
                   >
                     {TEMPLATE_TYPES.filter((option) => option.value !== 'all').map((option) => (

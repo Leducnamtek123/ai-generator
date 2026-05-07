@@ -9,7 +9,6 @@ import {
     Play,
     Download,
     Maximize2,
-    Type,
     Settings,
     Image as ImageIcon,
     Clock,
@@ -19,6 +18,7 @@ import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { useUpdateNodeInternals } from '@xyflow/react';
 import { ExecutionMode, NodeStatus, VideoModel, VideoDuration, AspectRatio } from '../types';
+import { useWorkflowUIStore } from '@/stores/workflow-ui-store';
 
 interface VideoNodeProps {
     id: string;
@@ -34,6 +34,9 @@ interface VideoNodeProps {
             prompt?: boolean;
             image?: boolean;
         };
+        connectedPrompt?: string;
+        connectedPromptSource?: string;
+        connectedImageSource?: string;
         onDelete?: (id: string) => void;
         onRun?: (id: string, mode?: ExecutionMode) => void;
         onSettingsChange?: (id: string, settings: any) => void;
@@ -59,6 +62,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
     const [selectedModel, setSelectedModel] = useState(data.model || VideoModel.RUNWAY);
     const [showFullscreen, setShowFullscreen] = useState(false);
     const [localPrompt, setLocalPrompt] = useState(data.prompt || '');
+    const autoplayVideos = useWorkflowUIStore((state) => state.autoplayVideos);
 
     React.useEffect(() => {
         if (data.prompt !== undefined && data.prompt !== localPrompt) {
@@ -92,29 +96,27 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
             )}
 
             {/* Left Handles (Stacked) */}
-            <div className={cn("absolute -left-3 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-50", data.isPreview && "scale-50 opacity-0")}>
+            <div className={cn("absolute left-0 top-1/2 -translate-y-1/2 flex flex-col gap-4 z-50", data.isPreview && "scale-50 opacity-0")}>
                 <Handle
                     type="target"
                     position={Position.Left}
                     id="prompt-input"
+                    onClick={(e) => data.onHandleClick?.(e, 'prompt-input', 'target')}
                     className={cn(
-                        "!w-8 !h-8 !border-2 !border-background !bg-card !rounded-full !relative !left-0 !top-0 !flex !items-center !justify-center !transition-colors !opacity-100",
+                        "!relative !left-0 !top-0 !flex !items-center !justify-center !rounded-full !border-2 !border-background !bg-card !transition-colors !opacity-100",
                         data.inputs?.prompt ? "!bg-green-500 !border-green-500/20" : "hover:!bg-green-500/20"
                     )}
-                >
-                    <Type className={cn("w-4 h-4", data.inputs?.prompt ? "text-white" : "text-muted-foreground")} />
-                </Handle>
+                />
                 <Handle
                     type="target"
                     position={Position.Left}
                     id="image-input"
+                    onClick={(e) => data.onHandleClick?.(e, 'image-input', 'target')}
                     className={cn(
-                        "!w-8 !h-8 !border-2 !border-background !bg-card !rounded-full !relative !left-0 !top-0 !flex !items-center !justify-center !transition-colors !opacity-100",
+                        "!relative !left-0 !top-0 !flex !items-center !justify-center !rounded-full !border-2 !border-background !bg-card !transition-colors !opacity-100",
                         data.inputs?.image ? "!bg-blue-500 !border-blue-500/20" : "hover:!bg-blue-500/20"
                     )}
-                >
-                    <ImageIcon className={cn("w-4 h-4", data.inputs?.image ? "text-white" : "text-muted-foreground")} />
-                </Handle>
+                />
             </div>
 
             <BaseNode
@@ -150,7 +152,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                     className="w-full h-auto block object-cover"
                                     muted
                                     loop
-                                    autoPlay
+                                    autoPlay={autoplayVideos}
                                     playsInline
                                 />
 
@@ -174,8 +176,18 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                             <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-gray-950/80 to-transparent pointer-events-none">
                                 <div className="pointer-events-auto">
                                     {data.inputs?.prompt ? (
-                                        <div className="px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
-                                            <p className="text-sm text-green-400 font-medium">Prompt (connected)</p>
+                                        <div className="space-y-1 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
+                                            <p className="text-sm text-green-400 font-medium">Prompt connected</p>
+                                            {data.connectedPrompt && (
+                                                <p className="text-xs text-green-200/80 leading-snug break-words">
+                                                    {data.connectedPrompt}
+                                                </p>
+                                            )}
+                                            {data.connectedPromptSource && (
+                                                <p className="text-[10px] text-green-300/50">
+                                                    From {data.connectedPromptSource}
+                                                </p>
+                                            )}
                                         </div>
                                     ) : (
                                         <textarea
@@ -184,6 +196,16 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                             value={localPrompt}
                                             onChange={handlePromptChange}
                                         />
+                                    )}
+                                    {data.inputs?.image && (
+                                        <div className="mt-2 px-3 py-2 bg-blue-500/10 border border-blue-500/20 rounded-lg">
+                                            <p className="text-sm text-blue-400 font-medium">Image reference connected</p>
+                                            {data.connectedImageSource && (
+                                                <p className="text-[10px] text-blue-300/50">
+                                                    From {data.connectedImageSource}
+                                                </p>
+                                            )}
+                                        </div>
                                     )}
                                 </div>
                             </div>
@@ -217,7 +239,9 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                 <Handle
                     type="source"
                     position={Position.Right}
-                    className={cn("!w-3 !h-3 !border-2 !border-background !bg-foreground/50 z-50 transform translate-x-1.5", data.isPreview && "scale-50 opacity-0")}
+                    id="output"
+                    onClick={(e) => data.onHandleClick?.(e, 'output', 'source')}
+                    className={cn("!border-2 !border-background !bg-foreground/50 z-50", data.isPreview && "scale-50 opacity-0")}
                 />
             </BaseNode>
 
@@ -227,7 +251,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                         src={data.previewUrl}
                         className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"
                         controls
-                        autoPlay
+                        autoPlay={autoplayVideos}
                     />
                 </button>
             )}

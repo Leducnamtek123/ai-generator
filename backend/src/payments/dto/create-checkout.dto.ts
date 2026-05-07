@@ -1,14 +1,56 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString } from 'class-validator';
 import { PaymentProvider } from '../config/payments-config.type';
+import { BillingPlanType } from '../../billing/config/billing-catalog';
 
 export class CreateCheckoutDto {
-  @ApiProperty({
-    enum: ['starter', 'pro', 'enterprise'],
-    description: 'Credit package identifier',
+  @ApiPropertyOptional({
+    enum: ['subscription', 'topup'],
+    default: 'topup',
+    description: 'Purchase type',
   })
+  @IsOptional()
+  @IsIn(['subscription', 'topup'])
+  purchaseType?: 'subscription' | 'topup';
+
+  @ApiPropertyOptional({
+    enum: ['trial', 'starter', 'pro', 'team', 'enterprise'],
+    description: 'Subscription plan identifier',
+  })
+  @IsOptional()
+  @IsIn(['trial', 'starter', 'pro', 'team', 'enterprise'])
+  planId?: BillingPlanType;
+
+  @ApiPropertyOptional({
+    enum: ['starter', 'pro', 'enterprise'],
+    description: 'Top-up package identifier',
+  })
+  @IsOptional()
   @IsIn(['starter', 'pro', 'enterprise'])
-  packageId: string;
+  topUpPackageId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Legacy top-up package identifier',
+  })
+  @IsOptional()
+  @IsString()
+  packageId?: string;
+
+  @ApiPropertyOptional({
+    enum: ['user', 'organization'],
+    default: 'user',
+    description: 'Billing scope type',
+  })
+  @IsOptional()
+  @IsIn(['user', 'organization'])
+  scopeType?: 'user' | 'organization';
+
+  @ApiPropertyOptional({
+    description: 'Billing scope identifier. Defaults to the current user.',
+  })
+  @IsOptional()
+  @IsString()
+  scopeId?: string;
 
   @ApiPropertyOptional({
     enum: ['vnpay', 'momo', 'zalopay', '9pay'],

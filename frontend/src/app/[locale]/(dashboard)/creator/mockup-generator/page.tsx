@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { Box, Upload, Download, Loader2, Folder, Smartphone, Monitor, Tablet, Watch } from 'lucide-react';
 import { Button } from '@/ui/button';
@@ -26,12 +26,6 @@ const scenes = [
     { id: 'gradient', label: 'Gradient', description: 'Colorful gradient bg' },
     { id: 'floating', label: 'Floating', description: '3D floating in space' },
     { id: 'hand', label: 'Hand-held', description: 'Person holding device' },
-];
-
-const mockResults = [
-    'https://images.unsplash.com/photo-1512941937669-90a1b58e7e9c?q=80&w=500&fit=crop',
-    'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?q=80&w=500&fit=crop',
-    'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=500&fit=crop',
 ];
 
 type MockupState = {
@@ -95,7 +89,7 @@ function reducer(state: MockupState, action: MockupAction): MockupState {
 export default function MockupGeneratorPage() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { mockupGenerator } = useGenerationStore();
+    const { mockupGenerator, currentGeneration } = useGenerationStore();
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -108,17 +102,29 @@ export default function MockupGeneratorPage() {
     const handleGenerate = async () => {
         if (!state.uploadedImage) return;
         dispatch({ type: 'setGenerating', isGenerating: true });
+        dispatch({ type: 'clearResults' });
         await mockupGenerator({
             designUrl: state.uploadedImage,
             template: state.selectedCategory,
             prompt: `${state.selectedDevice} mockup in ${state.selectedScene} scene`,
             scene: state.selectedScene,
         });
-        dispatch({ type: 'setResults', results: mockResults });
-        dispatch({ type: 'setGenerating', isGenerating: false });
     };
 
     const currentCategory = mockupCategories.find((category) => category.id === state.selectedCategory);
+
+    useEffect(() => {
+        if (!currentGeneration || currentGeneration.type !== 'mockup') {
+            return;
+        }
+
+        if (currentGeneration.status === 'completed' && currentGeneration.resultUrl) {
+            dispatch({ type: 'setResults', results: [currentGeneration.resultUrl] });
+            dispatch({ type: 'setGenerating', isGenerating: false });
+        } else if (currentGeneration.status === 'failed') {
+            dispatch({ type: 'setGenerating', isGenerating: false });
+        }
+    }, [currentGeneration]);
 
     return (
         <div className="h-full bg-background text-foreground flex overflow-hidden">
@@ -229,6 +235,11 @@ export default function MockupGeneratorPage() {
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">2 Credits</span>
                     </div>
+                    {currentGeneration?.status === 'failed' && (
+                        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+                            {currentGeneration.error || 'Mockup generation failed. Please try again.'}
+                        </div>
+                    )}
                     <Button onClick={handleGenerate} disabled={state.isGenerating || !state.uploadedImage} className="w-full h-12 font-bold rounded-xl gap-2">
                         {state.isGenerating ? (
                             <>

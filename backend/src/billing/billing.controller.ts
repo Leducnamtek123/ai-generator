@@ -18,6 +18,6 @@ export class BillingController {
 
   @Get()
   getBilling(@Request() req, @Param('orgSlug') orgSlug: string) {
-    return this.billingService.getBilling(orgSlug, req.user.id);
+    return this.billingService.getBilling(orgSlug, req.user.id, req.user.role);
   }
 }

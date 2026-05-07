@@ -50,6 +50,8 @@ export interface SocialInteraction {
   time: string;
   status?: string;
   isNew?: boolean;
+  accountId?: number;
+  canReply?: boolean;
 }
 
 export interface SocialAnalytics {
@@ -57,11 +59,22 @@ export interface SocialAnalytics {
     likes: number;
     comments: number;
     shares: number;
+    views?: number;
+    totalPosts?: number;
   };
   chartData: Array<{
     name: string;
     engagement: number;
   }>;
+  platformBreakdown?: Record<
+    string,
+    {
+      posts: number;
+      likes: number;
+      comments: number;
+      shares: number;
+    }
+  >;
 }
 
 export const socialHubApi = {
@@ -87,5 +100,18 @@ export const socialHubApi = {
   deletePost: async (id: number) => apiDel(`/social-hub/posts/${id}`),
 
   getInbox: async () => apiGet<SocialInteraction[]>('/social-hub/inbox'),
-  getAnalytics: async () => apiGet<SocialAnalytics>('/social-hub/analytics'),
+  replyToInboxInteraction: async (payload: {
+    accountId: number;
+    interactionId: string;
+    message: string;
+  }) => apiPost('/social-hub/inbox/reply', payload),
+  markInboxInteractionHandled: async (payload: {
+    accountId: number;
+    interactionId: string;
+  }) =>
+    apiPatch('/social-hub/inbox/' + payload.accountId + '/' + payload.interactionId + '/handled', {}),
+  getAnalytics: async (days?: number) => {
+    const query = days ? `?days=${days}` : '';
+    return apiGet<SocialAnalytics>(`/social-hub/analytics${query}`);
+  },
 };

@@ -170,19 +170,16 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                     type="target"
                     position={Position.Left}
                     id="input"
-                    className={cn(
-                        "!w-3 !h-3 !border-2 !border-background !bg-blue-500 z-50 transform -translate-x-1.5",
-                        data.isPreview && "scale-50 opacity-0"
-                    )}
+                    onClick={(e) => data.onHandleClick?.(e, 'input', 'target')}
+                    className={cn("!border-2 !border-background !bg-blue-500 z-50", data.isPreview && "scale-50 opacity-0")}
                 />
 
                 <Handle
                     type="source"
                     position={Position.Right}
-                    className={cn(
-                        "!w-3 !h-3 !border-2 !border-background !bg-foreground/50 z-50 transform translate-x-1.5",
-                        data.isPreview && "scale-50 opacity-0"
-                    )}
+                    id="output"
+                    onClick={(e) => data.onHandleClick?.(e, 'output', 'source')}
+                    className={cn("!border-2 !border-background !bg-foreground/50 z-50", data.isPreview && "scale-50 opacity-0")}
                 />
             </BaseNode>
         </div>

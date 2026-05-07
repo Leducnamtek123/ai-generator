@@ -1,13 +1,16 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between, MoreThanOrEqual } from 'typeorm';
-import { SocialPostEntity, SocialPostStatus } from '../infrastructure/persistence/relational/entities/social-post.entity';
+import {
+  SocialPostEntity,
+  SocialPostStatus,
+} from '../infrastructure/persistence/relational/entities/social-post.entity';
 import { SocialPostMetricEntity } from '../infrastructure/persistence/relational/entities/social-post-metric.entity';
 import { SocialAccountEntity } from '../infrastructure/persistence/relational/entities/social-account.entity';
 import { SocialProviderRegistry } from '../providers/social-provider.registry';
 import { SocialHubGateway } from '../gateways/social-hub.gateway';
 import { decrypt } from '../utils/encryption.helper';
-import { UserEntity } from '../../users/infrastructure/persistence/relational/entities/user.entity';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
 
 @Injectable()
 export class SocialAnalyticsService {
@@ -29,7 +32,7 @@ export class SocialAnalyticsService {
    */
   async refreshAllMetrics() {
     this.logger.log('Starting global metrics refresh cycle...');
-    
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
@@ -47,11 +50,13 @@ export class SocialAnalyticsService {
       if (!post.externalPostId || !post.socialAccount) continue;
 
       try {
-        const provider = this.providerRegistry.getProvider(post.socialAccount.platform);
+        const provider = this.providerRegistry.getProvider(
+          post.socialAccount.platform,
+        );
         if (provider.getMetrics) {
           const metrics = await provider.getMetrics(
             decrypt(post.socialAccount.accessToken),
-            post.externalPostId
+            post.externalPostId,
           );
 
           await this.metricRepository.save(
@@ -61,11 +66,13 @@ export class SocialAnalyticsService {
               comments: metrics.comments,
               shares: metrics.shares,
               views: metrics.views || 0,
-              rawMetrics: metrics.raw
-            })
+              rawMetrics: metrics.raw,
+            }),
           );
-          
-          this.logger.debug(`Updated metrics for post ${post.id} (${post.socialAccount.platform})`);
+
+          this.logger.debug(
+            `Updated metrics for post ${post.id} (${post.socialAccount.platform})`,
+          );
 
           // Emit a real-time event via WebSocket
           if (post.user) {
@@ -73,12 +80,14 @@ export class SocialAnalyticsService {
               postId: post.id,
               platform: post.socialAccount.platform,
               metrics: metrics,
-              timestamp: new Date()
+              timestamp: new Date(),
             });
           }
         }
       } catch (error) {
-        this.logger.error(`Failed to refresh metrics for post ${post.id}: ${error.message}`);
+        this.logger.error(
+          `Failed to refresh metrics for post ${post.id}: ${error.message}`,
+        );
       }
     }
   }
@@ -87,31 +96,40 @@ export class SocialAnalyticsService {
    * Get aggregated analytics for a user's dashboard.
    * Phase 1 improvement: Real chart data from DB instead of mock.
    */
-  async getDashboardStats(user: UserEntity) {
+  async getDashboardStats(user: AuthenticatedUser, days: number = 7) {
     try {
+      const userId = Number(user.id);
+      const windowStart = new Date();
+      windowStart.setDate(windowStart.getDate() - days);
+
       const posts = await this.postRepository.find({
-        where: { user: { id: user.id }, status: SocialPostStatus.PUBLISHED },
+        where: {
+          user: { id: userId },
+          status: SocialPostStatus.PUBLISHED,
+          publishedAt: MoreThanOrEqual(windowStart),
+        },
         relations: ['socialAccount'],
         order: { publishedAt: 'DESC' },
-        take: 20
       });
-      const stats = await Promise.all(posts.map(async (post) => {
-        const latestMetric = await this.metricRepository.findOne({
-          where: { post: { id: post.id } },
-          order: { createdAt: 'DESC' }
-        });
-        return {
-          id: post.id,
-          content: (post.content || '').substring(0, 50),
-          platform: post.socialAccount?.platform,
-          publishedAt: post.publishedAt,
-          likes: latestMetric?.likes || 0,
-          comments: latestMetric?.comments || 0,
-          shares: latestMetric?.shares || 0,
-          views: latestMetric?.views || 0
-        };
-      }));
-      const chartData = await this.buildEngagementChart(user.id, 7);
+      const stats = await Promise.all(
+        posts.map(async (post) => {
+          const latestMetric = await this.metricRepository.findOne({
+            where: { post: { id: post.id } },
+            order: { createdAt: 'DESC' },
+          });
+          return {
+            id: post.id,
+            content: (post.content || '').substring(0, 50),
+            platform: post.socialAccount?.platform,
+            publishedAt: post.publishedAt,
+            likes: latestMetric?.likes || 0,
+            comments: latestMetric?.comments || 0,
+            shares: latestMetric?.shares || 0,
+            views: latestMetric?.views || 0,
+          };
+        }),
+      );
+      const chartData = await this.buildEngagementChart(userId, days);
       const platformBreakdown = this.buildPlatformBreakdown(stats);
       return {
         recentPosts: stats,
@@ -123,7 +141,7 @@ export class SocialAnalyticsService {
           shares: stats.reduce((sum, s) => sum + s.shares, 0),
           views: stats.reduce((sum, s) => sum + s.views, 0),
           totalPosts: stats.length,
-        }
+        },
       };
     } catch (error) {
       this.logger.error(
@@ -142,7 +160,7 @@ export class SocialAnalyticsService {
           shares: 0,
           views: 0,
           totalPosts: 0,
-        }
+        },
       };
     }
   }
@@ -150,13 +168,19 @@ export class SocialAnalyticsService {
    * Get analytics per specific channel/account.
    * New endpoint inspired by Postiz's AnalyticsController.
    */
-  async getChannelAnalytics(accountId: number, days: number = 30) {
+  async getChannelAnalytics(
+    accountId: number,
+    days: number = 30,
+    userId?: AuthenticatedUser['id'],
+  ) {
     const account = await this.accountRepository.findOne({
-      where: { id: accountId },
+      where: userId
+        ? { id: accountId, user: { id: Number(userId) } }
+        : { id: accountId },
     });
 
     if (!account) {
-      throw new Error('Account not found');
+      throw new NotFoundException('Account not found');
     }
 
     // Try to get platform-level analytics
@@ -171,7 +195,10 @@ export class SocialAnalyticsService {
           days,
         );
       } catch (error) {
-        this.logger.warn(`Failed to fetch platform analytics for ${account.platform}:`, error);
+        this.logger.warn(
+          `Failed to fetch platform analytics for ${account.platform}:`,
+          error,
+        );
       }
     }
 
@@ -228,14 +255,16 @@ export class SocialAnalyticsService {
    * Get analytics for a specific post.
    * New endpoint inspired by Postiz's postAnalytics.
    */
-  async getPostAnalytics(postId: number) {
+  async getPostAnalytics(postId: number, userId?: AuthenticatedUser['id']) {
     const post = await this.postRepository.findOne({
-      where: { id: postId },
+      where: userId
+        ? { id: postId, user: { id: Number(userId) } }
+        : { id: postId },
       relations: ['socialAccount'],
     });
 
     if (!post) {
-      throw new Error('Post not found');
+      throw new NotFoundException('Post not found');
     }
 
     // Fetch all historical metrics (time series)
@@ -247,7 +276,9 @@ export class SocialAnalyticsService {
     // Try to get live analytics from the platform
     let liveAnalytics: any[] = [];
     if (post.socialAccount && post.externalPostId) {
-      const provider = this.providerRegistry.getProvider(post.socialAccount.platform);
+      const provider = this.providerRegistry.getProvider(
+        post.socialAccount.platform,
+      );
       if (provider.getPostAnalytics) {
         try {
           liveAnalytics = await provider.getPostAnalytics(
@@ -267,7 +298,10 @@ export class SocialAnalyticsService {
         platform: post.socialAccount?.platform,
         publishedAt: post.publishedAt,
         externalUrl: post.externalPostId
-          ? this.buildExternalUrl(post.socialAccount?.platform, post.externalPostId)
+          ? this.buildExternalUrl(
+              post.socialAccount?.platform,
+              post.externalPostId,
+            )
           : null,
       },
       metricsHistory: metrics.map((m) => ({
@@ -288,7 +322,13 @@ export class SocialAnalyticsService {
    * Inspired by Chatwoot's ReportingEvent time-series pattern.
    */
   private async buildEngagementChart(userId: number, days: number) {
-    const chartData: { name: string; engagement: number; likes: number; comments: number; shares: number }[] = [];
+    const chartData: {
+      name: string;
+      engagement: number;
+      likes: number;
+      comments: number;
+      shares: number;
+    }[] = [];
 
     for (let i = days - 1; i >= 0; i--) {
       const dayStart = new Date();
@@ -298,11 +338,15 @@ export class SocialAnalyticsService {
       const dayEnd = new Date(dayStart);
       dayEnd.setHours(23, 59, 59, 999);
 
-      const dayName = dayStart.toLocaleDateString('en-US', { weekday: 'short' });
+      const dayName = dayStart.toLocaleDateString('en-US', {
+        weekday: 'short',
+      });
       const dateStr = dayStart.toISOString().split('T')[0];
 
       // Sum metrics collected on this day for the user's posts
-      let result: { likes?: string; comments?: string; shares?: string } | undefined;
+      let result:
+        | { likes?: string; comments?: string; shares?: string }
+        | undefined;
       try {
         result = await this.metricRepository
           .createQueryBuilder('metric')
@@ -348,7 +392,10 @@ export class SocialAnalyticsService {
    * Build per-platform breakdown from stats.
    */
   private buildPlatformBreakdown(stats: any[]) {
-    const breakdown: Record<string, { posts: number; likes: number; comments: number; shares: number }> = {};
+    const breakdown: Record<
+      string,
+      { posts: number; likes: number; comments: number; shares: number }
+    > = {};
 
     for (const stat of stats) {
       const platform = stat.platform || 'unknown';
@@ -367,7 +414,10 @@ export class SocialAnalyticsService {
   /**
    * Build external URL for a published post.
    */
-  private buildExternalUrl(platform: string | undefined, externalPostId: string): string | null {
+  private buildExternalUrl(
+    platform: string | undefined,
+    externalPostId: string,
+  ): string | null {
     if (!platform || !externalPostId) return null;
 
     switch (platform) {
@@ -382,4 +432,3 @@ export class SocialAnalyticsService {
     }
   }
 }
-

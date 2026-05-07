@@ -23,11 +23,11 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Enhancement Mode</div>
+                <div className="text-xs font-medium text-muted-foreground">Enhancement Mode</div>
                 <select
                     value={(nodeData.mode as string) || AssistantMode.ENHANCE}
                     onChange={(e) => onChange('mode', e.target.value)}
-                    className="w-full bg-gray-950/20 border border-white/10 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-emerald-500/50"
+                    className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground focus:outline-none focus:border-emerald-500/50"
                 >
                     <option value={AssistantMode.ENHANCE}>Enhance - Improve clarity & detail</option>
                     <option value={AssistantMode.EXPAND}>Expand - Add creative details</option>
@@ -38,7 +38,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Style Emphasis</div>
+                <div className="text-xs font-medium text-muted-foreground">Style Emphasis</div>
                 <div className="flex flex-wrap gap-2">
                     {[StyleEmphasis.NONE, StyleEmphasis.PHOTOREALISTIC, StyleEmphasis.ARTISTIC, StyleEmphasis.ANIME, StyleEmphasis.FANTASY, StyleEmphasis.SCI_FI].map((style) => (
                         <Button
@@ -47,7 +47,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
                             onClick={() => onChange('styleEmphasis', style)}
                             className={cn(
                                 "h-7 px-2 text-[10px] font-medium transition-all",
-                                (nodeData.styleEmphasis || StyleEmphasis.NONE) === style ? "bg-emerald-600 hover:bg-emerald-500 border-none" : "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                (nodeData.styleEmphasis || StyleEmphasis.NONE) === style ? "bg-emerald-600 hover:bg-emerald-500 border-none" : "bg-background border-border hover:bg-accent text-muted-foreground"
                             )}
                         >
                             {style}
@@ -57,7 +57,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Detail Level</div>
+                <div className="text-xs font-medium text-muted-foreground">Detail Level</div>
                 <div className="grid grid-cols-3 gap-2">
                     {[DetailLevel.LOW, DetailLevel.MEDIUM, DetailLevel.HIGH].map((level) => (
                         <Button
@@ -66,7 +66,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
                             onClick={() => onChange('detailLevel', level)}
                             className={cn(
                                 "h-9 text-xs font-medium capitalize",
-                                (nodeData.detailLevel || DetailLevel.MEDIUM) === level ? "bg-emerald-600 hover:bg-emerald-500 border-none" : "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                (nodeData.detailLevel || DetailLevel.MEDIUM) === level ? "bg-emerald-600 hover:bg-emerald-500 border-none" : "bg-background border-border hover:bg-accent text-muted-foreground"
                             )}
                         >
                             {level}
@@ -80,9 +80,9 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
             {(nodeData.enhancedText as string) && (
                 <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                        <div className="text-xs font-medium text-white/60">Enhanced Output</div>
+                        <div className="text-xs font-medium text-muted-foreground">Enhanced Output</div>
                     </div>
-                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg text-xs text-white/80 max-h-32 overflow-y-auto">
+                    <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-lg text-xs text-foreground max-h-32 overflow-y-auto">
                         {nodeData.enhancedText as string}
                     </div>
                 </div>

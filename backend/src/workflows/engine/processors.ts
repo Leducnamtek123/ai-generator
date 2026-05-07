@@ -19,6 +19,54 @@ export interface ProcessorResult {
   error?: string;
 }
 
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (trimmed) return trimmed;
+    }
+  }
+  return '';
+}
+
+function readInputValue(context: ProcessorContext, ...keys: string[]): string {
+  for (const key of keys) {
+    const value = context.nodeInputs.get(key);
+    const direct = firstString(value);
+    if (direct) return direct;
+
+    if (value && typeof value === 'object') {
+      const record = value as Record<string, unknown>;
+      const nested = firstString(
+        record.text,
+        record.prompt,
+        record.originalPrompt,
+        record.enhancedText,
+        record.value,
+        record.imageUrl,
+        record.inputImageUrl,
+        record.startImageUrl,
+        record.videoUrl,
+        record.inputVideoUrl,
+        record.previewUrl,
+        record.resultUrl,
+        record.referenceImageUrl,
+        record.reference,
+        record.content,
+        record.name,
+        record.label,
+      );
+      if (nested) return nested;
+    }
+  }
+  return '';
+}
+
+function readNodeValue(node: WorkflowNode, ...keys: string[]): string {
+  const data = node.data as Record<string, unknown>;
+  return firstString(...keys.map((key) => data[key]));
+}
+
 /**
  * Base interface for all node processors
  */
@@ -40,10 +88,85 @@ export class TextNodeProcessor implements NodeProcessor {
     node: WorkflowNode,
     _context: ProcessorContext,
   ): Promise<ProcessorResult> {
-    const text = node.data.content || node.data.text || '';
+    const text = firstString(
+      node.data.content,
+      node.data.text,
+      node.data.label,
+    );
     return Promise.resolve({
       success: true,
-      output: { text },
+      output: { text, prompt: text },
+    });
+  }
+}
+
+export class ReferenceNodeProcessor implements NodeProcessor {
+  constructor(readonly nodeType: string) {}
+
+  process(
+    node: WorkflowNode,
+    context: ProcessorContext,
+  ): Promise<ProcessorResult> {
+    const text =
+      readInputValue(context, 'text', 'prompt', 'reference') ||
+      readNodeValue(
+        node,
+        'content',
+        'text',
+        'inputText',
+        'prompt',
+        'name',
+        'label',
+      );
+    const imageUrl =
+      readInputValue(
+        context,
+        'image',
+        'imageUrl',
+        'inputImageUrl',
+        'startImageUrl',
+        'previewUrl',
+        'resultUrl',
+      ) ||
+      readNodeValue(
+        node,
+        'inputImageUrl',
+        'previewUrl',
+        'outputUrl',
+        'mediaUrl',
+      );
+    const videoUrl =
+      readInputValue(
+        context,
+        'video',
+        'videoUrl',
+        'inputVideoUrl',
+        'previewUrl',
+        'resultUrl',
+      ) ||
+      readNodeValue(
+        node,
+        'inputVideoUrl',
+        'videoUrl',
+        'previewUrl',
+        'outputUrl',
+      );
+    const reference =
+      text ||
+      imageUrl ||
+      videoUrl ||
+      readNodeValue(node, 'name', 'label', 'content', 'text');
+
+    return Promise.resolve({
+      success: true,
+      output: {
+        reference,
+        text: text || reference,
+        imageUrl: imageUrl || undefined,
+        videoUrl: videoUrl || undefined,
+        label: node.data.label,
+        name: node.data.name,
+      },
     });
   }
 }
@@ -60,7 +183,22 @@ export class ImageGenNodeProcessor implements NodeProcessor {
   ): Promise<ProcessorResult> {
     // Get input from connected text node
     const inputText =
-      context.nodeInputs.get('prompt') || node.data.prompt || '';
+      readInputValue(context, 'prompt', 'text', 'inputText') ||
+      firstString(node.data.prompt, node.data.inputPrompt, node.data.text);
+    const referenceImageUrl =
+      readInputValue(
+        context,
+        'image',
+        'referenceImageUrl',
+        'startImageUrl',
+        'inputImageUrl',
+      ) ||
+      firstString(
+        node.data.inputReference,
+        node.data.inputImageUrl,
+        node.data.inputUrl,
+        node.data.previewUrl,
+      );
 
     // Integrated with GenerationProcessor via BullMQ queueing
     // For now, queue a job and return pending status
@@ -69,6 +207,9 @@ export class ImageGenNodeProcessor implements NodeProcessor {
       output: {
         status: 'queued',
         prompt: inputText,
+        text: inputText,
+        referenceImageUrl,
+        inputImageUrl: referenceImageUrl,
         model: node.data.model || 'seedream',
         aspectRatio: node.data.aspectRatio || '1:1',
       },
@@ -87,13 +228,31 @@ export class VideoGenNodeProcessor implements NodeProcessor {
     context: ProcessorContext,
   ): Promise<ProcessorResult> {
     const inputText =
-      context.nodeInputs.get('prompt') || node.data.prompt || '';
+      readInputValue(context, 'prompt', 'text', 'inputText') ||
+      firstString(node.data.prompt, node.data.inputPrompt, node.data.text);
+    const startImageUrl =
+      readInputValue(
+        context,
+        'image',
+        'startImageUrl',
+        'inputImageUrl',
+        'imageUrl',
+      ) ||
+      firstString(
+        node.data.inputImage,
+        node.data.startImageUrl,
+        node.data.inputImageUrl,
+        node.data.previewUrl,
+      );
 
     return Promise.resolve({
       success: true,
       output: {
         status: 'queued',
         prompt: inputText,
+        text: inputText,
+        startImageUrl,
+        inputImageUrl: startImageUrl,
         model: node.data.model || 'runway',
         duration: node.data.duration || '8s',
       },
@@ -111,7 +270,14 @@ export class UpscaleNodeProcessor implements NodeProcessor {
     node: WorkflowNode,
     context: ProcessorContext,
   ): Promise<ProcessorResult> {
-    const inputImage = context.nodeInputs.get('image');
+    const inputImage =
+      readInputValue(
+        context,
+        'image',
+        'inputImageUrl',
+        'startImageUrl',
+        'imageUrl',
+      ) || firstString(node.data.inputImageUrl, node.data.previewUrl);
 
     if (!inputImage) {
       return Promise.resolve({
@@ -125,6 +291,7 @@ export class UpscaleNodeProcessor implements NodeProcessor {
       output: {
         status: 'queued',
         imageUrl: inputImage,
+        inputImageUrl: inputImage,
         scale: node.data.scale || '2x',
       },
     });
@@ -142,13 +309,20 @@ export class AssistantNodeProcessor implements NodeProcessor {
     context: ProcessorContext,
   ): Promise<ProcessorResult> {
     const inputText =
-      context.nodeInputs.get('text') || node.data.inputPrompt || '';
+      readInputValue(context, 'text', 'prompt', 'inputText') ||
+      firstString(
+        node.data.inputText,
+        node.data.inputPrompt,
+        node.data.text,
+        node.data.prompt,
+      );
 
     return Promise.resolve({
       success: true,
       output: {
         status: 'queued',
         originalPrompt: inputText,
+        text: inputText,
         style: node.data.styleEmphasis || 'enhance',
       },
     });
@@ -167,11 +341,8 @@ export class ToolNodeProcessor implements NodeProcessor {
   ): Promise<ProcessorResult> {
     const toolType = node.data.toolType || 'image_gen';
     const prompt =
-      context.nodeInputs.get('text') ||
-      context.nodeInputs.get('prompt') ||
-      node.data.prompt ||
-      node.data.inputText ||
-      '';
+      readInputValue(context, 'text', 'prompt', 'inputText') ||
+      firstString(node.data.prompt, node.data.inputText);
 
     return Promise.resolve({
       success: true,
@@ -179,6 +350,7 @@ export class ToolNodeProcessor implements NodeProcessor {
         status: 'queued',
         toolType,
         prompt,
+        text: prompt,
         ...node.data,
       },
     });

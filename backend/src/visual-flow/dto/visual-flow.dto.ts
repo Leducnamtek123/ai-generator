@@ -217,3 +217,15 @@ export class GenerateSceneVideosDto {
   @IsArray()
   sceneIds?: string[];
 }
+
+export class SuggestScenesDto {
+  @ApiPropertyOptional({ description: 'Number of scenes to suggest', default: 5 })
+  @IsOptional()
+  @IsNumber()
+  count?: number;
+
+  @ApiPropertyOptional({ description: 'Additional instructions for the AI' })
+  @IsOptional()
+  @IsString()
+  instructions?: string;
+}

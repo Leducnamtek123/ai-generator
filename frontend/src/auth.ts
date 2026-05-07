@@ -7,7 +7,7 @@ const API_URL = (
   process.env.INTERNAL_API_URL ||
   process.env.API_BACKEND_URL ||
   process.env.NEXT_PUBLIC_API_URL ||
-  "http://localhost:8000/api/v1"
+  "http://localhost/api/v1"
 ).replace(/\/+$/, "");
 
 function toEpochMs(value: unknown): number | undefined {
@@ -18,6 +18,16 @@ function toEpochMs(value: unknown): number | undefined {
 
   // Convert seconds to ms if needed.
   return num < 10_000_000_000 ? num * 1000 : num;
+}
+
+function normalizeRole(value: unknown) {
+  if (!value || typeof value !== "object") return null;
+
+  const role = value as { id?: string | number | null; name?: string | null };
+  return {
+    id: role.id ?? null,
+    name: role.name ?? null,
+  };
 }
 
 async function refreshAccessToken(refreshToken: string) {
@@ -77,6 +87,7 @@ export const { handlers, auth } = NextAuth({
             accessToken: data.token,
             refreshToken: data.refreshToken,
             tokenExpires: data.tokenExpires,
+            role: normalizeRole(data.user?.role),
           };
         } catch {
           return null;
@@ -98,6 +109,7 @@ export const { handlers, auth } = NextAuth({
           token.refreshToken = data.refreshToken;
           token.tokenExpires = data.tokenExpires;
           token.userId = String(data.user?.id || user?.id);
+          token.role = normalizeRole(data.user?.role);
           token.error = undefined;
           return token;
         } catch (error) {
@@ -124,6 +136,7 @@ export const { handlers, auth } = NextAuth({
           | string
           | undefined;
         token.userId = user.id;
+        token.role = normalizeRole((user as Record<string, unknown>).role);
         token.error = undefined;
         return token;
       }
@@ -171,6 +184,7 @@ export const { handlers, auth } = NextAuth({
       session.accessToken = token.accessToken as string;
       if (session.user) {
         session.user.id = token.userId as string;
+        session.user.role = normalizeRole(token.role);
         // Keep token accessible in both locations for legacy consumers.
         session.user.accessToken = token.accessToken as string;
       }

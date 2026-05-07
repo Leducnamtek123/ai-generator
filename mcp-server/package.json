@@ -1,0 +1,25 @@
+{
+  "name": "@paintai/mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for AI Generator Platform",
+  "main": "dist/index.js",
+  "type": "module",
+  "bin": {
+    "paintai-mcp": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.6.0",
+    "axios": "^1.7.0",
+    "dotenv": "^16.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.7",
+    "typescript": "^5.4.5"
+  }
+}

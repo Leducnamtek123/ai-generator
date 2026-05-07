@@ -38,6 +38,16 @@ class CreditReserveDto {
   @IsString()
   userId: string;
 
+  @ApiPropertyOptional({ description: 'Billing scope type', enum: ['user', 'organization'] })
+  @IsOptional()
+  @IsString()
+  scopeType?: 'user' | 'organization';
+
+  @ApiPropertyOptional({ description: 'Billing scope identifier' })
+  @IsOptional()
+  @IsString()
+  scopeId?: string;
+
   @ApiProperty({ description: 'Amount of credits to mutate', minimum: 1 })
   @IsNumber()
   @Min(1)
@@ -99,16 +109,14 @@ export class CreditsController {
   @ApiOperation({ summary: 'Add credits to your account' })
   @ApiResponse({ status: 201, description: 'Credits added successfully' })
   async topUp(@Body() dto: TopUpCreditsDto, @Request() req: any) {
-    await this.creditsService.create({
+    await this.creditsService.addTopUpCredits({
       userId: req.user.id,
       amount: dto.amount,
-      type: 'topup',
       referenceType: 'manual_topup',
       referenceId: dto.paymentRef || 'manual',
-      status: 'posted',
       metadata: { paymentRef: dto.paymentRef || 'manual' },
     });
-    const newBalance = await this.creditsService.getBalance(req.user.id);
+    const newBalance = await this.creditsService.getBalance(String(req.user.id));
     return {
       success: true,
       added: dto.amount,
@@ -143,6 +151,8 @@ export class CreditsController {
     await this.creditsService.reserve({
       userId: dto.userId,
       amount: dto.amount,
+      scopeType: dto.scopeType,
+      scopeId: dto.scopeId,
       referenceType: dto.referenceType,
       referenceId: dto.referenceId,
       metadata: dto.metadata,
@@ -162,6 +172,8 @@ export class CreditsController {
     await this.creditsService.refund({
       userId: dto.userId,
       amount: dto.amount,
+      scopeType: dto.scopeType,
+      scopeId: dto.scopeId,
       referenceType: dto.referenceType,
       referenceId: dto.referenceId,
       metadata: dto.metadata,
@@ -181,6 +193,8 @@ export class CreditsController {
     const reservation = await this.creditsService.reserve({
       userId: dto.userId,
       amount: dto.amount,
+      scopeType: dto.scopeType,
+      scopeId: dto.scopeId,
       referenceType: dto.referenceType,
       referenceId: dto.referenceId,
       metadata: dto.metadata,

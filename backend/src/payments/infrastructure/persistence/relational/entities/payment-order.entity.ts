@@ -10,6 +10,8 @@ import { EntityRelationalHelper } from '../../../../../utils/relational-entity-h
 import { PaymentProvider } from '../../../../config/payments-config.type';
 
 export type PaymentOrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled';
+export type PaymentPurchaseType = 'subscription' | 'topup';
+export type PaymentScopeType = 'user' | 'organization';
 
 @Entity({ name: 'payment_order' })
 export class PaymentOrderEntity extends EntityRelationalHelper {
@@ -23,9 +25,24 @@ export class PaymentOrderEntity extends EntityRelationalHelper {
   @Column()
   provider: PaymentProvider;
 
+  @Column({ type: 'varchar', default: 'topup' })
+  purchaseType: PaymentPurchaseType;
+
   @Column({ unique: true })
   @Index()
   orderCode: string;
+
+  @Column({ type: 'varchar', nullable: true })
+  planId: string | null;
+
+  @Column({ type: 'varchar', nullable: true })
+  topUpPackageId: string | null;
+
+  @Column({ type: 'varchar', default: 'user' })
+  scopeType: PaymentScopeType;
+
+  @Column({ type: 'varchar', nullable: true })
+  scopeId: string | null;
 
   @Column('int')
   credits: number;

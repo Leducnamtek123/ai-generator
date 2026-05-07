@@ -16,15 +16,16 @@ import { UpdateWorkflowDto } from './dto/update-workflow.dto';
 import { ExecuteWorkflowDto } from './dto/execute-workflow.dto';
 import { AuthGuard } from '@nestjs/passport';
 
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiSecurity } from '@nestjs/swagger';
 
+@ApiSecurity('api-key')
 @ApiBearerAuth()
 @ApiTags('Workflows')
 @Controller({
   path: 'workflows',
   version: '1',
 })
-@UseGuards(AuthGuard('jwt'))
+@UseGuards(AuthGuard(['jwt', 'api-key']))
 export class WorkflowsController {
   constructor(private readonly workflowsService: WorkflowsService) {}
 

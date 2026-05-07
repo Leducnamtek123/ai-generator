@@ -43,6 +43,12 @@ export class Workflow {
     type: String,
     nullable: true,
   })
+  organizationId?: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+  })
   previewUrl?: string | null;
 
   @ApiProperty()

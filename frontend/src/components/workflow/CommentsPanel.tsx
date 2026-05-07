@@ -9,9 +9,10 @@ import { Input } from '@/ui/input';
 interface CommentsPanelProps {
     isOpen: boolean;
     onClose: () => void;
+    onAddFirstComment: () => void;
 }
 
-export function CommentsPanel({ isOpen, onClose }: CommentsPanelProps) {
+export function CommentsPanel({ isOpen, onClose, onAddFirstComment }: CommentsPanelProps) {
     const [activeTab, setActiveTab] = useState<'all' | 'open' | 'resolved'>('all');
     const [searchQuery, setSearchQuery] = useState('');
 
@@ -74,7 +75,11 @@ export function CommentsPanel({ isOpen, onClose }: CommentsPanelProps) {
                 <p className="text-xs text-white/40 mt-1 max-w-[200px]">
                     Click anywhere on the canvas or an element to leave a comment.
                 </p>
-                <Button variant="outline" className="mt-6 border-white/10 text-xs h-8 hover:bg-white/5">
+                <Button
+                    variant="outline"
+                    className="mt-6 border-white/10 text-xs h-8 hover:bg-white/5"
+                    onClick={onAddFirstComment}
+                >
                     Add first comment
                 </Button>
             </div>

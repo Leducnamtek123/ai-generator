@@ -9,6 +9,24 @@ import { NodePanelProps } from '../NodePanels';
 import { FileMediaType } from '../types';
 
 export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
+    const mediaUrl = nodeData.mediaUrl as string | undefined;
+    const mediaName = (nodeData.mediaName as string) || 'media';
+
+    const handleOpen = () => {
+        if (!mediaUrl) return;
+        window.open(mediaUrl, '_blank', 'noopener,noreferrer');
+    };
+
+    const handleDownload = () => {
+        if (!mediaUrl) return;
+        const anchor = document.createElement('a');
+        anchor.href = mediaUrl;
+        anchor.download = mediaName || 'media';
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+    };
+
     return (
         <div className="space-y-4">
             <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
@@ -25,16 +43,16 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
 
             <ConnectionInfo accepts={['None (Input Node)']} outputs="Image/Video" />
 
-            {(nodeData.mediaUrl as string) && (
+            {mediaUrl && (
                 <div className="space-y-2">
-                    <div className="text-xs font-medium text-white/60">Current Media</div>
-                    <div className="p-3 bg-gray-950/20 rounded-lg space-y-2">
-                        <p className="text-xs text-white truncate">{(nodeData.mediaName as string) || ''}</p>
+                    <div className="text-xs font-medium text-muted-foreground">Current Media</div>
+                    <div className="p-3 bg-muted/30 rounded-lg space-y-2">
+                        <p className="text-xs text-foreground truncate">{mediaName || ''}</p>
                         <div className="flex gap-2">
-                            <Button variant="ghost" size="sm" className="flex-1 gap-1 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors">
+                            <Button variant="ghost" size="sm" onClick={handleOpen} className="flex-1 gap-1 bg-background/70 hover:bg-accent rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors">
                                 <ExternalLink className="w-3 h-3" /> Open
                             </Button>
-                            <Button variant="ghost" size="sm" className="flex-1 gap-1 bg-white/5 hover:bg-white/10 rounded text-[10px] text-white/60 hover:text-white transition-colors">
+                            <Button variant="ghost" size="sm" onClick={handleDownload} className="flex-1 gap-1 bg-background/70 hover:bg-accent rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors">
                                 <Download className="w-3 h-3" /> Download
                             </Button>
                             <Button
@@ -51,7 +69,7 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
             )}
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Media Type Filter</div>
+                <div className="text-xs font-medium text-muted-foreground">Media Type Filter</div>
                 <div className="grid grid-cols-3 gap-2">
                     {[FileMediaType.ANY, FileMediaType.IMAGE, FileMediaType.VIDEO].map((type) => (
                         <Button
@@ -60,7 +78,7 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
                             onClick={() => onChange('mediaType', type)}
                             className={cn(
                                 "h-9 text-xs font-medium capitalize",
-                                (nodeData.mediaType || FileMediaType.ANY) === type ? "bg-cyan-600 hover:bg-cyan-500 border-none" : "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                (nodeData.mediaType || FileMediaType.ANY) === type ? "bg-cyan-600 hover:bg-cyan-500 border-none" : "bg-background border-border hover:bg-accent text-muted-foreground"
                             )}
                         >
                             {type}
@@ -70,16 +88,16 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
             </div>
             
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Max File Size</div>
+                <div className="text-xs font-medium text-muted-foreground">Max File Size</div>
                 <select
                     value={(nodeData.maxSize as string) || '10mb'}
                     onChange={(e) => onChange('maxSize', e.target.value)}
-                    className="w-full h-10 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none"
+                    className="w-full h-10 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none"
                 >
-                    <option value="5mb" className="bg-[#1A1B1F]">5 MB</option>
-                    <option value="10mb" className="bg-[#1A1B1F]">10 MB</option>
-                    <option value="25mb" className="bg-[#1A1B1F]">25 MB</option>
-                    <option value="50mb" className="bg-[#1A1B1F]">50 MB</option>
+                    <option value="5mb">5 MB</option>
+                    <option value="10mb">10 MB</option>
+                    <option value="25mb">25 MB</option>
+                    <option value="50mb">50 MB</option>
                 </select>
             </div>
         </div>

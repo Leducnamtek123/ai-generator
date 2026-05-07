@@ -25,6 +25,7 @@ import { ChannelsService } from './services/channels.service';
 import { PublishingService } from './services/publishing.service';
 import { SocialHubGateway } from './gateways/social-hub.gateway';
 import { AllConfigType } from '../config/config.type';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { MessengerService } from './services/messenger.service';
 import { FacebookMessengerController } from './controllers/facebook-messenger.controller';
@@ -54,6 +55,7 @@ import { FacebookMessengerController } from './controllers/facebook-messenger.co
     }),
     HttpModule,
     ConfigModule,
+    NotificationsModule,
   ],
   controllers: [
     SocialHubController,

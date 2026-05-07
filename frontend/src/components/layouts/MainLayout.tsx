@@ -6,6 +6,7 @@ import { cn } from '@/lib/utils';
 import { Share2, Sparkles, Plus, Copy, Edit, ChevronDown, Menu, Bell } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
 import { Button } from '@/ui/button';
+import { WORKSPACE_ROOT } from './navigation-data';
 import { UserMenu } from './header/UserMenu';
 import { useAuth } from '@/providers';
 import { useRouter } from '@/i18n/navigation';
@@ -30,6 +31,7 @@ import { Input } from "@/components/ui/input";
 
 export function MainLayout({ children, onMenuClick }: { children: React.ReactNode, onMenuClick?: () => void }) {
     const pathname = usePathname();
+    const [search, setSearch] = React.useState('');
     const isWorkflow = pathname === '/creator/workflow-editor';
     const { user, isLoading } = useAuth();
     const router = useRouter();
@@ -47,10 +49,15 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         pathname === '/sign-up';
 
     React.useEffect(() => {
+        setSearch(window.location.search);
+    }, []);
+
+    React.useEffect(() => {
         if (!isLoading && !user && !isPublicRoute) {
-            window.location.replace('/sign-in');
+            const nextPath = `${pathname}${search}`;
+            window.location.replace(`/sign-in?next=${encodeURIComponent(nextPath)}`);
         }
-    }, [user, isLoading, pathname, router, isPublicRoute]);
+    }, [user, isLoading, pathname, search, router, isPublicRoute]);
 
     React.useEffect(() => {
         if (user) {
@@ -95,7 +102,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         if (isWorkflow) {
             return (
                 <div className="flex items-center gap-2">
-                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
                     <span className="text-muted-foreground">/</span>
                     <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
                     <span className="text-muted-foreground">/</span>
@@ -143,7 +150,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             };
             return (
                 <div className="flex items-center gap-2 text-xs">
-                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
                     <span className="text-muted-foreground">/</span>
                     <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
                     <span className="text-muted-foreground">/</span>
@@ -156,7 +163,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         if (pathname === '/creator') {
             return (
                 <div className="flex items-center gap-2 text-xs">
-                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
                     <span className="text-muted-foreground">/</span>
                     <span className="text-foreground font-medium">Creator</span>
                 </div>
@@ -168,7 +175,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             const parts = pathname.split('/').filter(Boolean);
             return (
                 <div className="flex items-center gap-2 text-xs">
-                    <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
                     <span className="text-muted-foreground">/</span>
                     <Link href="/visual-flow" className={cn(
                         'transition-colors',
@@ -189,7 +196,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         // Default / Dashboard
         return (
             <div className="flex items-center gap-2 text-xs">
-                <Link href="/dashboard" className="text-muted-foreground hover:text-foreground transition-colors">Personal</Link>
+                <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
                 {pathname !== '/dashboard' && pathname !== '/' && (
                     <>
                         <span className="text-muted-foreground">/</span>
@@ -247,8 +254,11 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                 </div>
                                 <div className="max-h-[300px] overflow-y-auto">
                                     {notifications.length === 0 ? (
-                                        <div className="p-8 text-center text-muted-foreground text-xs">
-                                            No notifications yet
+                                        <div className="p-8 text-center text-muted-foreground text-xs space-y-3">
+                                            <p>No notifications yet</p>
+                                            <p className="leading-5">
+                                                Activity, billing, moderation, and admin alerts will appear here in a single inbox.
+                                            </p>
                                         </div>
                                     ) : (
                                         notifications.map((notification) => (
@@ -283,7 +293,13 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                     )}
                                 </div>
                                 <div className="p-2 border-t border-border">
-                                    <Button variant="ghost" className="w-full text-xs h-8">View all notifications</Button>
+                                    <Button
+                                        variant="ghost"
+                                        className="w-full text-xs h-8"
+                                        onClick={() => router.push('/notifications')}
+                                    >
+                                        View all notifications
+                                    </Button>
                                 </div>
                             </DropdownMenuContent>
                         </DropdownMenu>

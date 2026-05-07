@@ -69,6 +69,9 @@ import { SocialHubModule } from './social-hub/social-hub.module';
 import { PaymentsModule } from './payments/payments.module';
 import paymentsConfig from './payments/config/payments.config';
 import { CommunityMarketplaceModule } from './community-marketplace/community-marketplace.module';
+import { AdminModule } from './admin/admin.module';
+import { SiteConfigModule } from './site-config/site-config.module';
+import { ApiKeysModule } from './api-keys/api-keys.module';
 
 const resolveI18nPath = () => {
   const candidates = [
@@ -153,6 +156,9 @@ const resolveI18nPath = () => {
     SocialHubModule,
     PaymentsModule,
     CommunityMarketplaceModule,
+    SiteConfigModule,
+    AdminModule,
+    ApiKeysModule,
     ThrottlerModule.forRoot([
       {
         ttl: 60000,

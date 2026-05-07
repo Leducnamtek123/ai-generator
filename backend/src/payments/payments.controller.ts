@@ -17,8 +17,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { Response } from 'express';
-import { ConfigService } from '@nestjs/config';
-import { AllConfigType } from '../config/config.type';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { PaymentProvider } from './config/payments-config.type';
 import { PaymentsService } from './payments.service';
@@ -26,15 +24,14 @@ import { PaymentsService } from './payments.service';
 @ApiTags('Payments')
 @Controller({ path: 'payments', version: '1' })
 export class PaymentsController {
-  constructor(
-    private readonly paymentsService: PaymentsService,
-    private readonly configService: ConfigService<AllConfigType>,
-  ) {}
+  constructor(private readonly paymentsService: PaymentsService) {}
 
   @Post('checkout')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create payment checkout session for credit topup' })
+  @ApiOperation({
+    summary: 'Create payment checkout session for subscription or top-up',
+  })
   @ApiResponse({ status: 201, description: 'Checkout URL created' })
   createCheckout(@Body() dto: CreateCheckoutDto, @Request() req: any) {
     const forwardedFor = req.headers?.['x-forwarded-for'];
@@ -61,20 +58,9 @@ export class PaymentsController {
     @Param('provider') provider: PaymentProvider,
     @Query() query: Record<string, string | string[]>,
     @Res() res: Response,
-  ) {
+  ): Promise<void> {
     const result = await this.paymentsService.handleReturn(provider, query);
-    const frontendDomain = this.configService.getOrThrow('app.frontendDomain', {
-      infer: true,
-    });
-    const returnPath = this.configService.getOrThrow('payments.returnPath', {
-      infer: true,
-    });
-    const redirectUrl = new URL(returnPath, frontendDomain);
-    redirectUrl.searchParams.set('paymentProvider', provider);
-    redirectUrl.searchParams.set('paymentOrder', result.orderCode);
-    redirectUrl.searchParams.set('paymentStatus', result.status);
-    redirectUrl.searchParams.set('paymentVerified', String(result.verified));
-    return res.redirect(redirectUrl.toString());
+    void res.redirect(result.redirectUrl);
   }
 
   @Post('ipn/:provider')

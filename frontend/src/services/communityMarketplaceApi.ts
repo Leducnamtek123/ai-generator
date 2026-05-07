@@ -27,7 +27,7 @@ export interface CreateListingPayload {
   title: string;
   description?: string;
   thumbnail?: string;
-  type: TemplateTypeEnum | string;
+  type: TemplateTypeEnum;
   content?: Record<string, unknown>;
   priceCredits: number;
   platformFeeBps?: number;
@@ -48,7 +48,7 @@ export interface MarketplaceFilters {
   page?: number;
   limit?: number;
   q?: string;
-  type?: string;
+  type?: TemplateTypeEnum | 'all';
   authorId?: string;
 }
 

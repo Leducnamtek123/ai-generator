@@ -20,6 +20,7 @@ interface GenerationState {
     currentGeneration: Generation | null;
     isGenerating: boolean;
     error: string | null;
+    fetchError: string | null;
 
     // Core generation actions
     generateImage: (params: { prompt: string; model?: string; aspectRatio?: string; seed?: number }) => Promise<void>;
@@ -48,6 +49,13 @@ interface GenerationState {
     // Generic action for any endpoint
     startGeneration: (endpoint: string, params: Record<string, any>) => Promise<void>;
 
+    generations: Generation[];
+    isLoading: boolean;
+    fetchGenerations: (params: { page?: number; limit?: number; type?: string; search?: string }) => Promise<void>;
+    templates: any[];
+    isTemplatesLoading: boolean;
+    fetchTemplates: (params: { page?: number; limit?: number; type?: string; search?: string }) => Promise<void>;
+
     pollStatus: (id: string) => Promise<void>;
     reset: () => void;
 }
@@ -73,6 +81,8 @@ function createGenerationAction(endpoint: string) {
             } else if (generation.status === 'completed') {
                 set({ isGenerating: false });
                 toast.success('Generation completed!', { id: 'generation' });
+                // Refresh list if it was open
+                get().fetchGenerations({ type: generation.type });
             } else {
                 set({ isGenerating: false });
             }
@@ -106,6 +116,11 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
     currentGeneration: null,
     isGenerating: false,
     error: null,
+    fetchError: null,
+    generations: [],
+    isLoading: false,
+    templates: [],
+    isTemplatesLoading: false,
 
     // Core
     generateImage: (params) => imageAction(params, set, get),
@@ -137,6 +152,58 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
         return action(params, set, get);
     },
 
+    fetchGenerations: async (params) => {
+        set({ isLoading: true });
+        try {
+            const query = new URLSearchParams();
+            if (params.page) query.append('page', params.page.toString());
+            if (params.limit) query.append('limit', params.limit.toString());
+            if (params.type) query.append('type', params.type);
+            if (params.search) query.append('search', params.search);
+
+            const response = await apiGet<{ data: Generation[] }>(`/generations?${query.toString()}`);
+            set({ generations: response.data || [] });
+        } catch (error) {
+            const status = (error as { response?: { status?: number } })?.response?.status;
+            console.error('Failed to fetch generations', {
+                status,
+                type: params.type,
+                error,
+            });
+            set({
+                fetchError:
+                    status === 500
+                        ? 'Server error while loading generations'
+                        : 'Failed to fetch generations',
+            });
+        } finally {
+            set({ isLoading: false });
+        }
+    },
+
+    fetchTemplates: async (params) => {
+        set({ isTemplatesLoading: true });
+        try {
+            const query = new URLSearchParams();
+            if (params.page) query.append('page', params.page.toString());
+            if (params.limit) query.append('limit', params.limit.toString());
+            if (params.type) query.append('type', params.type);
+            if (params.search) query.append('search', params.search);
+
+            const response = await apiGet<{ data: any[] }>(`/templates?${query.toString()}`);
+            set({ templates: response.data || [] });
+        } catch (error) {
+            const status = (error as { response?: { status?: number } })?.response?.status;
+            console.error('Failed to fetch templates', {
+                status,
+                type: params.type,
+                error,
+            });
+        } finally {
+            set({ isTemplatesLoading: false });
+        }
+    },
+
     pollStatus: async (id) => {
         const pollInterval = 2000;
 
@@ -148,6 +215,8 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
                 if (generation.status === 'completed') {
                     set({ isGenerating: false });
                     toast.success('Generation completed!', { id: 'generation' });
+                    // Refresh list if it was open
+                    get().fetchGenerations({ type: generation.type });
                 } else if (generation.status === 'failed') {
                     set({ isGenerating: false });
                     toast.error(generation.error || 'Generation failed', { id: 'generation' });
@@ -164,5 +233,5 @@ export const useGenerationStore = create<GenerationState>((set, get) => ({
         setTimeout(checkStatus, pollInterval);
     },
 
-    reset: () => set({ currentGeneration: null, isGenerating: false, error: null }),
+    reset: () => set({ currentGeneration: null, isGenerating: false, error: null, fetchError: null }),
 }));

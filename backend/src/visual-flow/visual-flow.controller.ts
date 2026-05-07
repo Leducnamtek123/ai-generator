@@ -31,6 +31,7 @@ import {
   GenerateRefsDto,
   GenerateSceneImagesDto,
   GenerateSceneVideosDto,
+  SuggestScenesDto,
 } from './dto/visual-flow.dto';
 import {
   RegisterMaterialDto,
@@ -290,7 +291,25 @@ export class VisualFlowController {
     );
   }
 
+
+  @Post('projects/:id/videos/:videoId/suggest-scenes')
+  @ApiOperation({ summary: 'AI Assistant: Suggest scenes based on project story' })
+  async suggestScenes(
+    @Param('id') projectId: string,
+    @Param('videoId') videoId: string,
+    @Body() dto: SuggestScenesDto,
+    @Request() req: any,
+  ) {
+    return this.visualFlowService.suggestScenes(
+      projectId,
+      videoId,
+      req.user.id,
+      dto,
+    );
+  }
+
   @Get('projects/:id/videos/:videoId/status')
+
   @ApiOperation({ summary: 'Get pipeline status dashboard for a video' })
   getPipelineStatus(
     @Param('id') projectId: string,

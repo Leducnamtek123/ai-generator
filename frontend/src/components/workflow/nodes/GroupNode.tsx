@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { BaseNode } from './BaseNode';
 import { Layers } from 'lucide-react';
+import { Handle, Position } from '@xyflow/react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { NodeStatus } from '../types';
@@ -17,6 +17,7 @@ interface GroupNodeProps {
         onDelete?: (id: string) => void;
         onLabelChange?: (id: string, label: string) => void;
         onResize?: (id: string, width: number, height: number) => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
     selected?: boolean;
@@ -64,6 +65,15 @@ export function GroupNode({ id, data, selected }: GroupNodeProps) {
                     />
                 </div>
             </div>
+            {!data.isPreview && (
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    id="reference-output"
+                    onClick={(e) => data.onHandleClick?.(e, 'reference-output', 'source')}
+                    className="!border-2 !border-background !bg-gray-500 z-50 cursor-pointer hover:!bg-gray-400"
+                />
+            )}
         </div>
     );
 }

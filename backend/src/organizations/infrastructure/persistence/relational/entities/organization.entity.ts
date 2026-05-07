@@ -39,6 +39,9 @@ export class OrganizationEntity extends EntityRelationalHelper {
   @Column({ name: 'owner_id' })
   ownerId: number;
 
+  @Column({ type: 'enum', enum: ['PERSONAL', 'TEAM'], default: 'TEAM' })
+  type: 'PERSONAL' | 'TEAM';
+
   @OneToMany(
     'MemberEntity',
     (member: any) => member.organization,

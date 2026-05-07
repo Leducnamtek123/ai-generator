@@ -1,12 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
     Sparkles,
     Image as ImageIcon,
-    Plus,
     Send,
     Bot,
     User,
@@ -19,7 +18,6 @@ import {
     Music,
     Palette,
     Wand2,
-    MessageSquare,
     ThumbsUp,
     ThumbsDown
 } from 'lucide-react';
@@ -43,6 +41,34 @@ const quickActions = [
     { id: 'edit', icon: Wand2, label: 'Edit Image', color: 'text-pink-400' },
 ];
 
+const actionConfig: Record<string, { endpoint: string; prompt: string; successLabel: string }> = {
+    image: {
+        endpoint: '/generations/image',
+        prompt: 'Generate a high quality image based on my request.',
+        successLabel: 'image',
+    },
+    video: {
+        endpoint: '/generations/video',
+        prompt: 'Generate a high quality video based on my request.',
+        successLabel: 'video',
+    },
+    music: {
+        endpoint: '/generations/music',
+        prompt: 'Generate music based on my request.',
+        successLabel: 'music',
+    },
+    design: {
+        endpoint: '/generations/image',
+        prompt: 'Create a polished design based on my request.',
+        successLabel: 'design',
+    },
+    edit: {
+        endpoint: '/generations/image',
+        prompt: 'Edit the image based on my request.',
+        successLabel: 'edit',
+    },
+};
+
 const templates = [
     { label: 'Product Photography', prompt: 'Create a professional product photo of a sleek smartwatch on a marble surface with soft studio lighting' },
     { label: 'Character Design', prompt: 'Design a futuristic cyberpunk character with neon accents, detailed armor, and a confident pose' },
@@ -52,17 +78,19 @@ const templates = [
     { label: 'Illustration', prompt: 'Create a whimsical children\'s book illustration of a friendly dragon in a flower garden' },
 ];
 
-const mockConversation: Message[] = [];
-
 export default function AssistantPage() {
-    const [messages, setMessages] = useState<Message[]>(mockConversation);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
+    const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [selectedAction, setSelectedAction] = useState<string | null>(null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const messageIdRef = useRef(0);
-    const { startGeneration } = useGenerationStore();
+    const pendingPromptRef = useRef<string | null>(null);
+    const pendingActionRef = useRef<string | null>(null);
+    const pendingGenerationIdRef = useRef<string | null>(null);
+    const { startGeneration, currentGeneration, error } = useGenerationStore();
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -72,40 +100,73 @@ export default function AssistantPage() {
         scrollToBottom();
     }, [messages]);
 
+    useEffect(() => {
+        if (!isGenerating) {
+            return;
+        }
+
+        if (!currentGeneration) {
+            return;
+        }
+
+        if (!pendingGenerationIdRef.current || pendingGenerationIdRef.current !== currentGeneration.id) {
+            pendingGenerationIdRef.current = currentGeneration.id;
+        }
+
+        if (currentGeneration.status === 'completed') {
+            const prompt = pendingPromptRef.current || input;
+            const actionKey = pendingActionRef.current;
+            const actionLabel = actionKey ? actionConfig[actionKey]?.successLabel : null;
+            messageIdRef.current += 1;
+            setMessages((prev) => [
+                ...prev,
+                {
+                    id: `msg_${messageIdRef.current}`,
+                    role: 'assistant',
+                    content: prompt
+                        ? `I processed your ${actionLabel || 'request'}: "${prompt}". Here is the generated result.`
+                        : `I processed your ${actionLabel || 'request'} and generated a result.`,
+                    timestamp: new Date(),
+                    generatedImages: currentGeneration.resultUrl ? [currentGeneration.resultUrl] : undefined,
+                },
+            ]);
+            pendingPromptRef.current = null;
+            pendingActionRef.current = null;
+            pendingGenerationIdRef.current = null;
+            setIsGenerating(false);
+            setErrorMessage(null);
+        } else if (currentGeneration.status === 'failed') {
+            pendingPromptRef.current = null;
+            pendingActionRef.current = null;
+            pendingGenerationIdRef.current = null;
+            setIsGenerating(false);
+            setErrorMessage(currentGeneration.error || error || 'Generation failed. Please try again.');
+        }
+    }, [currentGeneration, error, input, isGenerating]);
+
     const handleSend = async () => {
         if (!input.trim() && !selectedAction) return;
         messageIdRef.current += 1;
         const userMessageId = `msg_${messageIdRef.current}`;
+        const action = selectedAction ? actionConfig[selectedAction] : null;
+        const promptText = input.trim() || action?.prompt || 'Create something new.';
 
         const userMsg: Message = {
             id: userMessageId,
             role: 'user',
-            content: input,
+            content: promptText,
             timestamp: new Date(),
         };
 
         setMessages((prev) => [...prev, userMsg]);
+        setErrorMessage(null);
         setInput('');
         setSelectedAction(null);
         setIsGenerating(true);
+        pendingPromptRef.current = userMsg.content;
+        pendingActionRef.current = selectedAction;
 
-        // Call API for generation
-        await startGeneration('/generations/image', { prompt: input });
-        messageIdRef.current += 1;
-
-        const assistantMsg: Message = {
-            id: `msg_${messageIdRef.current}`,
-            role: 'assistant',
-            content: `I've processed your request: "${userMsg.content}". Here's what I generated for you. You can download, copy, or request modifications.`,
-            timestamp: new Date(),
-            generatedImages: [
-                'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=500&fit=crop',
-                'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=500&fit=crop',
-            ],
-        };
-
-        setMessages((prev) => [...prev, assistantMsg]);
-        setIsGenerating(false);
+        await startGeneration(action?.endpoint ?? '/generations/image', { prompt: promptText });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -116,6 +177,7 @@ export default function AssistantPage() {
     };
 
     const isEmpty = messages.length === 0;
+    const canSend = Boolean((input.trim() || selectedAction) && !isGenerating);
 
     return (
         <div className="h-full flex flex-col bg-background text-foreground overflow-hidden">
@@ -135,15 +197,21 @@ export default function AssistantPage() {
                             </p>
                         </div>
 
+                        {errorMessage && (
+                            <div className="mx-auto max-w-2xl rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive text-left">
+                                {errorMessage}
+                            </div>
+                        )}
+
                         {/* Quick Actions */}
                         <div className="flex items-center justify-center gap-3 pt-2">
                             {quickActions.map((action) => (
                                 <button
                                     key={action.id}
-                                    onClick={() => {
-                                        setSelectedAction(action.id);
-                                        textareaRef.current?.focus();
-                                    }}
+                                        onClick={() => {
+                                            setSelectedAction(action.id);
+                                            textareaRef.current?.focus();
+                                        }}
                                     className={cn(
                                         "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all text-sm",
                                         selectedAction === action.id
@@ -183,7 +251,7 @@ export default function AssistantPage() {
                                         size="icon"
                                         className="h-9 w-9 rounded-full"
                                         onClick={handleSend}
-                                        disabled={!input.trim()}
+                                        disabled={!canSend}
                                     >
                                         <Send className="w-4 h-4" />
                                     </Button>
@@ -294,7 +362,7 @@ export default function AssistantPage() {
                                         <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground"><Paperclip className="w-4 h-4" /></Button>
                                         <Button variant="ghost" size="icon" className="w-8 h-8 text-muted-foreground"><ImageIcon className="w-4 h-4" /></Button>
                                     </div>
-                                    <Button size="icon" className="h-8 w-8 rounded-full" onClick={handleSend} disabled={!input.trim() || isGenerating}>
+                                    <Button size="icon" className="h-8 w-8 rounded-full" onClick={handleSend} disabled={!canSend}>
                                         <Send className="w-4 h-4" />
                                     </Button>
                                 </div>

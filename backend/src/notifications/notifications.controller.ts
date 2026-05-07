@@ -1,4 +1,5 @@
 import {
+  Body,
   Controller,
   Get,
   Patch,
@@ -12,6 +13,7 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { NotificationsService } from './notifications.service';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { UpdateNotificationPreferencesDto } from './dto/update-notification-preferences.dto';
 
 @ApiTags('Notifications')
 @ApiBearerAuth()
@@ -43,6 +45,22 @@ export class NotificationsController {
   async countUnread(@Request() request) {
     const count = await this.notificationsService.countUnread(request.user.id);
     return { count };
+  }
+
+  @Get('preferences')
+  async getPreferences(@Request() request) {
+    return this.notificationsService.getPreferences(request.user.id);
+  }
+
+  @Patch('preferences')
+  async updatePreferences(
+    @Request() request,
+    @Body() dto: UpdateNotificationPreferencesDto,
+  ) {
+    return this.notificationsService.updatePreferences(
+      request.user.id,
+      dto.preferences,
+    );
   }
 
   @Patch(':id/read')

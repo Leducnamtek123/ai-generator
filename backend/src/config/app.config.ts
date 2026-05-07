@@ -5,10 +5,13 @@ import {
   IsEnum,
   IsInt,
   IsOptional,
+  Matches,
   IsString,
   IsUrl,
   Max,
   Min,
+  MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 enum Environment {
@@ -28,7 +31,7 @@ class EnvironmentVariablesValidator {
   @IsOptional()
   APP_PORT: number;
 
-  @IsUrl({ require_tld: false })
+  @Matches(/^https?:\/\/\S+(\s*,\s*https?:\/\/\S+)*$/)
   @IsOptional()
   FRONTEND_DOMAIN: string;
 
@@ -47,6 +50,12 @@ class EnvironmentVariablesValidator {
   @IsString()
   @IsOptional()
   APP_HEADER_LANGUAGE: string;
+
+  @IsString()
+  @ValidateIf((env) => env.NODE_ENV === 'production')
+  @MinLength(32)
+  @IsOptional()
+  GENERATION_CALLBACK_SECRET: string;
 }
 
 export default registerAs<AppConfig>('app', () => {
@@ -66,5 +75,6 @@ export default registerAs<AppConfig>('app', () => {
     apiPrefix: process.env.API_PREFIX || 'api',
     fallbackLanguage: process.env.APP_FALLBACK_LANGUAGE || 'en',
     headerLanguage: process.env.APP_HEADER_LANGUAGE || 'x-custom-lang',
+    generationCallbackSecret: process.env.GENERATION_CALLBACK_SECRET,
   };
 });

@@ -1,4 +1,4 @@
-import {
+﻿import {
   Injectable,
   Logger,
   NotFoundException,
@@ -21,6 +21,7 @@ import {
   CreateVisualVideoDto,
   CreateVisualSceneDto,
   UpdateVisualSceneDto,
+  SuggestScenesDto,
 } from './dto/visual-flow.dto';
 import { GenerationsService } from '../generations/generations.service';
 import { MaterialsService } from './services/materials.service';
@@ -141,9 +142,9 @@ export class VisualFlowService implements OnModuleInit {
     }
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // REPOSITORY HELPERS
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   
   async saveCharacter(character: VisualCharacterEntity) {
     return this.characterRepo.save(character);
@@ -153,9 +154,9 @@ export class VisualFlowService implements OnModuleInit {
     return this.sceneRepo.save(scene);
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // PROJECT CRUD
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async createProject(
     dto: CreateVisualProjectDto,
@@ -226,9 +227,9 @@ export class VisualFlowService implements OnModuleInit {
     await this.projectRepo.softDelete(project.id);
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // CHARACTER CRUD
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async addCharacter(
     projectId: string,
@@ -261,9 +262,9 @@ export class VisualFlowService implements OnModuleInit {
     await this.characterRepo.delete({ id: characterId, projectId });
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // VIDEO CRUD
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async createVideo(
     projectId: string,
@@ -299,9 +300,9 @@ export class VisualFlowService implements OnModuleInit {
     return video;
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // SCENE CRUD
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async createScene(
     projectId: string,
@@ -357,9 +358,9 @@ export class VisualFlowService implements OnModuleInit {
     await this.sceneRepo.delete(sceneId);
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // PIPELINE: GENERATE REFERENCE IMAGES
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async generateRefs(
     projectId: string,
@@ -405,9 +406,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // PIPELINE: GENERATE SCENE IMAGES
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async generateSceneImages(
     projectId: string,
@@ -433,14 +434,14 @@ export class VisualFlowService implements OnModuleInit {
       return { message: 'No pending scenes to generate images for', queued: 0 };
     }
 
-    // Build character name → URL map for reference injection
+    // Build character name â†’ URL map for reference injection
     const chars = project.characters ?? [];
     const charMap = Object.fromEntries(
       chars.filter((c) => c.referenceImageUrl).map((c) => [c.name, c.referenceImageUrl]),
     );
 
     const jobs = scenes.map(async (scene) => {
-      // Build character name → URL map for reference injection
+      // Build character name â†’ URL map for reference injection
       const refNames = (scene.characterNames ?? [])
         .filter((n) => charMap[n])
         .join(', ');
@@ -488,9 +489,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // PIPELINE: GENERATE SCENE VIDEOS
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async generateSceneVideos(
     projectId: string,
@@ -566,9 +567,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // PIPELINE STATUS DASHBOARD
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async getPipelineStatus(projectId: string, videoId: string, userId: string) {
     const project = await this.findOneProject(projectId, userId);
@@ -619,9 +620,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // MATERIALS: APPLY TO SCENES (FlowKit)
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async applyMaterialToScenes(
     projectId: string,
@@ -663,9 +664,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // CONCAT SCENE VIDEOS (FlowKit)
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async concatSceneVideos(
     projectId: string,
@@ -728,9 +729,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // REVIEW VIDEO SCENES (FlowKit)
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async reviewVideoScenes(
     projectId: string,
@@ -769,9 +770,9 @@ export class VisualFlowService implements OnModuleInit {
     });
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // SLIDESHOW FROM SCENE IMAGES (FlowKit)
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async createSlideshowFromScenes(
     projectId: string,
@@ -854,9 +855,9 @@ export class VisualFlowService implements OnModuleInit {
     };
   }
 
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // VIDEO NARRATION PIPELINE (FlowKit TTS)
-  // ═══════════════════════════════════════════════
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
   async generateVideoNarration(
     projectId: string,
@@ -941,5 +942,117 @@ export class VisualFlowService implements OnModuleInit {
         overlaid: overlayResults.length,
       },
     };
+  }
+
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+  // PIPELINE: SUGGEST SCENES (AI Assistant)
+  // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+
+  async suggestScenes(
+    projectId: string,
+    videoId: string,
+    userId: string,
+    dto: SuggestScenesDto,
+  ) {
+    const project = await this.findOneProject(projectId, userId);
+    if (!project.story) {
+      throw new BadRequestException('Project story is required to suggest scenes');
+    }
+
+    const characters = project.characters || [];
+    const charNames = characters.map((c) => c.name);
+    const count = dto.count || 5;
+
+    this.logger.log(`Suggesting ${count} scenes for project ${projectId} using AI`);
+
+    // We use the OpenAI adapter for chat completion
+    // Since we need structured JSON, we'll use a specific prompt
+    const openai = this.generationsService['providerRegistry'].getProvider('openai') as any;
+    if (!openai || typeof openai.getHeaders !== 'function') {
+      throw new Error('OpenAI provider not properly configured for AI Assistant');
+    }
+
+    const openAIBaseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+    const normalizedOpenAIBaseUrl = openAIBaseUrl.endsWith('/v1')
+      ? openAIBaseUrl
+      : `${openAIBaseUrl}/v1`;
+
+    const systemPrompt = `You are a professional storyboard artist and AI video director.
+Analyze the provided story and break it down into exactly ${count} cinematic scenes.
+Each scene must include:
+1. "prompt": A highly detailed visual still image prompt.
+2. "videoPrompt": A motion instruction prompt (e.g. "0-3s: camera pans left...").
+3. "characterNames": An array of characters from the allowed list who appear in this scene.
+
+IMPORTANT:
+- Use only characters from this list: [${charNames.join(', ')}].
+- Output ONLY a JSON array of objects.
+- Do not include any markdown formatting or extra text.
+
+JSON Schema:
+[
+  { "prompt": "string", "videoPrompt": "string", "characterNames": ["string"] }
+]`;
+
+    try {
+      const response = await (openai as any).httpService.axiosRef.post(
+        `${normalizedOpenAIBaseUrl}/chat/completions`,
+        {
+          model: 'gpt-4o',
+          messages: [
+            { role: 'system', content: systemPrompt },
+            { role: 'user', content: `Story: ${project.story}\n\nAdditional Instructions: ${dto.instructions || 'None'}` },
+          ],
+          response_format: { type: 'json_object' },
+          max_tokens: 2000,
+        },
+        { headers: (openai as any).getHeaders(), timeout: 60000 },
+      );
+
+      const content = response.data?.choices?.[0]?.message?.content;
+      if (!content) throw new Error('AI failed to return scene suggestions');
+
+      let suggestedScenes: any[];
+      const parsed = JSON.parse(content);
+      // GPT might wrap it in a "scenes" key if we use json_object mode
+      suggestedScenes = Array.isArray(parsed) ? parsed : parsed.scenes || Object.values(parsed)[0];
+
+      if (!Array.isArray(suggestedScenes)) {
+        throw new Error('Invalid AI response format');
+      }
+
+      // Get current max display order
+      const existingScenes = await this.getScenes(videoId);
+      let nextOrder = existingScenes.length;
+
+      const createdScenes: VisualSceneEntity[] = [];
+      for (const s of suggestedScenes) {
+        const scene = this.sceneRepo.create({
+          videoId,
+          prompt: s.prompt,
+          videoPrompt: s.videoPrompt,
+          characterNames: Array.isArray(s.characterNames) 
+            ? s.characterNames.filter((n: string) => charNames.includes(n))
+            : [],
+          displayOrder: nextOrder++,
+          chainType: 'ROOT',
+          verticalImageStatus: 'PENDING',
+          verticalVideoStatus: 'PENDING',
+          horizontalImageStatus: 'PENDING',
+          horizontalVideoStatus: 'PENDING',
+        });
+        await this.sceneRepo.save(scene);
+        createdScenes.push(scene);
+      }
+
+      this.logger.log(`Created ${createdScenes.length} suggested scenes for video ${videoId}`);
+      return {
+        message: `Successfully generated ${createdScenes.length} scenes`,
+        scenes: createdScenes,
+      };
+    } catch (err: any) {
+      this.logger.error(`AI Scene Suggestion failed: ${err.message}`);
+      throw new BadRequestException(`AI Assistant failed: ${err.message}`);
+    }
   }
 }

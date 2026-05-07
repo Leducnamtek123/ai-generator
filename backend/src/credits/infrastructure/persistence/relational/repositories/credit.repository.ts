@@ -32,12 +32,7 @@ export class CreditRelationalRepository implements CreditRepository {
     userId: string,
     status: CreditTransactionStatus,
   ): Promise<CreditTransaction | null> {
-    const entity = await this.creditRepository.findOne({
-      where: {
-        id: transactionId,
-        userId,
-      },
-    });
+    const entity = await this.findEntityById(transactionId, userId);
 
     if (!entity) {
       return null;
@@ -64,6 +59,14 @@ export class CreditRelationalRepository implements CreditRepository {
     return CreditMapper.toDomain(savedEntity);
   }
 
+  async findById(
+    transactionId: string,
+    userId: string,
+  ): Promise<CreditTransaction | null> {
+    const entity = await this.findEntityById(transactionId, userId);
+    return entity ? CreditMapper.toDomain(entity) : null;
+  }
+
   async findAllWithPagination(
     paginationOptions: IPaginationOptions,
     userId: string,
@@ -86,5 +89,14 @@ export class CreditRelationalRepository implements CreditRepository {
       .getRawOne();
 
     return Number(total) || 0;
+  }
+
+  private async findEntityById(transactionId: string, userId: string) {
+    return this.creditRepository.findOne({
+      where: {
+        id: transactionId,
+        userId,
+      },
+    });
   }
 }

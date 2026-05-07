@@ -10,4 +10,5 @@ export * from "./sonner";
 export * from "./table";
 export * from "./tooltip";
 export * from "./dialog";
+export * from "./alert-dialog";
 export * from "./global-loader";

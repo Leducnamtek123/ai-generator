@@ -2,9 +2,12 @@ import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SocialAccountEntity } from '../infrastructure/persistence/relational/entities/social-account.entity';
-import { UserEntity } from '../../users/infrastructure/persistence/relational/entities/user.entity';
+import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
 import { SocialProviderRegistry } from '../providers/social-provider.registry';
 import { encrypt, decrypt } from '../utils/encryption.helper';
+import { NotificationsService } from '../../notifications/notifications.service';
+import { NotificationCategory } from '../../notifications/notifications.types';
+import { NotificationType } from '../../notifications/infrastructure/persistence/relational/entities/notification.entity';
 
 @Injectable()
 export class ChannelsService {
@@ -14,16 +17,18 @@ export class ChannelsService {
     @InjectRepository(SocialAccountEntity)
     private readonly socialAccountRepository: Repository<SocialAccountEntity>,
     private readonly socialProviderRegistry: SocialProviderRegistry,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   /**
    * Find all channels for the current user.
    * Improved: scoped to user instead of returning all accounts.
    */
-  async findAllForUser(user: UserEntity) {
+  async findAllForUser(user: AuthenticatedUser) {
+    const userId = Number(user.id);
     try {
       const accounts = await this.socialAccountRepository.find({
-        where: { user: { id: user.id } },
+        where: { user: { id: userId } },
         order: { createdAt: 'DESC' },
       });
 
@@ -54,9 +59,13 @@ export class ChannelsService {
     return this.socialAccountRepository.find();
   }
 
-  async connect(user: UserEntity, platform: string, code: string, extraParams: Record<string, any> = {}) {
-    console.log(`User ${user.id} connecting to ${platform} with code ${code}`);
-
+  async connect(
+    user: AuthenticatedUser,
+    platform: string,
+    code: string,
+    extraParams: Record<string, any> = {},
+  ) {
+    const userId = Number(user.id);
     // Get the provider and exchange code for real tokens
     const provider = this.socialProviderRegistry.getProvider(platform);
     const details = await provider.authenticate(code, extraParams);
@@ -64,7 +73,7 @@ export class ChannelsService {
     // Check if account already exists (re-connecting)
     const existingAccount = await this.socialAccountRepository.findOne({
       where: {
-        user: { id: user.id },
+        user: { id: userId },
         platform,
         platformId: details.id,
       },
@@ -81,6 +90,8 @@ export class ChannelsService {
       metadata.verifyToken = `paint_ai_${Math.random().toString(36).substring(2, 15)}`;
     }
 
+    let savedAccount: SocialAccountEntity;
+
     if (existingAccount) {
       // Update existing account with new tokens
       existingAccount.accessToken = encrypt(details.accessToken);
@@ -93,46 +104,77 @@ export class ChannelsService {
       existingAccount.name = details.name || existingAccount.name;
       existingAccount.picture = details.picture || existingAccount.picture;
       existingAccount.metadata = metadata;
-      return this.socialAccountRepository.save(existingAccount);
+      savedAccount = (await this.socialAccountRepository.save(
+        existingAccount,
+      )) as SocialAccountEntity;
+    } else {
+      const userRef = { id: userId } as SocialAccountEntity['user'];
+      const account = this.socialAccountRepository.create({
+        user: userRef,
+        platform,
+        platformId: details.id,
+        name: details.name,
+        username: details.username,
+        picture: details.picture,
+        accessToken: encrypt(details.accessToken),
+        refreshToken: details.refreshToken
+          ? encrypt(details.refreshToken)
+          : undefined,
+        expiresAt: details.expiresIn
+          ? new Date(Date.now() + details.expiresIn * 1000)
+          : undefined,
+        metadata,
+      });
+      savedAccount = (await this.socialAccountRepository.save(
+        account,
+      )) as SocialAccountEntity;
     }
 
-    const account = this.socialAccountRepository.create({
-      user,
-      platform,
-      platformId: details.id,
-      name: details.name,
-      username: details.username,
-      picture: details.picture,
-      accessToken: encrypt(details.accessToken),
-      refreshToken: details.refreshToken
-        ? encrypt(details.refreshToken)
-        : undefined,
-      expiresAt: details.expiresIn
-        ? new Date(Date.now() + details.expiresIn * 1000)
-        : undefined,
-      metadata,
+    await this.notificationsService.notifyUser({
+      userId: user.id,
+      category: NotificationCategory.SOCIAL,
+      type: NotificationType.SUCCESS,
+      title: existingAccount
+        ? 'Social account reconnected'
+        : 'Social account connected',
+      message: `${savedAccount.platform.charAt(0).toUpperCase()}${savedAccount.platform.slice(1)} is now connected${savedAccount.name ? ` as ${savedAccount.name}` : ''}.`,
+      emailSubject: `${savedAccount.platform} account connected`,
     });
 
-    return this.socialAccountRepository.save(account);
+    return savedAccount;
   }
 
-  async disconnect(id: number) {
+  async disconnect(id: number, userId: AuthenticatedUser['id']) {
+    const ownerId = Number(userId);
     const account = await this.socialAccountRepository.findOne({
-      where: { id },
+      where: { id, user: { id: ownerId } },
+      relations: ['user'],
     });
     if (!account) {
       throw new NotFoundException('Account not found');
     }
-    return this.socialAccountRepository.remove(account);
+    const removed = await this.socialAccountRepository.remove(account);
+    if (account.user?.id) {
+      await this.notificationsService.notifyUser({
+        userId: account.user.id,
+        category: NotificationCategory.SOCIAL,
+        type: NotificationType.WARNING,
+        title: 'Social account disconnected',
+        message: `${account.platform.charAt(0).toUpperCase()}${account.platform.slice(1)} was disconnected from your workspace.`,
+        emailSubject: `${account.platform} account disconnected`,
+      });
+    }
+    return removed;
   }
 
   /**
    * Fetch real interactions from the social platform.
    * Improved: actually calls the provider API instead of returning mock data.
    */
-  async getInteractions(accountId: number) {
+  async getInteractions(accountId: number, userId: AuthenticatedUser['id']) {
+    const ownerId = Number(userId);
     const account = await this.socialAccountRepository.findOne({
-      where: { id: accountId },
+      where: { id: accountId, user: { id: ownerId } },
     });
     if (!account) {
       throw new NotFoundException('Account not found');
@@ -149,20 +191,20 @@ export class ChannelsService {
         );
       }
     } catch (error) {
-      console.error(
-        `Failed to fetch interactions for ${account.platform}:`,
-        error,
+      this.logger.error(
+        `Failed to fetch interactions for ${account.platform}: ${error?.message || error}`,
       );
     }
 
     return [];
   }
 
-  async getFeed(user: UserEntity) {
+  async getFeed(user: AuthenticatedUser) {
+    const userId = Number(user.id);
     let accounts: SocialAccountEntity[] = [];
     try {
       accounts = await this.socialAccountRepository.find({
-        where: { user: { id: user.id } },
+        where: { user: { id: userId } },
       });
     } catch (error) {
       this.logger.error(
@@ -182,7 +224,24 @@ export class ChannelsService {
             decrypt(account.accessToken),
             account.platformId,
           );
-          allInteractions.push(...interactions);
+          const handledInteractionIds = new Set<string>(
+            Array.isArray(account.metadata?.handledInteractionIds)
+              ? account.metadata.handledInteractionIds.map((id: any) =>
+                  String(id),
+                )
+              : [],
+          );
+          const scopedInteractions = interactions
+            .filter(
+              (interaction) =>
+                !handledInteractionIds.has(String(interaction.id)),
+            )
+            .map((interaction) => ({
+              ...interaction,
+              accountId: account.id,
+              canReply: !!provider.comment,
+            }));
+          allInteractions.push(...scopedInteractions);
         }
       } catch (error) {
         console.error(
@@ -214,6 +273,93 @@ export class ChannelsService {
       const timeB = new Date(b.time || 0).getTime();
       return timeB - timeA;
     });
+  }
+
+  async replyToInteraction(
+    user: AuthenticatedUser,
+    accountId: number,
+    interactionId: string,
+    message: string,
+  ) {
+    const userId = Number(user.id);
+    const account = await this.socialAccountRepository.findOne({
+      where: { id: accountId, user: { id: userId } },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    const provider = this.socialProviderRegistry.getProvider(account.platform);
+    if (!provider.comment) {
+      throw new Error(
+        `${account.platform} does not support direct replies yet`,
+      );
+    }
+
+    const result = await provider.comment(
+      decrypt(account.accessToken),
+      interactionId,
+      { message },
+      account.platformId,
+    );
+
+    const metadata = {
+      ...(account.metadata || {}),
+      handledInteractionIds: Array.from(
+        new Set<string>([
+          ...(Array.isArray(account.metadata?.handledInteractionIds)
+            ? account.metadata.handledInteractionIds.map((id: any) =>
+                String(id),
+              )
+            : []),
+          interactionId,
+        ]),
+      ),
+    };
+    account.metadata = metadata;
+    await this.socialAccountRepository.save(account);
+
+    return {
+      replied: true,
+      interactionId,
+      accountId,
+      result,
+    };
+  }
+
+  async markInteractionHandled(
+    user: AuthenticatedUser,
+    accountId: number,
+    interactionId: string,
+  ) {
+    const userId = Number(user.id);
+    const account = await this.socialAccountRepository.findOne({
+      where: { id: accountId, user: { id: userId } },
+    });
+
+    if (!account) {
+      throw new NotFoundException('Account not found');
+    }
+
+    const handledInteractionIds = new Set<string>(
+      Array.isArray(account.metadata?.handledInteractionIds)
+        ? account.metadata.handledInteractionIds.map((id: any) => String(id))
+        : [],
+    );
+    handledInteractionIds.add(interactionId);
+
+    account.metadata = {
+      ...(account.metadata || {}),
+      handledInteractionIds: Array.from(handledInteractionIds),
+    };
+    await this.socialAccountRepository.save(account);
+
+    return {
+      handled: true,
+      interactionId,
+      accountId,
+    };
   }
 
   /**

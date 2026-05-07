@@ -156,6 +156,7 @@ export type ProviderType =
   | 'replicate'
   | 'stability'
   | 'openai'
+  | 'comfyui'
   | 'leonardo'
   | 'runway'
   | 'elevenlabs'

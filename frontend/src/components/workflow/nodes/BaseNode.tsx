@@ -41,58 +41,60 @@ export const BaseNode = memo(({
     };
 
     return (
-        <div className="relative group">
-            {/* Minimal Title - Floating above */}
+        <div className="relative isolate group">
             {!isPreview && (
-                <div className="absolute -top-7 left-0 flex items-center justify-between w-full px-1 z-10">
-                    <div className="flex items-center gap-2">
-                        {isEditing ? (
-                            <input
-                                ref={inputRef}
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                onBlur={handleTitleSubmit}
-                                onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
-                                className="bg-background border border-input rounded px-2 py-0.5 text-[10px] text-foreground outline-none w-32 focus:ring-1 focus:ring-ring"
-                            />
-                        ) : (
-                            <span
-                                onDoubleClick={handleStartEditing}
-                                className={cn(
-                                    "text-[10px] font-medium transition-colors cursor-text select-none",
-                                    selected ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
-                                )}>{title}</span>
-                        )}
-                    </div>
+                <div className="absolute -top-8 left-3 z-20 flex items-center gap-2 rounded-full border border-border/70 bg-[#0b0e13]/92 px-2.5 py-1 backdrop-blur-xl shadow-[0_10px_24px_rgba(0,0,0,0.32)]">
+                    {isEditing ? (
+                        <input
+                            ref={inputRef}
+                            value={editTitle}
+                            onChange={(e) => setEditTitle(e.target.value)}
+                            onBlur={handleTitleSubmit}
+                            onKeyDown={(e) => e.key === 'Enter' && handleTitleSubmit()}
+                            className="h-6 w-32 rounded-full border border-input bg-background px-2 text-[10px] text-foreground outline-none focus:ring-1 focus:ring-ring"
+                        />
+                    ) : (
+                        <span
+                            onDoubleClick={handleStartEditing}
+                            className={cn(
+                                "cursor-text select-none text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                selected ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
+                            )}
+                        >
+                            {title}
+                        </span>
+                    )}
                 </div>
             )}
 
-            {/* Top Toolbar (Appears on selection) */}
             {selected && !isPreview && headerActions && (
-                <div className="absolute -top-12 left-1/2 -translate-x-1/2 z-[60] animate-in fade-in zoom-in-95 duration-200">
-                    <div className="bg-popover border border-border rounded-xl px-1.5 py-1 flex items-center gap-0.5 shadow-xl shadow-black/10">
+                <div className="absolute -top-12 left-1/2 z-[60] -translate-x-1/2">
+                    <div className="flex items-center gap-0.5 rounded-lg border border-border/70 bg-[#0b0e13]/95 px-1.5 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl">
                         {headerActions}
                     </div>
                 </div>
             )}
 
-            {/* Side Mini Icons */}
             {!isPreview && sideActions && (
-                <div className="absolute top-0 -right-8 flex flex-col gap-1 z-10">
+                <div className="absolute top-1.5 -right-7 z-10 flex flex-col gap-1">
                     {sideActions}
                 </div>
             )}
 
-            {/* Main Content Card */}
             <Card
                 className={cn(
-                    "rounded-xl transition-all duration-200 overflow-hidden",
-                    "bg-card shadow-sm relative",
-                    selected && !isPreview ? "border-primary shadow-[0_0_0_4px_rgba(59,130,246,0.1)]" : "border-border/50",
-                    !isPreview && "hover:border-border"
+                    "relative overflow-visible rounded-xl border transition-all duration-200",
+                    "bg-[#0b0e13] shadow-[0_18px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.03]",
+                    selected && !isPreview
+                        ? "border-primary/70 shadow-[0_0_0_1px_rgba(47,102,255,0.28),0_24px_60px_rgba(0,0,0,0.45)]"
+                        : "border-border/55 hover:border-border/80",
+                    !isPreview && "hover:shadow-[0_22px_70px_rgba(0,0,0,0.42)]"
                 )}
             >
-                {children}
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white/[0.04] to-transparent" />
+                <div className="relative">
+                    {children}
+                </div>
             </Card>
         </div>
     );

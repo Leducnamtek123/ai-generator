@@ -15,6 +15,8 @@ import { AuthTokenService } from './services/auth-token.service';
 import { SocialAuthService } from './services/social-auth.service';
 import { AuthProvisioningService } from './services/auth-provisioning.service';
 import { AuthPasswordService } from './services/auth-password.service';
+import { ApiKeyStrategy } from './strategies/api-key.strategy';
+import { ApiKeysModule } from '../api-keys/api-keys.module';
 
 @Module({
   imports: [
@@ -24,6 +26,7 @@ import { AuthPasswordService } from './services/auth-password.service';
     MailModule,
     ProjectsModule,
     OrganizationsModule,
+    ApiKeysModule,
     JwtModule.register({}),
   ],
   controllers: [AuthController],
@@ -36,6 +39,7 @@ import { AuthPasswordService } from './services/auth-password.service';
     JwtStrategy,
     JwtRefreshStrategy,
     AnonymousStrategy,
+    ApiKeyStrategy,
   ],
   exports: [AuthService],
 })

@@ -17,6 +17,7 @@ import { RelationalFilePersistenceModule } from '../../persistence/relational/re
 import { AllConfigType } from '../../../../config/config.type';
 import { DatabaseConfig } from '../../../../database/config/database-config.type';
 import databaseConfig from '../../../../database/config/database.config';
+import { AssetsModule } from '../../../../assets/assets.module';
 
 // <database-block>
 const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
@@ -28,6 +29,7 @@ const infrastructurePersistenceModule = (databaseConfig() as DatabaseConfig)
 @Module({
   imports: [
     infrastructurePersistenceModule,
+    AssetsModule,
     MulterModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

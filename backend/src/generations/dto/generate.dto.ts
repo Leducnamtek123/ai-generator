@@ -33,12 +33,21 @@ export class GenerateImageDto {
   @IsNumber()
   seed?: number;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for image generation' })
+  @ApiPropertyOptional({ description: 'Optional reference image URL' })
+  @IsOptional()
+  @IsString()
+  referenceImageUrl?: string;
+
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for image generation',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
 
-  @ApiPropertyOptional({ description: 'Extra metadata to store with generation' })
+  @ApiPropertyOptional({
+    description: 'Extra metadata to store with generation',
+  })
   @IsOptional()
   metadata?: Record<string, any>;
 }
@@ -73,11 +82,15 @@ export class GenerateVideoDto {
   @IsString()
   endImageUrl?: string;
 
-  @ApiPropertyOptional({ description: 'Extra metadata to store with generation' })
+  @ApiPropertyOptional({
+    description: 'Extra metadata to store with generation',
+  })
   @IsOptional()
   metadata?: Record<string, any>;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for video generation' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for video generation',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -172,7 +185,9 @@ export class UpscaleImageDto {
   @IsString()
   prompt?: string;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for image upscaling' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for image upscaling',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -190,7 +205,9 @@ export class EnhancePromptDto {
   @IsString()
   style?: string;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for prompt enhancement' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for prompt enhancement',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -223,7 +240,22 @@ export class GenerateMusicDto {
   @IsString()
   prompt: string;
 
-  @ApiPropertyOptional({ enum: ['pop', 'rock', 'electronic', 'classical', 'jazz', 'ambient', 'cinematic', 'lofi', 'hiphop', 'rnb', 'country', 'reggae'] })
+  @ApiPropertyOptional({
+    enum: [
+      'pop',
+      'rock',
+      'electronic',
+      'classical',
+      'jazz',
+      'ambient',
+      'cinematic',
+      'lofi',
+      'hiphop',
+      'rnb',
+      'country',
+      'reggae',
+    ],
+  })
   @IsOptional()
   @IsString()
   genre?: string;
@@ -236,21 +268,31 @@ export class GenerateMusicDto {
   @IsOptional()
   instruments?: string[];
 
-  @ApiPropertyOptional({ description: 'Duration in seconds', minimum: 15, maximum: 180 })
+  @ApiPropertyOptional({
+    description: 'Duration in seconds',
+    minimum: 15,
+    maximum: 180,
+  })
   @IsOptional()
   @IsNumber()
   @Min(15)
   @Max(180)
   duration?: number;
 
-  @ApiPropertyOptional({ description: 'Tempo in BPM', minimum: 60, maximum: 200 })
+  @ApiPropertyOptional({
+    description: 'Tempo in BPM',
+    minimum: 60,
+    maximum: 200,
+  })
   @IsOptional()
   @IsNumber()
   @Min(60)
   @Max(200)
   tempo?: number;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for music generation' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for music generation',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -261,19 +303,36 @@ export class GenerateSfxDto {
   @IsString()
   prompt: string;
 
-  @ApiPropertyOptional({ enum: ['nature', 'urban', 'mechanical', 'digital', 'human', 'musical', 'weather', 'scifi'] })
+  @ApiPropertyOptional({
+    enum: [
+      'nature',
+      'urban',
+      'mechanical',
+      'digital',
+      'human',
+      'musical',
+      'weather',
+      'scifi',
+    ],
+  })
   @IsOptional()
   @IsString()
   category?: string;
 
-  @ApiPropertyOptional({ description: 'Duration in seconds', minimum: 0.5, maximum: 30 })
+  @ApiPropertyOptional({
+    description: 'Duration in seconds',
+    minimum: 0.5,
+    maximum: 30,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0.5)
   @Max(30)
   duration?: number;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for sound effect generation' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for sound effect generation',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -299,19 +358,28 @@ export class GenerateVoiceDto {
   @IsString()
   language?: string;
 
-  @ApiPropertyOptional({ description: 'Emotion', enum: ['neutral', 'happy', 'sad', 'angry', 'excited', 'calm'] })
+  @ApiPropertyOptional({
+    description: 'Emotion',
+    enum: ['neutral', 'happy', 'sad', 'angry', 'excited', 'calm'],
+  })
   @IsOptional()
   @IsString()
   emotion?: string;
 
-  @ApiPropertyOptional({ description: 'Speech speed', minimum: 0.5, maximum: 2.0 })
+  @ApiPropertyOptional({
+    description: 'Speech speed',
+    minimum: 0.5,
+    maximum: 2.0,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0.5)
   @Max(2.0)
   speed?: number;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for voice generation' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for voice generation',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -333,14 +401,22 @@ export class LipSyncDto {
   @IsString()
   syncMode?: string;
 
-  @ApiPropertyOptional({ description: 'Sync accuracy', minimum: 50, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Sync accuracy',
+    minimum: 50,
+    maximum: 100,
+  })
   @IsOptional()
   @IsNumber()
   @Min(50)
   @Max(100)
   accuracy?: number;
 
-  @ApiPropertyOptional({ description: 'Motion smoothing', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Motion smoothing',
+    minimum: 0,
+    maximum: 100,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -368,14 +444,22 @@ export class UpscaleVideoDto {
   @IsString()
   model?: string;
 
-  @ApiPropertyOptional({ description: 'Denoise level', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Denoise level',
+    minimum: 0,
+    maximum: 100,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
   denoise?: number;
 
-  @ApiPropertyOptional({ description: 'Sharpen level', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Sharpen level',
+    minimum: 0,
+    maximum: 100,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -386,7 +470,9 @@ export class UpscaleVideoDto {
   @IsOptional()
   fpsBoost?: boolean;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for video upscaling' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for video upscaling',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -404,14 +490,20 @@ export class RemoveBackgroundDto {
   @IsString()
   mode?: string;
 
-  @ApiPropertyOptional({ description: 'Edge refinement level', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Edge refinement level',
+    minimum: 0,
+    maximum: 100,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   @Max(100)
   edgeRefinement?: number;
 
-  @ApiPropertyOptional({ description: 'Preferred AI provider for image processing' })
+  @ApiPropertyOptional({
+    description: 'Preferred AI provider for image processing',
+  })
   @IsOptional()
   @IsString()
   provider?: string;
@@ -426,12 +518,16 @@ export class SketchToImageDto {
   @IsString()
   sketchUrl: string;
 
-  @ApiPropertyOptional({ enum: ['photorealistic', 'anime', 'oil-painting', 'watercolor', 'pencil'] })
+  @ApiPropertyOptional({
+    enum: ['photorealistic', 'anime', 'oil-painting', 'watercolor', 'pencil'],
+  })
   @IsOptional()
   @IsString()
   style?: string;
 
-  @ApiPropertyOptional({ description: 'How closely to follow the sketch (0-100)' })
+  @ApiPropertyOptional({
+    description: 'How closely to follow the sketch (0-100)',
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
@@ -456,7 +552,11 @@ export class ImageVariationsDto {
   @Max(100)
   strength?: number;
 
-  @ApiPropertyOptional({ description: 'Number of variations', minimum: 1, maximum: 4 })
+  @ApiPropertyOptional({
+    description: 'Number of variations',
+    minimum: 1,
+    maximum: 4,
+  })
   @IsOptional()
   @IsNumber()
   @Min(1)
@@ -469,7 +569,17 @@ export class CameraChangeDto {
   @IsString()
   imageUrl: string;
 
-  @ApiPropertyOptional({ enum: ['orbit-left', 'orbit-right', 'zoom-in', 'zoom-out', 'pan-up', 'pan-down', 'tilt'] })
+  @ApiPropertyOptional({
+    enum: [
+      'orbit-left',
+      'orbit-right',
+      'zoom-in',
+      'zoom-out',
+      'pan-up',
+      'pan-down',
+      'tilt',
+    ],
+  })
   @IsOptional()
   @IsString()
   movement?: string;
@@ -490,7 +600,9 @@ export class IconGeneratorDto {
   @IsString()
   prompt: string;
 
-  @ApiPropertyOptional({ enum: ['flat', '3d', 'outline', 'filled', 'gradient', 'glassmorphism'] })
+  @ApiPropertyOptional({
+    enum: ['flat', '3d', 'outline', 'filled', 'gradient', 'glassmorphism'],
+  })
   @IsOptional()
   @IsString()
   style?: string;
@@ -537,7 +649,18 @@ export class MockupGeneratorDto {
   @IsString()
   designUrl: string;
 
-  @ApiPropertyOptional({ enum: ['phone', 'laptop', 'tablet', 'tshirt', 'mug', 'poster', 'book', 'card'] })
+  @ApiPropertyOptional({
+    enum: [
+      'phone',
+      'laptop',
+      'tablet',
+      'tshirt',
+      'mug',
+      'poster',
+      'book',
+      'card',
+    ],
+  })
   @IsOptional()
   @IsString()
   template?: string;
@@ -558,7 +681,11 @@ export class SkinEnhanceDto {
   @IsString()
   imageUrl: string;
 
-  @ApiPropertyOptional({ description: 'Enhancement level (0-100)', minimum: 0, maximum: 100 })
+  @ApiPropertyOptional({
+    description: 'Enhancement level (0-100)',
+    minimum: 0,
+    maximum: 100,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)

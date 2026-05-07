@@ -1,0 +1,97 @@
+- main [ref=e3]:
+  - generic [ref=e5]:
+    - text: .. .. ..
+    - generic:
+      - generic [ref=e8]:
+        - group [ref=e12]:
+          - button "Unsaved Workflow • " [pressed] [ref=e13] [cursor=pointer]:
+            - generic [ref=e15]:
+              - generic [ref=e16]: Unsaved Workflow
+              - generic [ref=e17]:
+                - generic [ref=e18]: •
+                - button "" [ref=e19]:
+                  - generic [ref=e20]: 
+        - button "Create a new blank workflow" [ref=e21] [cursor=pointer]:
+          - generic [ref=e22]: 
+      - generic:
+        - navigation [ref=e23]:
+          - generic [ref=e24]:
+            - generic [ref=e25]:
+              - img [ref=e28] [cursor=pointer]
+              - button "Assets" [ref=e30] [cursor=pointer]
+              - button "Node Library (n)" [ref=e33] [cursor=pointer]
+              - button "Model Library (m)" [ref=e36] [cursor=pointer]
+              - button "Workflows (w)" [ref=e39] [cursor=pointer]
+              - button "Templates" [ref=e42] [cursor=pointer]
+            - generic [ref=e45]:
+              - button "Help Center" [ref=e47] [cursor=pointer]:
+                - generic [ref=e49]: 
+              - button "Toggle Bottom Panel" [ref=e50] [cursor=pointer]:
+                - img [ref=e52]
+              - button "Keyboard Shortcuts (Ctrl + Shift + k)" [ref=e54] [cursor=pointer]
+              - button "Settings (Ctrl + ,)" [ref=e57] [cursor=pointer]
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - navigation "Graph navigation":
+                    - list:
+                      - listitem [ref=e60]:
+                        - link "Unsaved Workflow " [ref=e61] [cursor=pointer]:
+                          - /url: "#"
+                          - generic [ref=e62]: Unsaved Workflow
+                          - generic [ref=e63]: 
+              - generic [ref=e64]:
+                - generic [ref=e67]:
+                  - button "ComfyUI Manager" [ref=e68] [cursor=pointer]:
+                    - generic [ref=e69]: 󰐱
+                    - generic [ref=e70]: Manager
+                  - button "Show favorite custom node list" [ref=e71] [cursor=pointer]:
+                    - generic [ref=e72]: 󰓎
+                  - button "Unload Models" [ref=e73] [cursor=pointer]:
+                    - generic [ref=e74]: 󱦢
+                  - button "Free model and node cache" [ref=e75] [cursor=pointer]:
+                    - generic [ref=e76]: 󱦡
+                  - button "Share" [ref=e77] [cursor=pointer]:
+                    - generic [ref=e78]: 󰒖
+                - region [ref=e81]:
+                  - generic [ref=e83]:
+                    - generic [ref=e84]: .. .. ..
+                    - generic [ref=e85]:
+                      - generic [ref=e86]:
+                        - button "Run" [ref=e87] [cursor=pointer]:
+                          - generic [ref=e89]: Run
+                        - button [ref=e90] [cursor=pointer]:
+                          - img [ref=e91]
+                      - generic "Batch Count" [ref=e93]:
+                        - generic [ref=e94]:
+                          - spinbutton [ref=e95]: "1"
+                          - generic [ref=e96]:
+                            - button [ref=e97] [cursor=pointer]:
+                              - img [ref=e98]
+                            - button:
+                              - img
+                    - button "Cancel current run" [disabled]
+                - button "Expand job queue" [ref=e100] [cursor=pointer]
+                - button "Toggle properties panel" [ref=e102] [cursor=pointer]
+            - generic:
+              - generic:
+                - group [ref=e104]:
+                  - button [ref=e105] [cursor=pointer]
+                  - button "Fit View (.)" [ref=e111] [cursor=pointer]
+                  - button "Zoom Controls" [ref=e113] [cursor=pointer]:
+                    - generic [ref=e115]: 100%
+                  - button "Hide Minimap (ALT + M)" [ref=e118] [cursor=pointer]
+                  - button "Hide Links" [ref=e120] [cursor=pointer]
+                - generic [ref=e123]:
+                  - button [ref=e124] [cursor=pointer]
+                  - button [ref=e126] [cursor=pointer]
+                  - separator [ref=e128]
+              - text: 
+    - generic:
+      - generic "The text to be encoded." [ref=e131]:
+        - textbox "text" [ref=e132]: text, watermark
+      - generic "The text to be encoded." [ref=e133]:
+        - textbox "text" [ref=e134]: beautiful scenery nature glass bottle landscape, , purple galaxy bottle,
+  - text: 
