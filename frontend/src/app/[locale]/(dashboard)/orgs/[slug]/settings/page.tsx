@@ -71,7 +71,7 @@ function reducer(state: OrgSettingsState, action: OrgSettingsAction): OrgSetting
 
 export default function OrgSettingsPage() {
     const params = useParams();
-    const router = useRouter();
+    const { push } = useRouter();
     const slug = params?.slug as string;
     const { currentOrg, setCurrentOrg, hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
@@ -132,7 +132,7 @@ export default function OrgSettingsPage() {
         try {
             await orgApi.delete(slug);
             setCurrentOrg(null);
-            router.push('/dashboard');
+            push('/dashboard');
         } catch (err: unknown) {
             const apiErr = err as { response?: { data?: { message?: string } } };
             dispatch({ type: 'setError', error: apiErr?.response?.data?.message || 'Failed to delete' });

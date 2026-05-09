@@ -34,7 +34,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const [search, setSearch] = React.useState('');
     const isWorkflow = pathname === '/creator/workflow-editor';
     const { user, isLoading } = useAuth();
-    const router = useRouter();
+    const { push } = useRouter();
     const { workflow, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
     const { notifications, unreadCount, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } = useNotificationStore();
 
@@ -58,7 +58,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             const nextPath = `${pathname}${search}`;
             window.location.replace(`/sign-in?next=${encodeURIComponent(nextPath)}`);
         }
-    }, [user, isLoading, pathname, search, router, isPublicRoute]);
+    }, [user, isLoading, pathname, search, push, isPublicRoute]);
 
     React.useEffect(() => {
         if (user) {
@@ -75,14 +75,14 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
 
     const handleCreateNew = () => {
         createWorkflow({ name: 'Untitled Studio' }).then(id => {
-            if (id) router.push(`/creator/workflow-editor?workflowId=${id}`);
+            if (id) push(`/creator/workflow-editor?workflowId=${id}`);
         });
     };
 
     const handleDuplicate = async () => {
         if (workflow?.id) {
             const newId = await duplicateWorkflow(workflow.id);
-            if (newId) router.push(`/creator/workflow-editor?workflowId=${newId}`);
+            if (newId) push(`/creator/workflow-editor?workflowId=${newId}`);
         }
     };
 
@@ -219,7 +219,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="md:hidden h-8 w-8"
+                            className="md:hidden size-8"
                             onClick={onMenuClick}
                         >
                             <Menu className="size-5" />
@@ -236,7 +236,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="h-8 w-8 relative">
+                                <Button variant="ghost" size="icon" className="size-8 relative">
                                     <Bell className="size-4 text-muted-foreground" />
                                     {unreadCount > 0 && (
                                         <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
@@ -297,7 +297,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                     <Button
                                         variant="ghost"
                                         className="w-full text-xs h-8"
-                                        onClick={() => router.push('/notifications')}
+                                        onClick={() => push('/notifications')}
                                     >
                                         View all notifications
                                     </Button>

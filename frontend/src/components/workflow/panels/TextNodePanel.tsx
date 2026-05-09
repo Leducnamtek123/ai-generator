@@ -27,7 +27,7 @@ export function TextNodePanel({ nodeData, onChange }: NodePanelProps) {
                     value={(nodeData.text as string) || ''}
                     onChange={(e) => onChange('text', e.target.value)}
                     className="w-full h-32 bg-background border border-input rounded-lg p-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-green-500/50 resize-none"
-                    placeholder="Describe what you want to create..."
+                    placeholder="Describe what you want to create?"
                 />
                 <div className="flex items-center justify-between">
                     <p className="text-[10px] text-muted-foreground">{((nodeData.text as string) || '').length} characters</p>

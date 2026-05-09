@@ -83,7 +83,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
             case WorkflowNodeType.IMAGE_GEN: return <ImageIcon className="size-4 text-blue-400" />;
             case WorkflowNodeType.VIDEO_GEN: return <Video className="size-4 text-purple-400" />;
             case WorkflowNodeType.ASSISTANT: return <Sparkles className="size-4 text-emerald-400" />;
-            case WorkflowNodeType.UPSCALE: return <Scan className="size-4 text-indigo-400" />;
+            case WorkflowNodeType.UPSCALE: return <Scan className="size-4 text-violet-400" />;
             case WorkflowNodeType.TOOL: return <Wand2 className="size-4 text-fuchsia-400" />;
             default: return <Settings2 className="size-4 text-white/60" />;
         }
@@ -114,7 +114,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     variant="ghost"
                     size="icon"
                     onClick={onClose}
-                    className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg"
+                    className="size-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg"
                 >
                     <X className="size-4" />
                 </Button>
@@ -135,7 +135,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             className="w-full h-11 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
                         >
                             <option value="">Auto / Default</option>
-                            {providersLoading && <option value="">Loading providers...</option>}
+                            {providersLoading && <option value="">Loading providers?</option>}
                             {providers.map((provider) => (
                                 <option key={provider.name} value={provider.name}>
                                     {provider.name}

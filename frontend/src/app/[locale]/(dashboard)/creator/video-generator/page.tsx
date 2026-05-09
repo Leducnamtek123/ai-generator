@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef, useState, useEffect } from 'react';
+import { Suspense, useReducer, useRef, useState, useEffect, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -131,6 +131,13 @@ type VideoProjectPayload = {
     snapshot: Partial<VideoSnapshot>;
 };
 
+type CommunityVideoListing = {
+    id: string;
+    title: string;
+    description?: string;
+    thumbnail?: string;
+};
+
 const initialState: VideoPageState = {
     activeContentTab: TUTORIALS_TAB,
     selectedModel: 'auto',
@@ -200,18 +207,27 @@ function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState
 }
 
 export default function VideoPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <VideoPageContent />
+        </Suspense>
+    );
+}
+
+function VideoPageContent() {
     const { startGeneration, isGenerating, currentGeneration, reset, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const [state, dispatch] = useReducer(reducer, initialState);
-    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [communityListings, setCommunityListings] = useState<CommunityVideoListing[]>([]);
     const [isCommunityLoading, setIsCommunityLoading] = useState(false);
     const [selectedProvider, setSelectedProvider] = useState('');
     const [projectId, setProjectId] = useState<string | null>(null);
     const [isProjectLoading, setIsProjectLoading] = useState(false);
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     
     const startImageRef = useRef<HTMLInputElement>(null);
     const endImageRef = useRef<HTMLInputElement>(null);
@@ -229,7 +245,7 @@ export default function VideoPage() {
     }, [selectedProvider, videoProviders]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<VideoSnapshot>) => {
@@ -251,7 +267,7 @@ export default function VideoPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('video-generator:draft');
+            const draftRaw = localStorage.getItem('video-generator:draft:v1');
             if (!draftRaw) return;
 
             try {
@@ -300,7 +316,7 @@ export default function VideoPage() {
             const fetchCommunity = async () => {
                 setIsCommunityLoading(true);
                 try {
-                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.VIDEO_GENERATOR}&limit=12`));
+                    const res = await import('@/lib/api').then(m => m.get<{ data: CommunityVideoListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.VIDEO_GENERATOR}&limit=12`));
                     setCommunityListings(res.data || []);
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
@@ -361,7 +377,7 @@ export default function VideoPage() {
             },
         };
 
-        localStorage.setItem('video-generator:draft', JSON.stringify(payload));
+        localStorage.setItem('video-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -379,7 +395,7 @@ export default function VideoPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 setProjectError(null);
@@ -447,7 +463,7 @@ export default function VideoPage() {
                     <h2 className="font-semibold text-muted-foreground">Video Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4  gap-y-6">
                     {/* Browse Templates */}
                     <button 
                         onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: TEMPLATES_TAB })}
@@ -570,7 +586,7 @@ export default function VideoPage() {
                         <textarea
                             value={state.prompt}
                             onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                            placeholder="Describe your video scene..."
+                            placeholder="Describe your video scene?"
                             className="w-full h-28 px-4 py-3 bg-card border border-border rounded-xl text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
                         />
                     </div>
@@ -805,7 +821,7 @@ export default function VideoPage() {
                                                     <div key={tutorial.id} className="group cursor-pointer relative rounded-2xl overflow-hidden">
                                                         <div className="aspect-[16/9] relative">
                                                             <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
-                                                            <div className="absolute inset-0 bg-gray-950/40" />
+                                                            <div className="absolute inset-0 bg-zinc-950/40" />
                                                             <div className="absolute bottom-6 left-6">
                                                                 <div className="size-12 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-foreground/30 transition-colors">
                                                                     <Play className="size-6 text-white fill-white" />
@@ -834,12 +850,12 @@ export default function VideoPage() {
                                                     <div key={tutorial.id} className="group cursor-pointer">
                                                         <div className="aspect-video rounded-xl overflow-hidden relative bg-muted">
                                                             <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
-                                                            <div className="absolute inset-0 bg-gray-950/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                                            <div className="absolute inset-0 bg-zinc-950/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                                                                 <div className="size-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center">
                                                                     <Play className="size-5 text-white fill-white" />
                                                                 </div>
                                                             </div>
-                                                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white">
+                                                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-[10px] text-white">
                                                                 {tutorial.duration}
                                                             </div>
                                                         </div>
@@ -882,14 +898,14 @@ function EmptyState({ message }: { message: string }) {
     );
 }
 
-function VideoCard({ generation }: { generation: any }) {
+function VideoCard({ generation }: { generation: { resultUrl?: string | null; prompt: string } }) {
     return (
         <div className="group cursor-pointer">
             <div className="aspect-video rounded-xl overflow-hidden relative bg-muted border border-border group-hover:border-primary/20 transition-all">
                 {generation.resultUrl ? (
                     <>
                         <Image src={generation.resultUrl} alt={generation.prompt} fill className="object-cover transition-transform group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 25vw" unoptimized />
-                        <div className="absolute inset-0 bg-gray-950/20 group-hover:bg-gray-950/40 transition-colors flex items-center justify-center">
+                        <div className="absolute inset-0 bg-zinc-950/20 group-hover:bg-zinc-950/40 transition-colors flex items-center justify-center">
                             <div className="size-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100 duration-300">
                                 <Play className="size-5 text-white fill-white ml-0.5" />
                             </div>

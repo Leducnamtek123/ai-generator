@@ -135,7 +135,7 @@ export function UpscaleNodeView({
 
                     <div className="w-full bg-background flex items-center justify-center overflow-hidden relative group min-h-[160px]">
                         {isProcessing && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/60 backdrop-blur-md z-10 transition-all">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/60 backdrop-blur-md z-10 transition-all">
                                 <div className="relative">
                                     <div className="size-16 border-4 border-yellow-500/20 rounded-full" />
                                     <div className="absolute inset-0 size-16 border-4 border-transparent border-t-yellow-500 rounded-full animate-spin" />
@@ -162,7 +162,7 @@ export function UpscaleNodeView({
                                     />
                                 </div>
 
-                                <div className="absolute inset-0 bg-gray-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                                     <button
                                         onClick={() => data.onOpenImageEditor?.(data.previewUrl)}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -188,7 +188,7 @@ export function UpscaleNodeView({
                                     {scale}x Upscaled
                                 </div>
 
-                                <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[9px] text-white/70 backdrop-blur-sm uppercase">
+                                <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-[9px] text-white/70 backdrop-blur-sm uppercase">
                                     {mediaDimensions ? `${mediaDimensions.width}x${mediaDimensions.height}` : 'Finished'}
                                 </div>
                             </>
@@ -198,7 +198,7 @@ export function UpscaleNodeView({
                                 {!data.inputUrl ? (
                                     <div className="text-center space-y-1">
                                         <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Image Upscaler</p>
-                                        <p className="text-[9px] text-white/10 italic">Waiting for input...</p>
+                                        <p className="text-[9px] text-white/10 italic">Waiting for input?</p>
                                     </div>
                                 ) : (
                                     <div className="text-center space-y-1">
@@ -328,7 +328,7 @@ export function UpscaleNodeView({
                                 {data.status === NodeStatus.PROCESSING ? (
                                     <>
                                         <Loader2 className="size-4 animate-spin" />
-                                        Upscaling...
+                                        Upscaling?
                                     </>
                                 ) : (
                                     <>
@@ -363,7 +363,7 @@ export function UpscaleNodeView({
             </BaseNode>
 
             {showFullscreen && data.previewUrl && (
-                <div className="fixed inset-0 z-[100] bg-gray-950/90 flex items-center justify-center p-12" onClick={() => onSetFullscreen(false)}>
+                <div className="fixed inset-0 z-[100] bg-zinc-950/90 flex items-center justify-center p-12" onClick={() => onSetFullscreen(false)}>
                     <div className="relative h-full w-full max-w-6xl max-h-[90vh]">
                         <Image src={data.previewUrl!} alt="Upscaled" fill className="object-contain rounded-xl shadow-2xl" sizes="100vw" />
                     </div>

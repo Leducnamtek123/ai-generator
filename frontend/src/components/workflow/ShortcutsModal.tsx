@@ -52,7 +52,7 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                 {/* Content */}
                 <div className="flex-1 flex flex-col bg-[#0B0C0E]">
                     {/* Header */}
-                    <DialogHeader className="h-16 border-b border-white/5 flex flex-row items-center justify-between px-8 space-y-0">
+                    <DialogHeader className="h-16 border-b border-white/5 flex flex-row items-center justify-between px-8  gap-y-0">
                         <DialogTitle className="text-lg font-semibold text-white">
                             {activeTab === 'general' ? 'General' : 'Shortcuts'}
                         </DialogTitle>

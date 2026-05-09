@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
-import { Scissors, Download, Play, Pause, SkipBack, SkipForward, Folder, Plus, Trash2, Copy, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
+import { Scissors, Download, Play, Pause, SkipBack, SkipForward, Folder, Trash2, Copy, ChevronLeft, ChevronRight, Upload } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { cn } from '@/lib/utils';
@@ -178,17 +178,26 @@ function reducer(state: ClipEditorState, action: ClipEditorAction): ClipEditorSt
 }
 
 export default function ClipEditorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <ClipEditorPageContent />
+        </Suspense>
+    );
+}
+
+function ClipEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [projectId, setProjectId] = useState<string | null>(null);
     const [isProjectLoading, setIsProjectLoading] = useState(false);
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -216,7 +225,7 @@ export default function ClipEditorPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('clip-editor:draft');
+                    const raw = localStorage.getItem('clip-editor:draft:v1');
                     if (raw) {
                         hydrate(JSON.parse(raw) as Partial<ClipEditorSnapshot>);
                     }
@@ -244,7 +253,7 @@ export default function ClipEditorPage() {
                 if (!cancelled) {
                     setErrorMessage('Could not load the saved clip project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('clip-editor:draft');
+                        const raw = localStorage.getItem('clip-editor:draft:v1');
                         if (raw) {
                             hydrate(JSON.parse(raw) as Partial<ClipEditorSnapshot>);
                         }
@@ -360,7 +369,7 @@ export default function ClipEditorPage() {
 
     const handleSave = () => {
         const snapshot = persistSnapshot();
-        localStorage.setItem('clip-editor:draft', JSON.stringify(snapshot));
+        localStorage.setItem('clip-editor:draft:v1', JSON.stringify(snapshot));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -384,7 +393,7 @@ export default function ClipEditorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Clip project saved to your projects.');
@@ -489,7 +498,7 @@ export default function ClipEditorPage() {
             </div>
 
             <div className="flex-1 flex overflow-hidden">
-                <div className="flex-1 flex items-center justify-center bg-gray-950/95 relative">
+                <div className="flex-1 flex items-center justify-center bg-zinc-950/95 relative">
                     {errorMessage && (
                         <div className="absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
                             {errorMessage}
@@ -534,7 +543,7 @@ export default function ClipEditorPage() {
                     <div className="p-4 border-b border-border">
                         <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Clip Properties</h4>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-5">
+                    <div className="flex-1 overflow-y-auto p-4  gap-y-5">
                         {selectedClip ? (
                             <>
                                 <div className="space-y-2">
@@ -674,7 +683,7 @@ export default function ClipEditorPage() {
                         })}
                         {state.clips.length === 0 && (
                             <div className="absolute inset-2 flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded-lg">
-                                Click "Add Clip" to get started
+                                Click &quot;Add Clip&quot; to get started
                             </div>
                         )}
                     </div>

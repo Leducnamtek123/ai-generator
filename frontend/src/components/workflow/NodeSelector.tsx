@@ -77,7 +77,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         className="w-full bg-accent/50 border-input rounded-xl py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring h-10"
-                        placeholder="Search nodes..."
+                        placeholder="Search nodes?"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />

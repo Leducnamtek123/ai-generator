@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -252,6 +252,14 @@ const createClipFromMedia = (media: MediaItem, track: Track): EditorClip => {
 };
 
 export default function VideoEditorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <VideoEditorPageContent />
+        </Suspense>
+    );
+}
+
+function VideoEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
     const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
@@ -263,8 +271,9 @@ export default function VideoEditorPage() {
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
     const mediaLoadToken = useRef(0);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const { startGeneration, isGenerating, error } = useGenerationStore();
     const selectedMedia = useMemo(
         () => mediaItems.find((item) => item.id === state.selectedMediaId) ?? null,
@@ -296,7 +305,7 @@ export default function VideoEditorPage() {
     const canRedo = (state.future?.length ?? 0) > 0;
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -324,7 +333,7 @@ export default function VideoEditorPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('video-editor:project');
+                    const raw = localStorage.getItem('video-editor:project:v1');
                     if (raw) {
                         const parsed = JSON.parse(raw) as Partial<VideoEditorSnapshot>;
                         hydrateFromSnapshot(parsed);
@@ -353,7 +362,7 @@ export default function VideoEditorPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved video project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('video-editor:project');
+                        const raw = localStorage.getItem('video-editor:project:v1');
                         if (raw) {
                             const parsed = JSON.parse(raw) as Partial<VideoEditorSnapshot>;
                             hydrateFromSnapshot(parsed);
@@ -480,7 +489,7 @@ export default function VideoEditorPage() {
             error: error ?? null,
         };
 
-        localStorage.setItem('video-editor:project', JSON.stringify(snapshot));
+        localStorage.setItem('video-editor:project:v1', JSON.stringify(snapshot));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -498,7 +507,7 @@ export default function VideoEditorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Video project saved to your projects.');
@@ -624,7 +633,7 @@ export default function VideoEditorPage() {
                         ))}
                     </div>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4  gap-y-4">
                         {state.activePanel === 'media' && (
                             <>
                                 <Button
@@ -710,7 +719,7 @@ export default function VideoEditorPage() {
                                         key={feature.id}
                                         onClick={() => handleAiFeature(feature.id)}
                                         disabled={state.isProcessing}
-                                        className="w-full flex items-start gap-3 px-3 py-3 bg-card rounded-xl border border-border hover:border-primary/20 transition-all text-left disabled:opacity-50"
+                                        className="w-full flex items-start gap-3 p-3 bg-card rounded-xl border border-border hover:border-primary/20 transition-all text-left disabled:opacity-50"
                                     >
                                         <div className="size-8 rounded-lg bg-accent flex items-center justify-center shrink-0">
                                             <feature.icon className="size-4" />
@@ -724,7 +733,7 @@ export default function VideoEditorPage() {
                                 {state.isProcessing && (
                                     <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
                                         <Loader2 className="size-4 animate-spin text-primary" />
-                                        <span className="text-xs text-primary">AI processing...</span>
+                                        <span className="text-xs text-primary">AI processing?</span>
                                     </div>
                                 )}
                             </div>
@@ -762,13 +771,13 @@ export default function VideoEditorPage() {
                     </div>
                 </div>
 
-                <div className="flex-1 flex items-center justify-center bg-gray-950/95 p-6">
+                <div className="flex-1 flex items-center justify-center bg-zinc-950/95 p-6">
                     <div className="w-full max-w-2xl aspect-video bg-muted/10 rounded-xl border border-border/30 flex items-center justify-center relative overflow-hidden">
                         {previewMedia ? (
                             previewMedia.type === 'audio' ? (
                                 <div className="flex h-full w-full flex-col items-center justify-center gap-4 bg-gradient-to-br from-card to-muted">
-                                    <div className="flex h-20 w-20 items-center justify-center rounded-full bg-primary/10 text-primary shadow-lg">
-                                        <Music className="h-10 w-10" />
+                                    <div className="flex size-20 items-center justify-center rounded-full bg-primary/10 text-primary shadow-lg">
+                                        <Music className="size-10" />
                                     </div>
                                     <div className="text-center">
                                         <p className="text-sm font-medium">{previewMedia.name}</p>
@@ -804,9 +813,9 @@ export default function VideoEditorPage() {
                             </div>
                         )}
                         {state.isProcessing && (
-                            <div className="absolute inset-0 bg-gray-950/60 flex flex-col items-center justify-center gap-3">
+                            <div className="absolute inset-0 bg-zinc-950/60 flex flex-col items-center justify-center gap-3">
                                 <Loader2 className="size-8 animate-spin text-primary" />
-                                <p className="text-white text-sm">Processing...</p>
+                                <p className="text-white text-sm">Processing?</p>
                             </div>
                         )}
                     </div>

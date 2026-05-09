@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/ui/button';
@@ -36,17 +36,26 @@ const normalizeSnapshot = (value: unknown): Partial<AssistantSnapshot> => {
 };
 
 export default function AssistantPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <AssistantPageContent />
+        </Suspense>
+    );
+}
+
+function AssistantPageContent() {
     const [prompt, setPrompt] = useState('');
     const [selectedTemplate, setSelectedTemplate] = useState('');
     const [projectId, setProjectId] = useState<string | null>(null);
     const [isProjectLoading, setIsProjectLoading] = useState(false);
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<AssistantSnapshot>) => {
@@ -56,7 +65,7 @@ export default function AssistantPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('assistant-home:draft');
+            const draftRaw = localStorage.getItem('assistant-home:draft:v1');
             if (!draftRaw) {
                 return;
             }
@@ -108,7 +117,7 @@ export default function AssistantPage() {
             selectedTemplate,
         };
 
-        localStorage.setItem('assistant-home:draft', JSON.stringify(snapshot));
+        localStorage.setItem('assistant-home:draft:v1', JSON.stringify(snapshot));
         setIsProjectSaving(true);
         setProjectError(null);
 
@@ -124,7 +133,7 @@ export default function AssistantPage() {
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot } satisfies AssistantProjectPayload,
                 });
                 setProjectId(created.project.id);
-                router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                replace(`${window.location.pathname}?projectId=${created.project.id}`);
             }
             toast.success('Assistant project saved.');
         } catch (error) {
@@ -172,7 +181,7 @@ export default function AssistantPage() {
                         <textarea
                             value={prompt}
                             onChange={(event) => setPrompt(event.target.value)}
-                            placeholder="Describe your creation..."
+                            placeholder="Describe your creation?"
                             className="w-full bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground/50 min-h-[80px] resize-none"
                         />
 
@@ -187,7 +196,7 @@ export default function AssistantPage() {
                                     Templates
                                 </Button>
                             </div>
-                            <Button size="icon" className="h-8 w-8 rounded-full">
+                            <Button size="icon" className="size-8 rounded-full">
                                 <Sparkles className="size-4" />
                             </Button>
                         </div>

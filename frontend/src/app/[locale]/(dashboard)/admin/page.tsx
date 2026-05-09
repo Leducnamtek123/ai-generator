@@ -38,10 +38,9 @@ import {
   type AdminAuditLog,
   type AdminCatalogImportResult,
   type AdminOrganization,
-  type AdminOrganizationDetail,
-  type AdminRolesMatrix,
   type AdminTemplate,
   type AdminUser,
+  type UpdateAdminOrganizationRequest,
 } from '@/services/adminApi';
 
 type AdminSection =
@@ -117,7 +116,7 @@ const CsvButton = ({
   busy?: boolean;
 }) => (
   <Button variant="outline" size="sm" onClick={() => void onClick()} disabled={busy}>
-    <Download className="mr-2 h-4 w-4" />
+    <Download className="mr-2 size-4" />
     {label}
   </Button>
 );
@@ -163,7 +162,7 @@ const PaginationControls = ({
 );
 
 export default function AdminPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const { user, isLoading } = useAuth();
   const isAdmin = canAccessAdmin(user);
 
@@ -237,7 +236,7 @@ export default function AdminPage() {
         statusId: userStatus ? Number(userStatus) : undefined,
       }),
     enabled: isAdmin,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
   });
 
   const templatesQuery = useQuery({
@@ -264,7 +263,7 @@ export default function AdminPage() {
           templateFeatured === '' ? undefined : templateFeatured === 'true',
       }),
     enabled: isAdmin,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
   });
 
   const assetsQuery = useQuery({
@@ -277,7 +276,7 @@ export default function AdminPage() {
         type: assetType || undefined,
       }),
     enabled: isAdmin,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
   });
 
   const organizationsQuery = useQuery({
@@ -289,7 +288,7 @@ export default function AdminPage() {
         q: orgSearch || undefined,
       }),
     enabled: isAdmin,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
   });
 
   const organizationDetailQuery = useQuery({
@@ -309,7 +308,7 @@ export default function AdminPage() {
         entityType: auditEntityType || undefined,
       }),
     enabled: isAdmin,
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
   });
 
   React.useEffect(() => {
@@ -367,7 +366,7 @@ export default function AdminPage() {
         locale: siteConfigLocale || undefined,
       }),
     enabled: isAdmin && activeSection === 'content',
-    placeholderData: (previousData: any) => previousData,
+    placeholderData: (previousData) => previousData,
   });
 
   const updateSiteConfigMutation = useMutation({
@@ -478,7 +477,7 @@ export default function AdminPage() {
   });
 
   const updateOrgMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: any }) =>
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateAdminOrganizationRequest }) =>
       adminApi.updateOrganization(id, payload),
     onSuccess: async () => {
       await qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
@@ -575,8 +574,8 @@ export default function AdminPage() {
           <Card className="w-full rounded-lg border-border">
             <CardHeader>
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
-                  <AlertTriangle className="h-5 w-5" />
+                <div className="flex size-10 items-center justify-center rounded-lg bg-destructive/10 text-destructive">
+                  <AlertTriangle className="size-5" />
                 </div>
                 <div>
                   <CardTitle>Admin access required</CardTitle>
@@ -587,7 +586,7 @@ export default function AdminPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <Button onClick={() => router.push('/dashboard')}>Back to dashboard</Button>
+              <Button onClick={() => push('/dashboard')}>Back to dashboard</Button>
             </CardContent>
           </Card>
         </div>
@@ -614,7 +613,7 @@ export default function AdminPage() {
         <header className="flex flex-col gap-4 border-b border-border pb-5 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
-              <ShieldCheck className="h-3.5 w-3.5" />
+              <ShieldCheck className="size-3.5" />
               Admin Console
             </div>
             <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">Operations</h1>
@@ -624,7 +623,7 @@ export default function AdminPage() {
           </div>
           <div className="flex items-center gap-2">
             <Button variant="outline" onClick={refreshAll}>
-              <RefreshCw className="mr-2 h-4 w-4" />
+              <RefreshCw className="mr-2 size-4" />
               Refresh
             </Button>
           </div>
@@ -663,8 +662,8 @@ export default function AdminPage() {
                         <div className="mt-2 text-2xl font-semibold">{metric.value}</div>
                         <div className="mt-1 text-xs text-muted-foreground">{metric.hint}</div>
                       </div>
-                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <Icon className="h-4 w-4" />
+                      <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                        <Icon className="size-4" />
                       </div>
                     </div>
                   </CardContent>
@@ -707,7 +706,7 @@ export default function AdminPage() {
                   'Template moderation writes reviewedAt metadata.',
                 ].map((item) => (
                   <div key={item} className="flex items-center gap-3 rounded-lg border border-border bg-background p-3 text-sm">
-                    <CheckCircle2 className="h-4 w-4 text-primary" />
+                    <CheckCircle2 className="size-4 text-primary" />
                     <span>{item}</span>
                   </div>
                 ))}
@@ -722,7 +721,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Users className="h-4 w-4" />
+                    <Users className="size-4" />
                     User directory
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -745,7 +744,7 @@ export default function AdminPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="relative md:col-span-2">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={userSearch}
                     onChange={(event) => {
@@ -900,7 +899,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <FileText className="h-4 w-4" />
+                    <FileText className="size-4" />
                     Template moderation
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -925,7 +924,7 @@ export default function AdminPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-5">
                 <div className="relative md:col-span-2">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={templateSearch}
                     onChange={(event) => {
@@ -1133,7 +1132,7 @@ export default function AdminPage() {
                             disabled={deleteTemplateMutation.isPending}
                             onClick={() => deleteTemplateMutation.mutate(template.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-4" />
                           </Button>
                         </div>
                       </div>
@@ -1160,7 +1159,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <ImageIcon className="h-4 w-4" />
+                    <ImageIcon className="size-4" />
                     Asset moderation
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -1180,7 +1179,7 @@ export default function AdminPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-3">
                 <div className="relative md:col-span-2">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={assetSearch}
                     onChange={(event) => {
@@ -1256,7 +1255,7 @@ export default function AdminPage() {
                             disabled={deleteAssetMutation.isPending}
                             onClick={() => deleteAssetMutation.mutate(asset.id)}
                           >
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="size-4" />
                           </Button>
                         </div>
                       </div>
@@ -1284,7 +1283,7 @@ export default function AdminPage() {
                 <div className="flex items-center justify-between gap-2">
                   <div>
                     <CardTitle className="flex items-center gap-2 text-base">
-                      <Building2 className="h-4 w-4" />
+                      <Building2 className="size-4" />
                       Workspace directory
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
@@ -1300,7 +1299,7 @@ export default function AdminPage() {
                   />
                 </div>
                 <div className="relative">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={orgSearch}
                     onChange={(event) => {
@@ -1355,7 +1354,7 @@ export default function AdminPage() {
             <Card className="rounded-lg border-border">
               <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <KeyRound className="h-4 w-4" />
+                  <KeyRound className="size-4" />
                   Organization detail
                 </CardTitle>
                 <p className="text-sm text-muted-foreground">
@@ -1486,7 +1485,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Activity className="h-4 w-4" />
+                    <Activity className="size-4" />
                     Audit logs
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -1507,7 +1506,7 @@ export default function AdminPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-4">
                 <div className="relative md:col-span-2">
-                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
                     value={auditSearch}
                     onChange={(event) => {
@@ -1589,7 +1588,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <Download className="h-4 w-4" />
+                    <Download className="size-4" />
                     External catalog import
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -1649,7 +1648,7 @@ export default function AdminPage() {
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2 text-base">
-                    <LayoutGrid className="h-4 w-4" />
+                    <LayoutGrid className="size-4" />
                     Content config
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
@@ -1716,7 +1715,7 @@ export default function AdminPage() {
             <Card className="rounded-lg border-border">
               <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <KeyRound className="h-4 w-4" />
+                  <KeyRound className="size-4" />
                   Platform roles
                 </CardTitle>
               </CardHeader>
@@ -1743,7 +1742,7 @@ export default function AdminPage() {
             <Card className="rounded-lg border-border">
               <CardHeader className="border-b border-border">
                 <CardTitle className="flex items-center gap-2 text-base">
-                  <Filter className="h-4 w-4" />
+                  <Filter className="size-4" />
                   Moderation matrix
                 </CardTitle>
               </CardHeader>

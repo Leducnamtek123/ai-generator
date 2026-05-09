@@ -68,5 +68,6 @@ published.
 - `backend/src/community-marketplace/community-marketplace.service.ts` implements real browse/publish/purchase logic, canonical type mapping, preview fallback, and credit-reserved checkout.
 - `backend/src/community-marketplace/community-marketplace.service.spec.ts` now proves purchase runs inside a single transaction, rolls back on insufficient credits, and posts all ledger entries atomically.
 - `frontend/src/services/communityMarketplaceApi.ts` and `frontend/src/components/community/CommunityMarketplacePanel.tsx` are wired to the live contract, including type filters, preview states, draft/live states, and post-purchase routing.
+- `frontend/src/components/community/CommunityMarketplacePanel.tsx` now routes `DESIGN_EDITOR` listings to the dedicated design editor instead of the image editor, so marketplace launch actions match the actual tool surface.
 - `frontend` `npm run typecheck` and `npm run build` passed in this sweep.
 - Browser verification after sign-in covered the Community browse cards, type filters, publish form controls, and the live filter/search state changes on the marketplace surface.

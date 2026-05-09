@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useOrgStore } from '@/stores/org-store';
 import { orgApi, type Organization } from '@/services/orgApi';
 import { cn } from '@/lib/utils';
 import {
-    Building2,
     ChevronDown,
     Plus,
     Check,
@@ -22,7 +21,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
 
-    const loadOrgs = async () => {
+    const loadOrgs = useCallback(async () => {
         try {
             const orgs = await orgApi.list();
             setOrganizations(orgs);
@@ -38,11 +37,11 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
             console.error('Failed to load organizations:', err);
         }
         setLoading(false);
-    };
+    }, [currentOrg, setCurrentMembership, setCurrentOrg, setOrganizations]);
 
     useEffect(() => {
         queueMicrotask(() => { void loadOrgs(); });
-    }, []);
+    }, [loadOrgs]);
 
     const selectOrg = async (org: Organization) => {
         setCurrentOrg(org);
@@ -58,7 +57,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
             <div className="flex justify-center py-2">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="size-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
+                    className="size-9 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
                 >
                     {currentOrg?.name?.charAt(0)?.toUpperCase() || '?'}
                 </button>
@@ -70,13 +69,12 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
         <div className="relative">
             <button
                 onClick={() => setIsOpen(!isOpen)}
-                className={cn(
-                    "flex items-center gap-2.5 w-full px-2 py-2 text-sm rounded-lg transition-all duration-200",
+                className={cn('flex items-center gap-2.5 w-full p-2 text-sm rounded-lg transition-all duration-200',
                     "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
                     isOpen && "bg-sidebar-accent text-sidebar-foreground"
                 )}
             >
-                <div className="size-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0">
+                <div className="size-7 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0">
                     {currentOrg?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 text-left min-w-0">
@@ -110,7 +108,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                             : "text-muted-foreground"
                                     )}
                                 >
-                                    <div className="size-6 rounded bg-gradient-to-br from-violet-500/80 to-indigo-600/80 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
+                                    <div className="size-6 rounded bg-gradient-to-br from-violet-500/80 to-violet-600/80 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
                                         {org.name?.charAt(0)?.toUpperCase()}
                                     </div>
                                     <span className="flex-1 text-left truncate">{org.name}</span>
@@ -125,7 +123,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                         {currentOrg && (
                             <div className="border-t border-border p-1.5">
                                 <Link
-                                    href={`/orgs/${currentOrg.slug}/settings` as any}
+                                    href={`/orgs/${currentOrg.slug}/settings`}
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
@@ -133,7 +131,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     Settings
                                 </Link>
                                 <Link
-                                    href={`/orgs/${currentOrg.slug}/members` as any}
+                                    href={`/orgs/${currentOrg.slug}/members`}
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
@@ -141,7 +139,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     Members
                                 </Link>
                                 <Link
-                                    href={`/orgs/${currentOrg.slug}/projects` as any}
+                                    href={`/orgs/${currentOrg.slug}/projects`}
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
@@ -149,7 +147,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     Projects
                                 </Link>
                                 <Link
-                                    href={`/orgs/${currentOrg.slug}/invites` as any}
+                                    href={`/orgs/${currentOrg.slug}/invites`}
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
@@ -157,7 +155,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     Invites
                                 </Link>
                                 <Link
-                                    href={`/orgs/${currentOrg.slug}/billing` as any}
+                                    href={`/orgs/${currentOrg.slug}/billing`}
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
@@ -170,7 +168,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                         {/* Create new */}
                         <div className="border-t border-border p-1.5">
                             <Link
-                                href={"/orgs/new" as any}
+                                href="/orgs/new"
                                 className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-primary hover:bg-primary/5 transition-all font-medium"
                                 onClick={() => setIsOpen(false)}
                             >

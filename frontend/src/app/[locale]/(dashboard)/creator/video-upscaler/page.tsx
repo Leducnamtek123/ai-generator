@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -129,6 +129,14 @@ function reducer(state: State, action: Action): State {
 }
 
 export default function VideoUpscalerPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <VideoUpscalerPageContent />
+        </Suspense>
+    );
+}
+
+function VideoUpscalerPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { upscaleVideo, currentGeneration, reset, isGenerating } = useGenerationStore();
@@ -137,13 +145,14 @@ export default function VideoUpscalerPage() {
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
     const [restoredResultVideo, setRestoredResultVideo] = useState<string | null>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultVideo;
     const isProcessing = isGenerating;
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -172,7 +181,7 @@ export default function VideoUpscalerPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('video-upscaler:draft');
+                    const raw = localStorage.getItem('video-upscaler:draft:v1');
                     if (raw) {
                         hydrateFromSnapshot(normalizeVideoUpscalerSnapshot(JSON.parse(raw)));
                     }
@@ -196,7 +205,7 @@ export default function VideoUpscalerPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved video upscaler project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('video-upscaler:draft');
+                        const raw = localStorage.getItem('video-upscaler:draft:v1');
                         if (raw) {
                             hydrateFromSnapshot(normalizeVideoUpscalerSnapshot(JSON.parse(raw)));
                         }
@@ -272,7 +281,7 @@ export default function VideoUpscalerPage() {
             },
         };
 
-        localStorage.setItem('video-upscaler:draft', JSON.stringify(payload));
+        localStorage.setItem('video-upscaler:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -290,7 +299,7 @@ export default function VideoUpscalerPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Video upscaler saved to your projects.');
@@ -351,7 +360,7 @@ export default function VideoUpscalerPage() {
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Source Video</h4>
                         <button
@@ -529,7 +538,7 @@ export default function VideoUpscalerPage() {
                                 <ZoomIn className="size-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <div className="text-center">
-                                <p className="font-medium">Upscaling to {selectedResolution?.label}...</p>
+                                <p className="font-medium">Upscaling to {selectedResolution?.label}?</p>
                                 <p className="text-sm text-muted-foreground mt-1">This may take several minutes</p>
                             </div>
                             <div className="w-full space-y-2">

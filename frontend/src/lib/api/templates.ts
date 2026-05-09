@@ -23,7 +23,7 @@ export interface Template {
     thumbnail?: string;
     type: TemplateTypeEnum;
     visibility: string;
-    content?: any;
+    content?: unknown;
     author: {
         id: string;
         email: string;

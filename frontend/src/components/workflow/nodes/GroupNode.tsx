@@ -71,7 +71,7 @@ export function GroupNode({ id, data, selected }: GroupNodeProps) {
                     position={Position.Right}
                     id="reference-output"
                     onClick={(e) => data.onHandleClick?.(e, 'reference-output', 'source')}
-                    className="!border-2 !border-background !bg-gray-500 z-50 cursor-pointer hover:!bg-gray-400"
+                    className="!border-2 !border-background !bg-zinc-500 z-50 cursor-pointer hover:!bg-zinc-400"
                 />
             )}
         </div>

@@ -142,7 +142,7 @@ export function CharacterPanel({
           <Input
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
-            placeholder="Entity name..."
+            placeholder="Entity name?"
             className="h-8 bg-white/5 border-white/10 text-white text-sm placeholder:text-white/20"
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           />
@@ -169,7 +169,7 @@ export function CharacterPanel({
           <Textarea
             value={form.description}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
-            placeholder="Visual description (for AI reference generation)..."
+            placeholder="Visual description (for AI reference generation)?"
             rows={2}
             className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
           />
@@ -186,7 +186,7 @@ export function CharacterPanel({
       )}
 
       {/* Character list */}
-      <div className="flex-1 overflow-y-auto px-3 py-2 space-y-1">
+      <div className="flex-1 overflow-y-auto px-3 py-2  gap-y-1">
         {characters.map((char) => {
           const Icon = ENTITY_ICONS[char.entityType] ?? UserRound;
           const statusStyle = STATUS_STYLES[char.refStatus] ?? STATUS_STYLES.PENDING;

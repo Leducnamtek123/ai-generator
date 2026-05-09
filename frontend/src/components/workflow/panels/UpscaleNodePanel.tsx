@@ -13,24 +13,24 @@ import { UpscaleFactor, UpscaleMode } from '../types';
 export function UpscaleNodePanel({ nodeData, onChange, isGenerating, handlers }: NodePanelProps) {
     return (
         <div className="space-y-4">
-            <div className="p-3 bg-indigo-500/10 border border-indigo-500/20 rounded-lg">
+            <div className="p-3 bg-violet-500/10 border border-violet-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                    <Scan className="size-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <Scan className="size-4 text-violet-400 shrink-0 mt-0.5" />
                     <div>
-                        <p className="text-xs text-indigo-300 font-medium">AI Upscaler</p>
-                        <p className="text-[10px] text-indigo-300/60 mt-1">Uses Magnific AI technology for enhanced 2x/4x upscaling.</p>
+                        <p className="text-xs text-violet-300 font-medium">AI Upscaler</p>
+                        <p className="text-[10px] text-violet-300/60 mt-1">Uses Magnific AI technology for enhanced 2x/4x upscaling.</p>
                     </div>
                 </div>
             </div>
 
             {nodeData.previewUrl ? (
-                <div className="aspect-video rounded-lg bg-gray-950/20 overflow-hidden relative">
+                <div className="aspect-video rounded-lg bg-zinc-950/20 overflow-hidden relative">
                     <Image src={nodeData.previewUrl as string} alt="Upscaled preview" fill className="object-cover" sizes="(max-width: 1024px) 100vw, 320px" />
                 </div>
             ) : (
-                <div className="aspect-video rounded-lg bg-gray-950/20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/10">
+                <div className="aspect-video rounded-lg bg-zinc-950/20 flex flex-col items-center justify-center gap-2 border border-dashed border-white/10">
                     <Scan className="size-8 text-white/20" />
-                    <p className="text-xs text-white/30">Waiting for image...</p>
+                    <p className="text-xs text-white/30">Waiting for image?</p>
                 </div>
             )}
 
@@ -65,7 +65,7 @@ export function UpscaleNodePanel({ nodeData, onChange, isGenerating, handlers }:
                 <select
                     value={(nodeData.enhanceMode as string) || UpscaleMode.CREATIVE}
                     onChange={(e) => onChange('enhanceMode', e.target.value)}
-                    className="w-full bg-gray-950/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-indigo-500/50"
+                    className="w-full bg-zinc-950/20 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-violet-500/50"
                 >
                     <option value={UpscaleMode.CREATIVE}>Creative (Add Details)</option>
                     <option value={UpscaleMode.FAITHFUL}>Faithful (Preserve Original)</option>
@@ -93,7 +93,7 @@ export function UpscaleNodePanel({ nodeData, onChange, isGenerating, handlers }:
                         }
                     }}
                     disabled={isGenerating}
-                    className="w-full h-11 bg-gradient-to-r from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-indigo-500/20"
+                    className="w-full h-11 bg-gradient-to-r from-violet-600 to-violet-500 hover:from-violet-500 hover:to-violet-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-violet-500/20"
                 >
                     {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <Scan className="size-4" />}
                     {isGenerating ? 'Upscaling...' : `Upscale ${String(nodeData.scale) || '2x'}`}

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -126,6 +126,14 @@ function reducer(state: MockupState, action: MockupAction): MockupState {
 }
 
 export default function MockupGeneratorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <MockupGeneratorPageContent />
+        </Suspense>
+    );
+}
+
+function MockupGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -133,8 +141,9 @@ export default function MockupGeneratorPage() {
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
     const { mockupGenerator, currentGeneration, error, reset } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const isProjectBusy = isProjectLoading || isProjectSaving;
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -199,7 +208,7 @@ export default function MockupGeneratorPage() {
             },
         };
 
-        localStorage.setItem('mockup-generator:draft', JSON.stringify(payload));
+        localStorage.setItem('mockup-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -217,7 +226,7 @@ export default function MockupGeneratorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Mockup saved to your projects.');
@@ -258,7 +267,7 @@ export default function MockupGeneratorPage() {
     const currentCategory = mockupCategories.find((category) => category.id === state.selectedCategory);
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -279,7 +288,7 @@ export default function MockupGeneratorPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('mockup-generator:draft');
+                    const raw = localStorage.getItem('mockup-generator:draft:v1');
                     if (raw) {
                         hydrate(normalizeMockupSnapshot(JSON.parse(raw)));
                     }
@@ -303,7 +312,7 @@ export default function MockupGeneratorPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved mockup project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('mockup-generator:draft');
+                        const raw = localStorage.getItem('mockup-generator:draft:v1');
                         if (raw) {
                             hydrate(normalizeMockupSnapshot(JSON.parse(raw)));
                         }
@@ -345,7 +354,7 @@ export default function MockupGeneratorPage() {
                     <h2 className="font-semibold text-muted-foreground">Mockup Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Your Screenshot</h4>
                         <button
@@ -459,7 +468,7 @@ export default function MockupGeneratorPage() {
                         {state.isGenerating ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Generating...
+                                Generating?
                             </>
                         ) : (
                             <>
@@ -489,7 +498,7 @@ export default function MockupGeneratorPage() {
                                 <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
                                 <Box className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
-                            <p className="text-sm text-muted-foreground animate-pulse">Generating mockups...</p>
+                            <p className="text-sm text-muted-foreground animate-pulse">Generating mockups?</p>
                         </div>
                     ) : state.results.length > 0 ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
@@ -498,7 +507,7 @@ export default function MockupGeneratorPage() {
                                     <div className="relative w-full aspect-video">
                                         <Image src={url} alt={`Mockup ${index + 1}`} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
                                     </div>
-                                    <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    <div className="absolute inset-0 bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                         <Button size="sm" variant="secondary" className="gap-2" onClick={() => downloadMockup(url, `mockup-${index + 1}.png`)}><Download className="size-4" /> Download</Button>
                                     </div>
                                 </div>

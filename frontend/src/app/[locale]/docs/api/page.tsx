@@ -85,7 +85,7 @@ function useClientOrigin() {
 }
 
 export default function ApiDocsPage() {
-    const router = useRouter();
+    const { push } = useRouter();
     const [search, setSearch] = useState('');
     const origin = useClientOrigin();
 
@@ -151,11 +151,11 @@ export default function ApiDocsPage() {
                     <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] self-start overflow-hidden rounded-3xl border border-border bg-card/80 p-4 backdrop-blur xl:flex xl:flex-col">
                         <div className="space-y-4 border-b border-border pb-4">
                             <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
-                                <Code className="h-3 w-3" />
+                                <Code className="size-3" />
                                 Developer Platform
                             </div>
                             <div>
-                                <h1 className="text-lg font-black tracking-tight">API & MCP Docs</h1>
+                                <h1 className="text-lg font-semibold tracking-tight">API & MCP Docs</h1>
                                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
                                     Generated from backend controllers and route decorators. No manual Swagger loading.
                                 </p>
@@ -171,7 +171,7 @@ export default function ApiDocsPage() {
                                     className="flex w-full items-center justify-between rounded-xl px-3 py-2.5 text-left text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                                 >
                                     <span>{item.label}</span>
-                                    <ChevronRight className="h-4 w-4" />
+                                    <ChevronRight className="size-4" />
                                 </button>
                             ))}
                         </nav>
@@ -206,21 +206,21 @@ export default function ApiDocsPage() {
                         >
                             <div className="flex flex-wrap items-center gap-3">
                                 <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
-                                    <Code className="h-3 w-3" />
+                                    <Code className="size-3" />
                                     Developer Platform
                                 </div>
                                 <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                                    <Server className="h-3 w-3" />
+                                    <Server className="size-3" />
                                     {totalRoutes} endpoints
                                 </div>
                                 <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                                    <ShieldCheck className="h-3 w-3" />
+                                    <ShieldCheck className="size-3" />
                                     {totalTags} tags
                                 </div>
                             </div>
 
                             <div className="mt-5 max-w-4xl">
-                                <h1 className="text-4xl font-black tracking-tight sm:text-5xl">
+                                <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
                                     API & MCP Documentation
                                 </h1>
                                 <p className="mt-4 text-lg leading-8 text-muted-foreground">
@@ -232,7 +232,7 @@ export default function ApiDocsPage() {
 
                             <div className="mt-6 flex flex-wrap gap-3">
                                 <Button onClick={() => scrollToSection('endpoints')} className="gap-2">
-                                    <Search className="h-4 w-4" />
+                                    <Search className="size-4" />
                                     Browse endpoints
                                 </Button>
                                 <Button
@@ -240,15 +240,15 @@ export default function ApiDocsPage() {
                                     onClick={() => scrollToSection('mcp')}
                                     className="gap-2"
                                 >
-                                    <Terminal className="h-4 w-4" />
+                                    <Terminal className="size-4" />
                                     MCP setup
                                 </Button>
                                 <Button
                                     variant="ghost"
-                                    onClick={() => router.push('/settings?tab=api')}
+                                    onClick={() => push('/settings?tab=api')}
                                     className="gap-2"
                                 >
-                                    <Copy className="h-4 w-4" />
+                                    <Copy className="size-4" />
                                     Get API key
                                 </Button>
                             </div>
@@ -290,8 +290,8 @@ export default function ApiDocsPage() {
                         >
                             <div className="space-y-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-400">
-                                        <Terminal className="h-5 w-5" />
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-400">
+                                        <Terminal className="size-5" />
                                     </div>
                                     <h2 className="text-2xl font-semibold">Connect via MCP</h2>
                                 </div>
@@ -326,7 +326,7 @@ export default function ApiDocsPage() {
                                     className="absolute right-3 top-3 h-8 text-[10px]"
                                     onClick={() => copyToClipboard(buildMcpConfig(origin))}
                                 >
-                                    <Copy className="mr-2 h-3 w-3" />
+                                    <Copy className="mr-2 size-3" />
                                     Copy JSON
                                 </Button>
                             </div>
@@ -338,8 +338,8 @@ export default function ApiDocsPage() {
                         >
                             <div className="space-y-3">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-                                        <Server className="h-5 w-5" />
+                                    <div className="flex size-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                                        <Server className="size-5" />
                                     </div>
                                     <h2 className="text-2xl font-semibold">Authentication</h2>
                                 </div>
@@ -348,15 +348,15 @@ export default function ApiDocsPage() {
                                     settings page and reuse it in MCP or direct API clients.
                                 </p>
                                 <div className="flex flex-wrap gap-3">
-                                    <Button onClick={() => router.push('/settings?tab=api')} className="gap-2">
-                                        <Terminal className="h-4 w-4" />
+                                    <Button onClick={() => push('/settings?tab=api')} className="gap-2">
+                                        <Terminal className="size-4" />
                                         Get API key
                                     </Button>
                                     <Button
                                         variant="outline"
                                         onClick={() => copyToClipboard('X-API-KEY', 'Header name copied')}
                                     >
-                                        <Copy className="mr-2 h-4 w-4" />
+                                        <Copy className="mr-2 size-4" />
                                         Copy header name
                                     </Button>
                                 </div>
@@ -371,7 +371,7 @@ export default function ApiDocsPage() {
   -H "X-API-KEY: YOUR_API_KEY_HERE"`}
                                 </pre>
                                 <div className="mt-4 flex items-center gap-2 text-xs text-muted-foreground">
-                                    <ExternalLink className="h-3.5 w-3.5" />
+                                    <ExternalLink className="size-3.5" />
                                     Endpoint groups below are generated from the backend source tree.
                                 </div>
                             </div>
@@ -390,7 +390,7 @@ export default function ApiDocsPage() {
                                     <Input
                                         value={search}
                                         onChange={(event) => setSearch(event.target.value)}
-                                        placeholder="Search endpoints, tags, paths..."
+                                        placeholder="Search endpoints, tags, paths?"
                                     />
                                 </div>
                             </div>
@@ -475,11 +475,11 @@ export default function ApiDocsPage() {
                                 </div>
                                 <div className="flex flex-wrap gap-3">
                                     <Button variant="ghost" size="sm" className="gap-2">
-                                        <MessageSquare className="h-4 w-4" />
+                                        <MessageSquare className="size-4" />
                                         Community Discord
                                     </Button>
                                     <Button variant="ghost" size="sm" className="gap-2">
-                                        <ExternalLink className="h-4 w-4" />
+                                        <ExternalLink className="size-4" />
                                         GitHub Examples
                                     </Button>
                                 </div>

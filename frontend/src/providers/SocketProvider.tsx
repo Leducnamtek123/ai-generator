@@ -1,6 +1,6 @@
 'use client';
 
-import React, { createContext, useContext, useEffect, useSyncExternalStore } from 'react';
+import React, { createContext, use, useEffect, useSyncExternalStore } from 'react';
 import { io, Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
 import { toast } from 'sonner';
@@ -72,7 +72,7 @@ const resolveSocketOrigin = () => {
   return apiUrl ? new URL(apiUrl).origin : 'http://localhost:3000';
 };
 
-export const useSocialSocket = () => useContext(SocketContext);
+export const useSocialSocket = () => use(SocketContext);
 
 export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
   const { data: session } = useSession();
@@ -101,32 +101,32 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
       transports: ['websocket'],
     });
 
-    socketInstance.on('connect', () => {
+    const onConnect = () => {
       console.debug('Connected to Social Hub WebSocket');
       updateSocketSnapshot({
         socket: socketInstance,
         isConnected: true,
       });
-    });
+    };
 
-    socketInstance.on('disconnect', () => {
+    const onDisconnect = () => {
       console.debug('Disconnected from Social Hub WebSocket');
       updateSocketSnapshot({
         socket: socketInstance,
         isConnected: false,
       });
-    });
+    };
 
-    socketInstance.on('connect_error', (err) => {
+    const onConnectError = (err: Error) => {
       console.warn('Social Hub WebSocket connection failed:', err.message);
       updateSocketSnapshot({
         socket: socketInstance,
         isConnected: false,
       });
-    });
+    };
 
     // Global listener for interactions to show toasts
-    socketInstance.on('interaction:created', (data) => {
+    const onInteractionCreated = (data: { platform: string }) => {
       // If we are not on the inbox page, show a toast
       if (typeof window !== 'undefined' && !window.location.pathname.includes('/social/inbox')) {
         toast(`New ${data.platform} interaction!`, {
@@ -137,7 +137,12 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
           }
         });
       }
-    });
+    };
+
+    socketInstance.on('connect', onConnect);
+    socketInstance.on('disconnect', onDisconnect);
+    socketInstance.on('connect_error', onConnectError);
+    socketInstance.on('interaction:created', onInteractionCreated);
 
     updateSocketSnapshot({
       socket: socketInstance,
@@ -145,6 +150,10 @@ export const SocketProvider = ({ children }: { children: React.ReactNode }) => {
     });
 
     return () => {
+      socketInstance.off('connect', onConnect);
+      socketInstance.off('disconnect', onDisconnect);
+      socketInstance.off('connect_error', onConnectError);
+      socketInstance.off('interaction:created', onInteractionCreated);
       socketInstance.disconnect();
       updateSocketSnapshot({
         socket: null,

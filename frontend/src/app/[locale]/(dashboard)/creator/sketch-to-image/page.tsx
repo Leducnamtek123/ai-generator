@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef, useEffect, useCallback, useState } from 'react';
+import { Suspense, useReducer, useRef, useEffect, useCallback, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -124,6 +124,14 @@ function reducer(state: State, action: Action): State {
 }
 
 export default function SketchToImagePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <SketchToImagePageContent />
+        </Suspense>
+    );
+}
+
+function SketchToImagePageContent() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [state, dispatch] = useReducer(reducer, initialState);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -134,8 +142,9 @@ export default function SketchToImagePage() {
     const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { sketchToImage, isGenerating, currentGeneration } = useGenerationStore();
     const completedImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const isProjectBusy = isProjectLoading || isProjectSaving;
 
     const initCanvas = useCallback(() => {
@@ -176,7 +185,7 @@ export default function SketchToImagePage() {
     }, []);
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -196,7 +205,7 @@ export default function SketchToImagePage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('sketch-to-image:draft');
+                    const raw = localStorage.getItem('sketch-to-image:draft:v1');
                     if (raw) {
                         hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(raw)));
                     }
@@ -220,7 +229,7 @@ export default function SketchToImagePage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved sketch project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('sketch-to-image:draft');
+                        const raw = localStorage.getItem('sketch-to-image:draft:v1');
                         if (raw) {
                             hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(raw)));
                         }
@@ -334,8 +343,8 @@ export default function SketchToImagePage() {
                 style: state.selectedStyle,
                 fidelity: state.strength,
             });
-        } catch (error: any) {
-            toast.error(error?.message || 'Failed to start sketch generation');
+        } catch (error: unknown) {
+            toast.error(error instanceof Error ? error.message : 'Failed to start sketch generation');
         }
     };
 
@@ -352,7 +361,7 @@ export default function SketchToImagePage() {
             },
         };
 
-        localStorage.setItem('sketch-to-image:draft', JSON.stringify(payload));
+        localStorage.setItem('sketch-to-image:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -370,7 +379,7 @@ export default function SketchToImagePage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Sketch saved to your projects.');
@@ -433,7 +442,7 @@ export default function SketchToImagePage() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Drawing Tools</h4>
                         <div className="flex items-center gap-2">
@@ -534,7 +543,7 @@ export default function SketchToImagePage() {
                             <textarea
                                 value={state.prompt}
                                 onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                                placeholder="Describe what the sketch should become..."
+                                placeholder="Describe what the sketch should become?"
                                 className="w-full h-24 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
@@ -550,7 +559,7 @@ export default function SketchToImagePage() {
                         {isGenerating ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Generating...
+                                Generating?
                             </>
                         ) : (
                             <>
@@ -608,7 +617,7 @@ export default function SketchToImagePage() {
                                         <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
                                         <Sparkles className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground animate-pulse">Transforming sketch...</p>
+                                    <p className="text-sm text-muted-foreground animate-pulse">Transforming sketch?</p>
                                 </div>
                             ) : completedImage ? (
                                 <div className="relative h-[65vh] w-full max-w-[768px] rounded-xl overflow-hidden border border-border shadow-lg">

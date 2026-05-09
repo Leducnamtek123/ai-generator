@@ -2,7 +2,7 @@
 
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -110,6 +110,18 @@ type MusicProjectPayload = {
     snapshot: Partial<MusicSnapshot>;
 };
 
+type CommunityMusicListing = {
+    id: string;
+    title: string;
+    description?: string;
+    metadata?: {
+        genre?: string;
+        duration?: string;
+        bpm?: number;
+    } | null;
+    resultUrl?: string | null;
+};
+
 const normalizeMusicSnapshot = (value: unknown): Partial<MusicSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -128,6 +140,14 @@ const normalizeMusicSnapshot = (value: unknown): Partial<MusicSnapshot> => {
 };
 
 export default function MusicGeneratorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <MusicGeneratorPageContent />
+        </Suspense>
+    );
+}
+
+function MusicGeneratorPageContent() {
     const { 
         generateMusic, 
         isGenerating, 
@@ -136,11 +156,12 @@ export default function MusicGeneratorPage() {
         isLoading: isGenerationsLoading 
     } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     
     const [activeContentTab, setActiveContentTab] = useState<string>(MUSIC_CONTENT_TABS[0]); // Default to My Creations
-    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [communityListings, setCommunityListings] = useState<CommunityMusicListing[]>([]);
     const [isCommunityLoading, setIsCommunityLoading] = useState(false);
     const [projectId, setProjectId] = useState<string | null>(null);
     const [isProjectLoading, setIsProjectLoading] = useState(false);
@@ -167,7 +188,7 @@ export default function MusicGeneratorPage() {
             const fetchCommunity = async () => {
                 setIsCommunityLoading(true);
                 try {
-                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.MUSIC_GENERATOR}&limit=12`));
+                    const res = await import('@/lib/api').then(m => m.get<{ data: CommunityMusicListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.MUSIC_GENERATOR}&limit=12`));
                     setCommunityListings(res.data || []);
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
@@ -182,7 +203,7 @@ export default function MusicGeneratorPage() {
     }, [activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<MusicSnapshot>) => {
@@ -200,7 +221,7 @@ export default function MusicGeneratorPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('music-generator:draft');
+            const draftRaw = localStorage.getItem('music-generator:draft:v1');
             if (!draftRaw) return;
 
             try {
@@ -325,7 +346,7 @@ export default function MusicGeneratorPage() {
             },
         };
 
-        localStorage.setItem('music-generator:draft', JSON.stringify(payload));
+        localStorage.setItem('music-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -343,7 +364,7 @@ export default function MusicGeneratorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 setProjectError(null);
@@ -384,7 +405,7 @@ export default function MusicGeneratorPage() {
     };
 
     const handleTrackSave = (track: MusicTrackRow) => {
-        localStorage.setItem(`music-generator:track:${track.id}`, JSON.stringify(track));
+        localStorage.setItem(`music-generator:track:v1:${track.id}`, JSON.stringify(track));
         toast.success(`Saved ${track.title} locally.`);
     };
 
@@ -442,7 +463,7 @@ export default function MusicGeneratorPage() {
                     <h2 className="font-semibold text-muted-foreground">Music Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4  gap-y-6">
                     {/* Browse Presets */}
                     <button 
                         onClick={() => setActiveContentTab(MUSIC_CONTENT_TABS[2])} // Templates
@@ -472,7 +493,7 @@ export default function MusicGeneratorPage() {
                                     : "bg-card border-border text-muted-foreground hover:border-border/80"
                                     )}
                                 >
-                                    <genre.icon className="h-4 w-4 text-muted-foreground" />
+                                    <genre.icon className="size-4 text-muted-foreground" />
                                     <span className="truncate w-full text-center">{genre.name}</span>
                                 </button>
                             ))}
@@ -494,7 +515,7 @@ export default function MusicGeneratorPage() {
                                     : "bg-card border border-border text-muted-foreground"
                                     )}
                                 >
-                                    <mood.icon className="h-3.5 w-3.5" />
+                                    <mood.icon className="size-3.5" />
                                     <span>{mood.label}</span>
                                 </button>
                             ))}
@@ -559,7 +580,7 @@ export default function MusicGeneratorPage() {
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Describe the music you want to create... e.g., 'Upbeat energetic music for a workout video with strong drums and synths'"
+                                placeholder="Describe the music you want to create? e.g., 'Upbeat energetic music for a workout video with strong drums and synths'"
                                 className="w-full h-28 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
@@ -635,7 +656,7 @@ export default function MusicGeneratorPage() {
                             className="h-12 flex-[2] font-bold rounded-xl gap-2"
                         >
                             {isGenerating ? (
-                                <><Loader2 className="size-5 animate-spin" /> Composing...</>
+                                <><Loader2 className="size-5 animate-spin" /> Composing?</>
                             ) : (
                                 <><Music className="size-5" /> Generate Music</>
                             )}

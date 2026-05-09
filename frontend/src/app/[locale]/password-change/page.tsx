@@ -1,7 +1,7 @@
 'use client';
 
+import { Suspense, useMemo, useState } from 'react';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useSearchParams } from 'next/navigation';
@@ -25,12 +25,20 @@ const passwordChangeSchema = z
 type PasswordChangeValues = z.infer<typeof passwordChangeSchema>;
 
 export default function PasswordChangePage() {
+    return (
+        <Suspense fallback={<div className="auth-card" />}>
+            <PasswordChangePageContent />
+        </Suspense>
+    );
+}
+
+function PasswordChangePageContent() {
     const searchParams = useSearchParams();
-    const hash = searchParams.get('hash') ?? '';
-    const [isLoading, setIsLoading] = useState(false);
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+    const hash = searchParamsSnapshot.get('hash') ?? '';
     const [completed, setCompleted] = useState(false);
 
-    const expires = useMemo(() => searchParams.get('expires'), [searchParams]);
+    const expires = searchParamsSnapshot.get('expires');
     const hasValidHash = hash.length > 0;
 
     const form = useForm<PasswordChangeValues>({
@@ -46,7 +54,6 @@ export default function PasswordChangePage() {
             return;
         }
 
-        setIsLoading(true);
         try {
             await authApi.resetPassword({ hash, password: values.password });
             setCompleted(true);
@@ -57,8 +64,6 @@ export default function PasswordChangePage() {
             toast.error('Unable to update password', {
                 description: 'The reset link may be invalid or expired.',
             });
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -78,7 +83,7 @@ export default function PasswordChangePage() {
                 {!hasValidHash ? (
                     <div className="rounded-3xl border border-amber-500/20 bg-amber-500/10 p-5">
                         <div className="flex items-start gap-3">
-                            <ShieldAlert className="mt-0.5 h-5 w-5 text-amber-300" />
+                            <ShieldAlert className="mt-0.5 size-5 text-amber-300" />
                             <div>
                                 <h2 className="text-lg font-semibold text-white">Reset link missing</h2>
                                 <p className="mt-2 text-sm text-white/60">
@@ -151,8 +156,8 @@ export default function PasswordChangePage() {
                             )}
                         </div>
 
-                        <button type="submit" disabled={isLoading} className="auth-submit">
-                            {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Update password'}
+                        <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
+                            {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Update password'}
                         </button>
                     </form>
                 )}

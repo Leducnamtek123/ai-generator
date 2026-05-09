@@ -1,7 +1,7 @@
 'use client';
 
-import { useCallback, useState } from 'react';
-import { Node, Edge, useReactFlow, addEdge, Connection, SelectionMode } from '@xyflow/react';
+import { useCallback, useState, type Dispatch, type SetStateAction } from 'react';
+import { Node, Edge, useReactFlow, addEdge, Connection } from '@xyflow/react';
 import { toast } from 'sonner';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { WorkflowNodeType, NodeStatus, ConnectionType, NODE_CONFIG } from '../types';
@@ -15,13 +15,13 @@ import {
 
 export function useWorkflowHandlers(
     nodes: Node[],
-    setNodes: (nds: any) => void,
-    setEdges: (eds: any) => void,
+    setNodes: Dispatch<SetStateAction<Node[]>>,
+    setEdges: Dispatch<SetStateAction<Edge[]>>,
     saveToHistory: (nodes: Node[], edges: Edge[]) => void,
     runWorkflow: (id: string, mode?: 'workflow' | 'local') => Promise<void>,
     clearPendingConnection?: () => void,
 ) {
-    const { getNodes, getEdges, deleteElements, screenToFlowPosition, zoomIn, zoomOut, fitView } = useReactFlow();
+    const { getNodes, getEdges, screenToFlowPosition, zoomIn, zoomOut, fitView } = useReactFlow();
     const flushWorkflowSave = useWorkflowStore((state) => state.flushWorkflowSave);
     const [selectedNode, setSelectedNode] = useState<Node | null>(null);
     const [activeTool, setActiveTool] = useState<'select' | 'pan' | 'comment'>('select');
@@ -44,7 +44,7 @@ export function useWorkflowHandlers(
     const handleTextChange = useCallback((nodeId: string, text: string) => {
         setNodes((nds: Node[]) => nds.map((n) => {
             if (n.id === nodeId) {
-                const newData: any = { ...n.data, text };
+                const newData: Record<string, unknown> = { ...(n.data as Record<string, unknown>), text };
                 if (n.type !== WorkflowNodeType.TEXT) {
                     newData.prompt = text; // Also update prompt for non-Text nodes (like VideoNode)
                 }
@@ -147,7 +147,7 @@ export function useWorkflowHandlers(
         const defaultData = NODE_CONFIG[nodeType as WorkflowNodeType]?.defaultData || {};
         const newNode: Node = {
             id,
-            type: nodeType as any,
+            type: nodeType as WorkflowNodeType,
             position,
             data: { ...defaultData, label, status: NodeStatus.IDLE },
         };

@@ -103,7 +103,7 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                 "nodrag nopan nowheel w-full resize-none rounded-lg border border-border bg-muted/50 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/50 focus:outline-none",
                 data.isPreview ? "h-12 overflow-hidden p-1 text-[8px]" : "h-32"
               )}
-              placeholder="Type your prompt here..."
+              placeholder="Type your prompt here?"
               value={localText}
               onChange={handleTextChange}
               onPointerDown={(event) => event.stopPropagation()}
@@ -129,12 +129,12 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                 >
                   {isGenerating ? (
                     <>
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Enhancing...
+                      <Loader2 className="size-3 animate-spin" />
+                      Enhancing?
                     </>
                   ) : (
                     <>
-                      <Wand2 className="h-3 w-3" />
+                      <Wand2 className="size-3" />
                       Enhance Prompt
                     </>
                   )}
@@ -145,7 +145,7 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                   className="rounded-lg bg-white/5 p-2 text-white/60 transition-all hover:bg-white/10 hover:text-white disabled:opacity-50"
                   title="Copy to clipboard"
                 >
-                  <Copy className="h-4 w-4" />
+                  <Copy className="size-4" />
                 </button>
               </div>
 

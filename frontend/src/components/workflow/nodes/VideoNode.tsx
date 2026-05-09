@@ -7,16 +7,10 @@ import {
     Video,
     Loader2,
     Play,
-    Download,
     Maximize2,
-    Settings,
-    Image as ImageIcon,
-    Clock,
-    MonitorPlay
 } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
-import { useUpdateNodeInternals } from '@xyflow/react';
 import { ExecutionMode, NodeStatus, VideoModel, VideoDuration, AspectRatio } from '../types';
 import { useWorkflowUIStore } from '@/stores/workflow-ui-store';
 
@@ -39,13 +33,13 @@ interface VideoNodeProps {
         connectedImageSource?: string;
         onDelete?: (id: string) => void;
         onRun?: (id: string, mode?: ExecutionMode) => void;
-        onSettingsChange?: (id: string, settings: any) => void;
+        onSettingsChange?: (id: string, settings: Record<string, unknown>) => void;
         onTextChange?: (id: string, text: string) => void;
         onDuplicate?: () => void;
         onSettings?: () => void;
         onReplace?: () => void;
         onReference?: () => void;
-        onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
     selected?: boolean;
@@ -59,7 +53,6 @@ const MODELS = [
 ];
 
 export function VideoNode({ id, data, selected }: VideoNodeProps) {
-    const [selectedModel, setSelectedModel] = useState(data.model || VideoModel.RUNWAY);
     const [showFullscreen, setShowFullscreen] = useState(false);
     const [localPrompt, setLocalPrompt] = useState(data.prompt || '');
     const autoplayVideos = useWorkflowUIStore((state) => state.autoplayVideos);
@@ -68,10 +61,10 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
         if (data.prompt !== undefined && data.prompt !== localPrompt) {
             setLocalPrompt(data.prompt);
         }
-    }, [data.prompt]);
+    }, [data.prompt, localPrompt]);
 
     // Derived state for display
-    const currentModel = MODELS.find(m => m.id === selectedModel) || MODELS[0];
+    const currentModel = MODELS.find(m => m.id === (data.model || VideoModel.RUNWAY)) || MODELS[0];
 
     const handlePromptChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
         setLocalPrompt(e.target.value);
@@ -131,7 +124,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                     {/* Preview Area */}
                     <div className={cn("w-full bg-background flex items-center justify-center overflow-hidden relative", data.isPreview ? "min-h-[80px]" : "min-h-[200px]")}>
                         {isProcessing ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/60 backdrop-blur-md z-10 transition-all">
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/60 backdrop-blur-md z-10 transition-all">
                                 <div className="relative">
                                     <div className="size-16 border-4 border-green-500/20 rounded-full" />
                                     <div className="absolute inset-0 size-16 border-4 border-transparent border-t-green-500 rounded-full animate-spin" />
@@ -157,7 +150,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                 />
 
                                 {/* Overlay Actions */}
-                                <div className="absolute inset-0 bg-gray-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                                     <button
                                         onClick={() => setShowFullscreen(true)}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
@@ -173,7 +166,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                         )}
 
                         {!data.isPreview && (
-                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-gray-950/80 to-transparent pointer-events-none">
+                            <div className="absolute inset-x-0 bottom-0 p-4 bg-gradient-to-t from-zinc-950/80 to-transparent pointer-events-none">
                                 <div className="pointer-events-auto">
                                     {data.inputs?.prompt ? (
                                         <div className="space-y-1 px-3 py-2 bg-green-500/10 border border-green-500/20 rounded-lg">
@@ -192,7 +185,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                     ) : (
                                         <textarea
                                             className="w-full bg-transparent border-none text-sm text-white/60 placeholder:text-white/20 focus:outline-none resize-none h-12 custom-scrollbar"
-                                            placeholder="Describe the video..."
+                                            placeholder="Describe the video?"
                                             value={localPrompt}
                                             onChange={handlePromptChange}
                                         />
@@ -224,7 +217,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                             <button
                                 onClick={() => data.onRun?.(id, ExecutionMode.LOCAL)}
                                 disabled={isProcessing || (!localPrompt.trim() && !data.inputs?.prompt)}
-                                className="p-2 bg-green-500 hover:bg-green-400 disabled:opacity-50 rounded-full text-white h-8 w-8 flex items-center justify-center transition-all shadow-lg shadow-green-500/20"
+                                className="p-2 bg-green-500 hover:bg-green-400 disabled:opacity-50 rounded-full text-white size-8 flex items-center justify-center transition-all shadow-lg shadow-green-500/20"
                             >
                                 {isProcessing ? (
                                     <Loader2 className="size-4 animate-spin" />
@@ -246,7 +239,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
             </BaseNode>
 
             {showFullscreen && data.previewUrl && !data.isPreview && (
-                <button type="button" aria-label="Close fullscreen preview" className="fixed inset-0 z-[200] bg-gray-950/90 flex items-center justify-center p-10" onClick={() => setShowFullscreen(false)}>
+                <button type="button" aria-label="Close fullscreen preview" className="fixed inset-0 z-[200] bg-zinc-950/90 flex items-center justify-center p-10" onClick={() => setShowFullscreen(false)}>
                     <video
                         src={data.previewUrl}
                         className="max-w-full max-h-full object-contain rounded-lg shadow-2xl"

@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Image from 'next/image';
 import { BaseNode } from './BaseNode';
 import { Handle, Position } from '@xyflow/react';
-import { Camera, RefreshCw, Loader2, ArrowUp, ArrowDown, ArrowLeft, ArrowRight, RotateCw, Image as ImageIcon } from 'lucide-react';
+import { Camera, RefreshCw, Loader2, ArrowUp, ArrowDown, ArrowRight, RotateCw } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
 import { useUpdateNodeInternals } from '@xyflow/react';
@@ -21,10 +21,10 @@ interface CameraNodeProps {
         previewUrl?: string;
         onDelete?: (id: string) => void;
         onRun?: (id: string, mode?: ExecutionMode) => void;
-        onSettingsChange?: (id: string, settings: any) => void;
+        onSettingsChange?: (id: string, settings: Record<string, unknown>) => void;
         onDuplicate?: () => void;
         onSettings?: () => void;
-        onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
         isPreview?: boolean;
     };
     selected?: boolean;
@@ -40,7 +40,6 @@ const ANGLES = [
 
 export function CameraNode({ id, data, selected }: CameraNodeProps) {
     const [angle, setAngle] = useState<CameraAngle>(data.angle || CameraAngle.FRONT);
-    const [rotation, setRotation] = useState(data.customRotation || { x: 0, y: 0, z: 0 });
     const updateNodeInternals = useUpdateNodeInternals();
 
     const handleAngleSelect = (newAngle: CameraAngle) => {
@@ -84,9 +83,9 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                         data.isPreview ? "w-full h-[80px] border-r-0 border-b" : "w-[200px] h-[240px]"
                     )}>
                         {isProcessing && (
-                            <div className="absolute inset-0 z-20 bg-gray-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
+                            <div className="absolute inset-0 z-20 bg-zinc-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
                                 <Loader2 className="size-6 text-white animate-spin mb-2" />
-                                <span className="text-[10px] text-white/60 uppercase tracking-widest">Adjusting...</span>
+                                <span className="text-[10px] text-white/60 uppercase tracking-widest">Adjusting?</span>
                             </div>
                         )}
 
@@ -120,7 +119,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                         )}
 
                         {/* Angle Overlay Indicator */}
-                        <div className="absolute top-2 right-2 px-2 py-1 bg-gray-950/60 backdrop-blur-md rounded text-[9px] text-white/80 font-mono">
+                        <div className="absolute top-2 right-2 px-2 py-1 bg-zinc-950/60 backdrop-blur-md rounded text-[9px] text-white/80 font-mono">
                             {ANGLES.find(a => a.id === angle)?.name}
                         </div>
                     </div>
@@ -137,8 +136,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                                             <button
                                                 key={a.id}
                                                 onClick={() => handleAngleSelect(a.id)}
-                                                className={cn(
-                                                    "flex items-center gap-2 px-2 py-2 rounded-lg border transition-all text-xs",
+                                                className={cn('flex items-center gap-2 p-2 rounded-lg border transition-all text-xs',
                                                     angle === a.id
                                                         ? "bg-accent border-border text-foreground"
                                                         : "bg-transparent border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground"

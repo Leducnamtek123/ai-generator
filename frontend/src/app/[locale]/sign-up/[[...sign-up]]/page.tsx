@@ -1,7 +1,7 @@
 'use client';
 
+import { Suspense, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,10 +24,18 @@ const registerSchema = z.object({
 type RegisterValues = z.infer<typeof registerSchema>;
 
 export default function SignUpPage() {
-    const router = useRouter();
+    return (
+        <Suspense fallback={<div className="auth-card" />}>
+            <SignUpPageContent />
+        </Suspense>
+    );
+}
+
+function SignUpPageContent() {
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
-    const [isLoading, setIsLoading] = useState(false);
-    const nextPath = sanitizeAppPath(searchParams.get('next'));
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+    const nextPath = sanitizeAppPath(searchParamsSnapshot.get('next'));
     const signInHref = nextPath === '/dashboard'
         ? '/sign-in'
         : `/sign-in?next=${encodeURIComponent(nextPath)}`;
@@ -38,7 +46,7 @@ export default function SignUpPage() {
     });
 
     useEffect(() => {
-        const error = searchParams.get('error');
+        const error = searchParamsSnapshot.get('error');
         if (error) {
             if (error === 'OAuthAccountNotLinked') {
                 toast.error("Account exists", {
@@ -50,32 +58,33 @@ export default function SignUpPage() {
                 });
             }
         }
-    }, [searchParams]);
+    }, [searchParamsSnapshot]);
 
     const onSubmit = async (data: RegisterValues) => {
-        setIsLoading(true);
         try {
             await post('/auth/email/register', data);
 
             toast.success("Account created!", {
                 description: "Please check your email to confirm your account."
             });
-            router.replace(`/sign-in?next=${encodeURIComponent(nextPath)}&email=${encodeURIComponent(data.email)}`);
-        } catch (error: any) {
-            console.error("Signup error:", error.response?.data);
+            replace(`/sign-in?next=${encodeURIComponent(nextPath)}&email=${encodeURIComponent(data.email)}`);
+        } catch (error: unknown) {
+            const response = error && typeof error === 'object'
+                ? (error as { response?: { data?: { errors?: { email?: string }; message?: string } } })
+                : null;
+            console.error("Signup error:", response?.response?.data);
             
             let description = "Please check your details and try again.";
-            if (error.response?.data?.errors?.email === 'emailAlreadyExists') {
+            if (response?.response?.data?.errors?.email === 'emailAlreadyExists') {
                 description = "An account with this email already exists. Please sign in instead.";
-            } else if (error.response?.data?.message) {
-                description = error.response.data.message;
+            } else if (response?.response?.data?.message) {
+                description = response.response.data.message;
             }
 
             toast.error("Registration failed", {
                 description
             });
         }
-        setIsLoading(false);
     };
 
     return (
@@ -175,8 +184,8 @@ export default function SignUpPage() {
                         )}
                     </div>
 
-                    <button type="submit" disabled={isLoading} className="auth-submit">
-                        {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
+                    <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
+                        {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
                     </button>
                 </form>
 

@@ -20,8 +20,20 @@ export interface VFEvent {
   type: VFEventType;
   projectId: string;
   videoId?: string;
-  payload: Record<string, any>;
+  payload: Record<string, unknown>;
   timestamp: number;
+}
+
+interface CharacterUpdatePayload {
+  characterId: string;
+  refStatus: string;
+  referenceImageUrl?: string;
+  [key: string]: unknown;
+}
+
+interface SceneUpdatePayload {
+  sceneId: string;
+  [key: string]: unknown;
 }
 
 interface UseVisualFlowSSEOptions {
@@ -29,9 +41,9 @@ interface UseVisualFlowSSEOptions {
   enabled?: boolean;
   onEvent?: (event: VFEvent) => void;
   onReconnect?: () => void | Promise<void>;
-  onCharacterUpdate?: (payload: { characterId: string; refStatus: string; referenceImageUrl?: string }) => void;
-  onSceneUpdate?: (payload: { sceneId: string; [key: string]: any }) => void;
-  onPipelineStatus?: (payload: Record<string, any>) => void;
+  onCharacterUpdate?: (payload: CharacterUpdatePayload) => void;
+  onSceneUpdate?: (payload: SceneUpdatePayload) => void;
+  onPipelineStatus?: (payload: Record<string, unknown>) => void;
   onExportCompleted?: (payload: { outputUrl: string }) => void;
 }
 
@@ -66,7 +78,7 @@ export function useVisualFlowSSE({
   const MAX_RETRIES = 5;
   const BASE_RETRY_DELAY = 2000; // 2 seconds
 
-  const connect = useCallback(() => {
+  const connect = useCallback(function connect() {
     if (!projectId || !enabled) return;
 
     // Close existing connection
@@ -101,16 +113,16 @@ export function useVisualFlowSSE({
         // Typed handlers
         switch (event.type) {
           case 'character:updated':
-            onCharacterUpdate?.(event.payload as any);
+            onCharacterUpdate?.(event.payload as CharacterUpdatePayload);
             break;
           case 'scene:updated':
-            onSceneUpdate?.(event.payload as any);
+            onSceneUpdate?.(event.payload as SceneUpdatePayload);
             break;
           case 'pipeline:status':
             onPipelineStatus?.(event.payload);
             break;
           case 'export:completed':
-            onExportCompleted?.(event.payload as any);
+            onExportCompleted?.(event.payload as { outputUrl: string });
             toast.success('Video export completed!');
             break;
           case 'generation:completed':
@@ -140,14 +152,12 @@ export function useVisualFlowSSE({
         const delay = BASE_RETRY_DELAY * Math.pow(2, Math.min(next - 1, 4));
         console.log(`SSE: Reconnecting in ${delay}ms (attempt ${next}/${MAX_RETRIES})`);
 
-        reconnectTimeoutRef.current = setTimeout(() => {
-          connect();
-        }, delay);
+        reconnectTimeoutRef.current = setTimeout(connect, delay);
 
         return next;
       });
     };
-  }, [projectId, enabled, onEvent, onCharacterUpdate, onSceneUpdate, onPipelineStatus, onExportCompleted]);
+  }, [projectId, enabled, onEvent, onReconnect, onCharacterUpdate, onSceneUpdate, onPipelineStatus, onExportCompleted]);
 
   // Connect when projectId changes
   useEffect(() => {

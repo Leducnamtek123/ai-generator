@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useLocale } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
@@ -306,113 +306,145 @@ const AllToolsMenuItem = ({
   pinnedIds,
   onTogglePin,
   allToolsList,
-}: AllToolsMenuItemProps) => (
-  <HoverCard openDelay={0} closeDelay={100}>
-    <HoverCardTrigger asChild>
-      <button
-        type="button"
-        className={cn(
-          "flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
-          isCollapsed ? "justify-center px-2" : "justify-between",
-        )}
-      >
-        <div
+}: AllToolsMenuItemProps) => {
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTools = useMemo(() => {
+    const normalizedQuery = searchQuery.trim().toLowerCase();
+
+    return allToolsList.filter((tool) => {
+      const matchesCategory = TOOL_CATEGORIES.some(
+        (category) => category.id === tool.category,
+      );
+      const matchesQuery =
+        normalizedQuery.length === 0 ||
+        tool.label.toLowerCase().includes(normalizedQuery) ||
+        tool.href.toLowerCase().includes(normalizedQuery);
+
+      return matchesCategory && matchesQuery;
+    });
+  }, [allToolsList, searchQuery]);
+
+  return (
+    <HoverCard openDelay={0} closeDelay={100}>
+      <HoverCardTrigger asChild>
+        <button
+          type="button"
           className={cn(
-            "flex items-center gap-3",
-            isCollapsed && "justify-center w-full",
+            "flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
+            isCollapsed ? "justify-center px-2" : "justify-between",
           )}
         >
-          <Grid3X3 className="size-5 shrink-0" />
-          {!isCollapsed && <span>All tools</span>}
-        </div>
-      </button>
-    </HoverCardTrigger>
-    <HoverCardContent
-      side="right"
-      align="start"
-      className="w-[700px] p-0 bg-popover border-border text-popover-foreground rounded-xl shadow-2xl overflow-hidden"
-    >
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-semibold">All tools</h3>
-          <div className="relative">
-            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              placeholder="Search tools..."
-              className="bg-muted border border-border rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 ring-ring w-64"
-            />
+          <div
+            className={cn(
+              "flex items-center gap-3",
+              isCollapsed && "justify-center w-full",
+            )}
+          >
+            <Grid3X3 className="size-5 shrink-0" />
+            {!isCollapsed && <span>All tools</span>}
+          </div>
+        </button>
+      </HoverCardTrigger>
+      <HoverCardContent
+        side="right"
+        align="start"
+        className="w-[700px] p-0 bg-popover border-border text-popover-foreground rounded-xl shadow-2xl overflow-hidden"
+      >
+        <div className="p-6">
+          <div className="flex items-center justify-between gap-4 mb-6">
+            <h3 className="text-xl font-semibold">All tools</h3>
+            <div className="relative">
+              <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(event) => setSearchQuery(event.target.value)}
+                placeholder="Search tools?"
+                className="bg-muted border border-border rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 ring-ring w-64"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-4 gap-8">
+            {TOOL_CATEGORIES.map((cat) => {
+              const categoryTools = filteredTools.filter((tool) => tool.category === cat.id);
+
+              return (
+                <div key={cat.id} className="space-y-4">
+                  <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                    <cat.icon className="size-3.5" />
+                    {cat.label}
+                  </div>
+                  <div className="space-y-1">
+                    {categoryTools.length > 0 ? (
+                      categoryTools.map((tool) => (
+                        <div
+                          key={tool.id}
+                          className="group flex items-center justify-between gap-2 py-1.5 px-2 -mx-2 rounded-lg hover:bg-accent transition-colors"
+                        >
+                          <Link
+                            href={tool.href}
+                            className="flex min-w-0 flex-1 items-center gap-2"
+                          >
+                            <span
+                              className={cn(
+                                "truncate text-sm transition-colors",
+                                pinnedIds.includes(tool.id || "")
+                                  ? "text-foreground font-medium"
+                                  : "text-muted-foreground group-hover:text-foreground",
+                              )}
+                            >
+                              {tool.label}
+                            </span>
+                            {tool.isNew && (
+                              <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 rounded">
+                                New
+                              </span>
+                            )}
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={(e) => onTogglePin(e, tool.id || "")}
+                            className={cn(
+                              "opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-accent rounded",
+                              pinnedIds.includes(tool.id || "") &&
+                                "opacity-100 text-primary",
+                            )}
+                          >
+                            <Pin
+                              className={cn(
+                                "size-3.5",
+                                pinnedIds.includes(tool.id || "") && "fill-current",
+                              )}
+                            />
+                          </button>
+                        </div>
+                      ))
+                    ) : (
+                      <p className="px-2 py-2 text-sm text-muted-foreground">
+                        No tools match this search.
+                      </p>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-8">
-          {TOOL_CATEGORIES.map((cat) => (
-            <div key={cat.id} className="space-y-4">
-              <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                <cat.icon className="size-3.5" />
-                {cat.label}
-              </div>
-              <div className="space-y-1">
-                {allToolsList
-                  .filter((t) => t.category === cat.id)
-                  .map((tool) => (
-                    <Link
-                      key={tool.id}
-                      href={tool.href}
-                      className="group flex items-center justify-between py-1.5 px-2 -mx-2 rounded-lg hover:bg-accent transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "text-sm transition-colors",
-                            pinnedIds.includes(tool.id || "")
-                              ? "text-foreground font-medium"
-                              : "text-muted-foreground group-hover:text-foreground",
-                          )}
-                        >
-                          {tool.label}
-                        </span>
-                        {tool.isNew && (
-                          <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 rounded">
-                            New
-                          </span>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={(e) => onTogglePin(e, tool.id || "")}
-                        className={cn(
-                          "opacity-0 group-hover:opacity-100 transition-all p-1 hover:bg-accent rounded",
-                          pinnedIds.includes(tool.id || "") &&
-                            "opacity-100 text-primary",
-                        )}
-                      >
-                        <Pin
-                          className={cn(
-                            "size-3.5",
-                            pinnedIds.includes(tool.id || "") && "fill-current",
-                          )}
-                        />
-                      </button>
-                    </Link>
-                  ))}
-              </div>
-            </div>
-          ))}
+        <div className="bg-muted p-4 flex items-center justify-center border-t border-border">
+          <Link
+            href="/creator"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+          >
+            View all tools in a single list
+          </Link>
         </div>
-      </div>
-
-      <div className="bg-muted p-4 flex items-center justify-center border-t border-border">
-        <button
-          type="button"
-          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-        >
-          View all tools in a single list
-        </button>
-      </div>
-    </HoverCardContent>
-  </HoverCard>
-);
+      </HoverCardContent>
+    </HoverCard>
+  );
+};
 
 export function Sidebar() {
   const pathname = usePathname();
@@ -451,13 +483,27 @@ export function Sidebar() {
   const [pinnedIds, setPinnedIds] = useState<string[]>(() => {
     if (typeof window === "undefined") return DEFAULT_PINNED_TOOL_IDS;
 
-    const saved = localStorage.getItem(PINNED_STORAGE_KEY);
-    if (saved) {
-      return JSON.parse(saved) as string[];
+    try {
+      const saved = localStorage.getItem(PINNED_STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved) as string[];
+      }
+    } catch {
+      localStorage.removeItem(PINNED_STORAGE_KEY);
     }
 
     return DEFAULT_PINNED_TOOL_IDS;
   });
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      localStorage.setItem(PINNED_STORAGE_KEY, JSON.stringify(pinnedIds));
+    } catch {
+      // Ignore storage quota or privacy-mode failures.
+    }
+  }, [pinnedIds]);
 
   const isOrgRoute = /\/orgs\/[^/]+/.test(pathname);
 
@@ -592,7 +638,7 @@ export function Sidebar() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 text-sidebar-foreground/50 hover:text-sidebar-foreground shrink-0"
+                className="size-8 text-sidebar-foreground/50 hover:text-sidebar-foreground shrink-0"
                 onClick={() => setManualCollapsed(true)}
               >
                 <PanelLeft className="size-4" />
@@ -636,7 +682,7 @@ export function Sidebar() {
           <OrgSwitcher isCollapsed={isCollapsed} />
         </div>
 
-        <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2 space-y-1 scrollbar-hide">
+        <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2  gap-y-1 scrollbar-hide">
           {/* Main Nav */}
           <div className="space-y-0.5">
             {navigationData.navItems.map((item) => (
@@ -653,7 +699,7 @@ export function Sidebar() {
           {isCollapsed ? (
             <div className="h-px w-8 bg-sidebar-border mx-auto my-3" />
           ) : (
-            <div className="px-3 py-3">
+            <div className="p-3">
               <h3 className="text-[10px] font-medium text-sidebar-foreground/30 uppercase tracking-wider">
                 Social Hub
               </h3>
@@ -675,7 +721,7 @@ export function Sidebar() {
           {isCollapsed ? (
             <div className="h-px w-8 bg-sidebar-border mx-auto my-3" />
           ) : (
-            <div className="px-3 py-3">
+            <div className="p-3">
               <h3 className="text-[10px] font-medium text-sidebar-foreground/30 uppercase tracking-wider">
                 Pinned
               </h3>
@@ -792,7 +838,7 @@ export function Sidebar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-10 w-10 text-pricing bg-pricing/10 rounded-xl hover:bg-pricing/20"
+                      className="size-10 text-pricing bg-pricing/10 rounded-xl hover:bg-pricing/20"
                     >
                       <Sparkles className="size-5" />
                     </Button>

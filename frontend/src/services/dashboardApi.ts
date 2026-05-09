@@ -4,7 +4,7 @@ interface DashboardStats {
   totalWorkflows: number;
   totalProjects: number;
   creditBalance: number;
-  recentWorkflows: any[];
+  recentWorkflows: unknown[];
 }
 
 export const dashboardApi = {

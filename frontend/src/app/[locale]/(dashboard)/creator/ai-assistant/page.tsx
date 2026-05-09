@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -147,6 +147,14 @@ const templates = [
 ];
 
 export default function AssistantPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <AssistantPageContent />
+        </Suspense>
+    );
+}
+
+function AssistantPageContent() {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [isGenerating, setIsGenerating] = useState(false);
@@ -167,8 +175,9 @@ export default function AssistantPage() {
     const [projectError, setProjectError] = useState<string | null>(null);
     const { startGeneration, currentGeneration, error, reset } = useGenerationStore();
     const { providers: generationProviders } = useGenerationProviders();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const providerOptions = useMemo(
         () => generationProviders.filter((provider) => provider.capabilities.some((capability) => capability in actionCapabilityMap || capability === 'image-generation' || capability === 'video-generation' || capability === 'audio-music' || capability === 'audio-sfx')),
         [generationProviders],
@@ -193,7 +202,7 @@ export default function AssistantPage() {
     };
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<AssistantSnapshot>) => {
@@ -215,7 +224,7 @@ export default function AssistantPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('assistant:draft');
+            const draftRaw = localStorage.getItem('assistant:draft:v1');
             if (!draftRaw) {
                 return;
             }
@@ -347,7 +356,7 @@ export default function AssistantPage() {
             pendingAttachments,
         };
 
-        localStorage.setItem('assistant:draft', JSON.stringify(snapshot));
+        localStorage.setItem('assistant:draft:v1', JSON.stringify(snapshot));
         setIsProjectSaving(true);
         setProjectError(null);
 
@@ -363,7 +372,7 @@ export default function AssistantPage() {
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot } satisfies AssistantProjectPayload,
                 });
                 setProjectId(created.project.id);
-                router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                replace(`${window.location.pathname}?projectId=${created.project.id}`);
             }
             toast.success('Assistant project saved.');
         } catch (saveError) {
@@ -598,7 +607,7 @@ export default function AssistantPage() {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Describe your creation..."
+                                    placeholder="Describe your creation?"
                                     className="w-full bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground/50 min-h-[80px] resize-none"
                                 />
                                 <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
@@ -614,7 +623,7 @@ export default function AssistantPage() {
                                     </div>
                                     <Button
                                         size="icon"
-                                        className="h-9 w-9 rounded-full"
+                                        className="size-9 rounded-full"
                                         onClick={handleSend}
                                         disabled={!canSend || isGenerating || !resolveProviderForAction(selectedAction)}
                                     >
@@ -700,7 +709,7 @@ export default function AssistantPage() {
                                                 {msg.generatedImages.map((url, i) => (
                                                     <div key={url} className="group relative aspect-square rounded-xl overflow-hidden border border-border">
                                                         <Image src={url} alt={`Generated ${i + 1}`} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
-                                                        <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                                        <div className="absolute inset-0 bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                                             <Button size="icon" variant="secondary" className="size-8" onClick={() => handleDownloadImage(url, `assistant-image-${msg.id}-${i + 1}.png`) }><Download className="size-4" /></Button>
                                                             <Button size="icon" variant="secondary" className="size-8" onClick={() => handleCopyText(url)}><Copy className="size-4" /></Button>
                                                         </div>
@@ -732,7 +741,7 @@ export default function AssistantPage() {
                                     <div className="px-4 py-3 bg-card border border-border rounded-2xl rounded-tl-md">
                                         <div className="flex items-center gap-2">
                                             <Loader2 className="size-4 animate-spin text-primary" />
-                                            <span className="text-sm text-muted-foreground">Creating...</span>
+                                            <span className="text-sm text-muted-foreground">Creating?</span>
                                         </div>
                                     </div>
                                 </div>
@@ -750,7 +759,7 @@ export default function AssistantPage() {
                                     value={input}
                                     onChange={(e) => setInput(e.target.value)}
                                     onKeyDown={handleKeyDown}
-                                    placeholder="Type a message..."
+                                    placeholder="Type a message?"
                                     className="w-full bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/50 min-h-[40px] max-h-[120px] resize-none"
                                     rows={1}
                                 />
@@ -759,7 +768,7 @@ export default function AssistantPage() {
                                         <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" onClick={() => attachmentInputRef.current?.click()}><Paperclip className="size-4" /></Button>
                                         <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" onClick={() => document.getElementById('assistant-templates')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><ImageIcon className="size-4" /></Button>
                                     </div>
-                                    <Button size="icon" className="h-8 w-8 rounded-full" onClick={handleSend} disabled={!canSend || isGenerating || !resolveProviderForAction(selectedAction)}>
+                                    <Button size="icon" className="size-8 rounded-full" onClick={handleSend} disabled={!canSend || isGenerating || !resolveProviderForAction(selectedAction)}>
                                         <Send className="size-4" />
                                     </Button>
                                 </div>

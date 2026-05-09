@@ -17,13 +17,13 @@ interface WorkflowCardProps {
 }
 
 export function WorkflowCard({ workflow, onClick, href, isUploading, actions, className, variant = 'default' }: WorkflowCardProps) {
-    const router = useRouter();
+    const { push } = useRouter();
 
     const handleClick = (e: React.MouseEvent) => {
         if (onClick) {
             onClick();
         } else if (href) {
-            router.push(href);
+            push(href);
         }
     };
 
@@ -32,7 +32,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
             if (onClick) {
                 onClick();
             } else if (href) {
-                router.push(href);
+                push(href);
             }
         }
     };
@@ -50,7 +50,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-2">
                             <Loader2 className="size-6 text-foreground animate-spin" />
-                            <span className="text-xs text-foreground/80 font-medium">Uploading...</span>
+                            <span className="text-xs text-foreground/80 font-medium">Uploading?</span>
                         </div>
                     </div>
                 )}

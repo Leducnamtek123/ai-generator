@@ -162,7 +162,7 @@ export default function MembersPage() {
 
                         return (
                             <div key={member.id} className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group">
-                                <div className="size-10 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                                <div className="size-10 rounded-full bg-gradient-to-br from-violet-400 to-violet-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
                                     {displayName.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">

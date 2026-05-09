@@ -89,7 +89,7 @@ function PlanCard({
           <div className="text-[11px] font-semibold tracking-[0.28em] text-white/38 uppercase">
             {plan.name}
           </div>
-          <h3 className="mt-3 text-2xl font-black tracking-[-0.05em] uppercase">
+          <h3 className="mt-3 text-2xl font-semibold tracking-[-0.05em] uppercase">
             {plan.priceLabel}
           </h3>
           <p className="mt-2 text-sm leading-6 text-white/58">{plan.summary}</p>
@@ -276,7 +276,7 @@ export default function PricingShowcasePage() {
               <Sparkles className="size-3.5 text-sky-300" />
               Pricing
             </div>
-            <h1 className="mt-5 text-[clamp(2.8rem,6vw,5.4rem)] leading-[0.88] font-black tracking-[-0.08em] text-balance uppercase">
+            <h1 className="mt-5 text-[clamp(2.8rem,6vw,5.4rem)] leading-[0.88] font-semibold tracking-[-0.08em] text-balance uppercase">
               Pick your way to create.
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-8 text-white/58 sm:text-lg">
@@ -292,7 +292,7 @@ export default function PricingShowcasePage() {
                 <div className="text-[11px] font-semibold tracking-[0.34em] text-white/38 uppercase">
                   Plan type
                 </div>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] uppercase">
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] uppercase">
                   Compare by billing scope
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-white/56">
@@ -374,7 +374,7 @@ export default function PricingShowcasePage() {
                 <div className="text-[11px] font-semibold tracking-[0.34em] text-white/38 uppercase">
                   Add-ons
                 </div>
-                <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] uppercase">
+                <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] uppercase">
                   Optional top-up credits
                 </h2>
               </div>
@@ -403,7 +403,7 @@ export default function PricingShowcasePage() {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-white/38 uppercase">
                 Credit guide
               </div>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] uppercase">
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] uppercase">
                 How the wallet is consumed
               </h2>
               {creditCostGuide.length === 0 ? (
@@ -436,7 +436,7 @@ export default function PricingShowcasePage() {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-white/38 uppercase">
                 Why it helps
               </div>
-              <h2 className="mt-2 text-2xl font-black tracking-[-0.05em] uppercase">
+              <h2 className="mt-2 text-2xl font-semibold tracking-[-0.05em] uppercase">
                 Clearer than a single long plan table
               </h2>
               <ul className="mt-5 space-y-3 text-sm leading-7 text-white/70">

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from 'react';
 import { ReactFlow, Background, Controls, useReactFlow, ReactFlowProvider, BackgroundVariant } from '@xyflow/react';
+import type { Edge, Node } from '@xyflow/react';
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import '@xyflow/react/dist/style.css';
@@ -45,7 +46,7 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
     const [hydrateError, setHydrateError] = useState<string | null>(null);
     const [hydrateAttempt, setHydrateAttempt] = useState(0);
     const [canvasRevision, setCanvasRevision] = useState(0);
-    const router = useRouter();
+    const { replace } = useRouter();
     const { fetchWorkflow, fetchWorkflowByProject, createWorkflow } = useWorkflowStore();
 
     useEffect(() => {
@@ -67,8 +68,12 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
             try {
                 if (templateId) {
                     const template = await apiGet<Template>(`/templates/${templateId}`);
-                    const templateNodes = template.content?.nodes || [];
-                    const templateEdges = template.content?.edges || [];
+                    const templateContent = template.content as {
+                        nodes?: unknown[];
+                        edges?: unknown[];
+                    } | undefined;
+                    const templateNodes = (templateContent?.nodes || []) as Node[];
+                    const templateEdges = (templateContent?.edges || []) as Edge[];
 
                     if (workflowId) {
                         await fetchWorkflow(workflowId);
@@ -88,7 +93,7 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
                             throw new Error(`Template ${templateId} could not be converted into a workflow.`);
                         }
 
-                        router.replace(`/creator/workflow-editor?workflowId=${newWorkflowId}${projectId ? `&projectId=${projectId}` : ''}`);
+                        replace(`/creator/workflow-editor?workflowId=${newWorkflowId}${projectId ? `&projectId=${projectId}` : ''}`);
                         await fetchWorkflow(newWorkflowId);
                     }
                 } else if (workflowId) {
@@ -114,7 +119,7 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
                         throw new Error('Could not create a draft workflow.');
                     }
 
-                    router.replace(`/creator/workflow-editor?workflowId=${draftWorkflowId}`);
+                    replace(`/creator/workflow-editor?workflowId=${draftWorkflowId}`);
                     await fetchWorkflow(draftWorkflowId);
                 }
             } catch (error) {
@@ -139,7 +144,7 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
         return () => {
             cancelled = true;
         };
-    }, [projectId, templateId, workflowId, fetchWorkflow, fetchWorkflowByProject, createWorkflow, router, hydrateAttempt]);
+    }, [projectId, templateId, workflowId, fetchWorkflow, fetchWorkflowByProject, createWorkflow, replace, hydrateAttempt]);
 
     if (!isHydrated) {
         return (
@@ -193,16 +198,9 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
             }
 
             const payload = JSON.stringify(buildWorkflowBody(state.nodes, state.edges));
-
-            void fetch(`/api/workflows/${state.workflow.id}`, {
-                method: 'PATCH',
-                credentials: 'include',
-                keepalive: true,
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: payload,
-            });
+            const endpoint = `/api/workflows/${state.workflow.id}`;
+            const body = new Blob([payload], { type: 'application/json' });
+            navigator.sendBeacon(endpoint, body);
         };
 
         window.addEventListener('beforeunload', flushPendingWorkflow);
@@ -402,7 +400,7 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                         onClick={handleReset}
                         className="h-10 rounded-full border-border/70 bg-background/90 px-4"
                     >
-                        <RotateCcw className="mr-2 h-4 w-4" />
+                        <RotateCcw className="mr-2 size-4" />
                         Reset
                     </Button>
                     <Button
@@ -412,7 +410,7 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                         disabled={isSaving || isProjectSaving}
                         className="h-10 rounded-full border-border/70 bg-background/90 px-4"
                     >
-                        <Save className="mr-2 h-4 w-4" />
+                        <Save className="mr-2 size-4" />
                         {isSaving || isProjectSaving ? 'Saving...' : 'Save'}
                     </Button>
                     <Button
@@ -420,7 +418,7 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                         onClick={handleExport}
                         className="h-10 rounded-full bg-primary px-4 text-primary-foreground hover:bg-primary/90"
                     >
-                        <Download className="mr-2 h-4 w-4" />
+                        <Download className="mr-2 size-4" />
                         Export
                     </Button>
                 </div>

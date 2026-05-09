@@ -59,7 +59,7 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => { onChange('mediaUrl', ''); onChange('mediaName', ''); }}
-                                className="h-8 w-8 bg-red-500/10 hover:bg-red-500/20 rounded text-red-400 transition-colors p-0"
+                                className="size-8 bg-red-500/10 hover:bg-red-500/20 rounded text-red-400 transition-colors p-0"
                             >
                                 <X className="size-3" />
                             </Button>

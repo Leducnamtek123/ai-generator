@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useState, useRef } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGenerationStore } from '@/stores/generation-store';
 import { mediaApi } from '@/services/mediaApi';
@@ -105,6 +105,14 @@ const normalizeImageUpscalerSnapshot = (value: unknown): Partial<ImageUpscalerSn
 };
 
 export default function ImageUpscalerPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <ImageUpscalerPageContent />
+        </Suspense>
+    );
+}
+
+function ImageUpscalerPageContent() {
     const { upscaleImage, isGenerating, currentGeneration, reset } = useGenerationStore();
     const [params, setParams] = useState<UpscaleParams>(initialParams);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -118,8 +126,9 @@ export default function ImageUpscalerPage() {
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const previewObjectUrlRef = useRef<string | null>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const localUpscaledImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
     const resultImage = localUpscaledImage ?? restoredResultImage;
 
@@ -132,7 +141,7 @@ export default function ImageUpscalerPage() {
     }, []);
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -151,7 +160,7 @@ export default function ImageUpscalerPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('image-upscaler:draft');
+                    const raw = localStorage.getItem('image-upscaler:draft:v1');
                     if (raw) {
                         hydrateFromSnapshot(normalizeImageUpscalerSnapshot(JSON.parse(raw)));
                     }
@@ -175,7 +184,7 @@ export default function ImageUpscalerPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved image upscaler project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('image-upscaler:draft');
+                        const raw = localStorage.getItem('image-upscaler:draft:v1');
                         if (raw) {
                             hydrateFromSnapshot(normalizeImageUpscalerSnapshot(JSON.parse(raw)));
                         }
@@ -272,7 +281,7 @@ export default function ImageUpscalerPage() {
             snapshot,
         };
 
-        localStorage.setItem('image-upscaler:draft', JSON.stringify(payload));
+        localStorage.setItem('image-upscaler:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -290,7 +299,7 @@ export default function ImageUpscalerPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Image upscaler saved to your projects.');
@@ -351,7 +360,7 @@ export default function ImageUpscalerPage() {
                 </div>
 
                 {/* Control Content */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-8">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6  gap-y-8">
                     {/* ... (Keep existing control content) ... */}
                     {/* Mode Selector */}
                     <div className="grid grid-cols-2 p-1 bg-muted rounded-xl border border-border">
@@ -587,7 +596,7 @@ export default function ImageUpscalerPage() {
                         <div className="space-y-2">
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Prompt Guidance</Label>
                             <textarea
-                                placeholder="Describe details to enhance..."
+                                placeholder="Describe details to enhance?"
                                 value={params.prompt}
                                 onChange={(e) => updateParam('prompt', e.target.value)}
                                 className="w-full h-24 bg-muted border border-border rounded-xl p-3 text-xs font-medium resize-none outline-none focus:ring-2 focus:ring-ring transition-all placeholder:text-muted-foreground"
@@ -606,7 +615,7 @@ export default function ImageUpscalerPage() {
                         {isGenerating ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Upscaling...
+                                Upscaling?
                             </>
                         ) : (
                             <>

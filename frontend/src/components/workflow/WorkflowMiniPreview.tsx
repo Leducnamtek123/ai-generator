@@ -6,6 +6,8 @@ import {
     Background,
     Node,
     Edge,
+    type NodeProps,
+    type NodeTypes,
     ReactFlowProvider,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
@@ -17,6 +19,14 @@ import { UpscaleNode } from './nodes/UpscaleNode';
 import { MediaNode } from './nodes/MediaNode';
 import { useTheme } from 'next-themes';
 
+const MiniLabelNode = (props: NodeProps<Node<{ label?: string }>>) => {
+    return (
+        <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">
+            {props.data.label}
+        </div>
+    );
+};
+
 const nodeTypes = {
     [WorkflowNodeType.TEXT]: TextNode,
     [WorkflowNodeType.IMAGE_GEN]: GeneratorNode,
@@ -25,10 +35,10 @@ const nodeTypes = {
     [WorkflowNodeType.UPSCALE]: UpscaleNode,
     [WorkflowNodeType.MEDIA]: MediaNode,
     // Add fallback/basic types if needed
-    input: (props: any) => <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
-    process: (props: any) => <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
-    output: (props: any) => <div className="p-2 border rounded bg-card text-foreground text-[10px] scale-50 origin-top-left">{props.data.label}</div>,
-};
+    input: MiniLabelNode,
+    process: MiniLabelNode,
+    output: MiniLabelNode,
+} as unknown as NodeTypes;
 
 interface WorkflowMiniPreviewProps {
     nodes: Node[];
@@ -53,7 +63,7 @@ function WorkflowMiniPreviewContent({ nodes, edges }: WorkflowMiniPreviewProps) 
         <ReactFlow
             nodes={nodesWithPreviewMode}
             edges={edges}
-            nodeTypes={nodeTypes as any}
+            nodeTypes={nodeTypes}
             fitView
             fitViewOptions={{ padding: 0.2 }}
             className="bg-transparent pointer-events-none"

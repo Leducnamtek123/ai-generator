@@ -200,7 +200,7 @@ function AddSceneDialog({
                 onChange={(e) => setForm((p) => ({ ...p, parentSceneId: e.target.value }))}
                 className="mt-1.5 w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white"
               >
-                <option value="">Select parent scene...</option>
+                <option value="">Select parent scene?</option>
                 {scenes.map((s, i) => (
                   <option key={s.id} value={s.id}>Scene {i + 1} ({s.chainType})</option>
                 ))}
@@ -277,7 +277,7 @@ function AddSceneDialog({
 
 export default function VisualProjectDetailPage() {
   const params = useParams();
-  const router = useRouter();
+  const { back } = useRouter();
   const projectId = params?.id as string;
 
   // Store
@@ -430,7 +430,7 @@ export default function VisualProjectDetailPage() {
       <div className="h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="size-8 text-violet-400 animate-spin" />
-          <p className="text-xs text-white/20">Loading studio...</p>
+          <p className="text-xs text-white/20">Loading studio?</p>
         </div>
       </div>
     );
@@ -449,7 +449,7 @@ export default function VisualProjectDetailPage() {
       {/* ═══ Top Bar ═══ */}
       <div className="shrink-0 h-12 flex items-center gap-3 px-4 border-b border-white/[0.06] bg-[#0a0a10]/80 backdrop-blur-xl z-20">
         <button
-          onClick={() => router.back()}
+          onClick={() => back()}
           className="p-1.5 hover:bg-white/[0.06] rounded-lg transition text-white/40 hover:text-white/70"
         >
           <ArrowLeft className="size-4" />
@@ -459,7 +459,7 @@ export default function VisualProjectDetailPage() {
           <h1 className="text-sm font-semibold truncate">{project.name}</h1>
           {project.story && (
             <span className="hidden sm:block text-[10px] text-white/15 truncate max-w-[200px]">
-              — {project.story}
+              , {project.story}
             </span>
           )}
 
@@ -561,7 +561,7 @@ export default function VisualProjectDetailPage() {
                 <TooltipContent>New Video</TooltipContent>
               </Tooltip>
             </div>
-            <div className="flex-1 overflow-y-auto px-3 py-2 space-y-0.5">
+            <div className="flex-1 overflow-y-auto px-3 py-2  gap-y-0.5">
               {videos.map((v) => (
                 <button
                   key={v.id}
@@ -709,7 +709,7 @@ export default function VisualProjectDetailPage() {
           <Input
             value={videoTitle}
             onChange={(e) => setVideoTitle(e.target.value)}
-            placeholder="Episode title..."
+            placeholder="Episode title?"
             className="bg-white/5 border-white/[0.08] text-white placeholder:text-white/20"
             onKeyDown={(e) => e.key === 'Enter' && handleCreateVideo()}
           />

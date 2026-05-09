@@ -35,7 +35,7 @@ export function ProcessNode({ id, data, selected }: ProcessNodeProps) {
         <BaseNode id={id} title="Process Node" selected={selected} status={status} onDelete={handleDelete}>
             <div className="flex flex-col items-center justify-center py-2">
                 <div className="mb-2 flex items-center gap-2">
-                    <Cpu className="h-4 w-4 text-blue-400" />
+                    <Cpu className="size-4 text-blue-400" />
                     <span className="text-sm font-medium">{data.label || 'AI Model'}</span>
                 </div>
 
@@ -47,7 +47,7 @@ export function ProcessNode({ id, data, selected }: ProcessNodeProps) {
                                 style={{ width: `${data.progress || 45}%` }}
                             />
                         </div>
-                        <p className="text-center text-[10px] text-muted-foreground">Generating...</p>
+                        <p className="text-center text-[10px] text-muted-foreground">Generating?</p>
                     </div>
                 )}
             </div>

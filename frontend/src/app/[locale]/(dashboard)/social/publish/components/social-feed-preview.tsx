@@ -65,7 +65,7 @@ function FacebookPreview({ content, mediaUrls }: { content: string; mediaUrls: s
             </div>
 
             {mediaUrls.length > 0 ? (
-                <div className="relative w-full aspect-video bg-slate-900/30 overflow-hidden border-y border-white/5">
+                <div className="relative w-full aspect-video bg-zinc-900/30 overflow-hidden border-y border-white/5">
                     <Image src={mediaUrls[0]} alt="Post media" fill className="object-cover" sizes="(max-width: 768px) 100vw, 600px" />
                 </div>
             ) : (
@@ -91,7 +91,7 @@ function FacebookPreview({ content, mediaUrls }: { content: string; mediaUrls: s
 
 function TwitterPreview({ content, mediaUrls }: { content: string; mediaUrls: string[] }) {
     return (
-        <div className="w-full max-w-lg bg-slate-950 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-4 font-sans text-white">
+        <div className="w-full max-w-lg bg-zinc-950 border border-white/20 rounded-2xl shadow-2xl overflow-hidden p-4 font-sans text-white">
             <div className="flex gap-3">
                 <div className="size-10 rounded-full bg-primary/20 flex items-center justify-center border border-white/10 shrink-0">
                     <Twitter className="size-5 text-white" />
@@ -130,26 +130,26 @@ function TwitterPreview({ content, mediaUrls }: { content: string; mediaUrls: st
 
 function InstagramPreview({ content, mediaUrls }: { content: string; mediaUrls: string[] }) {
     return (
-        <div className="w-full max-w-md bg-white text-black rounded-lg shadow-2xl overflow-hidden font-sans border border-gray-200">
+        <div className="w-full max-w-md bg-white text-black rounded-lg shadow-2xl overflow-hidden font-sans border border-zinc-200">
             <div className="p-3 flex items-center justify-between">
                 <div className="flex items-center gap-3">
                     <div className="size-8 rounded-full bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-600 p-[2px]">
                         <div className="w-full h-full rounded-full bg-white p-[2px]">
-                            <div className="w-full h-full rounded-full bg-gray-100 flex items-center justify-center">
+                            <div className="w-full h-full rounded-full bg-zinc-100 flex items-center justify-center">
                                 <Instagram className="size-4 text-black" />
                             </div>
                         </div>
                     </div>
                     <span className="text-sm font-semibold">paintai_studio</span>
                 </div>
-                <MoreHorizontal className="size-5 text-gray-500" />
+                <MoreHorizontal className="size-5 text-zinc-500" />
             </div>
 
-            <div className="relative w-full aspect-square bg-gray-100 flex items-center justify-center overflow-hidden border-y border-gray-100">
+            <div className="relative w-full aspect-square bg-zinc-100 flex items-center justify-center overflow-hidden border-y border-zinc-100">
                 {mediaUrls.length > 0 ? (
                     <Image src={mediaUrls[0]} alt="Post media" fill className="object-cover" sizes="(max-width: 768px) 100vw, 480px" />
                 ) : (
-                    <Instagram className="size-20 text-gray-200" />
+                    <Instagram className="size-20 text-zinc-200" />
                 )}
             </div>
 
@@ -169,7 +169,7 @@ function InstagramPreview({ content, mediaUrls }: { content: string; mediaUrls: 
                         <span className="font-bold mr-2">paintai_studio</span>
                         {content || "Generating creative caption..." }
                     </p>
-                    <p className="text-[10px] text-gray-400 uppercase tracking-tighter mt-1 font-medium">Just now</p>
+                    <p className="text-[10px] text-zinc-400 uppercase tracking-tighter mt-1 font-medium">Just now</p>
                 </div>
             </div>
         </div>

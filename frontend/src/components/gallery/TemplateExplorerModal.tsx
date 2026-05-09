@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils';
 import { useInView } from 'react-intersection-observer';
 import { TemplateCard } from './TemplateCard';
 
-import { Template, TemplateTypeEnum } from '@/lib/api/templates';
+import { TemplateTypeEnum } from '@/lib/api/templates';
 
 const CATEGORIES = [
     { id: 'all', label: 'All templates', icon: LayoutGrid },
@@ -27,7 +27,7 @@ export function TemplateExplorerModal({ children }: { children?: React.ReactNode
     const [searchQuery, setSearchQuery] = useState('');
 
     // Determine params based on selection
-    const queryParams: any = { limit: 20 };
+    const queryParams: { limit: number; mode?: string; type?: string } = { limit: 20 };
     if (selectedCategory === 'my-templates') {
         queryParams.mode = 'my-templates';
     } else if (selectedCategory !== 'all') {
@@ -92,7 +92,7 @@ export function TemplateExplorerModal({ children }: { children?: React.ReactNode
                         <div className="relative flex-1 max-w-xl">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search templates..."
+                                placeholder="Search templates?"
                                 className="pl-10 rounded-full"
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}

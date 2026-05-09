@@ -69,8 +69,8 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
                 <textarea
                     value={(nodeData.prompt as string) || ''}
                     onChange={(e) => onChange('prompt', e.target.value)}
-                    className="w-full min-h-[92px] rounded-lg bg-gray-950/20 border border-white/10 p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 resize-none"
-                    placeholder="Describe what you want to create..."
+                    className="w-full min-h-[92px] rounded-lg bg-zinc-950/20 border border-white/10 p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 resize-none"
+                    placeholder="Describe what you want to create?"
                 />
             </div>
 
@@ -80,7 +80,7 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
                     <input
                         value={(nodeData.primaryUrl as string) || ''}
                         onChange={(e) => onChange('primaryUrl', e.target.value)}
-                        className="w-full h-11 rounded-lg bg-gray-950/20 border border-white/10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
+                        className="w-full h-11 rounded-lg bg-zinc-950/20 border border-white/10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                         placeholder="Image / video / design / audio URL"
                     />
                 </div>
@@ -90,7 +90,7 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
                     <input
                         value={(nodeData.secondaryUrl as string) || ''}
                         onChange={(e) => onChange('secondaryUrl', e.target.value)}
-                        className="w-full h-11 rounded-lg bg-gray-950/20 border border-white/10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
+                        className="w-full h-11 rounded-lg bg-zinc-950/20 border border-white/10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                         placeholder="Audio / end frame / extra input URL"
                     />
                 </div>
@@ -101,7 +101,7 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
                 <textarea
                     value={(nodeData.advancedParams as string) || '{}'}
                     onChange={(e) => onChange('advancedParams', e.target.value)}
-                    className="w-full min-h-[120px] rounded-lg bg-gray-950/20 border border-white/10 p-3 font-mono text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 resize-none"
+                    className="w-full min-h-[120px] rounded-lg bg-zinc-950/20 border border-white/10 p-3 font-mono text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 resize-none"
                     placeholder='{"model":"seedream"}'
                 />
             </div>

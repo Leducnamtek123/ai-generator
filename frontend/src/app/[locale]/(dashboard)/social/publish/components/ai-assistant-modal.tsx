@@ -76,7 +76,7 @@ export function AiAssistantModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-sm">
       <LazyMotion features={domAnimation}>
         <m.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
@@ -152,7 +152,7 @@ export function AiAssistantModal({
                 {isGenerating ? (
                   <>
                     <Loader2 className="size-5 mr-3 animate-spin" />
-                    AI is writing...
+                    AI is writing?
                   </>
                 ) : (
                   <>

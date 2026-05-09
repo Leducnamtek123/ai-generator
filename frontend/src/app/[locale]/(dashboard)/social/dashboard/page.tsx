@@ -21,7 +21,7 @@ import {
     Linkedin,
     Instagram
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 import { 
     AreaChart, 
     Area, 
@@ -102,7 +102,7 @@ export default function SocialDashboardPage() {
     }, [daysRange]);
 
     if (isLoading || !stats) {
-        return <div className="p-8 text-muted-foreground">Loading analytics...</div>;
+        return <div className="p-8 text-muted-foreground">Loading analytics?</div>;
     }
 
     const DISPLAY_STATS = [
@@ -188,7 +188,7 @@ export default function SocialDashboardPage() {
                         <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-sm text-muted-foreground">Connected accounts</span>
-                                <Share2 className="h-4 w-4 text-primary" />
+                                <Share2 className="size-4 text-primary" />
                             </div>
                             <div className="mt-3 text-2xl font-bold">{connectedAccounts}</div>
                             <p className="mt-1 text-xs text-muted-foreground">All channels in this workspace</p>
@@ -196,7 +196,7 @@ export default function SocialDashboardPage() {
                         <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-sm text-muted-foreground">Scheduled posts</span>
-                                <CalendarDays className="h-4 w-4 text-primary" />
+                                <CalendarDays className="size-4 text-primary" />
                             </div>
                             <div className="mt-3 text-2xl font-bold">{scheduledPosts.length}</div>
                             <p className="mt-1 text-xs text-muted-foreground">{draftPosts.length} drafts waiting to move</p>
@@ -204,7 +204,7 @@ export default function SocialDashboardPage() {
                         <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-sm text-muted-foreground">Open inbox threads</span>
-                                <Inbox className="h-4 w-4 text-primary" />
+                                <Inbox className="size-4 text-primary" />
                             </div>
                             <div className="mt-3 text-2xl font-bold">{openInboxItems.length}</div>
                             <p className="mt-1 text-xs text-muted-foreground">{inboundNeedsAttention} ready to reply</p>
@@ -212,7 +212,7 @@ export default function SocialDashboardPage() {
                         <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                             <div className="flex items-center justify-between gap-4">
                                 <span className="text-sm text-muted-foreground">Needs review</span>
-                                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                                <AlertTriangle className="size-4 text-amber-400" />
                             </div>
                             <div className="mt-3 text-2xl font-bold">{accountsNeedingReauth}</div>
                             <p className="mt-1 text-xs text-muted-foreground">Reconnect before publishing</p>
@@ -235,7 +235,7 @@ export default function SocialDashboardPage() {
                             <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                                 <div className="flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-2">
-                                        <Clock3 className="h-4 w-4 text-primary" />
+                                        <Clock3 className="size-4 text-primary" />
                                         <span className="font-semibold">Next scheduled post</span>
                                     </div>
                                     <span className="text-xs text-muted-foreground">{nextScheduledLabel}</span>
@@ -254,7 +254,7 @@ export default function SocialDashboardPage() {
                             <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                                 <div className="flex items-center justify-between gap-3">
                                     <span className="text-sm text-muted-foreground">Published</span>
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                    <CheckCircle2 className="size-4 text-emerald-400" />
                                 </div>
                                 <div className="mt-3 text-2xl font-bold">{publishedPosts.length}</div>
                                 <p className="mt-1 text-xs text-muted-foreground">Ready for analytics review</p>
@@ -262,7 +262,7 @@ export default function SocialDashboardPage() {
                             <div className="rounded-xl border border-white/10 bg-background/40 p-4">
                                 <div className="flex items-center justify-between gap-3">
                                     <span className="text-sm text-muted-foreground">Failed</span>
-                                    <AlertTriangle className="h-4 w-4 text-rose-400" />
+                                    <AlertTriangle className="size-4 text-rose-400" />
                                 </div>
                                 <div className="mt-3 text-2xl font-bold">{failedPosts.length}</div>
                                 <p className="mt-1 text-xs text-muted-foreground">Check auth, media, or API errors</p>
@@ -311,7 +311,7 @@ export default function SocialDashboardPage() {
                     </div>
                     <div className="space-y-3">
                         {SOCIAL_PIPELINE.map((step, index) => (
-                            <motion.div
+                            <m.div
                                 key={step.label}
                                 initial={{ opacity: 0, x: 12 }}
                                 animate={{ opacity: 1, x: 0 }}
@@ -319,13 +319,13 @@ export default function SocialDashboardPage() {
                                 className="rounded-xl border border-white/10 bg-background/40 p-4"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                                         {index + 1}
                                     </div>
                                     <span className="font-semibold">{step.label}</span>
                                 </div>
                                 <p className="mt-2 text-sm text-muted-foreground pl-11">{step.detail}</p>
-                            </motion.div>
+                            </m.div>
                         ))}
                     </div>
                 </GlassCard>
@@ -334,7 +334,7 @@ export default function SocialDashboardPage() {
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {DISPLAY_STATS.map((stat, index) => (
-                    <motion.div
+                    <m.div
                         key={stat.label}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -355,7 +355,7 @@ export default function SocialDashboardPage() {
                                 <h3 className="text-2xl font-semibold mt-1 text-white">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</h3>
                             </div>
                         </GlassCard>
-                    </motion.div>
+                    </m.div>
                 ))}
             </div>
 
@@ -448,7 +448,7 @@ export default function SocialDashboardPage() {
                                         <span className="font-bold">{item.share}%</span>
                                     </div>
                                     <div className="h-2 w-full bg-muted rounded-full overflow-hidden">
-                                        <motion.div 
+                                        <m.div 
                                             initial={{ width: 0 }}
                                             animate={{ width: `${item.share}%` }}
                                             className="h-full bg-primary"

@@ -279,7 +279,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
               </div>
             ) : (
               <p className="text-[11px] text-white/30 leading-relaxed italic">
-                {scene.videoPrompt || 'Not set — will use image prompt for motion'}
+                {scene.videoPrompt || 'Not set , will use image prompt for motion'}
               </p>
             )}
           </div>

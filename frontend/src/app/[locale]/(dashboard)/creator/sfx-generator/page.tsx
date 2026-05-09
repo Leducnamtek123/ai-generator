@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useState, useRef } from 'react';
+import { Suspense, useReducer, useEffect, useState, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
@@ -9,14 +9,11 @@ import { TemplateTypeEnum } from '@/lib/api/templates';
 import { CONTENT_TABS, COMMUNITY_TAB, TEMPLATES_TAB } from '@/components/layouts/navigation-data';
 import { Zap, Download, Loader2, Play, Pause, Folder, Leaf, Cog, Bomb, User, Smartphone, Rocket, Waves, Music2, Search, Sparkles, Upload } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { Slider } from '@/ui/slider';
-import { Label } from '@/ui/label';
 import { Input } from '@/ui/input';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { createSfxFilename, getSfxPreviewUrl, type SfxTrackLike } from '@/lib/sfx-track';
 import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
-import Image from 'next/image';
 import { uploadFileWithToast } from '@/lib/upload';
 import type { MediaItem } from '@/types/media';
 import { getUserFacingErrorMessage } from '@/lib/async-operation';
@@ -132,12 +129,21 @@ function reducer(state: SfxState, action: SfxAction): SfxState {
 }
 
 export default function SfxGeneratorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <SfxGeneratorPageContent />
+        </Suspense>
+    );
+}
+
+function SfxGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const { generateSfx, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
-    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+    const [communityListings, setCommunityListings] = useState<Array<{ id: string; title: string; description?: string }>>([]);
     const [isCommunityLoading, setIsCommunityLoading] = useState(false);
     const [sampleUrl, setSampleUrl] = useState<string | null>(null);
     const [sampleName, setSampleName] = useState('');
@@ -156,7 +162,7 @@ export default function SfxGeneratorPage() {
             const fetchCommunity = async () => {
                 setIsCommunityLoading(true);
                 try {
-                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.SOUND_EFFECT_GENERATOR}&limit=12`));
+                    const res = await import('@/lib/api').then(m => m.get<{ data: Array<{ id: string; title: string; description?: string }> }>(`/community-marketplace/listings?type=${TemplateTypeEnum.SOUND_EFFECT_GENERATOR}&limit=12`));
                     setCommunityListings(res.data || []);
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
@@ -171,7 +177,7 @@ export default function SfxGeneratorPage() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<SfxSnapshot>) => {
@@ -187,7 +193,7 @@ export default function SfxGeneratorPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('sfx-generator:draft');
+            const draftRaw = localStorage.getItem('sfx-generator:draft:v1');
             if (!draftRaw) return;
 
             try {
@@ -351,7 +357,7 @@ export default function SfxGeneratorPage() {
             },
         };
 
-        localStorage.setItem('sfx-generator:draft', JSON.stringify(payload));
+        localStorage.setItem('sfx-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -369,7 +375,7 @@ export default function SfxGeneratorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 setProjectError(null);
@@ -393,14 +399,14 @@ export default function SfxGeneratorPage() {
                     <h2 className="font-semibold text-muted-foreground">SFX Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6 text-left">
                     <div className="space-y-3 text-left">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Describe the Sound</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
                                 onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                                placeholder="e.g., Heavy rain on a tin roof..."
+                                placeholder="e.g., Heavy rain on a tin roof?"
                                 className="w-full h-28 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
@@ -421,7 +427,7 @@ export default function SfxGeneratorPage() {
                                         state.selectedCategory === cat.id ? 'bg-accent border-primary/20' : 'bg-card border-border hover:border-border/80',
                                     )}
                                 >
-                                    <cat.icon className="h-4 w-4 text-muted-foreground" />
+                                    <cat.icon className="size-4 text-muted-foreground" />
                                     <span className="text-[8px] font-medium">{cat.label}</span>
                                 </button>
                             ))}
@@ -661,7 +667,7 @@ function GenerationCard({ generation, onPlay, onDownload, isPlaying }: { generat
     );
 }
 
-function TemplateCard({ template, onClick }: { template: any; onClick?: () => void }) {
+function TemplateCard({ template, onClick }: { template: { title: string; description?: string }; onClick?: () => void }) {
     return (
         <button type="button" className="group text-left cursor-pointer p-4 bg-card rounded-xl border border-border group-hover:border-border/80 transition-all relative w-full" onClick={onClick}>
             <div className="flex items-center gap-3">

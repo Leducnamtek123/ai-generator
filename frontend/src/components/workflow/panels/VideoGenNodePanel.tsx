@@ -26,7 +26,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
                 <select
                     value={(nodeData.model as string) || VideoModel.RUNWAY}
                     onChange={(e) => onChange('model', e.target.value)}
-                    className="w-full h-11 bg-gray-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none"
+                    className="w-full h-11 bg-zinc-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none"
                 >
                     <option value={VideoModel.RUNWAY} className="bg-[#1A1B1F]">Runway Gen-3 ⭐</option>
                     <option value={VideoModel.SORA} className="bg-[#1A1B1F]">OpenAI Sora</option>

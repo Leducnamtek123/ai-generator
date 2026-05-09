@@ -18,7 +18,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
     <div className="space-y-4">
       <div className="rounded-lg border border-blue-500/20 bg-blue-500/10 p-3">
         <div className="flex items-start gap-2">
-          <ImageIcon className="mt-0.5 h-4 w-4 shrink-0 text-blue-400" />
+          <ImageIcon className="mt-0.5 size-4 shrink-0 text-blue-400" />
           <div>
             <p className="text-xs font-medium text-blue-300">Image Generator</p>
             <p className="mt-1 text-[10px] text-blue-300/60">
@@ -86,7 +86,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
           value={(nodeData.negativePrompt as string) || ""}
           onChange={(e) => onChange("negativePrompt", e.target.value)}
           className="h-20 w-full resize-none rounded-lg border border-input bg-background p-3 text-xs text-foreground focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
-          placeholder="What to avoid in generation..."
+          placeholder="What to avoid in generation?"
         />
       </div>
 
@@ -124,9 +124,9 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
           className="h-11 w-full rounded-xl bg-gradient-to-r from-blue-600 to-blue-500 text-sm font-medium text-white shadow-lg shadow-blue-500/20 hover:from-blue-500 hover:to-blue-400"
         >
           {isGenerating ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <Play className="h-4 w-4" />
+            <Play className="size-4" />
           )}
           {isGenerating ? "Generating..." : "Generate Image"}
         </Button>

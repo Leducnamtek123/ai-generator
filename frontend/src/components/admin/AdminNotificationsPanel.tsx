@@ -59,7 +59,7 @@ const NotificationRow = ({
     <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 transition-colors hover:border-border/70 md:flex-row md:items-start md:justify-between">
       <div className="flex gap-3">
         <div className={cn('mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border', meta.className)}>
-          <Icon className="h-4 w-4" />
+          <Icon className="size-4" />
         </div>
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
@@ -74,7 +74,7 @@ const NotificationRow = ({
           <p className="text-sm text-muted-foreground">{item.message}</p>
           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
             <span className="inline-flex items-center gap-1">
-              <Clock3 className="h-3.5 w-3.5" />
+              <Clock3 className="size-3.5" />
               {formatRelativeTime(item.createdAt)}
             </span>
             {action && (
@@ -95,7 +95,7 @@ const NotificationRow = ({
 };
 
 export function AdminNotificationsPanel() {
-  const router = useRouter();
+  const { push } = useRouter();
   const [severityFilter, setSeverityFilter] = React.useState<'all' | AdminNotificationSeverity>('all');
 
   const query = useQuery({
@@ -123,7 +123,7 @@ export function AdminNotificationsPanel() {
               <RefreshCw className={cn('mr-2 h-4 w-4', query.isFetching && 'animate-spin')} />
               Refresh
             </Button>
-            <Button size="sm" onClick={() => router.push('/admin')}>
+            <Button size="sm" onClick={() => push('/admin')}>
               Back to admin
             </Button>
           </div>
@@ -163,8 +163,8 @@ export function AdminNotificationsPanel() {
 
         {!query.isLoading && visibleFeed.length === 0 && (
           <div className="rounded-3xl border border-dashed border-border bg-muted/20 px-6 py-10 text-center">
-            <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-              <ShieldAlert className="h-5 w-5" />
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <ShieldAlert className="size-5" />
             </div>
             <h3 className="mt-4 text-base font-semibold">No alerts in this view</h3>
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
@@ -175,7 +175,7 @@ export function AdminNotificationsPanel() {
 
         {!query.isLoading &&
           visibleFeed.map((item) => (
-            <NotificationRow key={item.id} item={item} onOpen={(href) => router.push(href)} />
+            <NotificationRow key={item.id} item={item} onOpen={(href) => push(href)} />
           ))}
 
         {summary && (

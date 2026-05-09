@@ -1,7 +1,7 @@
 'use client';
 
-import Image from 'next/image';
 import { useState } from 'react';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { isAxiosError } from 'axios';
@@ -19,7 +19,6 @@ const forgotPasswordSchema = z.object({
 type ForgotPasswordValues = z.infer<typeof forgotPasswordSchema>;
 
 export default function ForgotPasswordPage() {
-    const [isLoading, setIsLoading] = useState(false);
     const [submitted, setSubmitted] = useState(false);
 
     const form = useForm<ForgotPasswordValues>({
@@ -28,7 +27,6 @@ export default function ForgotPasswordPage() {
     });
 
     const onSubmit = async (values: ForgotPasswordValues) => {
-        setIsLoading(true);
         try {
             await authApi.forgotPassword(values.email);
             setSubmitted(true);
@@ -47,8 +45,6 @@ export default function ForgotPasswordPage() {
             toast.error('Unable to request reset link', {
                 description: 'Please try again in a moment.',
             });
-        } finally {
-            setIsLoading(false);
         }
     };
 
@@ -99,8 +95,8 @@ export default function ForgotPasswordPage() {
                             )}
                         </div>
 
-                        <button type="submit" disabled={isLoading} className="auth-submit">
-                            {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Send reset link'}
+                        <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
+                            {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Send reset link'}
                         </button>
                     </form>
                 )}

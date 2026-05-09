@@ -73,6 +73,7 @@ behavior instead of only changing appearance.
 - Connection snapshot aliases now mirror connected prompt/image/video/reference values into the workflow node data used by the property panels and local execution path.
 - Reference-style nodes and legacy `input` / `process` / `output` nodes now participate in execution instead of being silently dropped.
 - Image Generator now renders an actual prompt textarea on the canvas, and Text/Image prompt inputs opt out of canvas pan/drag so they remain editable while the hand tool is active.
+- Workflow canvas unload persistence now uses `sendBeacon` with a fetch fallback so pending graph changes still have a reliable save path when the page closes.
 - Media and generated image previews now use browser-native media rendering for arbitrary uploaded/provider URLs instead of being blocked by `next/image` host restrictions.
 - Browser verification on `http://localhost/creator/workflow-editor` after rebuilding `ai-generator-web` confirmed Image Generator prompt entry works in hand/pan mode with no console errors.
 - The shared workflow node shell and node toolbars were restyled to use a tighter card language, edge-aligned ports that no longer clip behind the card, and smaller connector affordances so the canvas reads more like a polished creative workspace.

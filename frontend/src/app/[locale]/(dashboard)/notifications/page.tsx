@@ -77,8 +77,8 @@ const EmptyState = () => (
   <Card className="overflow-hidden rounded-3xl border-border">
     <div className="bg-gradient-to-br from-primary/15 via-background to-chart-2/10 px-6 py-10 md:px-10">
       <div className="mx-auto max-w-2xl text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-background/80 shadow-sm">
-          <Inbox className="h-6 w-6 text-primary" />
+        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl border border-border bg-background/80 shadow-sm">
+          <Inbox className="size-6 text-primary" />
         </div>
         <h2 className="mt-5 text-2xl font-semibold">No notifications yet</h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
@@ -132,7 +132,7 @@ const NotificationRow = ({
       <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
         <div className="flex gap-4">
           <div className={cn('mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border', meta.accent)}>
-            <Icon className="h-5 w-5" />
+            <Icon className="size-5" />
           </div>
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
@@ -152,10 +152,10 @@ const NotificationRow = ({
             <p className="text-sm leading-6 text-muted-foreground">{item.message}</p>
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
-                <Clock3 className="h-3.5 w-3.5" />
+                <Clock3 className="size-3.5" />
                 {relativeTime(item.createdAt)}
               </span>
-              {item.isRead && <span className="inline-flex items-center gap-1"><CheckCircle2 className="h-3.5 w-3.5" /> Read</span>}
+              {item.isRead && <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3.5" /> Read</span>}
             </div>
           </div>
         </div>
@@ -218,7 +218,7 @@ export default function NotificationsPage() {
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                <Bell className="h-3.5 w-3.5 text-primary" />
+                <Bell className="size-3.5 text-primary" />
                 Notification center
               </div>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
@@ -272,7 +272,7 @@ export default function NotificationsPage() {
         <div className="mt-6 grid gap-4 lg:grid-cols-[240px_1fr]">
           <aside className="rounded-3xl border border-border bg-card p-4">
             <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <Filter className="h-4 w-4 text-muted-foreground" />
+              <Filter className="size-4 text-muted-foreground" />
               Filters
             </div>
             <div className="space-y-2">

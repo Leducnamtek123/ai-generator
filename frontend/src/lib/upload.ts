@@ -43,9 +43,10 @@ export async function uploadFileWithToast(
         const result = await uploadFile(file);
         toast.success(`${name} uploaded!`, { id: toastId });
         return result;
-    } catch (error: any) {
+    } catch (error: unknown) {
         console.error('Upload failed', error);
-        toast.error(error.message || `Failed to upload ${name}`, { id: toastId });
+        const message = error instanceof Error ? error.message : `Failed to upload ${name}`;
+        toast.error(message, { id: toastId });
         return null;
     }
 }

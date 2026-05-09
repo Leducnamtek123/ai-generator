@@ -167,10 +167,10 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
             )}
           >
             {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-gray-950/40 backdrop-blur-[2px]">
-                <div className="relative flex h-12 w-12 items-center justify-center">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-950/40 backdrop-blur-[2px]">
+                <div className="relative flex size-12 items-center justify-center">
                   <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />
-                  <Loader2 className="relative z-20 h-6 w-6 animate-spin text-blue-500" />
+                  <Loader2 className="relative z-20 size-6 animate-spin text-blue-500" />
                 </div>
                 <span className="mt-3 animate-pulse text-[10px] font-bold tracking-widest text-blue-400 uppercase">
                   {data.status === NodeStatus.QUEUED ? "In Queue" : "Generating..."}
@@ -196,7 +196,7 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
             )}
 
             {!data.isPreview && (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-gray-950/80 to-transparent p-4">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-950/80 to-transparent p-4">
                 {data.inputs?.prompt ? (
                   <div className="space-y-1 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2">
                     <p className="text-sm font-medium text-blue-400">Prompt connected</p>
@@ -214,7 +214,7 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                 ) : (
                   <textarea
                     className="nodrag nopan nowheel custom-scrollbar h-16 w-full resize-none rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80 outline-none placeholder:text-white/35 focus:border-blue-400/70 focus:bg-black/50 focus:ring-2 focus:ring-blue-500/20"
-                    placeholder="Describe the image..."
+                    placeholder="Describe the image?"
                     value={localPrompt}
                     onChange={handlePromptChange}
                     onPointerDown={(event) => event.stopPropagation()}
@@ -249,9 +249,9 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                   data.status === NodeStatus.QUEUED ||
                   (!data.prompt?.trim() && !data.inputs?.prompt)
                 }
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-500 p-2 text-white transition-all hover:bg-blue-400 disabled:opacity-50"
+                className="flex size-8 items-center justify-center rounded-full bg-blue-500 p-2 text-white transition-all hover:bg-blue-400 disabled:opacity-50"
               >
-                <Play className="h-4 w-4 fill-current" />
+                <Play className="size-4 fill-current" />
               </button>
             </div>
           )}

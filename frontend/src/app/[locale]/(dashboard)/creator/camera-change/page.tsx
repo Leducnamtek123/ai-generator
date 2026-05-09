@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -143,6 +143,14 @@ function reducer(state: CameraChangeState, action: CameraChangeAction): CameraCh
 }
 
 export default function CameraChangePage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <CameraChangePageContent />
+        </Suspense>
+    );
+}
+
+function CameraChangePageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -151,13 +159,14 @@ export default function CameraChangePage() {
     const [projectError, setProjectError] = useState<string | null>(null);
     const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { cameraChange, currentGeneration, reset, isGenerating } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const resultImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
     const isProcessing = isGenerating;
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -180,7 +189,7 @@ export default function CameraChangePage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('camera-change:draft');
+                    const raw = localStorage.getItem('camera-change:draft:v1');
                     if (raw) {
                         hydrateFromSnapshot(normalizeCameraChangeSnapshot(JSON.parse(raw)));
                     }
@@ -204,7 +213,7 @@ export default function CameraChangePage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved camera change project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('camera-change:draft');
+                        const raw = localStorage.getItem('camera-change:draft:v1');
                         if (raw) {
                             hydrateFromSnapshot(normalizeCameraChangeSnapshot(JSON.parse(raw)));
                         }
@@ -269,7 +278,7 @@ export default function CameraChangePage() {
             },
         };
 
-        localStorage.setItem('camera-change:draft', JSON.stringify(payload));
+        localStorage.setItem('camera-change:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -287,7 +296,7 @@ export default function CameraChangePage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Camera change saved to your projects.');
@@ -348,7 +357,7 @@ export default function CameraChangePage() {
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
@@ -479,7 +488,7 @@ export default function CameraChangePage() {
                         {isProcessing ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Processing...
+                                Processing?
                             </>
                         ) : (
                             <>
@@ -536,7 +545,7 @@ export default function CameraChangePage() {
                                         <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
                                         <Camera className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                     </div>
-                                    <p className="text-sm text-muted-foreground animate-pulse">Changing perspective...</p>
+                                    <p className="text-sm text-muted-foreground animate-pulse">Changing perspective?</p>
                                 </div>
                             ) : resultImage ? (
                                 <div className="relative h-[65vh] w-full max-w-4xl rounded-xl border border-border shadow-lg overflow-hidden">

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useState } from 'react';
+import { Suspense, useEffect, useReducer, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -155,6 +155,14 @@ function reducer(state: IconGeneratorState, action: IconGeneratorAction): IconGe
 }
 
 export default function IconGeneratorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <IconGeneratorPageContent />
+        </Suspense>
+    );
+}
+
+function IconGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const { startGeneration, currentGeneration, error, reset } = useGenerationStore();
     const { providers: iconProviders, isLoading: isProvidersLoading } = useGenerationProviders('icon-gen');
@@ -163,8 +171,9 @@ export default function IconGeneratorPage() {
     const [isProjectLoading, setIsProjectLoading] = useState(false);
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const isProjectBusy = isProjectLoading || isProjectSaving;
 
     useEffect(() => {
@@ -178,7 +187,7 @@ export default function IconGeneratorPage() {
     }, [selectedProvider, iconProviders]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<IconSnapshot>) => {
@@ -195,7 +204,7 @@ export default function IconGeneratorPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('icon-generator:draft');
+            const draftRaw = localStorage.getItem('icon-generator:draft:v1');
             if (!draftRaw) {
                 return;
             }
@@ -283,7 +292,7 @@ export default function IconGeneratorPage() {
             selectedProvider,
         };
 
-        localStorage.setItem('icon-generator:draft', JSON.stringify(content));
+        localStorage.setItem('icon-generator:draft:v1', JSON.stringify(content));
         setIsProjectSaving(true);
         setProjectError(null);
 
@@ -299,7 +308,7 @@ export default function IconGeneratorPage() {
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot: content } satisfies IconProjectPayload,
                 });
                 setProjectId(created.project.id);
-                router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                replace(`${window.location.pathname}?projectId=${created.project.id}`);
             }
             toast.success('Icon project saved.');
         } catch (saveError) {
@@ -371,14 +380,14 @@ export default function IconGeneratorPage() {
                     <h2 className="font-semibold text-muted-foreground">Icon Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Describe your icon</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
                                 onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                                placeholder="e.g., A rocket launching from a laptop, tech startup..."
+                                placeholder="e.g., A rocket launching from a laptop, tech startup?"
                                 className="w-full h-24 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
@@ -529,7 +538,7 @@ export default function IconGeneratorPage() {
                         {state.isGenerating ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Generating...
+                                Generating?
                             </>
                         ) : (
                             <>
@@ -573,7 +582,7 @@ export default function IconGeneratorPage() {
                                 <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
                                 <Shapes className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
-                            <p className="text-sm text-muted-foreground animate-pulse">Generating {state.count} icon variations...</p>
+                            <p className="text-sm text-muted-foreground animate-pulse">Generating {state.count} icon variations?</p>
                         </div>
                     ) : state.results.length > 0 ? (
                         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-4xl mx-auto">
@@ -582,7 +591,7 @@ export default function IconGeneratorPage() {
                                     <div className="aspect-square rounded-2xl border border-border overflow-hidden bg-[repeating-conic-gradient(#80808010_0%_25%,transparent_0%_50%)] bg-[length:16px_16px] shadow-lg">
                                         <Image src={url} alt="Generated icon" fill className="object-cover" sizes="(max-width: 1024px) 50vw, 25vw" />
                                     </div>
-                                    <div className="absolute inset-0 rounded-2xl bg-gray-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    <div className="absolute inset-0 rounded-2xl bg-zinc-950/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                         <Button size="icon" variant="secondary" className="size-9 rounded-lg" onClick={() => handleDownloadIcon(url, index)}>
                                             <Download className="size-4" />
                                         </Button>

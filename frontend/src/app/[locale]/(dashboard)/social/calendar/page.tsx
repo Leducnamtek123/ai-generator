@@ -4,7 +4,7 @@ import React from "react";
 import Link from "next/link";
 
 import { CalendarClock, ChevronLeft, ChevronRight, Filter, Plus, Trash2, X } from "lucide-react";
-import { motion } from "framer-motion";
+import { m } from 'framer-motion';
 import { toast } from "sonner";
 
 import { cn } from "@/lib/utils";
@@ -395,7 +395,7 @@ export default function CalendarPage() {
   };
 
   return (
-    <div className="mx-auto flex h-full max-w-7xl flex-col space-y-8 p-8">
+    <div className="mx-auto flex min-h-full max-w-7xl flex-col gap-y-8 p-8 pb-8">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold tracking-tight">Social Calendar</h1>
@@ -426,7 +426,7 @@ export default function CalendarPage() {
             ))}
           </div>
           <Button onClick={() => openComposer()}>
-            <Plus className="mr-2 h-4 w-4" />
+            <Plus className="mr-2 size-4" />
             New Post
           </Button>
         </div>
@@ -500,17 +500,17 @@ export default function CalendarPage() {
 
       <GlassCard
         variant="morphism"
-        className="flex flex-1 flex-col overflow-hidden border border-white/10 p-0"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto border border-white/10 p-0"
       >
         <div className="flex items-center justify-between border-b border-white/10 bg-white/5 p-6">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-semibold">{visibleMonthLabel}</h2>
             <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveRange(-1)}>
-                <ChevronLeft className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="size-8" onClick={() => moveRange(-1)}>
+                <ChevronLeft className="size-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveRange(1)}>
-                <ChevronRight className="h-4 w-4" />
+              <Button variant="ghost" size="icon" className="size-8" onClick={() => moveRange(1)}>
+                <ChevronRight className="size-4" />
               </Button>
             </div>
             <Button
@@ -540,7 +540,7 @@ export default function CalendarPage() {
                 dispatch({ type: "setStatusFilter", statusFilter: next });
               }}
             >
-              <Filter className="mr-2 h-3.5 w-3.5" />
+              <Filter className="mr-2 size-3.5" />
               {state.statusFilter === "all" ? "All statuses" : state.statusFilter}
             </Button>
           </div>
@@ -584,7 +584,7 @@ export default function CalendarPage() {
 
                   <div className="mt-2 space-y-1">
                     {dayPosts.slice(0, 3).map((post) => (
-                      <motion.div
+                      <m.div
                         key={post.id}
                         initial={{ opacity: 0, scale: 0.95 }}
                         animate={{ opacity: 1, scale: 1 }}
@@ -624,11 +624,11 @@ export default function CalendarPage() {
                             className="inline-flex items-center text-red-400 underline"
                             onClick={() => handleDeletePost(post.id)}
                           >
-                            <Trash2 className="mr-0.5 h-3 w-3" />
+                            <Trash2 className="mr-0.5 size-3" />
                             Delete
                           </button>
                         </div>
-                      </motion.div>
+                      </m.div>
                     ))}
                   </div>
 
@@ -637,7 +637,7 @@ export default function CalendarPage() {
                     title="Schedule post"
                     onClick={() => openComposer(day)}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="size-4" />
                   </button>
                 </div>
               );
@@ -663,7 +663,7 @@ export default function CalendarPage() {
                   <div className="space-y-2 p-2">
                     {dayPosts.length > 0 ? (
                       dayPosts.map((post) => (
-                        <motion.div
+                        <m.div
                           key={post.id}
                           initial={{ opacity: 0, y: 6 }}
                           animate={{ opacity: 1, y: 0 }}
@@ -703,11 +703,11 @@ export default function CalendarPage() {
                               className="inline-flex items-center text-red-400 underline"
                               onClick={() => handleDeletePost(post.id)}
                             >
-                              <Trash2 className="mr-0.5 h-3 w-3" />
+                              <Trash2 className="mr-0.5 size-3" />
                               Delete
                             </button>
                           </div>
-                        </motion.div>
+                        </m.div>
                       ))
                     ) : (
                       <div className="rounded-xl border border-dashed border-white/10 p-3 text-xs text-muted-foreground">
@@ -726,7 +726,7 @@ export default function CalendarPage() {
             })}
           </div>
         ) : (
-          <div className="flex-1 space-y-4 p-6">
+          <div className="flex-1  gap-y-4 p-6">
             <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
               <div>
                 <p className="text-xs tracking-wider text-muted-foreground uppercase">
@@ -742,7 +742,7 @@ export default function CalendarPage() {
                 </h3>
               </div>
               <Button onClick={() => openComposer(state.currentDate)}>
-                <Plus className="mr-2 h-4 w-4" />
+                <Plus className="mr-2 size-4" />
                 New Post
               </Button>
             </div>
@@ -750,7 +750,7 @@ export default function CalendarPage() {
             <div className="space-y-3">
               {currentDayPosts.length > 0 ? (
                 currentDayPosts.map((post) => (
-                  <motion.div
+                  <m.div
                     key={post.id}
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -790,13 +790,13 @@ export default function CalendarPage() {
                           className="inline-flex items-center text-sm text-red-400 underline"
                           onClick={() => handleDeletePost(post.id)}
                         >
-                          <Trash2 className="mr-0.5 h-3 w-3" />
+                          <Trash2 className="mr-0.5 size-3" />
                           Delete
                         </button>
                       </div>
                     </div>
                     <p className="text-sm leading-relaxed">{post.content}</p>
-                  </motion.div>
+                  </m.div>
                 ))
               ) : (
                 <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-muted-foreground">
@@ -809,18 +809,18 @@ export default function CalendarPage() {
       </GlassCard>
 
       {state.isLoading && (
-        <div className="text-sm text-muted-foreground">Loading calendar data...</div>
+        <div className="text-sm text-muted-foreground">Loading calendar data?</div>
       )}
 
       {state.isComposerOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm">
           <GlassCard
             variant="morphism"
             className="w-full max-w-xl space-y-4 border border-white/10 p-6"
           >
             <div className="flex items-center justify-between">
               <h3 className="inline-flex items-center text-lg font-semibold">
-                <CalendarClock className="mr-2 h-4 w-4" />
+                <CalendarClock className="mr-2 size-4" />
                 Create Scheduled Post
               </h3>
               <Button
@@ -828,7 +828,7 @@ export default function CalendarPage() {
                 size="icon"
                 onClick={() => dispatch({ type: "setComposerOpen", isComposerOpen: false })}
               >
-                <X className="h-4 w-4" />
+                <X className="size-4" />
               </Button>
             </div>
 
@@ -860,7 +860,7 @@ export default function CalendarPage() {
                 onChange={(e) => dispatch({ type: "setContent", content: e.target.value })}
                 rows={4}
                 className="w-full resize-none rounded-md border border-border bg-background p-3 text-sm"
-                placeholder="Write your post content..."
+                placeholder="Write your post content?"
               />
             </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -293,10 +293,19 @@ function reducer(state: DesignEditorState, action: DesignEditorAction): DesignEd
 }
 
 export default function DesignEditorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <DesignEditorPageContent />
+        </Suspense>
+    );
+}
+
+function DesignEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const { startGeneration } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [pastSnapshots, setPastSnapshots] = useState<DesignEditorSnapshot[]>([]);
     const [futureSnapshots, setFutureSnapshots] = useState<DesignEditorSnapshot[]>([]);
@@ -309,7 +318,7 @@ export default function DesignEditorPage() {
     const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -337,7 +346,7 @@ export default function DesignEditorPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('design-editor:draft');
+                    const raw = localStorage.getItem('design-editor:draft:v1');
                     if (!raw) {
                         return;
                     }
@@ -371,7 +380,7 @@ export default function DesignEditorPage() {
                 if (!cancelled) {
                     setErrorMessage('Could not load the saved design project. Falling back to a blank canvas.');
                     try {
-                        const raw = localStorage.getItem('design-editor:draft');
+                        const raw = localStorage.getItem('design-editor:draft:v1');
                         if (raw) {
                             const parsed = JSON.parse(raw) as Partial<DesignEditorSnapshot> & { canvasZoom?: number };
                             restoreFromPayload(parsed);
@@ -635,7 +644,7 @@ export default function DesignEditorPage() {
             canvasZoom: state.canvasZoom,
         };
 
-        localStorage.setItem('design-editor:draft', JSON.stringify(snapshot));
+        localStorage.setItem('design-editor:draft:v1', JSON.stringify(snapshot));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -659,7 +668,7 @@ export default function DesignEditorPage() {
                         content: JSON.parse(description),
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Design saved to your projects.');
@@ -710,7 +719,7 @@ export default function DesignEditorPage() {
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                <div className="flex-1 overflow-y-auto p-4  gap-y-4">
                     {state.activePanel === 'templates' && (
                         <>
                             {/* Canvas Size */}
@@ -818,10 +827,10 @@ export default function DesignEditorPage() {
                         <div className="space-y-4">
                             <div className="space-y-3">
                                 <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">AI Design Assistant</h4>
-                                <textarea value={state.aiPrompt} onChange={(e) => dispatch({ type: 'setAiPrompt', aiPrompt: e.target.value })} placeholder="Describe the design you want to create..." className="w-full h-32 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
+                                <textarea value={state.aiPrompt} onChange={(e) => dispatch({ type: 'setAiPrompt', aiPrompt: e.target.value })} placeholder="Describe the design you want to create?" className="w-full h-32 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
                             </div>
                             <Button onClick={handleAiGenerate} disabled={state.isGenerating || !state.aiPrompt.trim()} className="w-full h-10 gap-2">
-                                {state.isGenerating ? (<><Loader2 className="size-4 animate-spin" /> Generating...</>) : (<><Sparkles className="size-4" /> Generate Design</>)}
+                                {state.isGenerating ? (<><Loader2 className="size-4 animate-spin" /> Generating?</>) : (<><Sparkles className="size-4" /> Generate Design</>)}
                             </Button>
                             <div className="space-y-2">
                                 <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Quick Prompts</h4>

@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { BaseNode } from './BaseNode';
 import { Handle, Position } from '@xyflow/react';
-import { Sparkles, Loader2, Play, Copy, RefreshCw, ChevronDown } from 'lucide-react';
+import { Sparkles, Loader2, Copy, ChevronDown } from 'lucide-react';
 import { NodeToolbar } from '../NodeToolbar';
 import { ExecutionMode, NodeStatus, AssistantMode, StyleEmphasis } from '../types';
 import { useGeneration } from '@/hooks/useGeneration';
@@ -18,10 +18,10 @@ interface AssistantNodeProps {
         status?: NodeStatus;
         onDelete?: (id: string) => void;
         onRun?: (id: string, mode?: ExecutionMode) => void;
-        onChange?: (id: string, updates: Record<string, any>) => void;
+        onChange?: (id: string, updates: Record<string, unknown>) => void;
         onDuplicate?: () => void;
         onSettings?: () => void;
-        onHandleClick?: (event: any, handleId: string, handleType: 'source' | 'target') => void;
+        onHandleClick?: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => void;
     };
     selected?: boolean;
 }
@@ -148,7 +148,7 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                             ) : data.enhancedText ? (
                                 <p className="leading-relaxed">{data.enhancedText}</p>
                             ) : (
-                                <p className="text-muted-foreground italic">Enhanced prompt will appear here...</p>
+                                <p className="text-muted-foreground italic">Enhanced prompt will appear here?</p>
                             )}
                         </div>
                     </div>

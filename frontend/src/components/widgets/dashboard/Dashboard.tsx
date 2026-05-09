@@ -37,7 +37,7 @@ export function Dashboard() {
 
         <Button asChild>
           <Link href={env.NEXT_PUBLIC_GITHUB_URL} target="_blank" rel="noopener noreferrer">
-            <Github className="h-4 w-4" aria-hidden="true" />
+            <Github className="size-4" aria-hidden="true" />
             {t("starOnGithub")}
           </Link>
         </Button>
@@ -52,7 +52,7 @@ export function Dashboard() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <Rocket className="h-4 w-4" aria-hidden="true" />
+            <Rocket className="size-4" aria-hidden="true" />
             {t("deployToVercel")}
           </Link>
         </Button>
@@ -62,7 +62,7 @@ export function Dashboard() {
             target="_blank"
             rel="noopener noreferrer"
           >
-            <GitBranch className="h-4 w-4" aria-hidden="true" />
+            <GitBranch className="size-4" aria-hidden="true" />
             {t("useTemplate")}
           </Link>
         </Button>

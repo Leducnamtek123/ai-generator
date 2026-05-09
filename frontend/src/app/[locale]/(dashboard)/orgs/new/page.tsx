@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { orgApi, type CreateOrgData } from '@/services/orgApi';
 import { useOrgStore } from '@/stores/org-store';
@@ -17,7 +18,7 @@ type OrgDraft = {
 const ORG_DRAFT_KEY = 'orgs:new:draft';
 
 export default function NewOrgPage() {
-    const router = useRouter();
+    const { push, back } = useRouter();
     const { setCurrentOrg, setOrganizations, organizations } = useOrgStore();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
@@ -82,9 +83,13 @@ export default function NewOrgPage() {
             setOrganizations([...organizations, org]);
             setCurrentOrg(org);
             window.localStorage.removeItem(ORG_DRAFT_KEY);
-            router.push(`/orgs/${org.slug}/settings`);
-        } catch (err: any) {
-            setError(err?.response?.data?.message || 'Failed to create organization');
+            push(`/orgs/${org.slug}/settings`);
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err)) {
+                setError(err.response?.data?.message || 'Failed to create organization');
+            } else {
+                setError(err instanceof Error ? err.message : 'Failed to create organization');
+            }
         }
         setLoading(false);
     };
@@ -94,7 +99,7 @@ export default function NewOrgPage() {
             {/* Header */}
             <div className="mb-8">
                 <Link
-                    href={"/dashboard" as any}
+                    href="/dashboard"
                     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
                     <ArrowLeft className="size-4" />
@@ -158,7 +163,7 @@ export default function NewOrgPage() {
                         <textarea
                             value={form.description}
                             onChange={(e) => setForm({ ...form, description: e.target.value })}
-                            placeholder="Brief description of your organization..."
+                            placeholder="Brief description of your organization?"
                             rows={3}
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all placeholder:text-muted-foreground/50 resize-none"
                         />
@@ -219,7 +224,7 @@ export default function NewOrgPage() {
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">
-                    <Button variant="outline" type="button" onClick={() => router.back()}>
+                    <Button variant="outline" type="button" onClick={() => back()}>
                         Cancel
                     </Button>
                     <Button type="submit" disabled={loading}>

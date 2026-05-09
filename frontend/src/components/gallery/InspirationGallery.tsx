@@ -12,7 +12,8 @@ export function InspirationGallery() {
     const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
 
     useEffect(() => {
-        const handleLike = (e: any) => {
+        const handleLike = (event: Event) => {
+            const e = event as CustomEvent<{ id: string }>;
             const id = e.detail.id;
             setLikedIds(prev => {
                 const next = new Set(prev);

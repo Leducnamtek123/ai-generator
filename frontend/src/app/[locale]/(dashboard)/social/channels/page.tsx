@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -16,7 +16,7 @@ import {
   XCircle,
   type LucideIcon
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { m } from 'framer-motion';
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -86,9 +86,18 @@ const getPageInitials = (name?: string | null) => {
 };
 
 export default function ChannelsPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <ChannelsPageContent />
+        </Suspense>
+    );
+}
+
+function ChannelsPageContent() {
   const pathname = usePathname();
-  const router = useRouter();
+  const { replace } = useRouter();
   const searchParams = useSearchParams();
+  const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
   const [accounts, setAccounts] = React.useState<SocialChannel[]>([]);
   const [providers, setProviders] = React.useState<SocialProvider[]>([]);
   const [facebookPendingConnections, setFacebookPendingConnections] = React.useState<FacebookPendingConnection[]>([]);
@@ -128,12 +137,12 @@ export default function ChannelsPage() {
   }, [fetchAccounts]);
 
   React.useEffect(() => {
-    const status = searchParams.get("status");
+    const status = searchParamsSnapshot.get("status");
     if (status !== "success" && status !== "error") {
       return;
     }
 
-    const platform = searchParams.get("platform");
+    const platform = searchParamsSnapshot.get("platform");
     if (status === "success") {
       toast.success(
         platform === "facebook"
@@ -150,8 +159,8 @@ export default function ChannelsPage() {
       );
     }
 
-    router.replace(pathname);
-  }, [pathname, router, searchParams]);
+    replace(pathname);
+  }, [pathname, replace, searchParams]);
 
   const handleConnect = async (platformId: string, params?: Record<string, string>) => {
     try {
@@ -461,7 +470,7 @@ export default function ChannelsPage() {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
         {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading social providers...</p>
+          <p className="text-sm text-muted-foreground">Loading social providers?</p>
         ) : null}
         {providers.map((provider, index) => {
           const meta = platformMeta[provider.identifier] ?? {
@@ -476,7 +485,7 @@ export default function ChannelsPage() {
           const Icon = meta.icon;
 
           return (
-            <motion.div
+            <m.div
               key={provider.identifier}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -488,18 +497,18 @@ export default function ChannelsPage() {
               >
                 <div className="absolute top-0 right-0 p-4">
                   {isConnected ? (
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <CheckCircle2 className="size-5 text-green-500" />
                   ) : (
-                    <XCircle className="h-5 w-5 text-muted-foreground/30" />
+                    <XCircle className="size-5 text-muted-foreground/30" />
                   )}
                 </div>
 
                 <div className="mb-6 flex items-center gap-4">
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-xl text-white"
+                    className="flex size-12 items-center justify-center rounded-xl text-white"
                     style={{ backgroundColor: meta.color }}
                   >
-                    <Icon className="h-6 w-6" />
+                    <Icon className="size-6" />
                   </div>
                 <div>
                   <h3 className="text-lg font-semibold">{meta.name}</h3>
@@ -557,10 +566,10 @@ export default function ChannelsPage() {
                               width={16}
                               height={16}
                               unoptimized
-                              className="h-4 w-4 rounded-full object-cover"
+                              className="size-4 rounded-full object-cover"
                             />
                           ) : (
-                            <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
+                            <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
                               {getPageInitials(account.name)}
                             </span>
                           )}
@@ -626,21 +635,21 @@ export default function ChannelsPage() {
                     "Review Pages"
                   ) : (
                     <>
-                      <Plus className="mr-2 h-4 w-4 transition-transform group-hover:rotate-90" />
+                      <Plus className="mr-2 size-4 transition-transform group-hover:rotate-90" />
                       Connect Account
                     </>
                   )}
                 </Button>
               </GlassCard>
-            </motion.div>
+            </m.div>
           );
         })}
       </div>
 
       <div className="mt-12 rounded-2xl border border-primary/10 bg-primary/5 p-6">
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
-            <Plus className="h-6 w-6 text-primary" />
+          <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+            <Plus className="size-6 text-primary" />
           </div>
           <div>
             <h4 className="font-semibold">Missing a platform?</h4>
@@ -682,7 +691,7 @@ export default function ChannelsPage() {
                   <div className="flex items-start gap-3">
                     <input
                       type="checkbox"
-                      className="mt-1 h-4 w-4 rounded border-border accent-primary"
+                      className="mt-1 size-4 rounded border-border accent-primary"
                       checked={selectedFacebookPageIds.includes(page.id)}
                       onChange={() => {
                         setSelectedFacebookPageIds((current) =>
@@ -699,10 +708,10 @@ export default function ChannelsPage() {
                         width={40}
                         height={40}
                         unoptimized
-                        className="mt-0.5 h-10 w-10 rounded-full object-cover ring-1 ring-white/10"
+                        className="mt-0.5 size-10 rounded-full object-cover ring-1 ring-white/10"
                       />
                     ) : (
-                      <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
+                      <div className="mt-0.5 flex size-10 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary">
                         {getPageInitials(page.name)}
                       </div>
                     )}

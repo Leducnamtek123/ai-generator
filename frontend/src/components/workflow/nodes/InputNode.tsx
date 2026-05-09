@@ -45,7 +45,7 @@ export function InputNode({ id, data, selected }: InputNodeProps) {
             <div className="space-y-2">
                 <label className="text-[10px] text-muted-foreground">Prompt / Input</label>
                 <Input
-                    placeholder="Enter prompt..."
+                    placeholder="Enter prompt?"
                     value={data.label || ''}
                     onChange={handleChange}
                     className="h-8 border-border bg-background text-xs focus:ring-blue-500/50"

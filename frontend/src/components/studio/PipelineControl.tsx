@@ -239,7 +239,7 @@ export function PipelineControl({
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.06] border border-red-500/10 text-red-400/60 text-[11px]">
           <XCircle className="size-3.5 shrink-0" />
           <span>
-            Some generations failed —{' '}
+            Some generations failed ,{' '}
             {status.characters.failed > 0 && `${status.characters.failed} refs, `}
             {status.scenes.verticalImages.failed > 0 && `${status.scenes.verticalImages.failed} images, `}
             {status.scenes.verticalVideos.failed > 0 && `${status.scenes.verticalVideos.failed} videos`}

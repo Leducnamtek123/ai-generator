@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { ArrowRight, CalendarDays, LayoutDashboard, MessageSquare, Share2, Sparkles } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m } from 'framer-motion';
 
 import { Button } from '@/components/ui/button';
 import { GlassCard } from '@/components/ui/glass-card';
@@ -77,7 +77,7 @@ export default function SocialHubOverviewPage() {
                         {PIPELINE.map((step, index) => (
                             <div key={step} className="rounded-xl border border-white/10 bg-background/40 p-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                    <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
                                         {index + 1}
                                     </div>
                                     <span className="font-semibold">{step}</span>
@@ -90,26 +90,26 @@ export default function SocialHubOverviewPage() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {HUB_CARDS.map((card, index) => (
-                    <motion.div
+                    <m.div
                         key={card.href}
                         initial={{ opacity: 0, y: 16 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.05 }}
                     >
                         <GlassCard variant="morphism" className="border border-white/10 p-6 h-full">
-                            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                                <card.icon className="h-5 w-5" />
+                            <div className="flex size-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                                <card.icon className="size-5" />
                             </div>
                             <h2 className="mt-4 text-xl font-semibold">{card.title}</h2>
                             <p className="mt-2 text-sm leading-6 text-muted-foreground">{card.description}</p>
                             <Button asChild variant="ghost" className="mt-6 w-fit px-0 text-primary hover:bg-transparent hover:text-primary/80">
                                 <Link href={card.href}>
                                     Open {card.title}
-                                    <ArrowRight className="ml-2 h-4 w-4" />
+                                    <ArrowRight className="ml-2 size-4" />
                                 </Link>
                             </Button>
                         </GlassCard>
-                    </motion.div>
+                    </m.div>
                 ))}
             </div>
         </div>

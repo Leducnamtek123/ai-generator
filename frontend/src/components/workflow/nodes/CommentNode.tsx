@@ -246,7 +246,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         onChange={(e) => setDraftText(e.target.value)}
                         onBlur={handleBlur}
                         onKeyDown={handleKeyDown}
-                        placeholder="Add a comment..."
+                        placeholder="Add a comment?"
                         className="w-full min-h-[60px] bg-transparent text-sm text-foreground/90 placeholder:text-foreground/30 resize-none focus:outline-none"
                     />
                 ) : (
@@ -257,7 +257,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         {draftText ? (
                             <p className="text-sm text-foreground/80 whitespace-pre-wrap">{draftText}</p>
                         ) : (
-                            <p className="text-sm text-muted-foreground italic">Click to add a comment...</p>
+                            <p className="text-sm text-muted-foreground italic">Click to add a comment?</p>
                         )}
                     </div>
                 )}

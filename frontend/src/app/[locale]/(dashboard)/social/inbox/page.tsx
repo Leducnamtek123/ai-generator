@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { AnimatePresence, LazyMotion, domAnimation, m } from 'framer-motion';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -19,7 +20,6 @@ import {
     Plus,
     Smile
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 import { useSocialSocket } from '@/providers/SocketProvider';
 import { cn } from '@/lib/utils';
 import { socialHubApi, type SocialInteraction } from '@/services/socialHubApi';
@@ -232,6 +232,27 @@ export default function InboxPage() {
         });
     };
 
+    const insertReplySnippet = (snippet: string) => {
+        setReplyText((current) => {
+            const base = current.trimEnd();
+            if (!base) {
+                return snippet;
+            }
+
+            return `${base}${base.endsWith('\n') ? '' : ' '}${snippet}`;
+        });
+    };
+
+    const insertAttachmentPlaceholder = () => {
+        insertReplySnippet('[Attachment]');
+        toast.success('Attachment placeholder added to the reply draft.');
+    };
+
+    const insertEmoji = () => {
+        insertReplySnippet('✨');
+        toast.success('Emoji added to the reply draft.');
+    };
+
     const handleReply = async () => {
         if (!replyText.trim()) {
             toast.error('Please enter a reply message.');
@@ -289,6 +310,7 @@ export default function InboxPage() {
     };
 
     return (
+        <LazyMotion features={domAnimation}>
         <div className="flex h-full overflow-hidden">
             {/* Sidebar / List Pane */}
             <div className="w-[450px] border-r border-border bg-sidebar flex flex-col h-full">
@@ -314,7 +336,7 @@ export default function InboxPage() {
                         </div>
                     </div>
                     <div className="flex items-center gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cycleFilter}>
+                        <Button variant="ghost" size="icon" className="size-8" onClick={cycleFilter}>
                             <Filter className="size-4" />
                         </Button>
                         <div className="text-xs text-muted-foreground">
@@ -338,7 +360,7 @@ export default function InboxPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <input 
                             className="w-full bg-muted/50 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary"
-                            placeholder="Search interactions..."
+                            placeholder="Search interactions?"
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
@@ -349,7 +371,7 @@ export default function InboxPage() {
                     <div className="space-y-4">
                         <AnimatePresence initial={false}>
                             {visibleInteractions.map((item) => (
-                                <motion.div
+                                <m.div
                                     key={item.id}
                                     initial={{ opacity: 0, x: -20, height: 0 }}
                                     animate={{ opacity: 1, x: 0, height: 'auto' }}
@@ -407,7 +429,7 @@ export default function InboxPage() {
                                             ))}
                                         </div>
                                     )}
-                                </motion.div>
+                                </m.div>
                             ))}
                             {visibleInteractions.length === 0 && (
                                 <div className="text-center text-sm text-muted-foreground p-8">
@@ -423,7 +445,7 @@ export default function InboxPage() {
             <div className="flex-1 flex flex-col bg-background/50 relative">
                 <AnimatePresence mode="wait">
                     {selectedInteraction ? (
-                        <motion.div 
+                        <m.div 
                             key={selectedInteraction.id}
                             initial={{ opacity: 0, scale: 0.98 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -440,7 +462,7 @@ export default function InboxPage() {
                                     </Button>
                                 </div>
                                 <div className="flex items-center gap-2">
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 text-green-500" onClick={() => void handleMarkDone()}>
+                                    <Button variant="ghost" size="icon" className="size-9 text-green-500" onClick={() => void handleMarkDone()}>
                                         <CheckCircle className="size-5" />
                                     </Button>
                                     <Button
@@ -462,14 +484,14 @@ export default function InboxPage() {
                                     >
                                         Assign: {selectedAssignment}
                                     </Button>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => toast.info('More actions coming soon.')}>
+                                    <Button variant="ghost" size="icon" className="size-9" onClick={() => toast.info('More actions are available from the reply actions below.')}>
                                         <MoreHorizontal className="size-5" />
                                     </Button>
                                 </div>
                             </div>
 
                             {/* Message Area */}
-                            <div className="flex-1 p-8 overflow-auto space-y-6">
+                            <div className="flex-1 p-8 overflow-auto  gap-y-6">
                                 <div className="flex gap-4 max-w-2xl">
                                     <div className="size-10 rounded-full bg-muted shrink-0" />
                                     <GlassCard variant="morphism" className="border border-white/5 bg-white/5 p-6 rounded-2xl rounded-tl-none">
@@ -558,8 +580,12 @@ export default function InboxPage() {
                                     />
                                     <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Attachments coming soon')}><Plus className="size-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Emojis coming soon')}><Smile className="size-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="size-8" onClick={insertAttachmentPlaceholder}>
+                                            <Plus className="size-4" />
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="size-8" onClick={insertEmoji}>
+                                            <Smile className="size-4" />
+                                        </Button>
                                     </div>
                                     <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
                                         {selectedFollowUp ? 'Marked for follow-up' : 'Ready to send'}
@@ -574,10 +600,10 @@ export default function InboxPage() {
                                     This inbox keeps the operational loop in one place: open, reply, follow up, and mark done.
                                 </div>
                             </div>
-                        </motion.div>
+                        </m.div>
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center p-12 text-center overflow-hidden relative">
-                            <motion.div
+                            <m.div
                                 initial={{ opacity: 0, scale: 0.8 }}
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="relative z-10 flex flex-col items-center"
@@ -592,7 +618,7 @@ export default function InboxPage() {
                                 <p className="text-muted-foreground max-w-sm text-sm">
                                     Click on an interaction from the sidebar to view the conversation details and reply across all your social channels.
                                 </p>
-                            </motion.div>
+                            </m.div>
                             
                             {/* Decorative background blur */}
                             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
@@ -601,5 +627,6 @@ export default function InboxPage() {
                 </AnimatePresence>
             </div>
         </div>
+        </LazyMotion>
     );
 }

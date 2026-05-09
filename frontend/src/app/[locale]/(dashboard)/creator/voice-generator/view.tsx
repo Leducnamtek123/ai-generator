@@ -126,7 +126,7 @@ export function VoiceGeneratorView({
                         </button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-6 text-left">
+                <div className="flex-1 overflow-y-auto p-4  gap-y-6 text-left">
                     {state.activeTab === 'tts' ? (
                         <>
                             <div className="space-y-3">
@@ -138,7 +138,7 @@ export function VoiceGeneratorView({
                                     <textarea
                                         value={state.text}
                                         onChange={(e) => dispatch({ type: 'setText', text: e.target.value })}
-                                        placeholder="Enter text..."
+                                        placeholder="Enter text?"
                                         className="w-full h-32 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                                         maxLength={5000}
                                     />

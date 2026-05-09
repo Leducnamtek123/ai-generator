@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useState } from 'react';
+import { Suspense, useReducer, useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -134,11 +134,20 @@ function reducer(state: VoiceGeneratorState, action: VoiceGeneratorAction): Voic
 }
 
 export default function VoiceGeneratorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <VoiceGeneratorPageContent />
+        </Suspense>
+    );
+}
+
+function VoiceGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const { generateVoice, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [communityListings, setCommunityListings] = useState<VoiceListingItem[]>([]);
     const [isCommunityLoading, setIsCommunityLoading] = useState(false);
     const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
@@ -170,7 +179,7 @@ export default function VoiceGeneratorPage() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<VoiceSnapshot>) => {
@@ -189,7 +198,7 @@ export default function VoiceGeneratorPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('voice-generator:draft');
+            const draftRaw = localStorage.getItem('voice-generator:draft:v1');
             if (!draftRaw) return;
 
             try {
@@ -271,7 +280,7 @@ export default function VoiceGeneratorPage() {
             },
         };
 
-        localStorage.setItem('voice-generator:draft', JSON.stringify(payload));
+        localStorage.setItem('voice-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -289,7 +298,7 @@ export default function VoiceGeneratorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 setProjectError(null);

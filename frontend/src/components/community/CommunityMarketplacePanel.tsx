@@ -229,7 +229,7 @@ const TOOL_ROUTES: Partial<Record<TemplateTypeEnum, string>> = {
   [TemplateTypeEnum.IMAGE_GENERATOR]: '/creator/image-generator',
   [TemplateTypeEnum.VIDEO_GENERATOR]: '/creator/video-generator',
   [TemplateTypeEnum.WORKFLOW_EDITOR]: '/creator/workflow-editor',
-  [TemplateTypeEnum.DESIGN_EDITOR]: '/creator/image-editor',
+  [TemplateTypeEnum.DESIGN_EDITOR]: '/creator/design-editor',
   [TemplateTypeEnum.IMAGE_UPSCALER]: '/creator/image-upscaler',
   [TemplateTypeEnum.VIDEO_UPSCALER]: '/creator/video-upscaler',
   [TemplateTypeEnum.MUSIC_GENERATOR]: '/creator/music-generator',
@@ -295,7 +295,7 @@ function MarketplaceListingThumbnail({
   const showImage = Boolean(listing.thumbnail) && !imageFailed;
 
   return (
-    <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-zinc-950 via-slate-950 to-zinc-900">
+    <div className="relative aspect-[16/10] overflow-hidden bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900">
       {showImage ? (
         <Image
           src={listing.thumbnail as string}
@@ -310,7 +310,7 @@ function MarketplaceListingThumbnail({
         <div className="flex h-full items-end p-4">
           <div className="max-w-[90%] space-y-2">
             <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
-              <Sparkles className="h-3.5 w-3.5" />
+              <Sparkles className="size-3.5" />
               Prompt preview
             </div>
             <p className="line-clamp-3 text-sm leading-relaxed text-white/90">{previewText}</p>
@@ -377,7 +377,7 @@ function MarketplaceListingCard({
       <CardContent className="space-y-4 pt-4">
         <div className="flex items-center justify-between text-xs text-muted-foreground">
           <span className="flex items-center gap-1.5">
-            <BadgeCheck className="h-3.5 w-3.5 text-primary" />
+            <BadgeCheck className="size-3.5 text-primary" />
             {creatorName}
           </span>
           <span>{listing.usageCount} uses</span>
@@ -389,7 +389,7 @@ function MarketplaceListingCard({
               key={tag}
               className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground"
             >
-              <Tag className="h-3 w-3" />
+              <Tag className="size-3" />
               {tag}
             </span>
           ))}
@@ -420,14 +420,54 @@ function MarketplaceListingCard({
           onClick={() => onPurchase(listing.id)}
         >
           {isPurchasing ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
+            <Loader2 className="size-4 animate-spin" />
           ) : (
-            <ArrowRight className="h-4 w-4" />
+            <ArrowRight className="size-4" />
           )}
           Buy & open
         </Button>
       </CardFooter>
     </Card>
+  );
+}
+
+function DraftPreviewThumbnail({
+  thumbnail,
+  title,
+  previewText,
+}: {
+  thumbnail: string;
+  title: string;
+  previewText: string;
+}) {
+  const [imageFailed, setImageFailed] = React.useState(false);
+  const showImage = Boolean(thumbnail.trim()) && !imageFailed;
+
+  return (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900">
+      {showImage ? (
+        <Image
+          src={thumbnail}
+          alt={title || 'Draft cover preview'}
+          fill
+          unoptimized
+          onError={() => setImageFailed(true)}
+          className="object-cover"
+          sizes="(max-width: 1024px) 100vw, 30vw"
+        />
+      ) : (
+        <div className="flex h-full items-end p-4">
+          <div className="max-w-[92%] space-y-2">
+            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
+              <Sparkles className="size-3.5" />
+              Preview state
+            </div>
+            <p className="line-clamp-4 text-sm leading-relaxed text-white/90">{previewText}</p>
+          </div>
+        </div>
+      )}
+
+    </div>
   );
 }
 
@@ -450,7 +490,6 @@ function ListingDraftPreview({
   platformFeeBps: number;
   tags: string;
 }) {
-  const [imageFailed, setImageFailed] = React.useState(false);
   const previewTypeLabel =
     TEMPLATE_TYPE_LABELS.get(templateType) ?? formatType(templateType);
   const previewTypeDescription =
@@ -462,12 +501,6 @@ function ListingDraftPreview({
     prompt.trim() ||
     description.trim() ||
     'Add a prompt body or workflow summary so the preview explains what buyers receive.';
-  const hasThumbnail = Boolean(thumbnail.trim());
-  const showImage = hasThumbnail && !imageFailed;
-
-  React.useEffect(() => {
-    setImageFailed(false);
-  }, [thumbnail]);
 
   return (
     <div className="overflow-hidden rounded-2xl border border-border/70 bg-muted/20">
@@ -482,28 +515,13 @@ function ListingDraftPreview({
       </div>
 
       <div className="grid gap-4 p-4 lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-gradient-to-br from-zinc-950 via-slate-950 to-zinc-900">
-          {showImage ? (
-            <Image
-              src={thumbnail}
-              alt={title || 'Draft cover preview'}
-              fill
-              unoptimized
-              onError={() => setImageFailed(true)}
-              className="object-cover"
-              sizes="(max-width: 1024px) 100vw, 30vw"
-            />
-          ) : (
-            <div className="flex h-full items-end p-4">
-              <div className="max-w-[92%] space-y-2">
-                <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
-                  <Sparkles className="h-3.5 w-3.5" />
-                  Preview state
-                </div>
-                <p className="line-clamp-4 text-sm leading-relaxed text-white/90">{previewCopy}</p>
-              </div>
-            </div>
-          )}
+        <div className="relative">
+          <DraftPreviewThumbnail
+            key={thumbnail.trim() || 'draft-preview-empty'}
+            thumbnail={thumbnail}
+            title={title}
+            previewText={previewCopy}
+          />
 
           <div className="absolute left-3 top-3 rounded-full bg-black/70 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
             {priceCredits} credits
@@ -527,7 +545,7 @@ function ListingDraftPreview({
                   key={tag}
                   className="inline-flex items-center gap-1 rounded-full border border-border/70 bg-background px-2.5 py-1 text-[11px] text-muted-foreground"
                 >
-                  <Tag className="h-3 w-3" />
+                  <Tag className="size-3" />
                   {tag}
                 </span>
               ))
@@ -597,7 +615,7 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
 };
 
 export function CommunityMarketplacePanel() {
-  const router = useRouter();
+  const { push } = useRouter();
   const queryClient = useQueryClient();
   const { balance, fetchBalance } = useCreditStore();
   const [page, setPage] = React.useState(1);
@@ -674,7 +692,7 @@ export function CommunityMarketplacePanel() {
       await fetchBalance();
       await queryClient.invalidateQueries({ queryKey: ['community-marketplace'] });
       await queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] });
-      router.push(`${getToolRoute(result.purchasedTemplate.type)}?templateId=${result.purchasedTemplate.id}`);
+      push(`${getToolRoute(result.purchasedTemplate.type)}?templateId=${result.purchasedTemplate.id}`);
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Unable to purchase template'));
@@ -773,7 +791,7 @@ export function CommunityMarketplacePanel() {
                 </CardDescription>
               </div>
               <div className="flex items-center gap-2 rounded-full border border-border/70 bg-muted/40 px-3 py-2 text-xs text-muted-foreground">
-                <CreditCard className="h-4 w-4 text-pricing" />
+                <CreditCard className="size-4 text-pricing" />
                 Balance: {balance ?? '...'} credits
               </div>
             </div>
@@ -797,7 +815,7 @@ export function CommunityMarketplacePanel() {
                         : 'border-border bg-background text-muted-foreground hover:border-foreground/40 hover:text-foreground',
                     )}
                   >
-                    <Icon className="h-4 w-4" />
+                    <Icon className="size-4" />
                     {option.label}
                   </button>
                 );
@@ -805,7 +823,7 @@ export function CommunityMarketplacePanel() {
             </div>
 
             <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={search}
                 onChange={(event) => {
@@ -831,11 +849,11 @@ export function CommunityMarketplacePanel() {
               </div>
             ) : listingsQuery.isLoading ? (
               <div className="flex h-40 items-center justify-center">
-                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
               </div>
             ) : listings.length === 0 ? (
               <div className="flex h-52 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
-                <BookOpen className="h-9 w-9 text-muted-foreground" />
+                <BookOpen className="size-9 text-muted-foreground" />
                 <div className="space-y-1">
                   <p className="font-medium text-foreground">No community listings yet</p>
                   <p className="text-sm text-muted-foreground">
@@ -898,7 +916,7 @@ export function CommunityMarketplacePanel() {
         <Card className="border-border/70 bg-card/95">
           <CardHeader className="border-b border-border/70 pb-6">
             <div className="flex items-center gap-2">
-              <Upload className="h-4 w-4 text-primary" />
+              <Upload className="size-4 text-primary" />
               <CardTitle className="text-lg">List a template</CardTitle>
             </div>
             <CardDescription>
@@ -981,7 +999,7 @@ export function CommunityMarketplacePanel() {
                         return (
                           <SelectItem key={option.value} value={option.value}>
                             <span className="flex items-center gap-2">
-                              <Icon className="h-4 w-4" />
+                              <Icon className="size-4" />
                               {option.label}
                             </span>
                           </SelectItem>
@@ -1041,7 +1059,7 @@ export function CommunityMarketplacePanel() {
                 </p>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 px-4 py-4">
+              <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 p-4">
                 <div className="space-y-1">
                   <Label htmlFor="community-listed">Publish immediately</Label>
                   <p className="text-xs text-muted-foreground">
@@ -1053,15 +1071,15 @@ export function CommunityMarketplacePanel() {
                   type="checkbox"
                   checked={listed}
                   onChange={(event) => setListed(event.target.checked)}
-                  className="h-4 w-4 rounded border-border text-primary focus:ring-primary"
+                  className="size-4 rounded border-border text-primary focus:ring-primary"
                 />
               </div>
 
               <Button type="submit" className="w-full gap-2" disabled={createListingMutation.isPending}>
                 {createListingMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="size-4 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles className="size-4" />
                 )}
                 {listed ? 'Publish listing' : 'Save draft'}
               </Button>
@@ -1091,7 +1109,7 @@ export function CommunityMarketplacePanel() {
                 {PUBLISHING_GUIDE.map((item) => (
                   <div key={item.title} className="flex items-start gap-3">
                     <div className="mt-1 rounded-full bg-primary/10 p-1.5 text-primary">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
+                      <CheckCircle2 className="size-3.5" />
                     </div>
                     <div>
                       <p className="text-sm font-medium text-foreground">{item.title}</p>
@@ -1124,7 +1142,7 @@ export function CommunityMarketplacePanel() {
               </div>
             ) : myListingsQuery.isLoading ? (
               <div className="flex h-24 items-center justify-center">
-                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
               </div>
             ) : myListings.length === 0 ? (
               <div className="rounded-xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
@@ -1157,15 +1175,15 @@ export function CommunityMarketplacePanel() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm text-muted-foreground">
             <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+              <CheckCircle2 className="mt-0.5 size-4 text-primary" />
               <p>Creator posts a template with a cover image, prompt body, type, and credit price.</p>
             </div>
             <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+              <CheckCircle2 className="mt-0.5 size-4 text-primary" />
               <p>Buyer pays in credits and receives a private copy in their library.</p>
             </div>
             <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-primary" />
+              <CheckCircle2 className="mt-0.5 size-4 text-primary" />
               <p>Credits split automatically between the creator and the platform fee.</p>
             </div>
           </CardContent>

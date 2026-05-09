@@ -1,7 +1,7 @@
 'use client';
 
+import { Suspense, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,12 +21,19 @@ const loginSchema = z.object({
 type LoginValues = z.infer<typeof loginSchema>;
 
 export default function SignInPage() {
-    const router = useRouter();
-    const searchParams = useSearchParams();
-    const nextPath = sanitizeAppPath(searchParams.get('next'));
-    const emailPrefill = searchParams.get('email') ?? '';
-    const [isLoading, setIsLoading] = useState(false);
+    return (
+        <Suspense fallback={<div className="auth-card" />}>
+            <SignInPageContent />
+        </Suspense>
+    );
+}
 
+function SignInPageContent() {
+    const { replace } = useRouter();
+    const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+    const nextPath = sanitizeAppPath(searchParamsSnapshot.get('next'));
+    const emailPrefill = searchParamsSnapshot.get('email') ?? '';
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
         defaultValues: { email: emailPrefill, password: "" }
@@ -36,7 +43,7 @@ export default function SignInPage() {
         : `/sign-up?next=${encodeURIComponent(nextPath)}`;
 
     useEffect(() => {
-        const error = searchParams.get('error');
+        const error = searchParamsSnapshot.get('error');
         if (error) {
             if (error === 'OAuthAccountNotLinked') {
                 toast.error("Account exists", {
@@ -52,10 +59,9 @@ export default function SignInPage() {
                 });
             }
         }
-    }, [searchParams]);
+    }, [searchParamsSnapshot]);
 
     const onSubmit = async (data: LoginValues) => {
-        setIsLoading(true);
         try {
             const result = await signIn("credentials", {
                 email: data.email,
@@ -71,14 +77,13 @@ export default function SignInPage() {
                 toast.success("Welcome back!", {
                     description: "You have successfully logged in."
                 });
-                router.replace(nextPath);
+                replace(nextPath);
             }
         } catch {
             toast.error("Login Failed", {
                 description: "Something went wrong. Please try again."
             });
         }
-        setIsLoading(false);
     };
 
     return (
@@ -150,8 +155,8 @@ export default function SignInPage() {
                         )}
                     </div>
 
-                    <button type="submit" disabled={isLoading} className="auth-submit">
-                        {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
+                    <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
+                        {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
                     </button>
                 </form>
 

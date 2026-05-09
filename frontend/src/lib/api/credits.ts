@@ -1,9 +1,5 @@
 import { get } from '@/lib/api';
 
-interface CreditsBalance {
-    balance: number;
-}
-
 /**
  * Get the current user's credit balance
  */
@@ -15,5 +11,5 @@ export async function getCreditsBalance(): Promise<number> {
  * Get credit transaction history
  */
 export async function getCreditHistory(page = 1, limit = 10) {
-    return get<any[]>(`/credits?page=${page}&limit=${limit}`);
+    return get<unknown[]>(`/credits?page=${page}&limit=${limit}`);
 }

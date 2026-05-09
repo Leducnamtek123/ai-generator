@@ -110,7 +110,7 @@ function reducer(state: StudioState, action: StudioAction): StudioState {
 }
 
 export default function CreativeStudioPage() {
-    const router = useRouter();
+    const { push } = useRouter();
     const { workflows, fetchWorkflows, createWorkflow, duplicateWorkflow, updateWorkflow, deleteWorkflow } = useWorkflowStore();
     const [state, dispatch] = useReducer(reducer, initialState);
     const [workflowToDelete, setWorkflowToDelete] = React.useState<Workflow | null>(null);
@@ -154,7 +154,7 @@ export default function CreativeStudioPage() {
         if (newId) {
             window.localStorage.removeItem(STUDIO_DRAFT_KEY);
             dispatch({ type: 'resetCreateModal' });
-            router.push(`/creator/workflow-editor?workflowId=${newId}`);
+            push(`/creator/workflow-editor?workflowId=${newId}`);
         }
     };
 
@@ -254,7 +254,7 @@ export default function CreativeStudioPage() {
 
                 <div className="relative w-full md:w-72">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input placeholder="Search spaces..." className="rounded-full pl-10 h-10 text-sm" />
+                    <Input placeholder="Search spaces?" className="rounded-full pl-10 h-10 text-sm" />
                 </div>
             </div>
 
@@ -317,7 +317,7 @@ export default function CreativeStudioPage() {
                     <button
                         type="button"
                         aria-label="Close create studio modal"
-                        className="absolute inset-0 bg-gray-950/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
                         onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: false })}
                     />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl animate-in zoom-in-95">

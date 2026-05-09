@@ -17,7 +17,7 @@ import { useProjectStore } from '@/stores/project-store';
 import { CreateWorkflowDialog } from '@/components/projects/create-workflow-dialog';
 
 export default function ProjectDetailsPage({ params }: { params: Promise<{ projectId: string }> }) {
-    const router = useRouter();
+    const { push } = useRouter();
     const resolvedParams = use(params);
     const projectId = resolvedParams.projectId;
 
@@ -37,7 +37,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                 <div className="px-8 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <button
-                            onClick={() => router.push('/projects')}
+                            onClick={() => push('/projects')}
                             className="p-2 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                         >
                             <ArrowLeft className="size-5" />
@@ -56,7 +56,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                         <CreateWorkflowDialog projectId={projectId} onCreate={async (name) => {
                             const newId = await createWorkflow({ name, projectId });
                             if (newId) {
-                                router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
+                                push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
                             }
                         }} isLoading={isLoading} />
                     </div>
@@ -111,7 +111,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                                 <CreateWorkflowDialog projectId={projectId} onCreate={async (name) => {
                                     const newId = await createWorkflow({ name, projectId });
                                     if (newId) {
-                                        router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
+                                        push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
                                     }
                                 }} isLoading={isLoading}>
                                     <Button

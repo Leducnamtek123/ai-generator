@@ -79,7 +79,7 @@ function projectsReducer(state: ProjectsState, action: ProjectsAction): Projects
 }
 
 export default function ProjectsPage() {
-    const router = useRouter();
+    const { push } = useRouter();
     const { projects, fetchProjects, createProject } = useProjectStore();
     const [state, dispatch] = useReducer(projectsReducer, initialState);
 
@@ -134,7 +134,7 @@ export default function ProjectsPage() {
             window.localStorage.removeItem(PROJECT_DRAFT_KEY);
             dispatch({ type: 'closeCreateModal' });
             dispatch({ type: 'resetCreateForm' });
-            router.push(`/projects/${newId}`);
+            push(`/projects/${newId}`);
         }
     };
 
@@ -182,7 +182,7 @@ export default function ProjectsPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
                             type="text"
-                            placeholder="Search projects..."
+                            placeholder="Search projects?"
                             className="w-56 h-9 pl-10 pr-4"
                         />
                     </div>
@@ -191,7 +191,7 @@ export default function ProjectsPage() {
                             variant={state.viewMode === 'grid' ? 'secondary' : 'ghost'}
                             size="icon-xs"
                             onClick={() => dispatch({ type: 'setViewMode', viewMode: 'grid' })}
-                            className="h-7 w-7"
+                            className="size-7"
                             title="Grid View"
                         >
                             <LayoutGrid className="size-4" />
@@ -200,7 +200,7 @@ export default function ProjectsPage() {
                             variant={state.viewMode === 'list' ? 'secondary' : 'ghost'}
                             size="icon-xs"
                             onClick={() => dispatch({ type: 'setViewMode', viewMode: 'list' })}
-                            className="h-7 w-7"
+                            className="size-7"
                             title="List View"
                         >
                             <List className="size-4" />
@@ -291,13 +291,17 @@ export default function ProjectsPage() {
 }
 
 function ProjectCard({ project }: { project: Project }) {
-    const router = useRouter();
+    const { push } = useRouter();
     return (
         <div
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/projects/${project.id}`); }}
-            onClick={() => router.push(`/projects/${project.id}`)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    push(`/projects/${project.id}`);
+                }
+            }}
+            onClick={() => push(`/projects/${project.id}`)}
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl p-5 hover:bg-accent/50 transition-all"
         >
             <div className="flex justify-between items-start mb-4">

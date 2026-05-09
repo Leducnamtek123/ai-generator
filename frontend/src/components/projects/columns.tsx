@@ -23,8 +23,8 @@ export const columns: ColumnDef<Project>[] = [
             const project = row.original;
             return (
                 <div className="flex items-center gap-3">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <Folder className="h-4 w-4" />
+                    <div className="flex size-9 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                        <Folder className="size-4" />
                     </div>
                     <div className="flex flex-col">
                         <Link
@@ -69,9 +69,9 @@ export const columns: ColumnDef<Project>[] = [
             return (
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button variant="ghost" className="size-8 p-0">
                             <span className="sr-only">Open menu</span>
-                            <MoreHorizontal className="h-4 w-4" />
+                            <MoreHorizontal className="size-4" />
                         </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
@@ -84,7 +84,7 @@ export const columns: ColumnDef<Project>[] = [
                         <DropdownMenuSeparator />
                         <DropdownMenuItem asChild>
                             <Link href={`/projects/${project.id}`}>
-                                <ExternalLink className="mr-2 h-4 w-4" />
+                                <ExternalLink className="mr-2 size-4" />
                                 Open Project
                             </Link>
                         </DropdownMenuItem>

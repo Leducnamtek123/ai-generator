@@ -17,7 +17,7 @@ import {
   Wand2,
   Zap,
 } from "lucide-react";
-import { motion, useScroll, useSpring } from "framer-motion";
+import { m, useScroll, useSpring } from "framer-motion";
 import { useLocale, useMessages } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
@@ -308,7 +308,7 @@ type LandingPageProps = {
 
 export default function LandingPage({ initialSectionId }: LandingPageProps) {
   const { user, isLoading } = useAuth();
-  const router = useRouter();
+  const { push } = useRouter();
   const pathname = usePathname();
   const messages = useMessages() as { Landing?: typeof LANDING_COPY.en };
   const locale = useLocale() as keyof typeof LANDING_COPY;
@@ -334,9 +334,9 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
 
   useEffect(() => {
     if (pathname === "/" && user && !isLoading) {
-      router.push("/dashboard");
+      push("/dashboard");
     }
-  }, [pathname, user, isLoading, router]);
+  }, [pathname, user, isLoading, push]);
 
   useEffect(() => {
     if (!initialSectionId) return;
@@ -389,7 +389,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050608] text-white selection:bg-sky-400/30 selection:text-white">
-      <motion.div
+      <m.div
         className="fixed top-0 left-0 z-50 h-1 origin-left bg-gradient-to-r from-sky-400 via-cyan-300 to-amber-300"
         style={{ scaleX }}
       />
@@ -403,9 +403,9 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
       </div>
 
       <header className="sticky top-0 z-40 border-b border-white/8 bg-[#050608]/70 backdrop-blur-2xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl items-center justify-between p-4 sm:px-6 lg:px-8">
           <Link href="/" className="flex items-center gap-3">
-            <div className="relative h-11 w-11 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-2 shadow-[0_0_40px_rgba(56,189,248,0.16)]">
+            <div className="relative size-11 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-2 shadow-[0_0_40px_rgba(56,189,248,0.16)]">
               <Image
                 src="/logo.svg"
                 alt="PaintAI logo"
@@ -467,10 +467,10 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
           <div className="grid items-start gap-10 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="space-y-7 pt-2">
               <div className="space-y-4">
-                <h1 className="max-w-[10ch] text-[clamp(3.2rem,6vw,7rem)] leading-[0.86] font-black tracking-[-0.08em] text-balance uppercase sm:max-w-[9ch]">
+                <h1 className="max-w-[10ch] text-[clamp(3.2rem,6vw,7rem)] leading-[0.86] font-semibold tracking-[-0.08em] text-balance uppercase sm:max-w-[9ch]">
                   {copy.hero.title[0]}
                   <span className="block text-white">{copy.hero.title[1]}</span>
-                  <span className="block bg-gradient-to-r from-sky-300 via-blue-400 to-indigo-300 bg-clip-text text-transparent">
+                  <span className="block bg-gradient-to-r from-sky-300 via-blue-400 to-violet-300 bg-clip-text text-transparent">
                     {copy.hero.title[2]}
                   </span>
                 </h1>
@@ -516,14 +516,14 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               </div>
             </div>
 
-            <motion.div
+            <m.div
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, ease: "easeOut" }}
               className="relative"
             >
-              <div className="absolute top-10 -left-8 h-28 w-28 rounded-full bg-amber-400/20 blur-3xl" />
-              <div className="absolute -right-6 bottom-0 h-36 w-36 rounded-full bg-sky-400/20 blur-3xl" />
+              <div className="absolute top-10 -left-8 size-28 rounded-full bg-amber-400/20 blur-3xl" />
+              <div className="absolute -right-6 bottom-0 size-36 rounded-full bg-sky-400/20 blur-3xl" />
 
               <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c0f14] shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
                 <div className="flex flex-col gap-3 border-b border-white/8 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
@@ -536,7 +536,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                    <div className="size-2.5 rounded-full bg-emerald-400" />
                     <span className="text-[11px] font-medium text-white/48">
                       {copy.workspace.live}
                     </span>
@@ -637,7 +637,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                           {copy.workspace.queue}
                         </div>
                         <div className="mt-2 flex items-center gap-2 text-sm text-white/72">
-                          <span className="h-2 w-2 rounded-full bg-emerald-400" />
+                          <span className="size-2 rounded-full bg-emerald-400" />
                           {copy.workspace.queueValue}
                         </div>
                       </div>
@@ -653,7 +653,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   </div>
                 </div>
               </div>
-            </motion.div>
+            </m.div>
           </div>
         </section>
 
@@ -717,7 +717,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-sky-300/80 uppercase">
                 Your creativity
               </div>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
                 Supercharged.
               </h2>
             </div>
@@ -738,7 +738,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   key={step.title}
                   className="rounded-[2rem] border border-white/8 bg-white/[0.03] p-6 transition-transform duration-300 hover:-translate-y-1"
                 >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-sky-200">
+                  <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-sky-200">
                     <StepIcon className="size-5" />
                   </div>
                   <div className="mt-5 text-[11px] font-semibold tracking-[0.28em] text-white/34 uppercase">
@@ -765,7 +765,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-amber-300/80 uppercase">
                 Powerful tools
               </div>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
                 Limitless potential.
               </h2>
             </div>
@@ -799,7 +799,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                       sizes="(max-width: 1280px) 100vw, 33vw"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/62 via-black/18 to-transparent" />
-                    <div className="absolute top-5 left-5 flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-white backdrop-blur-xl">
+                    <div className="absolute top-5 left-5 flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-black/25 text-white backdrop-blur-xl">
                       <CardIcon className="size-5" />
                     </div>
                   </div>
@@ -827,7 +827,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-cyan-300/80 uppercase">
                 Inspire
               </div>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
                 Create. Repeat.
               </h2>
             </div>
@@ -890,7 +890,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-violet-300/80 uppercase">
                 Pricing
               </div>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
                 Choose the subscription plan that fits you.
               </h2>
             </div>
@@ -906,7 +906,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 <div className="text-[11px] font-semibold tracking-[0.34em] text-white/42 uppercase">
                   Plan type
                 </div>
-                <h3 className="mt-2 text-2xl font-black tracking-[-0.05em] uppercase">
+                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] uppercase">
                   Choose the right billing scope
                 </h3>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-white/56">
@@ -1113,7 +1113,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-emerald-300/80 uppercase">
                 Loved by teams
               </div>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
                 Shipping every week.
               </h2>
             </div>
@@ -1130,7 +1130,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   {testimonial.quote}
                 </p>
                 <div className="mt-6 flex items-center gap-3">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-full border border-white/10 bg-white/8 text-sm font-bold">
+                  <div className="flex size-11 items-center justify-center rounded-full border border-white/10 bg-white/8 text-sm font-bold">
                     {testimonial.name
                       .split(" ")
                       .map((part) => part[0])
@@ -1159,7 +1159,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="text-[11px] font-semibold tracking-[0.34em] text-amber-200/80 uppercase">
                 FAQ
               </div>
-              <h2 className="text-3xl font-black tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
                 Everything you need to know.
               </h2>
               <p className="max-w-xl text-sm leading-7 text-white/56">
@@ -1195,7 +1195,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 <div className="text-[11px] font-semibold tracking-[0.34em] text-white/42 uppercase">
                   Final CTA
                 </div>
-                <h2 className="max-w-[12ch] text-4xl font-black tracking-[-0.06em] uppercase sm:text-5xl lg:text-6xl">
+                <h2 className="max-w-[12ch] text-4xl font-semibold tracking-[-0.06em] uppercase sm:text-5xl lg:text-6xl">
                   Ready to create something incredible?
                 </h2>
                 <p className="max-w-2xl text-sm leading-7 text-white/68 sm:text-base">
@@ -1250,7 +1250,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         <div className="mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 lg:grid-cols-[1.1fr_0.9fr] lg:px-8">
           <div className="space-y-5">
             <Link href="/" className="flex items-center gap-3">
-              <div className="relative h-11 w-11 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-2">
+              <div className="relative size-11 overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-2">
                 <Image
                   src="/logo.svg"
                   alt="PaintAI logo"

@@ -7,7 +7,7 @@ export default function CommunityPage() {
             <div className="mx-auto max-w-[1800px] px-6 py-8">
                 <div className="mb-10 space-y-6 text-center">
                     <div className="inline-flex items-center gap-2 rounded-full border border-border/70 bg-muted/30 px-4 py-2 text-xs font-medium text-muted-foreground">
-                        <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                        <span className="size-2 rounded-full bg-emerald-500" />
                         Marketplace live listings, publish drafts, and credit-based purchase flow
                     </div>
                     <p className="text-xs font-semibold uppercase tracking-[0.35em] text-muted-foreground">

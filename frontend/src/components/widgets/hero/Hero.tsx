@@ -28,7 +28,7 @@ export function Hero({ title, description, githubUrl, githubLabel }: HeroType) {
 
       <Button asChild>
         <Link href={githubUrl} target="_blank" rel="noopener noreferrer">
-          <Github className="h-4 w-4" aria-hidden="true" />
+          <Github className="size-4" aria-hidden="true" />
           {githubLabel}
         </Link>
       </Button>

@@ -212,7 +212,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
         <Input
           value={musicUrl}
           onChange={(e) => setMusicUrl(e.target.value)}
-          placeholder="Music URL (optional)..."
+          placeholder="Music URL (optional)?"
           className="h-8 bg-white/5 border-white/[0.08] text-white text-xs placeholder:text-white/15"
         />
 
@@ -221,7 +221,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
           <Input
             value={musicPrompt}
             onChange={(e) => setMusicPrompt(e.target.value)}
-            placeholder="Generate: 'epic cinematic orchestra'..."
+            placeholder="Generate: 'epic cinematic orchestra'?"
             className="h-7 bg-white/[0.03] border-white/[0.06] text-white text-[10px] placeholder:text-white/15 flex-1"
           />
           <Button

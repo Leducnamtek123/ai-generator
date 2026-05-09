@@ -20,12 +20,15 @@ export const useCreditStore = create<CreditState>((set) => ({
     fetchBalance: async () => {
         set({ isLoading: true, error: null });
         try {
-            const response = await apiGet<{ balance: number }>('/credits/balance');
-            const balance = typeof response === 'number' ? response : (response as any).balance;
+            const response = await apiGet<{ balance: number } | number>('/credits/balance');
+            const balance = typeof response === 'number' ? response : response.balance;
             set({ balance: typeof balance === 'number' ? balance : 0, isLoading: false });
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to fetch credits', error);
-            set({ error: error.message || 'Failed to fetch credits', isLoading: false });
+            set({
+                error: error instanceof Error ? error.message : 'Failed to fetch credits',
+                isLoading: false,
+            });
         }
     },
 
@@ -39,9 +42,9 @@ export const useCreditStore = create<CreditState>((set) => ({
             set({ balance: result.balance, isLoading: false });
             toast.success(`Added ${result.added} credits! Balance: ${result.balance}`);
             return true;
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error('Failed to top up credits', error);
-            const msg = error.message || 'Failed to add credits';
+            const msg = error instanceof Error ? error.message : 'Failed to add credits';
             set({ error: msg, isLoading: false });
             toast.error(msg);
             return false;

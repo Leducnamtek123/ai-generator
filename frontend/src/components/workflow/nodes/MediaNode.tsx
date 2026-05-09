@@ -94,7 +94,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
           isVideo ? "bg-muted text-muted-foreground" : "bg-blue-500/10 text-blue-600"
         )}
       >
-        <Upload className="h-3.5 w-3.5" />
+        <Upload className="size-3.5" />
       </div>
       <div
         className={cn(
@@ -102,7 +102,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
           isVideo ? "bg-green-500/10 text-green-600" : "bg-muted text-muted-foreground"
         )}
       >
-        <Plus className="h-3.5 w-3.5" />
+        <Plus className="size-3.5" />
       </div>
     </div>
   );
@@ -165,7 +165,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                     className="gap-2 border-border bg-background/80 text-foreground backdrop-blur-sm hover:bg-background"
                     onClick={handleMediaClick}
                   >
-                    <Wand2 className="h-4 w-4" />
+                    <Wand2 className="size-4" />
                     Edit {isVideo ? "Clip" : "Image"}
                   </Button>
                 </div>
@@ -182,7 +182,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                 }}
               >
                 {isUploading ? (
-                  <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                  <Loader2 className="size-4 animate-spin text-primary" />
                 ) : (
                   <>
                     <Upload

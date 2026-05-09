@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, FormEvent, Suspense } from 'react';
+import { useState, FormEvent, Suspense, useMemo } from 'react';
 import Image from 'next/image';
 import { 
     Search as SearchIcon, 
@@ -60,6 +60,7 @@ export default function StockPage() {
 
 function StockPageContent() {
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const locale = useLocale();
     const stockConfig = useSiteConfig('stock', locale);
     const stockContent = mergeDeep(
@@ -67,8 +68,8 @@ function StockPageContent() {
         stockConfig.data?.value as Partial<StockContent> | undefined,
     );
     const [query, setQuery] = useState(() => {
-        const category = searchParams.get('category');
-        const view = searchParams.get('view');
+        const category = searchParamsSnapshot.get('category');
+        const view = searchParamsSnapshot.get('view');
         return (category ?? view ?? '').replace(/[-_]/g, ' ');
     });
     const [isSearching, setIsSearching] = useState(false);
@@ -135,14 +136,14 @@ function StockPageContent() {
 
                     <form onSubmit={handleSearch} className="relative max-w-xl mx-auto w-full group">
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none z-10">
-                            <SearchIcon className="h-5 w-5 text-muted-foreground group-focus-within:text-foreground transition-colors" />
+                            <SearchIcon className="size-5 text-muted-foreground group-focus-within:text-foreground transition-colors" />
                         </div>
                         <Input
                             type="text"
                             value={query}
                             onChange={(e) => setQuery(e.target.value)}
                             className="w-full h-14 rounded-full pl-12 pr-32 text-lg bg-background/50 backdrop-blur-sm"
-                            placeholder="Search assets or start creating..."
+                            placeholder="Search assets or start creating?"
                         />
                         <div className="absolute inset-y-2 right-2 flex items-center">
                             <Button 
@@ -188,11 +189,11 @@ function StockPageContent() {
                                         <Image src={res.url} alt={res.title} fill className="object-cover group-hover:scale-105 transition-transform duration-500" sizes="(max-width: 1024px) 50vw, 25vw" />
                                         
                                         {/* Overlay gradient */}
-                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
                                         
                                         {/* Actions */}
                                         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0 duration-300">
-                                            <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-white/20 backdrop-blur-md hover:bg-white text-white hover:text-black transition-colors" onClick={(e) => { e.stopPropagation(); toast.success('Saved to collection'); }}>
+                                            <Button variant="secondary" size="icon" className="size-8 rounded-full bg-white/20 backdrop-blur-md hover:bg-white text-white hover:text-black transition-colors" onClick={(e) => { e.stopPropagation(); toast.success('Saved to collection'); }}>
                                                 <Heart className="size-4" />
                                             </Button>
                                         </div>
@@ -202,7 +203,7 @@ function StockPageContent() {
                                                 <p className="text-sm font-medium text-white truncate max-w-[150px]">{res.title}</p>
                                                 <p className="text-xs text-white/70">by {res.author}</p>
                                             </div>
-                                            <Button size="icon" className="h-8 w-8 rounded-full bg-primary hover:bg-primary text-primary-foreground" onClick={(e) => { e.stopPropagation(); handleDownload(res.url); }}>
+                                            <Button size="icon" className="size-8 rounded-full bg-primary hover:bg-primary text-primary-foreground" onClick={(e) => { e.stopPropagation(); handleDownload(res.url); }}>
                                                 <Download className="size-4" />
                                             </Button>
                                         </div>
@@ -265,7 +266,7 @@ function StockPageContent() {
                                     >
                                         <div className="aspect-[4/3] rounded-xl overflow-hidden bg-muted relative">
                                             <Image src={col.image} alt={col.title} fill className="object-cover transition-transform duration-500 group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 25vw" />
-                                            <div className="absolute inset-0 bg-gray-950/20 group-hover:bg-transparent transition-colors" />
+                                            <div className="absolute inset-0 bg-zinc-950/20 group-hover:bg-transparent transition-colors" />
                                         </div>
                                         <div>
                                             <h3 className="font-medium group-hover:text-primary transition-colors">{col.title}</h3>

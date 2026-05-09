@@ -53,7 +53,7 @@ function inviteReducer(state: InviteState, action: InviteAction): InviteState {
 
 export default function InviteAcceptPage() {
     const params = useParams();
-    const router = useRouter();
+    const { push } = useRouter();
     const inviteId = params?.inviteId as string;
     const [state, dispatch] = useReducer(inviteReducer, initialState);
 
@@ -75,7 +75,7 @@ export default function InviteAcceptPage() {
         try {
             await inviteApi.accept(inviteId);
             dispatch({ type: 'setResult', result: 'accepted' });
-            setTimeout(() => router.push('/dashboard'), 2000);
+            setTimeout(() => push('/dashboard'), 2000);
         } catch {
             dispatch({ type: 'setError', error: 'Failed to accept invite' });
         }
@@ -146,7 +146,7 @@ export default function InviteAcceptPage() {
             <div className="w-full max-w-md">
                 <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xl">
                     {/* Header gradient */}
-                    <div className="h-32 bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 relative">
+                    <div className="h-32 bg-gradient-to-br from-violet-600 via-violet-600 to-blue-600 relative">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.15),transparent_60%)]" />
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
                             <div className="size-16 rounded-2xl bg-card border-4 border-card flex items-center justify-center shadow-lg">
@@ -164,7 +164,7 @@ export default function InviteAcceptPage() {
                         {/* Org Info */}
                         <div className="bg-muted/50 rounded-xl p-5 mb-6 space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="size-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                                <div className="size-10 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold">
                         {state.invite?.org?.name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div className="text-left">

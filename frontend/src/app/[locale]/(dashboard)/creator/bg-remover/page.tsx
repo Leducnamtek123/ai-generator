@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -134,6 +134,14 @@ function bgRemoverReducer(state: BgRemoverState, action: BgRemoverAction): BgRem
 }
 
 export default function BgRemoverPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <BgRemoverPageContent />
+        </Suspense>
+    );
+}
+
+function BgRemoverPageContent() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [state, dispatch] = useReducer(bgRemoverReducer, initialState);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -142,8 +150,9 @@ export default function BgRemoverPage() {
     const [projectError, setProjectError] = useState<string | null>(null);
     const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { removeBackground, currentGeneration, reset } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
 
     const isProcessing = currentGeneration?.status === 'pending' || currentGeneration?.status === 'processing';
     const resultImage = currentGeneration?.status === 'completed'
@@ -152,7 +161,7 @@ export default function BgRemoverPage() {
     const previewImage = state.showOriginal || !resultImage ? state.uploadedImage : resultImage;
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -188,7 +197,7 @@ export default function BgRemoverPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('bg-remover:draft');
+                    const raw = localStorage.getItem('bg-remover:draft:v1');
                     if (raw) {
                         const parsed = JSON.parse(raw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
                         hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
@@ -217,7 +226,7 @@ export default function BgRemoverPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved background remover project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('bg-remover:draft');
+                        const raw = localStorage.getItem('bg-remover:draft:v1');
                         if (raw) {
                             const parsed = JSON.parse(raw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
                             hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
@@ -284,7 +293,7 @@ export default function BgRemoverPage() {
             snapshot,
         };
 
-        localStorage.setItem('bg-remover:draft', JSON.stringify(payload));
+        localStorage.setItem('bg-remover:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -302,7 +311,7 @@ export default function BgRemoverPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Background remover saved to your projects.');
@@ -373,7 +382,7 @@ export default function BgRemoverPage() {
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <div
                     onClick={() => fileInputRef.current?.click()}
                     onDrop={handleDrop}
@@ -465,7 +474,7 @@ export default function BgRemoverPage() {
                                     title={bg.label}
                                 >
                                     {state.selectedBg === bg.id && (
-                                        <div className="w-full h-full flex items-center justify-center bg-gray-950/20">
+                                        <div className="w-full h-full flex items-center justify-center bg-zinc-950/20">
                                             <Check className="size-4 text-white drop-shadow" />
                                         </div>
                                     )}
@@ -488,7 +497,7 @@ export default function BgRemoverPage() {
                         {isProcessing ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Processing...
+                                Processing?
                             </>
                         ) : (
                             <>
@@ -551,7 +560,7 @@ export default function BgRemoverPage() {
                                 <Sparkles className="size-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <div className="text-center">
-                                <p className="font-medium">Removing background...</p>
+                                <p className="font-medium">Removing background?</p>
                                 <p className="text-sm text-muted-foreground mt-1">This usually takes 3-5 seconds</p>
                             </div>
                         </div>

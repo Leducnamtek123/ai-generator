@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGenerationStore } from '@/stores/generation-store';
 import {
@@ -244,11 +244,20 @@ function reducer(state: ImageEditorState, action: ImageEditorAction): ImageEdito
 }
 
 export default function ImageEditorPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <ImageEditorPageContent />
+        </Suspense>
+    );
+}
+
+function ImageEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { startGeneration, reset } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -298,7 +307,7 @@ export default function ImageEditorPage() {
     };
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: ImageEditorSnapshot) => {
@@ -470,7 +479,7 @@ export default function ImageEditorPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 setProjectError(null);
@@ -728,7 +737,7 @@ export default function ImageEditorPage() {
                             {state.isProcessing && (
                                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
                                     <Loader2 className="size-10 animate-spin text-primary" />
-                                    <p className="text-sm font-medium">AI is processing...</p>
+                                    <p className="text-sm font-medium">AI is processing?</p>
                                 </div>
                             )}
                         </div>
@@ -755,7 +764,7 @@ export default function ImageEditorPage() {
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="flex-1 overflow-y-auto p-4  gap-y-6">
                     {state.activePanel === 'adjust' && (
                         <>
                             {adjustmentControls.map((adj) => (

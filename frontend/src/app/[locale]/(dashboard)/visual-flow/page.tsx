@@ -96,7 +96,7 @@ function CharacterRow({ char, onDelete }: CharacterRowProps) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{char.name}</p>
-        <p className="text-xs text-white/40 truncate">{char.description ?? '—'}</p>
+        <p className="text-xs text-white/40 truncate">{char.description ?? ','}</p>
       </div>
       <StatusBadge status={char.refStatus} />
       {char.referenceImageUrl && (
@@ -318,7 +318,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
               <Textarea
                 value={state.form.story}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch({ type: 'setForm', form: { story: e.target.value } })}
-                placeholder="Describe your full story here. The AI will use this to maintain consistency across all scenes..."
+                placeholder="Describe your full story here. The AI will use this to maintain consistency across all scenes?"
                 rows={5}
                 className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none"
               />
@@ -461,7 +461,7 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
       className="group relative cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 overflow-hidden"
     >
       {/* Thumbnail / gradient header */}
-      <div className="h-36 bg-gradient-to-br from-violet-900/60 via-pink-900/40 to-indigo-900/60 relative overflow-hidden">
+      <div className="h-36 bg-gradient-to-br from-violet-900/60 via-pink-900/40 to-violet-900/60 relative overflow-hidden">
         {project.thumbnailUrl ? (
           <Image src={project.thumbnailUrl} alt={project.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" unoptimized />
         ) : (
@@ -473,7 +473,7 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <button className="p-1.5 bg-gray-950/60 backdrop-blur rounded-lg text-white hover:bg-gray-950/80 transition">
+              <button className="p-1.5 bg-zinc-950/60 backdrop-blur rounded-lg text-white hover:bg-zinc-950/80 transition">
                 <MoreHorizontal className="size-4" />
               </button>
             </DropdownMenuTrigger>
@@ -540,7 +540,7 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
 // ─────────────────────────────────────────────
 
 export default function VisualFlowPage() {
-  const router = useRouter();
+  const { push } = useRouter();
   const [projects, setProjects] = useState<VisualProject[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -625,7 +625,7 @@ export default function VisualFlowPage() {
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search projects..."
+            placeholder="Search projects?"
             className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-full"
           />
         </div>
@@ -658,7 +658,7 @@ export default function VisualFlowPage() {
             <ProjectCard
               key={project.id}
               project={project}
-              onClick={() => router.push(`/visual-flow/projects/${project.id}`)}
+              onClick={() => push(`/visual-flow/projects/${project.id}`)}
               onDelete={() => setProjectToDelete(project)}
             />
           ))}
@@ -699,7 +699,7 @@ export default function VisualFlowPage() {
         onClose={() => setShowWizard(false)}
         onCreated={(p) => {
           setProjects((prev) => [p, ...prev]);
-          router.push(`/visual-flow/projects/${p.id}`);
+          push(`/visual-flow/projects/${p.id}`);
         }}
       />
     </div>

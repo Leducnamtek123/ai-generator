@@ -78,21 +78,21 @@ function Calendar({ selected, month, onSelect, onMonthChange, className }: Calen
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="h-8 w-8"
+            className="size-8"
             onClick={() => updateMonth(addMonths(displayMonth, -1))}
             aria-label="Previous month"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="size-4" />
           </Button>
           <Button
             type="button"
             variant="ghost"
             size="icon-sm"
-            className="h-8 w-8"
+            className="size-8"
             onClick={() => updateMonth(addMonths(displayMonth, 1))}
             aria-label="Next month"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="size-4" />
           </Button>
         </div>
       </div>

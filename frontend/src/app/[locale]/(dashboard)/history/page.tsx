@@ -164,7 +164,7 @@ export default function HistoryPage() {
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Search history..."
+                                placeholder="Search history?"
                                 className="w-56 h-9 pl-10"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
@@ -276,7 +276,7 @@ export default function HistoryPage() {
                                                         <Button
                                                             variant="ghost"
                                                             size="icon"
-                                                            className="h-8 w-8"
+                                                            className="size-8"
                                                             onClick={(e) => { e.stopPropagation(); handleDownload(gen.resultUrl); }}
                                                         >
                                                             <Download className="size-4" />
@@ -285,7 +285,7 @@ export default function HistoryPage() {
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
-                                                        className="h-8 w-8 text-destructive hover:text-destructive"
+                                                        className="size-8 text-destructive hover:text-destructive"
                                                         onClick={(e) => { e.stopPropagation(); handleDelete(gen.id); }}
                                                     >
                                                         <Trash2 className="size-4" />

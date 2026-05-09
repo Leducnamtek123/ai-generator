@@ -1,15 +1,6 @@
 "use client";
 
-import {
-  Suspense,
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-  type ChangeEvent
-} from "react";
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState, type ChangeEvent } from "react";
 import { useSearchParams } from "next/navigation";
 
 import {
@@ -55,6 +46,8 @@ import { Label } from "@/ui/label";
 import { authApi } from "@/services/authApi";
 import {
   billingApi,
+  type BillingPlanId,
+  type TopUpPackageId,
   type BillingCatalogResponse,
   type BillingPlanSegment,
   type BillingWalletSummary
@@ -89,7 +82,8 @@ export default function SettingsPage() {
 function SettingsPageContent() {
   const t = useTranslations("Settings");
   const searchParams = useSearchParams();
-  const router = useRouter();
+  const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+  const { push, replace } = useRouter();
   const settingsTabs = [
     { id: "profile", label: t("tabs.profile"), icon: User },
     { id: "account", label: t("tabs.account"), icon: Lock },
@@ -98,7 +92,7 @@ function SettingsPageContent() {
     { id: "api", label: t("tabs.apiKeys"), icon: Key }
   ] as const;
   const [activeTab, setActiveTab] = useState<(typeof settingsTabs)[number]["id"]>(() => {
-    const tab = searchParams.get("tab");
+    const tab = searchParamsSnapshot.get("tab");
     if (tab && settingsTabs.some((item) => item.id === tab)) {
       return tab as (typeof settingsTabs)[number]["id"];
     }
@@ -128,9 +122,9 @@ function SettingsPageContent() {
   }, [fetchProfile]);
 
   useEffect(() => {
-    const paymentStatus = searchParams.get("paymentStatus");
-    const paymentProvider = searchParams.get("paymentProvider");
-    const paymentOrder = searchParams.get("paymentOrder");
+    const paymentStatus = searchParamsSnapshot.get("paymentStatus");
+    const paymentProvider = searchParamsSnapshot.get("paymentProvider");
+    const paymentOrder = searchParamsSnapshot.get("paymentOrder");
     if (!paymentStatus || !paymentProvider) return;
 
     const notifyKey = `${paymentProvider}:${paymentOrder || ""}:${paymentStatus}`;
@@ -147,9 +141,9 @@ function SettingsPageContent() {
   }, [searchParams, t]);
 
   useEffect(() => {
-    const paymentOrder = searchParams.get("paymentOrder");
-    const paymentProvider = searchParams.get("paymentProvider");
-    const paymentStatus = searchParams.get("paymentStatus");
+    const paymentOrder = searchParamsSnapshot.get("paymentOrder");
+    const paymentProvider = searchParamsSnapshot.get("paymentProvider");
+    const paymentStatus = searchParamsSnapshot.get("paymentStatus");
     if (!paymentOrder || !paymentProvider || paymentStatus !== "pending") return;
 
     const checkStatus = async () => {
@@ -169,8 +163,8 @@ function SettingsPageContent() {
   }, [searchParams, t]);
 
   useEffect(() => {
-    const socialStatus = searchParams.get("status");
-    const socialPlatform = searchParams.get("platform");
+    const socialStatus = searchParamsSnapshot.get("status");
+    const socialPlatform = searchParamsSnapshot.get("platform");
     if (socialStatus !== "success" && socialStatus !== "error") return;
 
     if (socialStatus === "success") {
@@ -189,12 +183,12 @@ function SettingsPageContent() {
       );
     }
 
-    const nextSearchParams = new URLSearchParams(searchParams.toString());
+    const nextSearchParams = new URLSearchParams(searchParamsSnapshot.toString());
     nextSearchParams.delete("status");
     nextSearchParams.delete("platform");
     const nextQuery = nextSearchParams.toString();
-    router.replace(`${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
-  }, [router, searchParams, t]);
+    replace(`${window.location.pathname}${nextQuery ? `?${nextQuery}` : ""}`);
+  }, [replace, searchParams, t]);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
@@ -214,7 +208,7 @@ function SettingsPageContent() {
                     : "text-muted-foreground hover:bg-muted hover:text-foreground"
                 )}
               >
-                <tab.icon className="h-4 w-4" />
+                <tab.icon className="size-4" />
                 {tab.label}
               </button>
             ))}
@@ -305,7 +299,7 @@ function ProfileSettings({
 
       <div className="flex items-center gap-6">
         <div className="relative">
-          <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/20 to-chart-2/20 text-2xl font-bold">
+          <div className="flex size-20 items-center justify-center overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-primary/20 to-chart-2/20 text-2xl font-bold">
             {avatarSrc ? (
               <Avatar className="h-full w-full rounded-2xl">
                 <AvatarImage
@@ -325,14 +319,14 @@ function ProfileSettings({
             type="button"
             size="icon"
             variant="secondary"
-            className="absolute -right-2 -bottom-2 h-8 w-8 rounded-full shadow-lg"
+            className="absolute -right-2 -bottom-2 size-8 rounded-full shadow-lg"
             onClick={() => avatarInputRef.current?.click()}
             disabled={isUploadingAvatar}
           >
             {isUploadingAvatar ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
+              <Loader2 className="size-4 animate-spin" />
             ) : (
-              <Upload className="h-4 w-4" />
+              <Upload className="size-4" />
             )}
           </Button>
           <input
@@ -385,9 +379,9 @@ function ProfileSettings({
       <div className="flex justify-end border-t border-border pt-4">
         <Button onClick={handleSave} disabled={isSaving}>
           {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 size-4 animate-spin" />
           ) : (
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="mr-2 size-4" />
           )}
           {t("profile.save")}
         </Button>
@@ -584,7 +578,7 @@ function AccountSettings() {
 
       <div className="space-y-4 rounded-2xl border border-border bg-card p-6">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Lock className="h-4 w-4" /> {t("account.changePassword")}
+          <Lock className="size-4" /> {t("account.changePassword")}
         </h3>
         <div className="space-y-3">
           <div className="space-y-2">
@@ -609,7 +603,7 @@ function AccountSettings() {
                 }
                 className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {state.showCurrent ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {state.showCurrent ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
           </div>
@@ -630,7 +624,7 @@ function AccountSettings() {
                 onClick={() => dispatch({ type: "setShowNext", showNext: !state.showNext })}
                 className="absolute top-1/2 right-3 -translate-y-1/2 text-muted-foreground hover:text-foreground"
               >
-                {state.showNext ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                {state.showNext ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
           </div>
@@ -657,7 +651,7 @@ function AccountSettings() {
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold">{t("account.connectedAccounts")}</h3>
           <Button variant="outline" size="sm" onClick={() => void loadChannels()}>
-            <RefreshCw className="mr-2 h-4 w-4" />
+            <RefreshCw className="mr-2 size-4" />
             {t("account.refresh")}
           </Button>
         </div>
@@ -684,9 +678,9 @@ function AccountSettings() {
                 <div className="flex items-center justify-between">
                   <div className="inline-flex items-center gap-2">
                     {isConnected ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <CheckCircle2 className="size-4 text-green-500" />
                     ) : (
-                      <XCircle className="h-4 w-4 text-muted-foreground" />
+                      <XCircle className="size-4 text-muted-foreground" />
                     )}
                     <span className="text-sm font-medium">
                       {provider.name}
@@ -778,21 +772,21 @@ function AccountSettings() {
 
       <div className="space-y-4 rounded-2xl border border-destructive/30 bg-card p-6">
         <h3 className="flex items-center gap-2 text-sm font-semibold text-destructive">
-          <Trash2 className="h-4 w-4" /> {t("account.dangerZone")}
+          <Trash2 className="size-4" /> {t("account.dangerZone")}
         </h3>
         <p className="text-xs text-muted-foreground">
           {t("account.dangerZoneDescription")}
         </p>
         <div className="flex gap-3">
           <Button variant="outline" size="sm" onClick={() => void logoutCurrentSession()}>
-            <LogOut className="mr-2 h-4 w-4" /> {t("account.signOut")}
+            <LogOut className="mr-2 size-4" /> {t("account.signOut")}
           </Button>
           <Button
             variant="destructive"
             size="sm"
             onClick={() => setIsDeleteAccountDialogOpen(true)}
           >
-            <Trash2 className="mr-2 h-4 w-4" /> {t("account.deleteAccount")}
+            <Trash2 className="mr-2 size-4" /> {t("account.deleteAccount")}
           </Button>
         </div>
       </div>
@@ -880,19 +874,21 @@ function BillingSettings() {
     itemId: string,
     provider: PaymentProvider
   ) => {
+    const planId = itemId as BillingPlanId;
+    const topUpPackageId = itemId as TopUpPackageId;
     try {
       setIsPaying(itemId);
       const checkout = await paymentApi.checkout(
         purchaseType === "subscription"
           ? {
               purchaseType,
-              planId: itemId as any,
+              planId,
               provider,
               returnUri: `${window.location.pathname}${window.location.search}`
             }
           : {
               purchaseType,
-              topUpPackageId: itemId as any,
+              topUpPackageId,
               provider,
               returnUri: `${window.location.pathname}${window.location.search}`
             }
@@ -1050,7 +1046,7 @@ function BillingSettings() {
                 <ul className="space-y-2 pt-2">
                   {plan.highlights.map((feature) => (
                     <li key={feature} className="flex items-start gap-2 text-sm text-foreground/85">
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                      <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
                       <span>{feature}</span>
                     </li>
                   ))}
@@ -1147,7 +1143,7 @@ function BillingSettings() {
               <ul className="space-y-2">
                 {pack.highlights.map((item) => (
                   <li key={item} className="flex items-start gap-2 text-sm text-foreground/85">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
                     <span>{item}</span>
                   </li>
                 ))}
@@ -1227,7 +1223,7 @@ function BillingSettings() {
 
 function NotificationSettings() {
   const t = useTranslations("Settings");
-  const router = useRouter();
+  const { push } = useRouter();
   const [preferences, setPreferences] = useState<NotificationPreference[]>([]);
   const [unreadCount, setUnreadCount] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -1339,7 +1335,7 @@ function NotificationSettings() {
             <RefreshCw className={cn("mr-2 h-4 w-4", isLoading && "animate-spin")} />
             {t("notifications.refresh")}
           </Button>
-          <Button variant="outline" onClick={() => router.push("/notifications")}>
+          <Button variant="outline" onClick={() => push("/notifications")}>
             {t("notifications.openInbox")}
           </Button>
         </div>
@@ -1384,16 +1380,16 @@ function NotificationSettings() {
             return (
               <div
                 key={category}
-                className="grid grid-cols-[1.2fr_repeat(3,minmax(0,0.95fr))] gap-4 px-5 py-5"
+                className="grid grid-cols-[1.2fr_repeat(3,minmax(0,0.95fr))] gap-4 p-5"
               >
                 <div>
                   <p className="font-semibold">{meta.label}</p>
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">{meta.description}</p>
                 </div>
-                <label className="flex items-center gap-3 rounded-xl border border-border px-3 py-3">
+                <label className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-primary"
+                    className="size-4 accent-primary"
                     checked={preference?.emailEnabled ?? true}
                     onChange={(event) =>
                       updatePreference(
@@ -1405,10 +1401,10 @@ function NotificationSettings() {
                   />
                   <span className="text-sm">{t("notifications.actions.sendEmail")}</span>
                 </label>
-                <label className="flex items-center gap-3 rounded-xl border border-border px-3 py-3">
+                <label className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-primary"
+                    className="size-4 accent-primary"
                     checked={preference?.inAppEnabled ?? true}
                     onChange={(event) =>
                       updatePreference(
@@ -1420,10 +1416,10 @@ function NotificationSettings() {
                   />
                   <span className="text-sm">{t("notifications.actions.showInInbox")}</span>
                 </label>
-                <label className="flex items-center gap-3 rounded-xl border border-border px-3 py-3">
+                <label className="flex items-center gap-3 rounded-xl border border-border p-3">
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-primary"
+                    className="size-4 accent-primary"
                     checked={preference?.adminAlertsEnabled ?? category === "moderation"}
                     onChange={(event) =>
                       updatePreference(
@@ -1447,9 +1443,9 @@ function NotificationSettings() {
         </Button>
         <Button onClick={() => void savePreferences()} disabled={isLoading || isSaving}>
           {isSaving ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 size-4 animate-spin" />
           ) : (
-            <Save className="mr-2 h-4 w-4" />
+            <Save className="mr-2 size-4" />
           )}
           {t("notifications.savePreferences")}
         </Button>
@@ -1479,7 +1475,9 @@ function ApiKeySettings() {
   }, []);
 
   useEffect(() => {
-    void fetchKeys();
+    queueMicrotask(() => {
+      void fetchKeys();
+    });
   }, [fetchKeys]);
 
   const handleGenerate = async () => {
@@ -1527,7 +1525,7 @@ function ApiKeySettings() {
 
       <div className="space-y-6 rounded-2xl border border-border bg-card p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-          <div className="flex-1 space-y-2">
+          <div className="flex-1  gap-y-2">
             <Label className="text-xs tracking-wider text-muted-foreground uppercase">
               {t("apiKeys.newKeyName")}
             </Label>
@@ -1539,9 +1537,9 @@ function ApiKeySettings() {
           </div>
           <Button onClick={handleGenerate} disabled={isGenerating}>
             {isGenerating ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              <Loader2 className="mr-2 size-4 animate-spin" />
             ) : (
-              <Plus className="mr-2 h-4 w-4" />
+              <Plus className="mr-2 size-4" />
             )}
             {t("apiKeys.generate")}
           </Button>
@@ -1551,7 +1549,7 @@ function ApiKeySettings() {
           <h3 className="text-sm font-semibold">{t("apiKeys.yourKeys")}</h3>
           {isLoading ? (
             <div className="flex items-center justify-center py-8">
-              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+              <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
           ) : keys.length === 0 ? (
             <div className="rounded-xl border border-dashed border-border py-8 text-center">
@@ -1572,7 +1570,7 @@ function ApiKeySettings() {
                       className="h-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
                       onClick={() => handleRevoke(key.id)}
                     >
-                      <Trash2 className="mr-2 h-4 w-4" />
+                      <Trash2 className="mr-2 size-4" />
                       {t("apiKeys.revoke")}
                     </Button>
                   </div>
@@ -1591,22 +1589,22 @@ function ApiKeySettings() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
+                          className="size-7"
                           onClick={() => toggleShow(key.id)}
                         >
                           {showKeys[key.id] ? (
-                            <EyeOff className="h-3.5 w-3.5" />
+                            <EyeOff className="size-3.5" />
                           ) : (
-                            <Eye className="h-3.5 w-3.5" />
+                            <Eye className="size-3.5" />
                           )}
                         </Button>
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
+                          className="size-7"
                           onClick={() => copyToClipboard(key.rawKey || key.keyPreview || key.key)}
                         >
-                          <RefreshCw className="h-3.5 w-3.5" />
+                          <RefreshCw className="size-3.5" />
                         </Button>
                       </div>
                     </div>
@@ -1629,7 +1627,7 @@ function ApiKeySettings() {
 
       <div className="space-y-4 rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/5 to-chart-4/5 p-6">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <Code className="h-4 w-4 text-primary" /> {t("apiKeys.mcpTitle")}
+          <Code className="size-4 text-primary" /> {t("apiKeys.mcpTitle")}
         </h3>
         <p className="text-xs leading-relaxed text-muted-foreground">
           {t("apiKeys.mcpDescription")} <code>claude_desktop_config.json</code>:

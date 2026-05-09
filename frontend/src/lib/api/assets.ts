@@ -12,7 +12,7 @@ export interface Asset {
         likes?: number;
         aspectRatio?: string;
         category?: string;
-        [key: string]: any;
+        [key: string]: unknown;
     };
     createdAt: string;
 }

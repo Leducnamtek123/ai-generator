@@ -105,7 +105,7 @@ export function UserList() {
           <TableHeader className="bg-muted">
             <TableRow>
               {columns.map((column, index) => (
-                <TableHead key={column.id ?? String((column as any).accessorKey ?? index)}>
+                <TableHead key={column.id ?? String(index)}>
                   {typeof column.header === "function"
                     ? (column.header as unknown as () => React.ReactNode)()
                     : column.header}

@@ -40,9 +40,9 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-[100vw] w-screen h-screen m-0 p-0 bg-gray-950/95 border-none flex flex-col gap-0 z-[100] outline-none">
+            <DialogContent className="max-w-[100vw] w-screen h-screen m-0 p-0 bg-zinc-950/95 border-none flex flex-col gap-0 z-[100] outline-none">
                 {/* Header */}
-                <DialogHeader className="h-14 px-6 flex flex-row items-center justify-between border-b border-white/5 bg-[#0F1014] space-y-0">
+                <DialogHeader className="h-14 px-6 flex flex-row items-center justify-between border-b border-white/5 bg-[#0F1014]  gap-y-0">
                     <div className="flex items-center gap-4">
                         <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg text-white/60 hover:text-white transition-colors">
                             <X className="size-5" />
@@ -57,7 +57,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
 
                 {/* Video Area */}
                 <div className="flex-1 relative flex flex-col items-center justify-center p-8 overflow-hidden bg-[#050505]">
-                    <div className="relative w-full max-w-4xl aspect-video bg-gray-950 rounded-xl overflow-hidden shadow-2xl border border-white/5 flex items-center justify-center group">
+                    <div className="relative w-full max-w-4xl aspect-video bg-zinc-950 rounded-xl overflow-hidden shadow-2xl border border-white/5 flex items-center justify-center group">
                         <video
                             ref={videoRef}
                             src={videoUrl}
@@ -73,7 +73,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
 
                         {/* Play Overlay */}
                         {!isPlaying && (
-                            <div className="absolute inset-0 flex items-center justify-center bg-gray-950/20 pointer-events-none">
+                            <div className="absolute inset-0 flex items-center justify-center bg-zinc-950/20 pointer-events-none">
                                 <div className="size-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
                                     <Play className="size-8 text-white fill-white ml-1" />
                                 </div>
@@ -82,7 +82,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
 
                         {/* Processing Overlay */}
                         {isProcessing && (
-                            <div className="absolute inset-0 bg-gray-950/60 backdrop-blur-md flex items-center justify-center z-20">
+                            <div className="absolute inset-0 bg-zinc-950/60 backdrop-blur-md flex items-center justify-center z-20">
                                 <div className="flex flex-col items-center gap-4 text-center">
                                     <div className="relative">
                                         <Wand2 className="size-12 text-blue-500 animate-[pulse_1.5s_ease-in-out_infinite]" />
@@ -90,7 +90,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                                     </div>
                                     <div>
                                         <h3 className="text-white font-semibold text-lg">AI Video Processing</h3>
-                                        <p className="text-white/40 text-sm mt-1 max-w-xs">Enhancing lighting, atmosphere, and textures...</p>
+                                        <p className="text-white/40 text-sm mt-1 max-w-xs">Enhancing lighting, atmosphere, and textures?</p>
                                     </div>
                                 </div>
                             </div>
@@ -105,11 +105,11 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                                 <span className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Range selected</span>
                                 <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-full">{formatTime(duration)}</span>
                             </div>
-                            <div className="h-10 w-full bg-gray-950/40 rounded-lg relative overflow-hidden border border-white/5 flex gap-1 p-1">
+                            <div className="h-10 w-full bg-zinc-950/40 rounded-lg relative overflow-hidden border border-white/5 flex gap-1 p-1">
                                 {Array.from({ length: 12 }).map((_, i) => (
                                     <div key={i} className="flex-1 h-full bg-white/5 rounded-sm overflow-hidden border border-white/5 relative">
                                         <Image src={videoUrl} alt="" fill className="object-cover opacity-30 blur-[1px]" sizes="8vw" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-gray-950/40 to-transparent" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/40 to-transparent" />
                                     </div>
                                 ))}
                                 <div className="absolute top-0 bottom-0 left-[10%] right-[10%] border-2 border-white rounded-lg z-10">
@@ -130,7 +130,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                                     placeholder="Describe what you want to do with your video"
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    className="w-full bg-gray-950/30 border border-white/5 rounded-2xl pl-4 pr-12 py-7 text-sm text-white focus:ring-1 focus:ring-blue-500/50 placeholder:text-white/20 h-auto"
+                                    className="w-full bg-zinc-950/30 border border-white/5 rounded-2xl pl-4 pr-12 py-7 text-sm text-white focus:ring-1 focus:ring-blue-500/50 placeholder:text-white/20 h-auto"
                                     onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
                                 />
                                 <div className="absolute left-4 -top-3 px-2 flex items-center gap-1.5 pointer-events-none">
@@ -141,7 +141,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                                     size="icon"
                                     onClick={handleEdit}
                                     disabled={!prompt.trim() || isProcessing}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg transition-transform active:scale-95"
+                                    className="absolute right-3 top-1/2 -translate-y-1/2 size-10 bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg transition-transform active:scale-95"
                                 >
                                     <Send className="size-4" />
                                 </Button>

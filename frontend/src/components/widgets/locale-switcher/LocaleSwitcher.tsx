@@ -18,15 +18,15 @@ import {
 export function LocaleSwitcher() {
   const currentLocale = useLocale() as LocaleCode;
   const t = useTranslations("LocaleSwitcher");
-  const router = useRouter();
+  const { replace, refresh } = useRouter();
   const pathname = usePathname();
   const locales = Object.keys(LOCALES) as LocaleCode[];
 
   if (locales.length <= 1) return null;
 
   const switchLocale = (locale: LocaleCode) => {
-    router.replace(pathname, { locale });
-    router.refresh();
+    replace(pathname, { locale });
+    refresh();
   };
 
   return (
@@ -36,7 +36,7 @@ export function LocaleSwitcher() {
           type="button"
           variant="ghost"
           size="icon"
-          className="h-11 w-11 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
+          className="size-11 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
           aria-label={t("ariaLabel")}
         >
           <Languages className="size-4" />
@@ -54,7 +54,7 @@ export function LocaleSwitcher() {
               switchLocale(code);
             }}
           >
-            <span className="mr-2 inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs font-semibold">
+            <span className="mr-2 inline-flex size-6 items-center justify-center rounded-full bg-muted text-xs font-semibold">
               {LOCALES[code].flag}
             </span>
             <span className="flex-1">{LOCALES[code].label}</span>

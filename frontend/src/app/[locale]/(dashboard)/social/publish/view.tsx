@@ -19,7 +19,7 @@ import {
   Video,
   Wand2
 } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
@@ -97,7 +97,7 @@ export function PublishPageView({
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" onClick={onToggleScheduling}>
-            <Calendar className="mr-2 h-4 w-4" />
+            <Calendar className="mr-2 size-4" />
             {state.isScheduling ? "Schedule" : "Post Now"}
           </Button>
           <Button variant="outline" onClick={onSaveDraft} disabled={!state.content.trim()}>
@@ -108,7 +108,7 @@ export function PublishPageView({
             disabled={state.isPublishing}
             className="bg-primary text-primary-foreground shadow-lg shadow-primary/20 transition-shadow hover:shadow-primary/40"
           >
-            <Send className="mr-2 h-4 w-4" />
+            <Send className="mr-2 size-4" />
             {state.isPublishing ? "Publishing..." : "Publish"}
           </Button>
         </div>
@@ -172,7 +172,7 @@ export function PublishPageView({
                   "flex h-7 w-7 items-center justify-center rounded-full border",
                   item.done ? "border-emerald-500/30 bg-emerald-500/15 text-emerald-400" : "border-white/10 bg-white/[0.03] text-muted-foreground",
                 )}>
-                  <CheckCircle2 className="h-4 w-4" />
+                  <CheckCircle2 className="size-4" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold">{item.label}</p>
@@ -245,7 +245,7 @@ export function PublishPageView({
               access tokens are saved.
             </div>
             {state.isLoadingAccounts ? (
-              <p className="text-sm text-muted-foreground">Loading connected channels...</p>
+              <p className="text-sm text-muted-foreground">Loading connected channels?</p>
             ) : state.accounts.length === 0 ? (
               <p className="text-sm text-muted-foreground">
                 No connected channel yet. Please connect from Social Channels first.
@@ -308,12 +308,12 @@ export function PublishPageView({
                         </span>
                       )}
                       {isSelected && (
-                        <motion.div
+                        <m.div
                           layoutId="check-badge"
-                          className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full border-2 border-background bg-primary"
+                          className="absolute -top-2 -right-2 flex size-6 items-center justify-center rounded-full border-2 border-background bg-primary"
                         >
-                          <CheckCircle2 className="h-4 w-4 text-primary-foreground" />
-                        </motion.div>
+                          <CheckCircle2 className="size-4 text-primary-foreground" />
+                        </m.div>
                       )}
                     </button>
                   );
@@ -333,9 +333,9 @@ export function PublishPageView({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 transition-colors hover:bg-white/10"
+                      className="size-8 transition-colors hover:bg-white/10"
                     >
-                      <ImageIcon className="h-4 w-4" />
+                      <ImageIcon className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
@@ -356,9 +356,9 @@ export function PublishPageView({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 transition-colors hover:bg-white/10"
+                      className="size-8 transition-colors hover:bg-white/10"
                     >
-                      <Video className="h-4 w-4" />
+                      <Video className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
@@ -377,9 +377,9 @@ export function PublishPageView({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 transition-colors hover:bg-white/10"
+                      className="size-8 transition-colors hover:bg-white/10"
                     >
-                      <LinkIcon className="h-4 w-4" />
+                      <LinkIcon className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-56">
@@ -398,9 +398,9 @@ export function PublishPageView({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 transition-colors hover:bg-white/10"
+                      className="size-8 transition-colors hover:bg-white/10"
                     >
-                      <Smile className="h-4 w-4" />
+                      <Smile className="size-4" />
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start" className="w-44">
@@ -424,7 +424,7 @@ export function PublishPageView({
                   className="group/ai h-8 gap-2 border border-primary/20 bg-primary/20 font-bold text-primary transition-all hover:bg-primary/30"
                   onClick={onOpenAiModal}
                 >
-                  <Wand2 className="h-4 w-4 transition-transform group-hover/ai:rotate-12" />
+                  <Wand2 className="size-4 transition-transform group-hover/ai:rotate-12" />
                   AI Assistant
                 </Button>
               </div>
@@ -440,7 +440,7 @@ export function PublishPageView({
             <textarea
               value={state.content}
               onChange={(e) => onSetContent(e.target.value)}
-              placeholder="Type your creative post here or use the AI Assistant magic..."
+              placeholder="Type your creative post here or use the AI Assistant magic?"
               className="w-full flex-1 resize-none bg-transparent p-8 text-xl leading-relaxed font-medium selection:bg-primary/30 placeholder:text-muted-foreground/20 focus:outline-none"
             />
             <div className="flex justify-end border-t border-white/5 bg-white/[0.02] p-4">
@@ -450,7 +450,7 @@ export function PublishPageView({
                 className="text-muted-foreground transition-all hover:bg-red-500/10 hover:text-red-500"
                 onClick={onClearDraft}
               >
-                <Trash2 className="mr-2 h-4 w-4" />
+                <Trash2 className="mr-2 size-4" />
                 Clear Draft
               </Button>
             </div>
@@ -460,7 +460,7 @@ export function PublishPageView({
         <div className="flex flex-col gap-4 lg:col-span-5">
           <div className="flex items-center justify-between px-2">
             <div className="flex items-center gap-2">
-              <Eye className="h-4 w-4 text-primary" />
+              <Eye className="size-4 text-primary" />
               <h3 className="text-sm font-semibold tracking-wide uppercase">Live Preview</h3>
             </div>
             <div className="flex gap-1.5 rounded-lg border border-white/10 bg-white/5 p-1">
@@ -488,7 +488,7 @@ export function PublishPageView({
 
           <div className="flex-1">
             <AnimatePresence mode="wait">
-              <motion.div
+              <m.div
                 key={state.previewPlatform}
                 initial={{ opacity: 0, scale: 0.98, x: 10 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -497,7 +497,7 @@ export function PublishPageView({
                 className="flex h-full items-start justify-center pt-8"
               >
                 <SocialFeedPreview platform={state.previewPlatform} content={state.content} />
-              </motion.div>
+              </m.div>
             </AnimatePresence>
           </div>
         </div>

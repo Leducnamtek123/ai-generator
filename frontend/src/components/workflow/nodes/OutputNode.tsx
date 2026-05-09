@@ -53,8 +53,8 @@ export function OutputNode({ id, data, selected }: OutputNodeProps) {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center gap-2">
-                        <ImageIcon className="h-6 w-6 text-muted-foreground" />
-                        <span className="text-[10px] text-muted-foreground">Waiting for preview...</span>
+                        <ImageIcon className="size-6 text-muted-foreground" />
+                        <span className="text-[10px] text-muted-foreground">Waiting for preview?</span>
                     </div>
                 )}
             </div>

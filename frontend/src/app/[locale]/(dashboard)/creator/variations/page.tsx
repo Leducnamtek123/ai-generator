@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -129,6 +129,14 @@ function variationsReducer(state: VariationsState, action: VariationsAction): Va
 }
 
 export default function VariationsPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <VariationsPageContent />
+        </Suspense>
+    );
+}
+
+function VariationsPageContent() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [state, dispatch] = useReducer(variationsReducer, initialState);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -136,8 +144,9 @@ export default function VariationsPage() {
     const [isProjectSaving, setIsProjectSaving] = useState(false);
     const [projectError, setProjectError] = useState<string | null>(null);
     const { imageVariations } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const isProjectBusy = isProjectLoading || isProjectSaving;
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -213,7 +222,7 @@ export default function VariationsPage() {
             },
         };
 
-        localStorage.setItem('variations:draft', JSON.stringify(payload));
+        localStorage.setItem('variations:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -231,7 +240,7 @@ export default function VariationsPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Variations saved to your projects.');
@@ -271,7 +280,7 @@ export default function VariationsPage() {
     };
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -296,7 +305,7 @@ export default function VariationsPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('variations:draft');
+                    const raw = localStorage.getItem('variations:draft:v1');
                     if (raw) {
                         hydrate(normalizeVariationsSnapshot(JSON.parse(raw)));
                     }
@@ -320,7 +329,7 @@ export default function VariationsPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved variations project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('variations:draft');
+                        const raw = localStorage.getItem('variations:draft:v1');
                         if (raw) {
                             hydrate(normalizeVariationsSnapshot(JSON.parse(raw)));
                         }
@@ -351,7 +360,7 @@ export default function VariationsPage() {
                         <Sparkles className="size-2.5" /> New
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     {/* Upload */}
                     <button
                         type="button"
@@ -401,7 +410,7 @@ export default function VariationsPage() {
                     {/* Prompt Guidance */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Guidance (Optional)</h4>
-                        <textarea value={state.prompt} onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })} placeholder="Guide the variation direction..." className="w-full h-20 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
+                        <textarea value={state.prompt} onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })} placeholder="Guide the variation direction?" className="w-full h-20 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
                     </div>
                 </div>
                 <div className="p-4 border-t border-border space-y-3">
@@ -412,7 +421,7 @@ export default function VariationsPage() {
                             Reset
                         </Button>
                         <Button onClick={handleGenerate} disabled={state.isGenerating || isProjectBusy || !state.uploadedImage} className="h-12 flex-[2] font-bold rounded-xl gap-2">
-                            {state.isGenerating ? (<><Loader2 className="size-5 animate-spin" /> Generating...</>) : (<><Shuffle className="size-5" /> Generate Variations</>)}
+                            {state.isGenerating ? (<><Loader2 className="size-5 animate-spin" /> Generating?</>) : (<><Shuffle className="size-5" /> Generate Variations</>)}
                         </Button>
                     </div>
                 </div>
@@ -431,7 +440,7 @@ export default function VariationsPage() {
                 )}
                 <div className="flex-1 overflow-y-auto p-6">
                     {state.isGenerating ? (
-                        <div className="flex flex-col items-center justify-center h-full gap-4"><div className="relative"><div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" /><Shuffle className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div><p className="text-sm text-muted-foreground animate-pulse">Creating {state.count} variations...</p></div>
+                        <div className="flex flex-col items-center justify-center h-full gap-4"><div className="relative"><div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" /><Shuffle className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div><p className="text-sm text-muted-foreground animate-pulse">Creating {state.count} variations?</p></div>
                     ) : state.results.length > 0 ? (
                         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 max-w-5xl mx-auto">
                             {/* Source Image */}
@@ -458,7 +467,7 @@ export default function VariationsPage() {
                                     <div className={cn("aspect-square rounded-2xl border overflow-hidden shadow-lg transition-all", state.selectedResult === i ? "border-primary ring-2 ring-primary/20 scale-[1.02]" : "border-border hover:border-primary/30")}>
                                         <Image src={url} alt={`Variation ${i + 1}`} fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" />
                                     </div>
-                                    <div className="absolute inset-0 rounded-2xl bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                                    <div className="absolute inset-0 rounded-2xl bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
                                         <Button size="icon" variant="secondary" className="size-9" onClick={() => downloadVariation(url, `variation-${i + 1}.png`)}><Download className="size-4" /></Button>
                                         <Button size="icon" variant="secondary" className="size-9" onClick={() => copyVariationUrl(url)}><Copy className="size-4" /></Button>
                                     </div>

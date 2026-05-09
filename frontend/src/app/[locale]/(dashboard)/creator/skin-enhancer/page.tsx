@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef, useState } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -143,6 +143,14 @@ function reducer(state: SkinEnhancerState, action: SkinEnhancerAction): SkinEnha
 }
 
 export default function SkinEnhancerPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <SkinEnhancerPageContent />
+        </Suspense>
+    );
+}
+
+function SkinEnhancerPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [projectId, setProjectId] = useState<string | null>(null);
@@ -151,13 +159,14 @@ export default function SkinEnhancerPage() {
     const [projectError, setProjectError] = useState<string | null>(null);
     const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { skinEnhance, currentGeneration, reset, isGenerating } = useGenerationStore();
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const resultImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
     const isProcessing = isGenerating;
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -187,7 +196,7 @@ export default function SkinEnhancerPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('skin-enhancer:draft');
+                    const raw = localStorage.getItem('skin-enhancer:draft:v1');
                     if (raw) {
                         hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(raw)));
                     }
@@ -211,7 +220,7 @@ export default function SkinEnhancerPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved skin enhancer project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('skin-enhancer:draft');
+                        const raw = localStorage.getItem('skin-enhancer:draft:v1');
                         if (raw) {
                             hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(raw)));
                         }
@@ -282,7 +291,7 @@ export default function SkinEnhancerPage() {
             },
         };
 
-        localStorage.setItem('skin-enhancer:draft', JSON.stringify(payload));
+        localStorage.setItem('skin-enhancer:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -300,7 +309,7 @@ export default function SkinEnhancerPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Skin enhancer saved to your projects.');
@@ -359,7 +368,7 @@ export default function SkinEnhancerPage() {
                         {isProjectLoading ? 'Loading project...' : projectError ?? ''}
                     </span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     {/* Upload */}
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative aspect-[3/4] rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3">
                         {state.uploadedImage ? (
@@ -416,7 +425,7 @@ export default function SkinEnhancerPage() {
                 <div className="p-4 border-t border-border space-y-3">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1"><span>Cost:</span><span className="font-medium text-foreground">1 Credit</span></div>
                     <Button onClick={handleEnhance} disabled={isProcessing || !state.uploadedImage || isProjectLoading || isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
-                        {isProcessing ? (<><Loader2 className="size-5 animate-spin" /> Enhancing...</>) : (<><Sparkles className="size-5" /> Enhance Skin</>)}
+                        {isProcessing ? (<><Loader2 className="size-5 animate-spin" /> Enhancing?</>) : (<><Sparkles className="size-5" /> Enhance Skin</>)}
                     </Button>
                 </div>
             </div>
@@ -446,7 +455,7 @@ export default function SkinEnhancerPage() {
                             <div className="flex flex-wrap justify-center gap-2 pt-2">{['Portraits', 'Selfies', 'Headshots', 'Fashion'].map(t => (<span key={t} className="px-3 py-1.5 rounded-full bg-muted border border-border text-xs text-muted-foreground">{t}</span>))}</div>
                         </div>
                     ) : isProcessing ? (
-                        <div className="flex flex-col items-center gap-4"><div className="relative"><div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" /><Sparkles className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div><p className="text-sm text-muted-foreground animate-pulse">Enhancing skin...</p></div>
+                        <div className="flex flex-col items-center gap-4"><div className="relative"><div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" /><Sparkles className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" /></div><p className="text-sm text-muted-foreground animate-pulse">Enhancing skin?</p></div>
                     ) : (
                         <div className="relative rounded-2xl overflow-hidden border border-border shadow-2xl animate-in fade-in zoom-in-95 duration-500">
                             <Image src={state.showOriginal ? state.uploadedImage! : (resultImage || state.uploadedImage!)} alt="Preview" width={1600} height={1600} className="max-h-[70vh] w-auto object-contain" />

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Sparkles,
@@ -97,6 +97,14 @@ const normalizeImageSnapshot = (value: unknown): Partial<ImageSnapshot> => {
 };
 
 export default function StudioPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <StudioPageContent />
+        </Suspense>
+    );
+}
+
+function StudioPageContent() {
     const [activeContentTab, setActiveContentTab] = useState<string>(CONTENT_TABS[2]);
     const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS[0].id);
     const [selectedAspectRatio, setSelectedAspectRatio] = useState('1:1');
@@ -119,8 +127,9 @@ export default function StudioPage() {
     const { providers: imageProviders, isLoading: isProvidersLoading } = useGenerationProviders('image-generation');
     const contentScrollRef = useRef<HTMLDivElement | null>(null);
     const referenceImageInputRef = useRef<HTMLInputElement | null>(null);
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const isProjectBusy = isProjectLoading || isProjectSaving;
 
     useEffect(() => {
@@ -128,7 +137,7 @@ export default function StudioPage() {
     }, [fetchBalance]);
 
     useEffect(() => {
-        const requestedProjectId = searchParams.get('projectId');
+        const requestedProjectId = searchParamsSnapshot.get('projectId');
         setProjectId(requestedProjectId);
 
         const applySnapshot = (snapshot: Partial<ImageSnapshot>) => {
@@ -149,7 +158,7 @@ export default function StudioPage() {
         };
 
         const loadDraft = () => {
-            const draftRaw = localStorage.getItem('image-generator:draft');
+            const draftRaw = localStorage.getItem('image-generator:draft:v1');
             if (!draftRaw) return;
 
             try {
@@ -312,7 +321,7 @@ export default function StudioPage() {
             },
         };
 
-        localStorage.setItem('image-generator:draft', JSON.stringify(payload));
+        localStorage.setItem('image-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -330,7 +339,7 @@ export default function StudioPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 setProjectError(null);
@@ -376,7 +385,7 @@ export default function StudioPage() {
                 </div>
 
                 {/* Control Content */}
-                <div className="min-h-0 flex-1 overflow-y-auto p-4 space-y-6">
+                <div className="min-h-0 flex-1 overflow-y-auto p-4  gap-y-6">
                     {/* Browse Templates Button */}
                     <button 
                         onClick={() => setActiveContentTab(CONTENT_TABS[2])}
@@ -444,7 +453,7 @@ export default function StudioPage() {
                             <textarea
                                 value={prompt}
                                 onChange={(e) => setPrompt(e.target.value)}
-                                placeholder="Describe what you want to create..."
+                                placeholder="Describe what you want to create?"
                                 className="w-full h-40 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
@@ -490,7 +499,7 @@ export default function StudioPage() {
                                 <textarea
                                     value={negativePrompt}
                                     onChange={(event) => setNegativePrompt(event.target.value)}
-                                    placeholder="Things to avoid, e.g. blurry, text, watermark..."
+                                    placeholder="Things to avoid, e.g. blurry, text, watermark?"
                                     className="w-full h-24 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                                 />
                             </div>
@@ -514,7 +523,7 @@ export default function StudioPage() {
                                         type="url"
                                         value={referenceImageUrl}
                                         onChange={(event) => setReferenceImageUrl(event.target.value)}
-                                        placeholder="https://..."
+                                        placeholder="https://?"
                                         className="h-10"
                                     />
                                     <div className="flex items-center gap-2">
@@ -581,7 +590,7 @@ export default function StudioPage() {
                         {isGenerating ? (
                             <>
                                 <Loader2 className="size-4 animate-spin" />
-                                Generating...
+                                Generating?
                             </>
                         ) : (
                             <>
@@ -926,7 +935,7 @@ function GenerationCard({ generation }: { generation: GeneratedCardData }) {
                         <Loader2 className="size-6 animate-spin text-muted-foreground" />
                     </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
                 {generation.prompt}
@@ -954,7 +963,7 @@ function TemplateCard({ template, onClick }: { template: { id: string; title: st
                         <Sparkles className="size-6 text-muted-foreground/50" />
                     </div>
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-gray-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-950/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
             </div>
             <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
                 {template.title}

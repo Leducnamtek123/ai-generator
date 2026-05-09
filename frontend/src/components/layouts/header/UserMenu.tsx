@@ -47,7 +47,7 @@ export function UserMenu() {
   const { setTheme, theme: currentTheme, resolvedTheme } = useTheme();
   const locale = useLocale();
   const t = useTranslations("UserMenu");
-  const router = useRouter();
+  const { push, replace, refresh } = useRouter();
   const pathname = usePathname();
   const currentOrg = useOrgStore((state) => state.currentOrg);
   const currentOrgSlug = currentOrg?.slug ?? "";
@@ -88,7 +88,7 @@ export function UserMenu() {
   }, [currentOrgSlug, hasWorkspaceContext]);
 
   const goTo = (href: string) => {
-    router.push(href);
+    push(href);
   };
 
   const billingHref = hasWorkspaceContext
@@ -114,7 +114,7 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center outline-none">
-          <Avatar className="h-8 w-8 cursor-pointer rounded-full border border-border ring-border transition-all hover:ring-2">
+          <Avatar className="size-8 cursor-pointer rounded-full border border-border ring-border transition-all hover:ring-2">
             <AvatarImage src={user.avatar} />
             <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground uppercase">
               {user.username.substring(0, 1)}
@@ -126,7 +126,7 @@ export function UserMenu() {
         <DropdownMenuContent align="end" sideOffset={8} className="w-72 p-2">
           {/* User Info Section */}
           <div className="flex items-center gap-3 p-3">
-            <Avatar className="h-10 w-10 rounded-lg">
+            <Avatar className="size-10 rounded-lg">
               <AvatarImage src={user.avatar} />
               <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground uppercase">
                 {user.username.substring(0, 1)}
@@ -168,7 +168,7 @@ export function UserMenu() {
               }}
             >
               <div className="flex items-center gap-3">
-                <CreditCard className="h-4 w-4" />
+                <CreditCard className="size-4" />
                 <span className="text-sm font-medium">{billingButtonLabel}</span>
               </div>
               <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground uppercase">
@@ -180,7 +180,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/settings")}
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="size-4" />
               <span className="text-sm font-medium">{t("items.settings")}</span>
             </DropdownMenuItem>
 
@@ -188,7 +188,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/settings?tab=profile")}
             >
-              <User className="h-4 w-4" />
+              <User className="size-4" />
               <span className="text-sm font-medium">{t("items.profile")}</span>
             </DropdownMenuItem>
 
@@ -196,7 +196,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/stock?view=collections")}
             >
-              <Layers className="h-4 w-4" />
+              <Layers className="size-4" />
               <span className="text-sm font-medium">{t("items.collections")}</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -207,14 +207,14 @@ export function UserMenu() {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 outline-none">
                 <div className="flex items-center gap-3">
-                  <Languages className="h-4 w-4" />
+                  <Languages className="size-4" />
                   <span className="text-sm font-medium">{t("items.language")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">
                     {locale in LOCALES ? LOCALES[locale as LocaleCode].label : locale}
                   </span>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  <ChevronRight className="size-3 text-muted-foreground" />
                 </div>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
@@ -228,11 +228,11 @@ export function UserMenu() {
                           locale === code && "bg-accent font-medium text-accent-foreground"
                         )}
                         onClick={() => {
-                          router.replace(pathname, { locale: code });
-                          router.refresh();
+                          replace(pathname, { locale: code });
+                          refresh();
                         }}
                       >
-                        <Languages className="mr-2 h-4 w-4" />
+                        <Languages className="mr-2 size-4" />
                         {info.label}
                       </DropdownMenuItem>
                     )
@@ -244,14 +244,14 @@ export function UserMenu() {
             <DropdownMenuSub>
               <DropdownMenuSubTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 outline-none">
                 <div className="flex items-center gap-3">
-                  <Moon className="h-4 w-4" />
+                  <Moon className="size-4" />
                   <span className="text-sm font-medium">{t("items.theme")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground capitalize">
                     {resolvedTheme ?? currentTheme}
                   </span>
-                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
+                  <ChevronRight className="size-3 text-muted-foreground" />
                 </div>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
@@ -291,7 +291,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/settings?tab=api")}
             >
-              <Code className="h-4 w-4" />
+              <Code className="size-4" />
               <span className="text-sm font-medium">{t("items.developer")}</span>
             </DropdownMenuItem>
 
@@ -299,7 +299,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => window.open("/docs/api", "_blank")}
             >
-              <LifeBuoy className="h-4 w-4" />
+              <LifeBuoy className="size-4" />
               <span className="text-sm font-medium">{t("items.docs")}</span>
             </DropdownMenuItem>
 
@@ -307,7 +307,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={openHelpCenter}
             >
-              <LifeBuoy className="h-4 w-4" />
+              <LifeBuoy className="size-4" />
               <span className="text-sm font-medium">{t("items.help")}</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
@@ -319,7 +319,7 @@ export function UserMenu() {
               onClick={() => logout()}
               className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-destructive hover:bg-destructive/10"
             >
-              <LogOut className="h-4 w-4" />
+              <LogOut className="size-4" />
               <span className="text-sm font-medium">{t("items.logout")}</span>
             </DropdownMenuItem>
           </div>

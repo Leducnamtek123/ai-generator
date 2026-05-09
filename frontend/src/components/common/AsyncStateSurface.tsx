@@ -25,9 +25,9 @@ export function AsyncStateSurface({
 }: AsyncStateSurfaceProps) {
   const isLoading = status === "loading";
   const icon = isLoading ? (
-    <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+    <Loader2 className="size-5 animate-spin text-muted-foreground" />
   ) : (
-    <TriangleAlert className="h-5 w-5 text-muted-foreground" />
+    <TriangleAlert className="size-5 text-muted-foreground" />
   );
 
   return (
@@ -47,7 +47,7 @@ export function AsyncStateSurface({
         {status === "error" && onRetry && (
           <div className="flex justify-center pt-1">
             <Button type="button" variant="outline" onClick={onRetry} className="gap-2">
-              <RefreshCw className="h-4 w-4" />
+              <RefreshCw className="size-4" />
               {retryLabel}
             </Button>
           </div>

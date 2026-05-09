@@ -272,7 +272,7 @@ export function MediaPickerModal({
                                     <Input
                                         value={state.search}
                                         onChange={(e) => dispatch({ type: 'setSearch', search: e.target.value })}
-                                        placeholder="Search..."
+                                        placeholder="Search?"
                                         className="w-48 pl-9 pr-3 py-1 h-auto"
                                     />
                                 </div>
@@ -303,7 +303,7 @@ export function MediaPickerModal({
                                                         : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-accent',
                                                 )}
                                             >
-                                                <Icon className="h-3.5 w-3.5" />
+                                                <Icon className="size-3.5" />
                                                 {filter.label}
                                             </button>
                                         );
@@ -339,8 +339,8 @@ export function MediaPickerModal({
                                         >
                                             {item.type === 'audio' ? (
                                                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card">
-                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-                                                        <Music2 className="h-6 w-6" />
+                                                    <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                        <Music2 className="size-6" />
                                                     </div>
                                                     <div className="px-2 text-center">
                                                         <p className="text-[10px] font-medium line-clamp-2">{item.name}</p>
@@ -359,13 +359,13 @@ export function MediaPickerModal({
 
                                             {/* Video indicator */}
                                             {item.type === 'video' && (
-                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white flex items-center gap-1">
+                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-[10px] text-white flex items-center gap-1">
                                                     <VideoIcon className="size-3" />
                                                     {item.duration}s
                                                 </div>
                                             )}
                                             {item.type === 'audio' && (
-                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white flex items-center gap-1">
+                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-[10px] text-white flex items-center gap-1">
                                                     <Music2 className="size-3" />
                                                     Audio
                                                 </div>
@@ -379,7 +379,7 @@ export function MediaPickerModal({
                                             )}
 
                                             {/* Hover overlay */}
-                                            <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                                            <div className="absolute inset-0 bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity" />
                                         </button>
                                     ))}
                                 </div>
@@ -409,7 +409,7 @@ export function MediaPickerModal({
                                         />
                                         <span className="text-sm font-medium">{state.uploadProgress}%</span>
                                     </div>
-                                    <p className="text-xs text-muted-foreground">Uploading...</p>
+                                    <p className="text-xs text-muted-foreground">Uploading?</p>
                                 </>
                             ) : (
                                 <>

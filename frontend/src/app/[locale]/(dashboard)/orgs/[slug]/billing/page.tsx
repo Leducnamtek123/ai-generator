@@ -143,7 +143,7 @@ export default function BillingPage() {
 
       {billing && (
         <div className="space-y-6">
-          <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 rounded-2xl p-8 text-white">
+          <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-violet-600 to-blue-600 rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
             <div className="absolute -bottom-10 -right-10 size-40 bg-white/5 rounded-full blur-2xl" />
             <div className="relative z-10">
@@ -212,7 +212,7 @@ export default function BillingPage() {
                 </div>
                 <div className="h-2 bg-muted rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 rounded-full transition-all duration-500"
+                    className="h-full bg-gradient-to-r from-blue-500 to-violet-500 rounded-full transition-all duration-500"
                     style={{ width: "100%" }}
                   />
                 </div>

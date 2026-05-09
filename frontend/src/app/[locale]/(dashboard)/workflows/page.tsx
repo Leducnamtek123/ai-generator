@@ -30,7 +30,7 @@ const tabs = [
 ];
 
 export default function WorkflowsPage() {
-    const router = useRouter();
+    const { push } = useRouter();
     const {
         workflows,
         fetchWorkflows,
@@ -54,19 +54,21 @@ export default function WorkflowsPage() {
     }, [fetchProjects]);
 
     useEffect(() => {
-        try {
-            const raw = window.localStorage.getItem(WORKFLOW_DRAFT_KEY);
-            if (!raw) {
-                return;
-            }
+        queueMicrotask(() => {
+            try {
+                const raw = window.localStorage.getItem(WORKFLOW_DRAFT_KEY);
+                if (!raw) {
+                    return;
+                }
 
-            const parsed = JSON.parse(raw) as { workflowName?: unknown };
-            if (typeof parsed.workflowName === 'string') {
-                setWorkflowName(parsed.workflowName);
+                const parsed = JSON.parse(raw) as { workflowName?: unknown };
+                if (typeof parsed.workflowName === 'string') {
+                    setWorkflowName(parsed.workflowName);
+                }
+            } catch (error) {
+                console.error('Failed to restore workflow draft', error);
             }
-        } catch (error) {
-            console.error('Failed to restore workflow draft', error);
-        }
+        });
     }, []);
 
     useEffect(() => {
@@ -102,7 +104,7 @@ export default function WorkflowsPage() {
             setShowCreateModal(false);
             setWorkflowName('');
             window.localStorage.removeItem(WORKFLOW_DRAFT_KEY);
-            router.push(`/creator/workflow-editor?workflowId=${newId}`);
+            push(`/creator/workflow-editor?workflowId=${newId}`);
         }
     };
 
@@ -161,7 +163,7 @@ export default function WorkflowsPage() {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         type="text"
-                        placeholder="Search workflows..."
+                        placeholder="Search workflows?"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                         className="w-56 h-9 pl-10 pr-4"
@@ -200,7 +202,7 @@ export default function WorkflowsPage() {
                     <button
                         type="button"
                         aria-label="Close create workflow modal"
-                        className="absolute inset-0 bg-gray-950/60 backdrop-blur-sm"
+                        className="absolute inset-0 bg-zinc-950/60 backdrop-blur-sm"
                         onClick={() => setShowCreateModal(false)}
                     />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl">
@@ -257,14 +259,18 @@ function WorkflowCard({
     workflow: WorkflowType;
     onDelete: () => void;
 }) {
-    const router = useRouter();
+    const { push } = useRouter();
 
     return (
         <div
             role="button"
             tabIndex={0}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') router.push(`/creator/workflow-editor?workflowId=${workflow.id}`); }}
-            onClick={() => router.push(`/creator/workflow-editor?workflowId=${workflow.id}`)}
+            onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    push(`/creator/workflow-editor?workflowId=${workflow.id}`);
+                }
+            }}
+            onClick={() => push(`/creator/workflow-editor?workflowId=${workflow.id}`)}
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl overflow-hidden hover:bg-accent/50 transition-all flex flex-col"
         >
             {/* Preview Section */}
@@ -280,7 +286,7 @@ function WorkflowCard({
                 {/* Stats / Badges Overlay */}
                 <div className="absolute top-2 right-2 flex gap-1">
                     {workflow.visibility === 'public' && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-gray-950/40 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
+                        <span className="px-1.5 py-0.5 rounded-md bg-zinc-950/40 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
                             <Globe className="size-3" /> Public
                         </span>
                     )}

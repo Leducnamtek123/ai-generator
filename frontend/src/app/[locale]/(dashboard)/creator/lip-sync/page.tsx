@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useRef, useEffect, useState } from 'react';
+import { Suspense, useReducer, useRef, useEffect, useState, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -119,6 +119,14 @@ function reducer(state: LipSyncState, action: LipSyncAction): LipSyncState {
 }
 
 export default function LipSyncPage() {
+    return (
+        <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
+            <LipSyncPageContent />
+        </Suspense>
+    );
+}
+
+function LipSyncPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const videoInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
@@ -129,12 +137,13 @@ export default function LipSyncPage() {
     const [restoredResultVideo, setRestoredResultVideo] = useState<string | null>(null);
     const { lipSync, currentGeneration, reset, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const [communityListings, setCommunityListings] = useState<any[]>([]);
+    const [communityListings, setCommunityListings] = useState<Array<{ id: string; title: string; description?: string }>>([]);
     const [isCommunityLoading, setIsCommunityLoading] = useState(false);
     const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
     const [mediaPickerType, setMediaPickerType] = useState<'video' | 'audio'>('video');
-    const router = useRouter();
+    const { replace } = useRouter();
     const searchParams = useSearchParams();
+    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const isProjectBusy = isProjectLoading || isProjectSaving;
 
     useEffect(() => {
@@ -144,7 +153,7 @@ export default function LipSyncPage() {
             const fetchCommunity = async () => {
                 setIsCommunityLoading(true);
                 try {
-                    const res = await import('@/lib/api').then(m => m.get<{ data: any[] }>('/community-marketplace/listings?type=lip-sync&limit=12'));
+                    const res = await import('@/lib/api').then(m => m.get<{ data: Array<{ id: string; title: string; description?: string }> }>('/community-marketplace/listings?type=lip-sync&limit=12'));
                     setCommunityListings(res.data || []);
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
@@ -161,7 +170,7 @@ export default function LipSyncPage() {
     const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultVideo;
 
     useEffect(() => {
-        const queryProjectId = searchParams.get('projectId');
+        const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
             setProjectId(queryProjectId);
         }
@@ -191,7 +200,7 @@ export default function LipSyncPage() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('lip-sync:draft');
+                    const raw = localStorage.getItem('lip-sync:draft:v1');
                     if (raw) {
                         hydrateFromSnapshot(normalizeLipSyncSnapshot(JSON.parse(raw)));
                     }
@@ -215,7 +224,7 @@ export default function LipSyncPage() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved lip sync project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('lip-sync:draft');
+                        const raw = localStorage.getItem('lip-sync:draft:v1');
                         if (raw) {
                             hydrateFromSnapshot(normalizeLipSyncSnapshot(JSON.parse(raw)));
                         }
@@ -322,7 +331,7 @@ export default function LipSyncPage() {
             },
         };
 
-        localStorage.setItem('lip-sync:draft', JSON.stringify(payload));
+        localStorage.setItem('lip-sync:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
             setIsProjectSaving(true);
@@ -340,7 +349,7 @@ export default function LipSyncPage() {
                         content: payload,
                     });
                     setProjectId(created.project.id);
-                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
                 toast.success('Lip sync saved to your projects.');
@@ -373,7 +382,7 @@ export default function LipSyncPage() {
                         )}
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6 space-y-6 text-left">
+                <div className="flex-1 overflow-y-auto p-6  gap-y-6 text-left">
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Source Video</h4>
                         <button type="button" onClick={() => videoInputRef.current?.click()} className="group relative aspect-video rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3">

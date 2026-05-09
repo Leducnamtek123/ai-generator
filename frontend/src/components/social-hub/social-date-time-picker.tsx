@@ -103,12 +103,12 @@ export function SocialDateTimePicker({
           )}
         >
           <span className="flex min-w-0 items-center gap-2 truncate">
-            <CalendarIcon className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <CalendarIcon className="size-4 shrink-0 text-muted-foreground" />
             <span className={cn("truncate", !parsedValue && "text-muted-foreground")}>
               {triggerLabel}
             </span>
           </span>
-          <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className={cn("w-auto p-0", className)} align="start">
