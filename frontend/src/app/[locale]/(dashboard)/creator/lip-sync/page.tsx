@@ -508,7 +508,7 @@ function LipSyncPageContent() {
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
                                     {templates.map((template) => (
                                         <button key={template.id} onClick={() => dispatch({ type: 'setVideoFile', videoFile: template.thumbnail })} className="aspect-video rounded-xl overflow-hidden border border-border hover:border-primary/40 transition-all relative group">
-                                            <Image src={template.thumbnail} alt={template.title} fill className="object-cover" />
+                                            <Image src={template.thumbnail} alt={template.title} fill sizes="200px" className="object-cover" />
                                             <div className="absolute inset-0 bg-black/20 group-hover:bg-black/40 transition-all" />
                                             <p className="absolute bottom-2 left-2 text-[10px] font-medium text-white line-clamp-1">{template.title}</p>
                                         </button>
@@ -535,8 +535,12 @@ function LipSyncPageContent() {
 function LoadingGrid() {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-                <div key={i} className="aspect-video rounded-xl bg-muted animate-pulse" />
+            {[
+                { id: 'lip-sync-skel-1' },
+                { id: 'lip-sync-skel-2' },
+                { id: 'lip-sync-skel-3' },
+            ].map((item) => (
+                <div key={item.id} className="aspect-video rounded-xl bg-muted animate-pulse" />
             ))}
         </div>
     );

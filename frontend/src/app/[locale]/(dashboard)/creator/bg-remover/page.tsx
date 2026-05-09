@@ -384,11 +384,19 @@ function BgRemoverPageContent() {
 
                 <div className="flex-1 overflow-y-auto p-6  gap-y-6">
                     <div
-                    onClick={() => fileInputRef.current?.click()}
-                    onDrop={handleDrop}
-                    onDragOver={(event) => event.preventDefault()}
-                    className="group relative aspect-[4/3] rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3"
-                >
+                        onClick={() => fileInputRef.current?.click()}
+                        onKeyDown={(event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                fileInputRef.current?.click();
+                            }
+                        }}
+                        onDrop={handleDrop}
+                        onDragOver={(event) => event.preventDefault()}
+                        role="button"
+                        tabIndex={0}
+                        className="group relative aspect-[4/3] rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3"
+                    >
                         {state.uploadedImage ? (
                             <div className="relative w-full h-full">
                                 <Image src={state.uploadedImage} alt="Preview" fill unoptimized sizes="320px" className="object-contain" />

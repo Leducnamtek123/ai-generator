@@ -237,7 +237,7 @@ export default function OrgSettingsPage() {
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 disabled:opacity-50 disabled:cursor-not-allowed transition-all placeholder:text-muted-foreground/50"
                         />
                     </div>
-                    <label htmlFor={attachUsersId} className="flex items-start gap-3 cursor-pointer">
+                    <div className="flex items-start gap-3 cursor-pointer">
                         <input
                             id={attachUsersId}
                             type="checkbox"
@@ -246,11 +246,11 @@ export default function OrgSettingsPage() {
                             disabled={!canUpdate}
                             className="mt-1 rounded border-input"
                         />
-                        <div>
+                        <label htmlFor={attachUsersId} className="block">
                             <span className="text-sm font-medium">Auto-attach users by domain</span>
                             <span className="text-xs text-muted-foreground block mt-0.5">Automatically add users with matching email domain</span>
-                        </div>
-                    </label>
+                        </label>
+                    </div>
                 </div>
 
                 {canUpdate && (

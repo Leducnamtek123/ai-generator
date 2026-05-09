@@ -84,7 +84,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
         }
     }, [isEditing]);
 
-    const handleBlur = useCallback(() => {
+    const commitDraftText = useCallback(() => {
         setIsEditing(false);
         if (draftText !== commentData.text) {
             commentData.onTextChange?.(id, draftText);
@@ -97,9 +97,9 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
             setDraftText(commentData.text || '');
         }
         if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            handleBlur();
+            commitDraftText();
         }
-    }, [commentData.text, handleBlur]);
+    }, [commentData.text, commitDraftText]);
 
     const formatTimestamp = (timestamp?: number) => {
         if (!timestamp) return 'Just now';
@@ -244,22 +244,23 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         ref={textareaRef}
                         value={draftText}
                         onChange={(e) => setDraftText(e.target.value)}
-                        onBlur={handleBlur}
+                        onBlur={commitDraftText}
                         onKeyDown={handleKeyDown}
                         placeholder="Add a comment?"
                         className="w-full min-h-[60px] bg-transparent text-sm text-foreground/90 placeholder:text-foreground/30 resize-none focus:outline-none"
                     />
                 ) : (
-                    <div
+                    <button
+                        type="button"
                         onClick={() => setIsEditing(true)}
-                        className="min-h-[40px] cursor-text"
+                        className="min-h-[40px] cursor-text w-full text-left"
                     >
                         {draftText ? (
                             <p className="text-sm text-foreground/80 whitespace-pre-wrap">{draftText}</p>
                         ) : (
                             <p className="text-sm text-muted-foreground italic">Click to add a comment?</p>
                         )}
-                    </div>
+                    </button>
                 )}
             </div>
 

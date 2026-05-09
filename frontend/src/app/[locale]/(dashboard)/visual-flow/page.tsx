@@ -347,7 +347,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                   const EntityIcon = ENTITY_TYPE_ICONS[c.entityType] ?? Clapperboard;
 
                   return (
-                    <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 text-sm">
+                    <div key={`${c.entityType}-${c.name}-${c.description}`} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 text-sm">
                       <EntityIcon className="size-4" />
                       <span className="font-medium">{c.name}</span>
                       <span className="text-white/40 truncate flex-1">{c.description}</span>
@@ -458,7 +458,15 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
   return (
     <div
       onClick={onClick}
-      className="group relative cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 overflow-hidden"
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick();
+        }
+      }}
+      className="group relative cursor-pointer rounded-2xl border border-white/10 bg-white/[0.03] hover:bg-white/[0.07] hover:border-white/20 transition-all duration-300 overflow-hidden text-left w-full"
     >
       {/* Thumbnail / gradient header */}
       <div className="h-36 bg-gradient-to-br from-violet-900/60 via-pink-900/40 to-violet-900/60 relative overflow-hidden">
@@ -588,7 +596,7 @@ export default function VisualFlowPage() {
             </div>
             <span className="text-xs font-medium text-violet-400 uppercase tracking-widest">VisualFlow Studio</span>
           </div>
-          <h1 className="text-3xl font-semibold mb-2 bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-semibold mb-2 text-white/90">
             AI Video Pipeline
           </h1>
           <p className="text-sm text-white/50 max-w-md">
@@ -642,7 +650,8 @@ export default function VisualFlowPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {/* New project ghost card */}
-          <div
+          <button
+            type="button"
             onClick={() => setShowWizard(true)}
             className="group cursor-pointer rounded-2xl border border-dashed border-white/10 bg-transparent hover:bg-white/[0.03] hover:border-violet-500/40 transition-all duration-300 flex flex-col items-center justify-center gap-3 min-h-[260px]"
           >
@@ -652,7 +661,7 @@ export default function VisualFlowPage() {
             <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors">
               New Project
             </span>
-          </div>
+          </button>
 
           {filtered.map((project) => (
             <ProjectCard

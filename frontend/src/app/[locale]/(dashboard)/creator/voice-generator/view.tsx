@@ -310,8 +310,12 @@ export function VoiceGeneratorView({
 function LoadingGrid() {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-            {[1, 2, 3].map(i => (
-                <div key={i} className="h-32 rounded-xl bg-muted animate-pulse" />
+            {[
+                { id: 'voice-skel-1' },
+                { id: 'voice-skel-2' },
+                { id: 'voice-skel-3' },
+            ].map((item) => (
+                <div key={item.id} className="h-32 rounded-xl bg-muted animate-pulse" />
             ))}
         </div>
     );

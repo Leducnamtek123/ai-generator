@@ -31,7 +31,6 @@ import { Input } from "@/components/ui/input";
 
 export function MainLayout({ children, onMenuClick }: { children: React.ReactNode, onMenuClick?: () => void }) {
     const pathname = usePathname();
-    const [search, setSearch] = React.useState('');
     const isWorkflow = pathname === '/creator/workflow-editor';
     const { user, isLoading } = useAuth();
     const { push } = useRouter();
@@ -50,15 +49,11 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const isCreatorWorkspace = pathname.startsWith('/creator/') && pathname !== '/creator';
 
     React.useEffect(() => {
-        setSearch(window.location.search);
-    }, []);
-
-    React.useEffect(() => {
         if (!isLoading && !user && !isPublicRoute) {
-            const nextPath = `${pathname}${search}`;
+            const nextPath = `${pathname}${window.location.search}`;
             window.location.replace(`/sign-in?next=${encodeURIComponent(nextPath)}`);
         }
-    }, [user, isLoading, pathname, search, push, isPublicRoute]);
+    }, [user, isLoading, pathname, push, isPublicRoute]);
 
     React.useEffect(() => {
         if (user) {
@@ -325,7 +320,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                 Enter a new name for your space.
                             </DialogDescription>
                         </DialogHeader>
-                        <div className="flex items-center space-x-2">
+                        <div className="flex items-center gap-x-2">
                             <div className="grid flex-1 gap-2">
                                 <Input
                                     id="link"

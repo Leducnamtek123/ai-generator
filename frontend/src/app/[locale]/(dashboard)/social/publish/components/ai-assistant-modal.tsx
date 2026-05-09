@@ -169,13 +169,13 @@ export function AiAssistantModal({
                     animate={{ opacity: 1, height: 'auto' }}
                     className="pt-6 border-t border-white/10 space-y-4"
                   >
-                    <label className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                    <p className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
                       Choose a suggestion
-                    </label>
+                    </p>
                     <div className="space-y-3">
-                      {results.map((result, i) => (
+                      {results.map((result) => (
                         <button
-                          key={`${i}-${result.slice(0, 20)}`}
+                          key={result}
                           type="button"
                           className="group relative w-full p-4 rounded-xl bg-white/5 border border-white/10 hover:border-primary/50 text-left transition-all"
                           onClick={() => {

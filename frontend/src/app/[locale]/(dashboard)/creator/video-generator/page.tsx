@@ -880,8 +880,8 @@ function VideoPageContent() {
 function LoadingGrid() {
     return (
         <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map(i => (
-                <div key={i} className="aspect-video rounded-2xl bg-muted animate-pulse" />
+            {['video-skel-1', 'video-skel-2', 'video-skel-3', 'video-skel-4'].map((id) => (
+                <div key={id} className="aspect-video rounded-2xl bg-muted animate-pulse" />
             ))}
         </div>
     );

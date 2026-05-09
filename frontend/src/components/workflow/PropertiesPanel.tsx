@@ -72,7 +72,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
     if (!selectedNode) return null;
 
-    const handleChange = (key: string, value: unknown) => {
+    const handleNodeDataChange = (key: string, value: unknown) => {
         onChange(selectedNode.id, { [key]: value });
     };
 
@@ -131,7 +131,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                         <div className="text-xs font-medium text-muted-foreground">Preferred Provider</div>
                         <select
                             value={(nodeData.provider as string) || ''}
-                            onChange={(e) => handleChange('provider', e.target.value)}
+                            onChange={(e) => handleNodeDataChange('provider', e.target.value)}
                             className="w-full h-11 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
                         >
                             <option value="">Auto / Default</option>
@@ -148,7 +148,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                 <PropertiesContent
                     selectedNode={selectedNode}
                     nodeData={nodeData}
-                    onChange={handleChange}
+                    onChange={handleNodeDataChange}
                     isGenerating={isGenerating}
                     handleGenerateImage={handleGenerateImage}
                     handleGenerateVideo={handleGenerateVideo}

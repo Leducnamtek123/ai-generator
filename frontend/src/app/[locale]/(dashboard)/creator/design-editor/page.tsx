@@ -152,20 +152,19 @@ const getSnapTargets = (
         { value: canvasBounds.height, guide: canvasBounds.height },
     ];
 
-    elements
-        .filter((other) => other.id !== element.id)
-        .forEach((other) => {
-            verticalTargets.push(
-                { value: other.x, guide: other.x },
-                { value: other.x + other.width / 2, guide: other.x + other.width / 2 },
-                { value: other.x + other.width, guide: other.x + other.width },
-            );
-            horizontalTargets.push(
-                { value: other.y, guide: other.y },
-                { value: other.y + other.height / 2, guide: other.y + other.height / 2 },
-                { value: other.y + other.height, guide: other.y + other.height },
-            );
-        });
+    for (const other of elements) {
+        if (other.id === element.id) continue;
+        verticalTargets.push(
+            { value: other.x, guide: other.x },
+            { value: other.x + other.width / 2, guide: other.x + other.width / 2 },
+            { value: other.x + other.width, guide: other.x + other.width },
+        );
+        horizontalTargets.push(
+            { value: other.y, guide: other.y },
+            { value: other.y + other.height / 2, guide: other.y + other.height / 2 },
+            { value: other.y + other.height, guide: other.y + other.height },
+        );
+    }
 
     return { verticalTargets, horizontalTargets };
 };
@@ -251,9 +250,17 @@ function reducer(state: DesignEditorState, action: DesignEditorAction): DesignEd
                 selectedElementId: action.element.id,
             };
         case 'deleteElement':
+            const nextElements = [];
+
+            for (const element of state.elements) {
+                if (element.id !== action.id) {
+                    nextElements.push(element);
+                }
+            }
+
             return {
                 ...state,
-                elements: state.elements.filter((element) => element.id !== action.id),
+                elements: nextElements,
                 selectedElementId: state.selectedElementId === action.id ? null : state.selectedElementId,
             };
         case 'selectElement':
@@ -888,9 +895,9 @@ function DesignEditorPageContent() {
                             className="w-full h-full relative overflow-hidden"
                             onPointerDown={() => dispatch({ type: 'selectElement', id: null })}
                         >
-                            {alignmentGuides.map((guide, index) => (
+                            {alignmentGuides.map((guide) => (
                                 <div
-                                    key={`${guide.orientation}-${guide.position}-${index}`}
+                                    key={`${guide.orientation}-${guide.position}`}
                                     className="pointer-events-none absolute z-30 bg-sky-500/80"
                                     style={guide.orientation === 'vertical'
                                         ? { left: guide.position, top: 0, width: 1, height: '100%' }
@@ -905,6 +912,14 @@ function DesignEditorPageContent() {
                                         event.stopPropagation();
                                         dispatch({ type: 'selectElement', id: el.id });
                                     }}
+                                    onKeyDown={(event) => {
+                                        if (event.key === 'Enter' || event.key === ' ') {
+                                            event.preventDefault();
+                                            dispatch({ type: 'selectElement', id: el.id });
+                                        }
+                                    }}
+                                    role="button"
+                                    tabIndex={0}
                                     className={cn(
                                         "absolute touch-none select-none",
                                         state.activeTool === 'move' || state.selectedElementId === el.id ? "cursor-move" : "cursor-pointer",

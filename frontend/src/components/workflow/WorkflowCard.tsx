@@ -19,7 +19,7 @@ interface WorkflowCardProps {
 export function WorkflowCard({ workflow, onClick, href, isUploading, actions, className, variant = 'default' }: WorkflowCardProps) {
     const { push } = useRouter();
 
-    const handleClick = (e: React.MouseEvent) => {
+    const activateCard = () => {
         if (onClick) {
             onClick();
         } else if (href) {
@@ -29,11 +29,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
         if (e.key === 'Enter' || e.key === ' ') {
-            if (onClick) {
-                onClick();
-            } else if (href) {
-                push(href);
-            }
+            activateCard();
         }
     };
 
@@ -41,7 +37,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
         <div
             role="button"
             tabIndex={0}
-            onClick={handleClick}
+            onClick={activateCard}
             onKeyDown={handleKeyDown}
             className={cn("group cursor-pointer flex flex-col", className)}
         >

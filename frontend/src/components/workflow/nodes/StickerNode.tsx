@@ -64,6 +64,14 @@ export function StickerNode({ id, data, selected }: StickerNodeProps) {
                     selected && "drop-shadow-[0_0_15px_#2563EB80]"
                 )}
                 onClick={() => !data.isPreview && setShowPicker(!showPicker)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => {
+                    if ((e.key === "Enter" || e.key === " ") && !data.isPreview) {
+                        e.preventDefault();
+                        setShowPicker((open) => !open);
+                    }
+                }}
             >
                 <div className={cn(
                     "select-none filter drop-shadow-lg text-foreground",

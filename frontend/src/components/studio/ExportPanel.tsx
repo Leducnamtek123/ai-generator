@@ -183,9 +183,9 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
 
       {/* Orientation toggle */}
       <div>
-        <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium mb-1.5 block">
+        <p className="text-[10px] text-white/30 uppercase tracking-widest font-medium mb-1.5 block">
           Orientation
-        </label>
+        </p>
         <div className="flex gap-2">
           {(['VERTICAL', 'HORIZONTAL'] as const).map((o) => (
             <button
@@ -206,10 +206,11 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
 
       {/* Music section */}
       <div className="space-y-2">
-        <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium flex items-center gap-1.5">
+        <label htmlFor="export-background-music-url" className="text-[10px] text-white/30 uppercase tracking-widest font-medium flex items-center gap-1.5">
           <Music className="size-3" /> Background Music
         </label>
         <Input
+          id="export-background-music-url"
           value={musicUrl}
           onChange={(e) => setMusicUrl(e.target.value)}
           placeholder="Music URL (optional)?"

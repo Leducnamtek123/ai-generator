@@ -288,11 +288,19 @@ export default function CalendarPage() {
   const publishedPosts = state.posts.filter((post) => post.status === "published");
   const draftPosts = state.posts.filter((post) => post.status === "draft");
   const failedPosts = state.posts.filter((post) => post.status === "failed");
-  const nextScheduledPost = scheduledPosts
-    .filter((post) => post.scheduledAt)
-    .map((post) => ({ ...post, scheduledTime: new Date(post.scheduledAt as string).getTime() }))
-    .filter((post) => !Number.isNaN(post.scheduledTime) && post.scheduledTime >= Date.now())
-    .sort((a, b) => a.scheduledTime - b.scheduledTime)[0] ?? null;
+  let nextScheduledPost: (typeof scheduledPosts)[number] | null = null;
+  let nextScheduledTime = Number.POSITIVE_INFINITY;
+  for (const post of scheduledPosts) {
+    if (!post.scheduledAt) {
+      continue;
+    }
+
+    const scheduledTime = new Date(post.scheduledAt as string).getTime();
+    if (!Number.isNaN(scheduledTime) && scheduledTime >= Date.now() && scheduledTime < nextScheduledTime) {
+      nextScheduledPost = post;
+      nextScheduledTime = scheduledTime;
+    }
+  }
   const nextScheduledLabel = nextScheduledPost?.scheduledAt
     ? new Date(nextScheduledPost.scheduledAt).toLocaleString([], {
         month: "short",

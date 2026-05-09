@@ -88,7 +88,7 @@ const getEffectiveDuration = (clip: Clip) => {
 };
 
 const normalizeClips = (clips: Clip[]) =>
-    [...clips].sort((a, b) => a.startTime - b.startTime || a.name.localeCompare(b.name));
+    clips.toSorted((a, b) => a.startTime - b.startTime || a.name.localeCompare(b.name));
 
 const getTimelineEnd = (clips: Clip[]) =>
     clips.reduce((max, clip) => Math.max(max, clip.startTime + getEffectiveDuration(clip)), 0);

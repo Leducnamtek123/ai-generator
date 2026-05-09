@@ -338,11 +338,12 @@ export function useWorkflowExecution(
     (nodeId: string) => {
       const currentNodes = getNodes();
       const currentEdges = getEdges();
+      const nodesById = new Map(currentNodes.map((node) => [node.id, node] as const));
       const incomingEdges = currentEdges.filter((e) => e.target === nodeId);
       const inputs: WorkflowInput[] = [];
 
       for (const edge of incomingEdges) {
-        const sourceNode = currentNodes.find((n) => n.id === edge.source);
+        const sourceNode = nodesById.get(edge.source);
         if (sourceNode) {
           const output = getNodeOutput(sourceNode);
           if (output) inputs.push(output);
@@ -568,6 +569,7 @@ export function useWorkflowExecution(
       const execution = startExecution();
       const currentNodes = getNodes();
       const currentEdges = getEdges();
+      const nodesById = new Map(currentNodes.map((node) => [node.id, node] as const));
       const visited = new Set<string>();
       const executionOrder: string[] = [];
 
@@ -577,7 +579,12 @@ export function useWorkflowExecution(
         const visit = (nodeId: string) => {
           if (visited.has(nodeId)) return;
           visited.add(nodeId);
-          const dependencies = currentEdges.filter((e) => e.target === nodeId).map((e) => e.source);
+          const dependencies: string[] = [];
+          for (const edge of currentEdges) {
+            if (edge.target === nodeId) {
+              dependencies.push(edge.source);
+            }
+          }
           dependencies.forEach(visit);
           executionOrder.push(nodeId);
         };
@@ -585,7 +592,7 @@ export function useWorkflowExecution(
       }
 
       for (const nodeId of executionOrder) {
-        const node = currentNodes.find((n) => n.id === nodeId);
+        const node = nodesById.get(nodeId);
         if (node && node.type !== WorkflowNodeType.TEXT && node.type !== WorkflowNodeType.MEDIA) {
           await runNode(nodeId, execution.signal);
         }

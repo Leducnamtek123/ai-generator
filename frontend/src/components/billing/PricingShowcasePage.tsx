@@ -263,8 +263,8 @@ export default function PricingShowcasePage() {
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050608] text-white selection:bg-sky-400/30 selection:text-white">
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute top-0 left-1/2 h-[42rem] w-[42rem] -translate-x-1/2 rounded-full bg-sky-500/10 blur-[140px]" />
-        <div className="absolute top-[16rem] right-[-10rem] h-[28rem] w-[28rem] rounded-full bg-amber-400/10 blur-[140px]" />
+        <div className="absolute top-0 left-1/2 size-[42rem] -translate-x-1/2 rounded-full bg-sky-500/10 blur-[140px]" />
+        <div className="absolute top-[16rem] right-[-10rem] size-[28rem] rounded-full bg-amber-400/10 blur-[140px]" />
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:88px_88px] opacity-[0.14]" />
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black via-black/70 to-transparent" />
       </div>

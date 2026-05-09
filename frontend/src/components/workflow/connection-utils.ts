@@ -273,9 +273,10 @@ export function buildNodeConnectionSnapshot(
   };
 
   const incomingEdges = edges.filter((edge) => edge.target === targetNode.id);
+  const nodesById = new Map(nodes.map((node) => [node.id, node] as const));
 
   for (const edge of incomingEdges) {
-    const sourceNode = nodes.find((node) => node.id === edge.source);
+    const sourceNode = nodesById.get(edge.source);
     if (!sourceNode) continue;
 
     const sourceType = inferNodeOutputType(sourceNode);

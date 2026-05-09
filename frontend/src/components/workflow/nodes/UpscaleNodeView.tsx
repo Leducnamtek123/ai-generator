@@ -363,11 +363,16 @@ export function UpscaleNodeView({
             </BaseNode>
 
             {showFullscreen && data.previewUrl && (
-                <div className="fixed inset-0 z-[100] bg-zinc-950/90 flex items-center justify-center p-12" onClick={() => onSetFullscreen(false)}>
+                <button
+                    type="button"
+                    aria-label="Close fullscreen preview"
+                    className="fixed inset-0 z-[100] bg-zinc-950/90 flex items-center justify-center p-12"
+                    onClick={() => onSetFullscreen(false)}
+                >
                     <div className="relative h-full w-full max-w-6xl max-h-[90vh]">
                         <Image src={data.previewUrl!} alt="Upscaled" fill className="object-contain rounded-xl shadow-2xl" sizes="100vw" />
                     </div>
-                </div>
+                </button>
             )}
         </>
     );

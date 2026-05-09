@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
@@ -22,15 +23,14 @@ import {
     Instagram
 } from 'lucide-react';
 import { m } from 'framer-motion';
-import { 
-    AreaChart, 
-    Area, 
-    XAxis, 
-    YAxis, 
-    Tooltip, 
-    ResponsiveContainer
-} from 'recharts';
 import { socialHubApi, type SocialAnalytics, type SocialChannel, type SocialInteraction, type SocialPost } from '@/services/socialHubApi';
+
+const AreaChart = dynamic(() => import('recharts').then((mod) => mod.AreaChart), { ssr: false });
+const Area = dynamic(() => import('recharts').then((mod) => mod.Area), { ssr: false });
+const XAxis = dynamic(() => import('recharts').then((mod) => mod.XAxis), { ssr: false });
+const YAxis = dynamic(() => import('recharts').then((mod) => mod.YAxis), { ssr: false });
+const Tooltip = dynamic(() => import('recharts').then((mod) => mod.Tooltip), { ssr: false });
+const ResponsiveContainer = dynamic(() => import('recharts').then((mod) => mod.ResponsiveContainer), { ssr: false });
 
 const SOCIAL_REFERENCES = [
     {
@@ -128,13 +128,15 @@ export default function SocialDashboardPage() {
         return status !== 'handled' && status !== 'done' && status !== 'closed';
     });
     const inboundNeedsAttention = openInboxItems.filter((item) => item.canReply !== false).length;
-    const nextScheduledPost = scheduledPosts
-        .map((post) => ({
-            ...post,
-            scheduledTime: post.scheduledAt ? new Date(post.scheduledAt).getTime() : Number.POSITIVE_INFINITY,
-        }))
-        .filter((post) => post.scheduledTime >= now.getTime())
-        .sort((a, b) => a.scheduledTime - b.scheduledTime)[0] ?? null;
+    let nextScheduledPost: (typeof scheduledPosts)[number] | null = null;
+    let nextScheduledTime = Number.POSITIVE_INFINITY;
+    for (const post of scheduledPosts) {
+        const scheduledTime = post.scheduledAt ? new Date(post.scheduledAt).getTime() : Number.POSITIVE_INFINITY;
+        if (scheduledTime >= now.getTime() && scheduledTime < nextScheduledTime) {
+            nextScheduledPost = post;
+            nextScheduledTime = scheduledTime;
+        }
+    }
     const nextScheduledDate = nextScheduledPost?.scheduledAt ? new Date(nextScheduledPost.scheduledAt) : null;
     const nextScheduledLabel = nextScheduledDate
         ? nextScheduledDate.toLocaleString([], {

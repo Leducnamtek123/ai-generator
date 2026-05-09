@@ -58,6 +58,7 @@ import {
   type NotificationCategory,
   type NotificationPreference
 } from "@/services/notificationApi";
+
 import { paymentApi, type PaymentProvider } from "@/services/paymentApi";
 import { socialHubApi, type SocialChannel, type SocialProvider } from "@/services/socialHubApi";
 
@@ -907,9 +908,7 @@ function BillingSettings() {
   };
 
   const formatDate = (value: string | null) =>
-    value
-      ? new Intl.DateTimeFormat(locale, { dateStyle: "medium" }).format(new Date(value))
-      : t("billing.noRenewalScheduled");
+    value ? new Date(value).toLocaleDateString(locale, { dateStyle: "medium" }) : t("billing.noRenewalScheduled");
 
   const activePlan = wallet?.plan ?? null;
   const remainingCredits = wallet?.totalCredits ?? 0;

@@ -24,6 +24,12 @@ import { Link } from "@/i18n/navigation";
 import { Button } from "@/ui/button";
 import { toast } from "sonner";
 
+const currencyFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "VND",
+  maximumFractionDigits: 0,
+});
+
 export default function BillingPage() {
   const params = useParams();
   const slug = params?.slug as string;
@@ -63,12 +69,7 @@ export default function BillingPage() {
     });
   }, [loadBilling]);
 
-  const formatCurrency = (value: number) =>
-    new Intl.NumberFormat("en-US", {
-      style: "currency",
-      currency: "VND",
-      maximumFractionDigits: 0,
-    }).format(value);
+  const formatCurrency = (value: number) => currencyFormatter.format(value);
 
   const teamPlans =
     catalog?.teamPlans ??

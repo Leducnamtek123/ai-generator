@@ -58,7 +58,7 @@ interface SceneCardProps {
 
 export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDelete }: SceneCardProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [editPrompt, setEditPrompt] = useState(scene.prompt);
+  const [editPrompt, setEditPrompt] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSave = async () => {
@@ -76,10 +76,19 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
 
   const previewUrl = scene.verticalImageUrl || scene.horizontalImageUrl;
   const hasVideo = scene.verticalVideoUrl || scene.horizontalVideoUrl;
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      onSelect();
+    }
+  };
 
   return (
     <div
       onClick={onSelect}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
       className={cn(
         'group relative rounded-xl border transition-all duration-200 cursor-pointer',
         'hover:border-white/15 hover:bg-white/[0.03]',
@@ -134,7 +143,7 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
             {/* Video play indicator */}
             {hasVideo && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="size-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20">
+                <div className="size-8 rounded-full bg-[#0a0a0f]/60 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20">
                   <Play className="size-3.5 text-white ml-0.5" />
                 </div>
               </div>
@@ -151,19 +160,19 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
       <div className="p-3 space-y-2">
         {/* Prompt */}
         {isEditing ? (
-          <div className="space-y-1.5" onClick={(e) => e.stopPropagation()}>
+          <div className="space-y-1.5">
             <Textarea
               value={editPrompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setEditPrompt(e.target.value)}
               rows={3}
+              onClick={(e) => e.stopPropagation()}
               className="bg-white/5 border-white/10 text-white text-[11px] placeholder:text-white/20 resize-none"
-              autoFocus
             />
             <div className="flex gap-1">
-              <Button size="xs" onClick={handleSave} className="bg-violet-600 hover:bg-violet-500 text-white text-[10px] h-5 px-2">
+              <Button size="xs" onClick={(e) => { e.stopPropagation(); void handleSave(); }} className="bg-violet-600 hover:bg-violet-500 text-white text-[10px] h-5 px-2">
                 Save
               </Button>
-              <Button size="xs" variant="ghost" onClick={() => { setIsEditing(false); setEditPrompt(scene.prompt); }} className="text-white/30 text-[10px] h-5 px-2">
+              <Button size="xs" variant="ghost" onClick={(e) => { e.stopPropagation(); setIsEditing(false); setEditPrompt(scene.prompt); }} className="text-white/30 text-[10px] h-5 px-2">
                 Cancel
               </Button>
             </div>
@@ -196,17 +205,15 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-1"
-          onClick={(e) => e.stopPropagation()}
-        >
+        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-1">
           <button
-            onClick={() => { setIsEditing(true); setEditPrompt(scene.prompt); }}
+            onClick={(e) => { e.stopPropagation(); setIsEditing(true); setEditPrompt(scene.prompt); }}
             className="p-1 hover:bg-white/10 rounded text-white/25 hover:text-white/60 transition"
           >
             <Edit3 className="size-3" />
           </button>
           <button
-            onClick={handleDelete}
+            onClick={(e) => { e.stopPropagation(); void handleDelete(); }}
             disabled={isDeleting}
             className="p-1 hover:bg-red-500/10 rounded text-white/25 hover:text-red-400 transition"
           >
@@ -239,12 +246,19 @@ export function SceneTimeline({
   onDelete,
   onAddScene,
 }: SceneTimelineProps) {
-  const sorted = [...scenes].sort((a, b) => a.displayOrder - b.displayOrder);
+  const sorted = scenes.toSorted((a, b) => a.displayOrder - b.displayOrder);
 
   if (sorted.length === 0) {
     return (
-      <div
+      <button
+        type="button"
         onClick={onAddScene}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            onAddScene();
+          }
+        }}
         className="flex flex-col items-center justify-center h-64 rounded-2xl border-2 border-dashed border-white/[0.06] hover:border-violet-500/20 hover:bg-violet-500/[0.02] cursor-pointer transition-all group"
       >
         <div className="size-14 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-3 group-hover:bg-violet-500/10 transition">
@@ -252,7 +266,7 @@ export function SceneTimeline({
         </div>
         <p className="text-sm text-white/20 group-hover:text-white/40 transition">Add your first scene</p>
         <p className="text-[10px] text-white/10 mt-1">Describe each frame of your visual story</p>
-      </div>
+      </button>
     );
   }
 

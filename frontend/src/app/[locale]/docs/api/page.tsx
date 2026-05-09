@@ -102,29 +102,45 @@ export default function ApiDocsPage() {
             return apiEndpointGroups;
         }
 
-        return apiEndpointGroups
-            .map((group) => {
-                const items = group.items.filter((item) => {
-                    const haystack = [
-                        group.tag,
-                        item.method,
-                        item.path,
-                        item.summary,
-                        item.source,
-                        item.operation,
-                    ]
-                        .join(' ')
-                        .toLowerCase();
+        const escapedTokens: string[] = [];
 
-                    return haystack.includes(query);
-                });
+        for (const token of query.split(/\s+/)) {
+            if (token) {
+                escapedTokens.push(token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+            }
+        }
+        const queryPattern = escapedTokens.length > 0 ? new RegExp(escapedTokens.join('|'), 'i') : null;
+        const filtered: typeof apiEndpointGroups = [];
 
-                return {
+        for (const group of apiEndpointGroups) {
+            const items = [];
+
+            for (const item of group.items) {
+                const haystack = [
+                    group.tag,
+                    item.method,
+                    item.path,
+                    item.summary,
+                    item.source,
+                    item.operation,
+                ]
+                    .join(' ')
+                    .toLowerCase();
+
+                if (queryPattern ? queryPattern.test(haystack) : false) {
+                    items.push(item);
+                }
+            }
+
+            if (items.length > 0) {
+                filtered.push({
                     ...group,
                     items,
-                };
-            })
-            .filter((group) => group.items.length > 0);
+                });
+            }
+        }
+
+        return filtered;
     }, [search]);
 
     const visibleRoutes = filteredGroups.reduce(

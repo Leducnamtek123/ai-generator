@@ -246,14 +246,21 @@ const getToolRoute = (type: TemplateTypeEnum) => TOOL_ROUTES[type] ?? '/creator/
 const parseTags = (value: string) =>
   value
     .split(',')
-    .map((tag) => tag.trim())
-    .filter(Boolean)
+    .flatMap((tag) => {
+      const trimmed = tag.trim();
+      return trimmed ? [trimmed] : [];
+    })
     .slice(0, 12);
 
 const formatType = (type: string) =>
   type.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 
 const getTypeLabel = (type: string) => TEMPLATE_TYPE_LABELS.get(type as TemplateTypeEnum) ?? formatType(type);
+
+const formatAuthorName = (firstName?: string | null, lastName?: string | null) => {
+  const parts = [firstName, lastName].filter((part): part is string => Boolean(part && part.trim()));
+  return parts.join(' ').trim();
+};
 
 const getListingContent = (listing: CommunityMarketplaceListing): MarketplaceContent => {
   const content = listing.content;
@@ -277,7 +284,7 @@ const getListingPreview = (listing: CommunityMarketplaceListing) => {
 };
 
 const getCreatorName = (listing: CommunityMarketplaceListing) =>
-  [listing.author?.firstName, listing.author?.lastName].filter(Boolean).join(' ').trim() ||
+  formatAuthorName(listing.author?.firstName, listing.author?.lastName) ||
   listing.author?.email ||
   'Creator';
 
@@ -595,9 +602,20 @@ const getApiErrorMessage = (error: unknown, fallback: string) => {
     }
 
     if (responseData?.errors && typeof responseData.errors === 'object') {
-      const flattened = Object.values(responseData.errors)
-        .flatMap((value) => (Array.isArray(value) ? value : [value]))
-        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+      const flattened: string[] = [];
+      for (const value of Object.values(responseData.errors)) {
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            if (typeof item === 'string' && item.trim().length > 0) {
+              flattened.push(item);
+            }
+          }
+          continue;
+        }
+        if (typeof value === 'string' && value.trim().length > 0) {
+          flattened.push(value);
+        }
+      }
 
       if (flattened.length > 0) {
         return flattened.join(', ');
@@ -675,8 +693,10 @@ export function CommunityMarketplacePanel() {
       setPlatformFeeBps(1500);
       setTags('prompt,community,template');
       setListed(true);
-      await queryClient.invalidateQueries({ queryKey: ['community-marketplace'] });
-      await queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['community-marketplace'] }),
+        queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] }),
+      ]);
     },
     onError: (error) => {
       toast.error(getApiErrorMessage(error, 'Failed to create listing'));
@@ -689,9 +709,11 @@ export function CommunityMarketplacePanel() {
       toast.success(
         `Purchased for ${result.marketplace.marketplace.priceCredits} credits. Creator receives ${result.marketplace.marketplace.creatorPayoutCredits}.`,
       );
-      await fetchBalance();
-      await queryClient.invalidateQueries({ queryKey: ['community-marketplace'] });
-      await queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] });
+      await Promise.all([
+        fetchBalance(),
+        queryClient.invalidateQueries({ queryKey: ['community-marketplace'] }),
+        queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] }),
+      ]);
       push(`${getToolRoute(result.purchasedTemplate.type)}?templateId=${result.purchasedTemplate.id}`);
     },
     onError: (error) => {

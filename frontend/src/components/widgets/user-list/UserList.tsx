@@ -27,7 +27,8 @@ export function UserList() {
       {
         accessorKey: "id",
         header: () => (
-          <span
+          <button
+            type="button"
             className="flex cursor-pointer items-center gap-2 [&_svg]:size-4"
             onClick={() => {
               setSortKey("id");
@@ -36,13 +37,14 @@ export function UserList() {
           >
             {t("id")}
             <ArrowUpDown />
-          </span>
+          </button>
         )
       },
       {
         accessorKey: "name",
         header: () => (
-          <span
+          <button
+            type="button"
             className="flex cursor-pointer items-center gap-2 [&_svg]:size-4"
             onClick={() => {
               setSortKey("name");
@@ -51,7 +53,7 @@ export function UserList() {
           >
             {t("name")}
             <ArrowUpDown />
-          </span>
+          </button>
         )
       },
       {
@@ -72,7 +74,7 @@ export function UserList() {
 
     if (!sortKey) return next;
 
-    return [...next].sort((a, b) => {
+    return next.toSorted((a, b) => {
       const left = String(a[sortKey] ?? "");
       const right = String(b[sortKey] ?? "");
       const result = left.localeCompare(right);
@@ -90,6 +92,9 @@ export function UserList() {
     );
   }
 
+  const getColumnKey = (column: ColumnDef<UserType>) =>
+    column.id ?? ("accessorKey" in column ? String(column.accessorKey) : "unknown");
+
   return (
     <section className="col-span-3 lg:col-span-2">
       <div className="flex items-center py-4">
@@ -104,8 +109,8 @@ export function UserList() {
         <Table>
           <TableHeader className="bg-muted">
             <TableRow>
-              {columns.map((column, index) => (
-                <TableHead key={column.id ?? String(index)}>
+              {columns.map((column) => (
+                <TableHead key={getColumnKey(column)}>
                   {typeof column.header === "function"
                     ? (column.header as unknown as () => React.ReactNode)()
                     : column.header}

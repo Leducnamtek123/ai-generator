@@ -38,6 +38,11 @@ const data: Payment[] = [
     })),
 ];
 
+const usdFormatter = new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+});
+
 const columns: ColumnDef<Payment>[] = [
     {
         accessorKey: "status",
@@ -52,10 +57,7 @@ const columns: ColumnDef<Payment>[] = [
         header: "Amount",
         cell: ({ row }) => {
             const amount = parseFloat(row.getValue("amount"));
-            const formatted = new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-            }).format(amount);
+            const formatted = usdFormatter.format(amount);
             return <div className="font-medium">{formatted}</div>;
         },
     },

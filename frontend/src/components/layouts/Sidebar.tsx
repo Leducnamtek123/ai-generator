@@ -105,8 +105,9 @@ const formatBillingStatus = (status: BillingWalletSummary["status"]) => {
   }
 };
 
-const formatCreditCount = (value: number) =>
-  new Intl.NumberFormat("en-US").format(value);
+const creditCountFormatter = new Intl.NumberFormat("en-US");
+
+const formatCreditCount = (value: number) => creditCountFormatter.format(value);
 
 const StockHoverContent = () => (
   <div className="w-[600px] p-6 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl">
@@ -422,7 +423,7 @@ const AllToolsMenuItem = ({
                         </div>
                       ))
                     ) : (
-                      <p className="px-2 py-2 text-sm text-muted-foreground">
+                      <p className="p-2 text-sm text-muted-foreground">
                         No tools match this search.
                       </p>
                     )}

@@ -627,8 +627,8 @@ function SfxGeneratorPageContent() {
 function LoadingGrid() {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="aspect-[3/4] rounded-xl bg-muted animate-pulse" />
+            {['sfx-skel-1', 'sfx-skel-2', 'sfx-skel-3', 'sfx-skel-4', 'sfx-skel-5'].map((id) => (
+                <div key={id} className="aspect-[3/4] rounded-xl bg-muted animate-pulse" />
             ))}
         </div>
     );

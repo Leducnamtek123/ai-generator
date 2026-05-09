@@ -67,7 +67,7 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
   };
 
   return (
-    <div className="relative rounded-lg overflow-hidden bg-black group">
+    <div className="relative rounded-lg overflow-hidden bg-[#0a0a0f] group">
       <video
         ref={videoRef}
         src={src}
@@ -76,18 +76,26 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
         playsInline
       />
       {/* Controls overlay */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#0a0a0f]/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
         {/* Progress bar */}
-        <div
-          className="h-1 bg-white/20 rounded-full mb-2 cursor-pointer"
+        <button
+          type="button"
+          aria-label="Seek video position"
+          className="block w-full h-1 bg-white/20 rounded-full mb-2 cursor-pointer"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const pctClicked = (e.clientX - rect.left) / rect.width;
             if (videoRef.current) videoRef.current.currentTime = pctClicked * duration;
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              if (videoRef.current) videoRef.current.currentTime = duration / 2;
+            }
+          }}
         >
           <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
-        </div>
+        </button>
         <div className="flex items-center gap-2">
           <button onClick={togglePlay} className="text-white/80 hover:text-white transition">
             {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
@@ -108,9 +116,9 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
       {!isPlaying && (
         <button
           onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-black/20"
+          className="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]/20"
         >
-          <div className="size-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20 hover:bg-black/70 transition">
+          <div className="size-12 rounded-full bg-[#0a0a0f]/50 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20 hover:bg-[#0a0a0f]/70 transition">
             <Play className="size-5 text-white ml-0.5" />
           </div>
         </button>
@@ -131,8 +139,8 @@ interface ScenePropertiesProps {
 
 export function SceneProperties({ scene, onUpdate, availableCharacters }: ScenePropertiesProps) {
   const [editingField, setEditingField] = useState<string | null>(null);
-  const [promptDraft, setPromptDraft] = useState(scene.prompt);
-  const [videoPromptDraft, setVideoPromptDraft] = useState(scene.videoPrompt ?? '');
+  const [promptDraft, setPromptDraft] = useState('');
+  const [videoPromptDraft, setVideoPromptDraft] = useState('');
 
   // Sync on scene change
   React.useEffect(() => {
@@ -182,7 +190,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {previewVideo ? (
             <VideoPlayer src={previewVideo} poster={previewImage} />
           ) : previewImage ? (
-            <div className="relative aspect-[9/16] max-h-[250px] rounded-lg overflow-hidden bg-black">
+            <div className="relative aspect-[9/16] max-h-[250px] rounded-lg overflow-hidden bg-[#0a0a0f]">
               <Image src={previewImage} alt="Preview" fill className="object-contain" sizes="300px" unoptimized />
             </div>
           ) : (
@@ -224,7 +232,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {/* Scene Prompt */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Image Prompt</label>
+              <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Image Prompt</div>
               <button
                 onClick={() => editingField === 'prompt' ? savePrompt() : setEditingField('prompt')}
                 className="text-white/20 hover:text-white/50 transition"
@@ -238,7 +246,6 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                   value={promptDraft}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPromptDraft(e.target.value)}
                   rows={4}
-                  autoFocus
                   className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
                 />
                 <div className="flex gap-1">
@@ -254,7 +261,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {/* Video Prompt */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <label className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Video Motion Prompt</label>
+              <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Video Motion Prompt</div>
               <button
                 onClick={() => editingField === 'videoPrompt' ? saveVideoPrompt() : setEditingField('videoPrompt')}
                 className="text-white/20 hover:text-white/50 transition"
@@ -268,7 +275,6 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                   value={videoPromptDraft}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVideoPromptDraft(e.target.value)}
                   rows={3}
-                  autoFocus
                   placeholder="e.g. 0-3s: wide crane down. 3-6s: tracking shot."
                   className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
                 />
@@ -286,9 +292,9 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
 
           {/* Characters */}
           <div>
-            <label className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+            <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <Users className="size-3" /> Characters in Scene
-            </label>
+            </div>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {availableCharacters.map((name) => {
                 const isActive = (scene.characterNames ?? []).includes(name);

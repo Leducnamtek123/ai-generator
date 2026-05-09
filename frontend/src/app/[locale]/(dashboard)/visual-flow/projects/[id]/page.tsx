@@ -172,7 +172,7 @@ function AddSceneDialog({
         <div className="space-y-4 py-2">
           {/* Chain Type */}
           <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Chain Type</label>
+            <label htmlFor="scene-chain-type" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Chain Type</label>
             <div className="flex gap-2 mt-1.5">
               {(['ROOT', 'CONTINUATION'] as ChainType[]).map((t) => (
                 <button
@@ -194,8 +194,9 @@ function AddSceneDialog({
           {/* Parent scene selector */}
           {form.chainType === 'CONTINUATION' && scenes.length > 0 && (
             <div>
-              <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Continues from</label>
+              <label htmlFor="scene-parent" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Continues from</label>
               <select
+                id="scene-parent"
                 value={form.parentSceneId}
                 onChange={(e) => setForm((p) => ({ ...p, parentSceneId: e.target.value }))}
                 className="mt-1.5 w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white"
@@ -210,8 +211,9 @@ function AddSceneDialog({
 
           {/* Image Prompt */}
           <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Image Prompt *</label>
+            <label htmlFor="scene-image-prompt" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Image Prompt *</label>
             <Textarea
+              id="scene-image-prompt"
               value={form.prompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm((p) => ({ ...p, prompt: e.target.value }))}
               placeholder='Describe the frame: "Luna stands on the candy planet surface, sunrise, wide shot"'
@@ -222,8 +224,9 @@ function AddSceneDialog({
 
           {/* Video Prompt */}
           <div>
-            <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Video Motion Prompt</label>
+            <label htmlFor="scene-video-prompt" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Video Motion Prompt</label>
             <Textarea
+              id="scene-video-prompt"
               value={form.videoPrompt}
               onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm((p) => ({ ...p, videoPrompt: e.target.value }))}
               placeholder='Optional: "0-3s: wide crane down. 3-6s: tracking shot."'
@@ -235,7 +238,7 @@ function AddSceneDialog({
           {/* Characters */}
           {characterNames.length > 0 && (
             <div>
-              <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Characters</label>
+              <p className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Characters</p>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {characterNames.map((name) => (
                   <button

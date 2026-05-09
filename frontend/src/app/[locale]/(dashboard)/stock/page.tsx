@@ -178,8 +178,17 @@ function StockPageContent() {
 
                         {isSearching ? (
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-                                {[1, 2, 3, 4, 5, 6, 7, 8].map(i => (
-                                    <div key={i} className="aspect-[4/3] bg-muted animate-pulse rounded-xl" />
+                                {[
+                                    'stock-skel-1',
+                                    'stock-skel-2',
+                                    'stock-skel-3',
+                                    'stock-skel-4',
+                                    'stock-skel-5',
+                                    'stock-skel-6',
+                                    'stock-skel-7',
+                                    'stock-skel-8',
+                                ].map((id) => (
+                                    <div key={id} className="aspect-[4/3] bg-muted animate-pulse rounded-xl" />
                                 ))}
                             </div>
                         ) : results.length > 0 ? (

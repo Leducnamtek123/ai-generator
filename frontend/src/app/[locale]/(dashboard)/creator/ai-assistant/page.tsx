@@ -59,24 +59,55 @@ const normalizeAssistantSnapshot = (value: unknown): Partial<AssistantSnapshot> 
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
 
     const messages = Array.isArray(snapshot.messages)
-        ? snapshot.messages
-              .map((message) => message as Record<string, unknown>)
-              .filter((message) => typeof message.id === 'string' && (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string')
-              .map((message) => ({
-                  id: message.id as string,
-                  role: message.role as 'user' | 'assistant',
-                  content: message.content as string,
-                  timestamp: typeof message.timestamp === 'string' ? message.timestamp : new Date().toISOString(),
-                  attachments: Array.isArray(message.attachments)
-                      ? message.attachments.filter((attachment): attachment is { type: 'image' | 'video'; url: string } => {
-                            const item = attachment as Record<string, unknown>;
-                            return (item.type === 'image' || item.type === 'video') && typeof item.url === 'string';
-                        })
-                      : undefined,
-                  generatedImages: Array.isArray(message.generatedImages)
-                      ? message.generatedImages.filter((url): url is string => typeof url === 'string')
-                      : undefined,
-              }))
+        ? snapshot.messages.reduce<
+              Array<{
+                  id: string;
+                  role: 'user' | 'assistant';
+                  content: string;
+                  timestamp: string;
+                  attachments?: Array<{ type: 'image' | 'video'; url: string }>;
+                  generatedImages?: string[];
+              }>
+          >((items, message) => {
+              const rawMessage = message as Record<string, unknown>;
+              if (
+                  typeof rawMessage.id !== 'string' ||
+                  (rawMessage.role !== 'user' && rawMessage.role !== 'assistant') ||
+                  typeof rawMessage.content !== 'string'
+              ) {
+                  return items;
+              }
+
+              const attachments = Array.isArray(rawMessage.attachments)
+                  ? rawMessage.attachments.flatMap((attachment) => {
+                        const item = attachment as Record<string, unknown>;
+                        if (
+                            (item.type === 'image' || item.type === 'video') &&
+                            typeof item.url === 'string'
+                        ) {
+                            return [{ type: item.type as 'image' | 'video', url: item.url }];
+                        }
+                        return [];
+                    })
+                  : undefined;
+
+              const generatedImages = Array.isArray(rawMessage.generatedImages)
+                  ? rawMessage.generatedImages.flatMap((url) => (typeof url === 'string' ? [url] : []))
+                  : undefined;
+
+              items.push({
+                  id: rawMessage.id,
+                  role: rawMessage.role,
+                  content: rawMessage.content,
+                  timestamp:
+                      typeof rawMessage.timestamp === 'string'
+                          ? rawMessage.timestamp
+                          : new Date().toISOString(),
+                  attachments,
+                  generatedImages,
+              });
+              return items;
+          }, [])
         : [];
 
     return {
@@ -655,7 +686,7 @@ function AssistantPageContent() {
                 /* Chat View */
                 <>
                     <div className="flex-1 overflow-y-auto">
-                        <div className="max-w-4xl mx-auto py-6 px-6 space-y-6">
+                        <div className="max-w-4xl mx-auto p-6 space-y-6">
                             <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
                                 <div>
                                     Provider: <span className="font-medium text-foreground">{selectedProvider || 'backend default'}</span>

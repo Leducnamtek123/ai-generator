@@ -39,8 +39,12 @@ export function PersonalGallery() {
                         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">This week</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[1, 2, 3].map(i => (
-                            <div key={i} className="group cursor-pointer space-y-3">
+                        {[
+                            { id: 'week-1', label: 'Untitled Project 1' },
+                            { id: 'week-2', label: 'Untitled Project 2' },
+                            { id: 'week-3', label: 'Untitled Project 3' },
+                        ].map((item) => (
+                            <div key={item.id} className="group cursor-pointer space-y-3">
                                 <div className="aspect-[4/3] rounded-xl bg-muted border border-border overflow-hidden relative">
                                     {/* Placeholder Image */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-accent/20">
@@ -48,7 +52,7 @@ export function PersonalGallery() {
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-medium text-foreground truncate">Untitled Project {i}</h4>
+                                    <h4 className="text-xs font-medium text-foreground truncate">{item.label}</h4>
                                     <p className="text-[10px] text-muted-foreground mt-1">Upscaled 4x • Creative</p>
                                 </div>
                             </div>
@@ -62,8 +66,12 @@ export function PersonalGallery() {
                         <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Previous</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                        {[4, 5, 6].map(i => (
-                            <div key={i} className="group cursor-pointer space-y-3">
+                        {[
+                            { id: 'prev-4', label: 'Restoration Project 4' },
+                            { id: 'prev-5', label: 'Restoration Project 5' },
+                            { id: 'prev-6', label: 'Restoration Project 6' },
+                        ].map((item) => (
+                            <div key={item.id} className="group cursor-pointer space-y-3">
                                 <div className="aspect-[4/3] rounded-xl bg-muted border border-border overflow-hidden relative">
                                     {/* Placeholder Image */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-accent/20">
@@ -71,7 +79,7 @@ export function PersonalGallery() {
                                     </div>
                                 </div>
                                 <div>
-                                    <h4 className="text-xs font-medium text-foreground truncate">Restoration Project {i}</h4>
+                                    <h4 className="text-xs font-medium text-foreground truncate">{item.label}</h4>
                                     <p className="text-[10px] text-muted-foreground mt-1">Upscaled 2x • Precision</p>
                                 </div>
                             </div>

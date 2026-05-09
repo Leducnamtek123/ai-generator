@@ -183,10 +183,20 @@ function resolveProviderName(
   providers: GenerationProviderInfo[],
   hints: GenerationCapabilityHint[],
 ): string | undefined {
+  const providerByCapability = new Map<string, string>();
+
+  for (const provider of providers) {
+    for (const capability of provider.capabilities) {
+      if (!providerByCapability.has(capability)) {
+        providerByCapability.set(capability, provider.name);
+      }
+    }
+  }
+
   for (const hint of hints) {
-    const provider = providers.find((item) => item.capabilities.includes(hint));
-    if (provider) {
-      return provider.name;
+    const providerName = providerByCapability.get(hint);
+    if (providerName) {
+      return providerName;
     }
   }
 

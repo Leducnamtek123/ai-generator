@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useCallback, useRef, useState } from "react";
+import Image from "next/image";
 
 import { Loader2, Plus, Upload, Wand2 } from "lucide-react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
@@ -128,6 +129,14 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
         >
           <div
             onClick={handleMediaClick}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleMediaClick();
+              }
+            }}
             className={cn(
               "group relative cursor-pointer",
               data.isPreview ? "min-h-[60px] w-[120px]" : "min-h-[100px] w-[300px]"
@@ -147,11 +156,13 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                   />
                 ) : (
                   <div className="relative aspect-video w-full overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element -- Uploaded files can come from local/S3 backends outside next.config image hosts. */}
-                    <img
+                    <Image
                       src={data.mediaUrl}
                       alt={data.mediaName || "Uploaded media"}
-                      className="h-full w-full object-cover"
+                      fill
+                      unoptimized
+                      sizes={data.isPreview ? "120px" : "300px"}
+                      className="object-cover"
                       onLoad={handleMediaLoad}
                     />
                   </div>
@@ -171,7 +182,8 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                 </div>
               </div>
             ) : (
-              <div
+              <button
+                type="button"
                 className={cn(
                   "nodrag nopan flex aspect-video w-full flex-col items-center justify-center border-2 border-dashed border-transparent bg-muted/50 p-4 transition-colors hover:border-primary/50",
                   data.isPreview && "p-2"
@@ -180,6 +192,13 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                   e.stopPropagation();
                   fileInputRef.current?.click();
                 }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    fileInputRef.current?.click();
+                  }
+                }}
+                aria-label="Upload media"
               >
                 {isUploading ? (
                   <Loader2 className="size-4 animate-spin text-primary" />
@@ -205,7 +224,7 @@ export function MediaNode({ id, data, selected }: MediaNodeProps) {
                   onClick={(e) => e.stopPropagation()}
                 />
                 {false && <span />}
-              </div>
+              </button>
             )}
           </div>
         </BaseNode>

@@ -610,9 +610,9 @@ export default function InboxPage() {
                             >
                                 <div className="size-24 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 relative">
                                     <MessageSquare className="size-12 text-primary" />
-                                    <div className="absolute -top-2 -right-2 size-8 rounded-full bg-background border-2 border-primary flex items-center justify-center animate-bounce">
+                                    <div className="absolute -top-2 -right-2 size-8 rounded-full bg-background border-2 border-primary flex items-center justify-center animate-[pulse_2.8s_ease-in-out_infinite]">
                                          <Plus className="size-4 text-primary" />
-                                    </div>
+                                     </div>
                                 </div>
                                 <h3 className="text-2xl font-semibold mb-2">Select a Conversation</h3>
                                 <p className="text-muted-foreground max-w-sm text-sm">

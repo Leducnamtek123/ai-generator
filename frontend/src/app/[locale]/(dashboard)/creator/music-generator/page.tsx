@@ -882,8 +882,8 @@ function MusicGeneratorPageContent() {
 function LoadingList() {
     return (
         <div className="space-y-3">
-            {[1, 2, 3].map(i => (
-                <div key={i} className="h-20 bg-muted rounded-xl animate-pulse" />
+            {['music-skel-1', 'music-skel-2', 'music-skel-3'].map((id) => (
+                <div key={id} className="h-20 bg-muted rounded-xl animate-pulse" />
             ))}
         </div>
     );

@@ -300,9 +300,9 @@ function ChannelsPageContent() {
       return;
     }
 
-    const idsToRemove = facebookAccounts
-      .filter((account) => !selectedFacebookPageIds.includes(String(account.id)))
-      .map((account) => account.id);
+    const idsToRemove = facebookAccounts.flatMap((account) =>
+      selectedFacebookPageIds.includes(String(account.id)) ? [] : [account.id]
+    );
 
     if (idsToRemove.length === 0) {
       setIsFacebookReviewDialogOpen(false);

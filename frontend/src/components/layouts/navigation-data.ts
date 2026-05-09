@@ -140,9 +140,12 @@ export const ALL_TOOLS_LIST: SidebarItem[] = [
 ];
 
 export const DEFAULT_PINNED_TOOL_IDS = ALL_TOOLS_LIST
-    .filter((tool) => tool.pinnedByDefault)
-    .map((tool) => tool.id)
-    .filter((id): id is string => Boolean(id));
+    .reduce<string[]>((ids, tool) => {
+        if (tool.pinnedByDefault && tool.id) {
+            ids.push(tool.id);
+        }
+        return ids;
+    }, []);
 
 export const CREATOR_TOOL_HIGHLIGHTS: ToolHighlight[] = [
     { icon: Search, label: 'Find assets', href: '/stock' },

@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Image from 'next/image';
 import axios from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
@@ -78,9 +79,20 @@ const parseErrorMessage = (error: unknown, fallback: string) => {
     if (Array.isArray(data?.message) && data.message.length > 0) return data.message.join(', ');
     if (typeof data?.error === 'string') return data.error;
     if (data?.errors) {
-      const flattened = Object.values(data.errors)
-        .flatMap((value) => (Array.isArray(value) ? value : [value]))
-        .filter((value): value is string => typeof value === 'string' && value.trim().length > 0);
+      const flattened: string[] = [];
+      for (const value of Object.values(data.errors)) {
+        if (Array.isArray(value)) {
+          for (const item of value) {
+            if (typeof item === 'string' && item.trim().length > 0) {
+              flattened.push(item);
+            }
+          }
+          continue;
+        }
+        if (typeof value === 'string' && value.trim().length > 0) {
+          flattened.push(value);
+        }
+      }
       if (flattened.length > 0) return flattened.join(', ');
     }
     return error.message || fallback;
@@ -480,9 +492,11 @@ export default function AdminPage() {
     mutationFn: ({ id, payload }: { id: string; payload: UpdateAdminOrganizationRequest }) =>
       adminApi.updateOrganization(id, payload),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
-      await qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] });
-      await qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['admin', 'organizations'] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+      ]);
       toast.success('Organization updated');
     },
     onError: (error: unknown) => handleError(error, 'Failed to update organization'),
@@ -492,9 +506,11 @@ export default function AdminPage() {
     mutationFn: ({ id, memberId }: { id: string; memberId: string }) =>
       adminApi.transferOrganizationOwner(id, { memberId }),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
-      await qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] });
-      await qc.invalidateQueries({ queryKey: ['admin', 'overview'] });
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['admin', 'organizations'] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'overview'] }),
+      ]);
       toast.success('Ownership transferred');
     },
     onError: (error: unknown) => handleError(error, 'Failed to transfer ownership'),
@@ -1224,9 +1240,16 @@ export default function AdminPage() {
                 {!assetsQuery.isLoading &&
                   assets.map((asset: AdminAsset) => (
                     <div key={asset.id} className="overflow-hidden rounded-lg border border-border bg-background">
-                      <div className="aspect-video bg-muted">
+                      <div className="relative aspect-video bg-muted">
                         {asset.type === 'image' ? (
-                          <img src={asset.url} alt="" className="h-full w-full object-cover" />
+                          <Image
+                            src={asset.url}
+                            alt=""
+                            fill
+                            unoptimized
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover"
+                          />
                         ) : (
                           <div className="flex h-full items-center justify-center text-xs text-muted-foreground">
                             {asset.type}
@@ -1664,8 +1687,9 @@ export default function AdminPage() {
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Config key</label>
+                  <label htmlFor="site-config-key" className="mb-2 block text-xs font-medium text-muted-foreground">Config key</label>
                   <select
+                    id="site-config-key"
                     value={siteConfigKey}
                     onChange={(event) => setSiteConfigKey(event.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
@@ -1676,8 +1700,9 @@ export default function AdminPage() {
                   </select>
                 </div>
                 <div>
-                  <label className="mb-2 block text-xs font-medium text-muted-foreground">Locale</label>
+                  <label htmlFor="site-config-locale" className="mb-2 block text-xs font-medium text-muted-foreground">Locale</label>
                   <select
+                    id="site-config-locale"
                     value={siteConfigLocale}
                     onChange={(event) => setSiteConfigLocale(event.target.value)}
                     className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"

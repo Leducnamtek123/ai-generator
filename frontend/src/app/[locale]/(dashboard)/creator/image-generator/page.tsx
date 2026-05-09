@@ -447,7 +447,7 @@ function StudioPageContent() {
                     </div>
 
                     {/* PROMPT */}
-                    <div className="space-y-3 flex-1 flex flex-col">
+                    <div className="gap-y-3 flex-1 flex flex-col">
                         <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Prompt</h4>
                         <div className="bg-card rounded-xl border border-border p-2 flex-1">
                             <textarea
@@ -771,8 +771,8 @@ function StudioPageContent() {
 function LoadingGrid() {
     return (
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-            {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="aspect-[3/4] rounded-xl bg-muted animate-pulse" />
+            {['image-skel-1', 'image-skel-2', 'image-skel-3', 'image-skel-4', 'image-skel-5'].map((id) => (
+                <div key={id} className="aspect-[3/4] rounded-xl bg-muted animate-pulse" />
             ))}
         </div>
     );

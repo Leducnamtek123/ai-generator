@@ -31,7 +31,7 @@ export function InputNode({ id, data, selected }: InputNodeProps) {
         deleteElements({ nodes: [{ id }] });
     };
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleLabelChange = (e: ChangeEvent<HTMLInputElement>) => {
         setNodes((nodes) => nodes.map((node) =>
             node.id === id
                 ? { ...node, data: { ...node.data, label: e.target.value } }
@@ -43,11 +43,11 @@ export function InputNode({ id, data, selected }: InputNodeProps) {
     return (
         <BaseNode id={id} title="Input Node" selected={selected} onDelete={handleDelete}>
             <div className="space-y-2">
-                <label className="text-[10px] text-muted-foreground">Prompt / Input</label>
+                <div className="text-[10px] text-muted-foreground">Prompt / Input</div>
                 <Input
                     placeholder="Enter prompt?"
                     value={data.label || ''}
-                    onChange={handleChange}
+                    onChange={handleLabelChange}
                     className="h-8 border-border bg-background text-xs focus:ring-blue-500/50"
                 />
             </div>

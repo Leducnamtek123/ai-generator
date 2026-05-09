@@ -22,49 +22,47 @@ export default function NewOrgPage() {
     const { setCurrentOrg, setOrganizations, organizations } = useOrgStore();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
-    const [draftReady, setDraftReady] = useState(false);
-    const [form, setForm] = useState<CreateOrgData>({
-        name: '',
-        url: '',
-        description: '',
-        domain: '',
-        shouldAttachUsersByDomain: false,
-    });
+    const [form, setForm] = useState<CreateOrgData>(() => {
+        const fallback: CreateOrgData = {
+            name: '',
+            url: '',
+            description: '',
+            domain: '',
+            shouldAttachUsersByDomain: false,
+        };
 
-    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return fallback;
+        }
+
         try {
             const raw = window.localStorage.getItem(ORG_DRAFT_KEY);
             if (!raw) {
-                setDraftReady(true);
-                return;
+                return fallback;
             }
 
             const parsed = JSON.parse(raw) as Partial<OrgDraft>;
             if (parsed.form) {
-                setForm((current) => ({
-                    ...current,
+                return {
+                    ...fallback,
                     ...parsed.form,
-                }));
+                };
             }
         } catch (restoreError) {
             console.error('Failed to restore organization draft', restoreError);
-        } finally {
-            setDraftReady(true);
         }
-    }, []);
+
+        return fallback;
+    });
 
     useEffect(() => {
-        if (!draftReady) {
-            return;
-        }
-
         const draft: OrgDraft = {
             version: 1,
             savedAt: new Date().toISOString(),
             form,
         };
         window.localStorage.setItem(ORG_DRAFT_KEY, JSON.stringify(draft));
-    }, [draftReady, form]);
+    }, [form]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -133,7 +131,12 @@ export default function NewOrgPage() {
                         <input
                             type="text"
                             value={form.name}
-                            onChange={(e) => setForm({ ...form, name: e.target.value })}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    name: e.target.value,
+                                }))
+                            }
                             placeholder="Acme Inc."
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all placeholder:text-muted-foreground/50"
                         />
@@ -148,7 +151,12 @@ export default function NewOrgPage() {
                         <input
                             type="url"
                             value={form.url}
-                            onChange={(e) => setForm({ ...form, url: e.target.value })}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    url: e.target.value,
+                                }))
+                            }
                             placeholder="https://acme.com"
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all placeholder:text-muted-foreground/50"
                         />
@@ -162,7 +170,12 @@ export default function NewOrgPage() {
                         </div>
                         <textarea
                             value={form.description}
-                            onChange={(e) => setForm({ ...form, description: e.target.value })}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    description: e.target.value,
+                                }))
+                            }
                             placeholder="Brief description of your organization?"
                             rows={3}
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all placeholder:text-muted-foreground/50 resize-none"
@@ -184,7 +197,12 @@ export default function NewOrgPage() {
                         <input
                             type="text"
                             value={form.domain || ''}
-                            onChange={(e) => setForm({ ...form, domain: e.target.value })}
+                            onChange={(e) =>
+                                setForm((current) => ({
+                                    ...current,
+                                    domain: e.target.value,
+                                }))
+                            }
                             placeholder="acme.com"
                             className="w-full px-3.5 py-2.5 bg-background border border-input rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-ring/50 focus:border-ring transition-all placeholder:text-muted-foreground/50"
                         />
@@ -193,13 +211,17 @@ export default function NewOrgPage() {
                         </p>
                     </div>
 
-                    <label className="flex items-start gap-3 cursor-pointer group">
+                    <div className="flex items-start gap-3 cursor-pointer group">
                         <div className="relative mt-0.5">
                             <input
+                                id="attach-users-by-domain"
                                 type="checkbox"
                                 checked={form.shouldAttachUsersByDomain}
                                 onChange={(e) =>
-                                    setForm({ ...form, shouldAttachUsersByDomain: e.target.checked })
+                                    setForm((current) => ({
+                                        ...current,
+                                        shouldAttachUsersByDomain: e.target.checked,
+                                    }))
                                 }
                                 className="sr-only peer"
                             />
@@ -211,7 +233,7 @@ export default function NewOrgPage() {
                                 )}
                             </div>
                         </div>
-                        <div>
+                        <label htmlFor="attach-users-by-domain" className="block">
                             <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
                                 <Shield className="size-3.5" />
                                 Auto-attach users by domain
@@ -219,8 +241,8 @@ export default function NewOrgPage() {
                             <span className="text-xs text-muted-foreground block mt-0.5">
                                 Automatically add users with matching email domain to this organization
                             </span>
-                        </div>
-                    </label>
+                        </label>
+                    </div>
                 </div>
 
                 <div className="flex items-center justify-end gap-3 pt-2">

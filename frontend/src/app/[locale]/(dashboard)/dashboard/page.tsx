@@ -67,8 +67,13 @@ export default function DashboardPage() {
                     </div>
                     <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
                         {isLoading ? (
-                            [1, 2, 3, 4].map((i) => (
-                                <Skeleton key={i} className="min-w-[200px] h-[140px] rounded-xl" />
+                            [
+                                { id: "recent-1" },
+                                { id: "recent-2" },
+                                { id: "recent-3" },
+                                { id: "recent-4" },
+                            ].map((item) => (
+                                <Skeleton key={item.id} className="min-w-[200px] h-[140px] rounded-xl" />
                             ))
                         ) : recentWorkflows.length === 0 ? (
                             <div className="w-full py-12 flex flex-col items-center justify-center border border-dashed border-border rounded-xl bg-card/30">

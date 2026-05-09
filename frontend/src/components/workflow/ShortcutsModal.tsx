@@ -211,7 +211,7 @@ function ModeButton({
 
 function ShortcutItem({ label, keys, separator = '+' }: { label: string, keys: string[], separator?: string }) {
     return (
-        <div className="flex items-center justify-between py-2 group hover:bg-white/5 -mx-2 px-2 rounded-lg transition-colors">
+        <div className="flex items-center justify-between p-2 group hover:bg-white/5 -mx-2 rounded-lg transition-colors">
             <span className="text-sm text-white/70 group-hover:text-white transition-colors capitalize">{label}</span>
             <div className="flex items-center gap-1.5">
                 {keys.map((k, i) => (

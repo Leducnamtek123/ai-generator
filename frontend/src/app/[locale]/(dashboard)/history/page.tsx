@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useEffectEvent } from 'react';
 import {
     LayoutGrid, Image as ImageIcon, Music, Mic, Video, Wand2,
     Download, Trash2, Search, Loader2
@@ -122,9 +122,15 @@ export default function HistoryPage() {
       setIsLoading(false);
     }, [filter, search]);
 
+    const fetchHistoryEvent = useEffectEvent((page: number, reset: boolean) => {
+        void fetchHistory(page, reset);
+    });
+
     useEffect(() => {
-        queueMicrotask(() => { void fetchHistory(1, true); });
-    }, [filter, fetchHistory]);
+        queueMicrotask(() => {
+            fetchHistoryEvent(1, true);
+        });
+    }, [filter]);
 
     const handleDelete = async (id: string) => {
         try {

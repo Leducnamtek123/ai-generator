@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Image from "next/image";
 
 import { Image as ImageIcon, Loader2, Play } from "lucide-react";
 import { Handle, Position, useUpdateNodeInternals } from "@xyflow/react";
@@ -179,13 +180,25 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
             ) : null}
 
             {data.previewUrl ? (
-              <div className="relative aspect-video w-full">
-                {/* eslint-disable-next-line @next/next/no-img-element -- Workflow outputs can be arbitrary provider URLs not declared in next.config. */}
-                <img
+              <div
+                className="relative aspect-video w-full"
+                role="button"
+                tabIndex={0}
+                onClick={() => data.onOpenImageEditor?.(data.previewUrl ?? "")}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    data.onOpenImageEditor?.(data.previewUrl ?? "");
+                  }
+                }}
+              >
+                <Image
                   src={data.previewUrl}
                   alt="Generated"
-                  className="h-full w-full cursor-pointer object-cover transition-all hover:ring-2 hover:ring-blue-500/50"
-                  onClick={() => data.onOpenImageEditor?.(data.previewUrl ?? "")}
+                  fill
+                  unoptimized
+                  sizes={data.isPreview ? "120px" : "340px"}
+                  className="cursor-pointer object-cover transition-all hover:ring-2 hover:ring-blue-500/50"
                   onLoad={handleMediaLoad}
                 />
               </div>

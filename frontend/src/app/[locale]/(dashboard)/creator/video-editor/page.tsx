@@ -281,9 +281,10 @@ function VideoEditorPageContent() {
     );
     const selectedClip = useMemo(() => {
         for (const track of state.tracks) {
-            const clip = track.clips.find((item) => item.id === state.selectedClipId);
-            if (clip) {
-                return clip;
+            for (const clip of track.clips) {
+                if (clip.id === state.selectedClipId) {
+                    return clip;
+                }
             }
         }
 
@@ -789,7 +790,7 @@ function VideoEditorPageContent() {
                                     key={previewMedia.id}
                                     src={previewMedia.url}
                                     poster={previewMedia.thumbnailUrl}
-                                    className="h-full w-full object-contain bg-black"
+                                    className="h-full w-full object-contain bg-[#0a0a0f]"
                                     controls
                                     autoPlay={false}
                                     muted
@@ -799,7 +800,7 @@ function VideoEditorPageContent() {
                                     src={previewMedia.thumbnailUrl}
                                     alt={previewMedia.name}
                                     fill
-                                    className="object-contain bg-black"
+                                    className="object-contain bg-[#0a0a0f]"
                                     sizes="(max-width: 1024px) 100vw, 50vw"
                                 />
                             )
