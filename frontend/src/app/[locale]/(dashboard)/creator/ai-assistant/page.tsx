@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -52,6 +52,88 @@ type AssistantProjectPayload = {
     version: number;
     savedAt: string;
     snapshot: AssistantSnapshot;
+};
+
+type AssistantState = {
+    messages: Message[];
+    input: string;
+    isGenerating: boolean;
+    errorMessage: string | null;
+    selectedAction: string | null;
+    selectedProvider: string;
+    pendingAttachments: Array<{ type: 'image' | 'video'; url: string }>;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type AssistantAction =
+    | { type: 'set-messages'; messages: Message[] }
+    | { type: 'append-message'; message: Message }
+    | { type: 'set-input'; input: string }
+    | { type: 'set-generating'; isGenerating: boolean }
+    | { type: 'set-error'; errorMessage: string | null }
+    | { type: 'set-selected-action'; selectedAction: string | null }
+    | { type: 'set-selected-provider'; selectedProvider: string }
+    | { type: 'set-pending-attachments'; pendingAttachments: Array<{ type: 'image' | 'video'; url: string }>; }
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-loading'; isProjectLoading: boolean }
+    | { type: 'set-project-saving'; isProjectSaving: boolean }
+    | { type: 'set-project-error'; projectError: string | null }
+    | { type: 'reset-conversation' };
+
+const initialAssistantState: AssistantState = {
+    messages: [],
+    input: '',
+    isGenerating: false,
+    errorMessage: null,
+    selectedAction: null,
+    selectedProvider: '',
+    pendingAttachments: [],
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+const assistantReducer = (state: AssistantState, action: AssistantAction): AssistantState => {
+    switch (action.type) {
+        case 'set-messages':
+            return { ...state, messages: action.messages };
+        case 'append-message':
+            return { ...state, messages: [...state.messages, action.message] };
+        case 'set-input':
+            return { ...state, input: action.input };
+        case 'set-generating':
+            return { ...state, isGenerating: action.isGenerating };
+        case 'set-error':
+            return { ...state, errorMessage: action.errorMessage };
+        case 'set-selected-action':
+            return { ...state, selectedAction: action.selectedAction };
+        case 'set-selected-provider':
+            return { ...state, selectedProvider: action.selectedProvider };
+        case 'set-pending-attachments':
+            return { ...state, pendingAttachments: action.pendingAttachments };
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.projectError };
+        case 'reset-conversation':
+            return {
+                ...initialAssistantState,
+                messages: [],
+                selectedProvider: state.selectedProvider,
+                projectId: state.projectId,
+                projectError: state.projectError,
+            };
+        default:
+            return state;
+    }
 };
 
 const normalizeAssistantSnapshot = (value: unknown): Partial<AssistantSnapshot> => {
@@ -186,12 +268,7 @@ export default function AssistantPage() {
 }
 
 function AssistantPageContent() {
-    const [messages, setMessages] = useState<Message[]>([]);
-    const [input, setInput] = useState('');
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [selectedAction, setSelectedAction] = useState<string | null>(null);
-    const [selectedProvider, setSelectedProvider] = useState('');
+    const [state, dispatch] = useReducer(assistantReducer, initialAssistantState);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const attachmentInputRef = useRef<HTMLInputElement>(null);
@@ -199,11 +276,6 @@ function AssistantPageContent() {
     const pendingPromptRef = useRef<string | null>(null);
     const pendingActionRef = useRef<string | null>(null);
     const pendingGenerationIdRef = useRef<string | null>(null);
-    const [pendingAttachments, setPendingAttachments] = useState<Array<{ type: 'image' | 'video'; url: string }>>([]);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const { startGeneration, currentGeneration, error, reset } = useGenerationStore();
     const { providers: generationProviders } = useGenerationProviders();
     const { replace } = useRouter();
@@ -213,7 +285,7 @@ function AssistantPageContent() {
         () => generationProviders.filter((provider) => provider.capabilities.some((capability) => capability in actionCapabilityMap || capability === 'image-generation' || capability === 'video-generation' || capability === 'audio-music' || capability === 'audio-sfx')),
         [generationProviders],
     );
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = state.isProjectLoading || state.isProjectSaving;
 
     const resolveProviderForAction = (actionId?: string | null) => {
         const capability = actionId ? actionCapabilityMap[actionId] : 'image-generation';
@@ -222,11 +294,11 @@ function AssistantPageContent() {
         );
 
         if (compatibleProviders.length === 0) {
-            return selectedProvider || '';
+            return state.selectedProvider || '';
         }
 
-        if (selectedProvider && compatibleProviders.some((provider) => provider.name === selectedProvider)) {
-            return selectedProvider;
+        if (state.selectedProvider && compatibleProviders.some((provider) => provider.name === state.selectedProvider)) {
+            return state.selectedProvider;
         }
 
         return compatibleProviders[0].name;
@@ -234,20 +306,21 @@ function AssistantPageContent() {
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        dispatch({ type: 'set-project-id', projectId: requestedProjectId });
 
         const applySnapshot = (snapshot: Partial<AssistantSnapshot>) => {
-            setMessages(
-                snapshot.messages?.map((message) => ({
+            dispatch({
+                type: 'set-messages',
+                messages: snapshot.messages?.map((message) => ({
                     ...message,
                     timestamp: new Date(message.timestamp),
                 })) ?? [],
-            );
-            setInput(snapshot.input ?? '');
-            setSelectedAction(snapshot.selectedAction ?? null);
-            setSelectedProvider(snapshot.selectedProvider ?? '');
-            setPendingAttachments(snapshot.pendingAttachments ?? []);
-            setProjectError(null);
+            });
+            dispatch({ type: 'set-input', input: snapshot.input ?? '' });
+            dispatch({ type: 'set-selected-action', selectedAction: snapshot.selectedAction ?? null });
+            dispatch({ type: 'set-selected-provider', selectedProvider: snapshot.selectedProvider ?? '' });
+            dispatch({ type: 'set-pending-attachments', pendingAttachments: snapshot.pendingAttachments ?? [] });
+            dispatch({ type: 'set-project-error', projectError: null });
             pendingPromptRef.current = null;
             pendingActionRef.current = null;
             pendingGenerationIdRef.current = null;
@@ -273,7 +346,7 @@ function AssistantPageContent() {
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatch({ type: 'set-project-loading', isProjectLoading: true });
 
         void (async () => {
             try {
@@ -286,12 +359,12 @@ function AssistantPageContent() {
             } catch (loadError) {
                 console.error('Failed to load assistant project', loadError);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
+                    dispatch({ type: 'set-project-error', projectError: 'Loaded local draft because backend project load failed.' });
                     loadDraft();
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'set-project-loading', isProjectLoading: false });
                 }
             }
         })();
@@ -299,29 +372,7 @@ function AssistantPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [searchParams]);
-
-    useEffect(() => {
-        if (!generationProviders.length) {
-            return;
-        }
-
-        if (!selectedProvider || !generationProviders.some((provider) => provider.name === selectedProvider)) {
-            const defaultProvider = resolveProviderForAction(selectedAction);
-            setSelectedProvider(defaultProvider || generationProviders[0].name);
-        }
-    }, [generationProviders, selectedAction, selectedProvider]);
-
-    useEffect(() => {
-        if (!selectedAction || !generationProviders.length) {
-            return;
-        }
-
-        const resolvedProvider = resolveProviderForAction(selectedAction);
-        if (resolvedProvider && resolvedProvider !== selectedProvider) {
-            setSelectedProvider(resolvedProvider);
-        }
-    }, [generationProviders, selectedAction, selectedProvider]);
+    }, [searchParamsSnapshot]);
 
     const scrollToBottom = () => {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -329,10 +380,10 @@ function AssistantPageContent() {
 
     useEffect(() => {
         scrollToBottom();
-    }, [messages]);
+    }, [state.messages]);
 
     useEffect(() => {
-        if (!isGenerating) {
+        if (!state.isGenerating) {
             return;
         }
 
@@ -345,13 +396,13 @@ function AssistantPageContent() {
         }
 
         if (currentGeneration.status === 'completed') {
-            const prompt = pendingPromptRef.current || input;
+            const prompt = pendingPromptRef.current || state.input;
             const actionKey = pendingActionRef.current;
             const actionLabel = actionKey ? actionConfig[actionKey]?.successLabel : null;
             messageIdRef.current += 1;
-            setMessages((prev) => [
-                ...prev,
-                {
+            dispatch({
+                type: 'append-message',
+                message: {
                     id: `msg_${messageIdRef.current}`,
                     role: 'assistant',
                     content: prompt
@@ -360,40 +411,40 @@ function AssistantPageContent() {
                     timestamp: new Date(),
                     generatedImages: currentGeneration.resultUrl ? [currentGeneration.resultUrl] : undefined,
                 },
-            ]);
+            });
             pendingPromptRef.current = null;
             pendingActionRef.current = null;
             pendingGenerationIdRef.current = null;
-            setIsGenerating(false);
-            setErrorMessage(null);
+            dispatch({ type: 'set-generating', isGenerating: false });
+            dispatch({ type: 'set-error', errorMessage: null });
         } else if (currentGeneration.status === 'failed') {
             pendingPromptRef.current = null;
             pendingActionRef.current = null;
             pendingGenerationIdRef.current = null;
-            setIsGenerating(false);
-            setErrorMessage(currentGeneration.error || error || 'Generation failed. Please try again.');
+            dispatch({ type: 'set-generating', isGenerating: false });
+            dispatch({ type: 'set-error', errorMessage: currentGeneration.error || error || 'Generation failed. Please try again.' });
         }
-    }, [currentGeneration, error, input, isGenerating]);
+    }, [currentGeneration, error, state.input, state.isGenerating]);
 
     const handleSaveProject = async () => {
         const snapshot: AssistantSnapshot = {
-            messages: messages.map((message) => ({
+            messages: state.messages.map((message) => ({
                 ...message,
                 timestamp: message.timestamp.toISOString(),
             })),
-            input,
-            selectedAction,
-            selectedProvider,
-            pendingAttachments,
+            input: state.input,
+            selectedAction: state.selectedAction,
+            selectedProvider: state.selectedProvider,
+            pendingAttachments: state.pendingAttachments,
         };
 
         localStorage.setItem('assistant:draft:v1', JSON.stringify(snapshot));
-        setIsProjectSaving(true);
-        setProjectError(null);
+        dispatch({ type: 'set-project-saving', isProjectSaving: true });
+        dispatch({ type: 'set-project-error', projectError: null });
 
         try {
-            if (projectId) {
-                await projectApi.update(projectId, {
+            if (state.projectId) {
+                await projectApi.update(state.projectId, {
                     name: 'AI Assistant Session',
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot } satisfies AssistantProjectPayload,
                 });
@@ -402,29 +453,29 @@ function AssistantPageContent() {
                     name: 'AI Assistant Session',
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot } satisfies AssistantProjectPayload,
                 });
-                setProjectId(created.project.id);
+                dispatch({ type: 'set-project-id', projectId: created.project.id });
                 replace(`${window.location.pathname}?projectId=${created.project.id}`);
             }
             toast.success('Assistant project saved.');
         } catch (saveError) {
             console.error('Failed to save assistant project', saveError);
-            setProjectError('Saved locally, but backend project save failed.');
+            dispatch({ type: 'set-project-error', projectError: 'Saved locally, but backend project save failed.' });
             toast.error('Assistant project saved locally, backend save failed.');
         } finally {
-            setIsProjectSaving(false);
+            dispatch({ type: 'set-project-saving', isProjectSaving: false });
         }
     };
 
     const handleSend = async () => {
-        if (!input.trim() && !selectedAction) return;
+        if (!state.input.trim() && !state.selectedAction) return;
         messageIdRef.current += 1;
         const userMessageId = `msg_${messageIdRef.current}`;
-        const action = selectedAction ? actionConfig[selectedAction] : null;
-        const promptText = input.trim() || action?.prompt || 'Create something new.';
-        const provider = resolveProviderForAction(selectedAction);
+        const action = state.selectedAction ? actionConfig[state.selectedAction] : null;
+        const promptText = state.input.trim() || action?.prompt || 'Create something new.';
+        const provider = resolveProviderForAction(state.selectedAction);
 
         if (!provider) {
-            setErrorMessage('No compatible provider is available for this action.');
+            dispatch({ type: 'set-error', errorMessage: 'No compatible provider is available for this action.' });
             return;
         }
 
@@ -433,17 +484,17 @@ function AssistantPageContent() {
             role: 'user',
             content: promptText,
             timestamp: new Date(),
-            attachments: pendingAttachments.length > 0 ? pendingAttachments : undefined,
+            attachments: state.pendingAttachments.length > 0 ? state.pendingAttachments : undefined,
         };
 
-        setMessages((prev) => [...prev, userMsg]);
-        setErrorMessage(null);
-        setInput('');
-        setSelectedAction(null);
-        setPendingAttachments([]);
-        setIsGenerating(true);
+        dispatch({ type: 'append-message', message: userMsg });
+        dispatch({ type: 'set-error', errorMessage: null });
+        dispatch({ type: 'set-input', input: '' });
+        dispatch({ type: 'set-selected-action', selectedAction: null });
+        dispatch({ type: 'set-pending-attachments', pendingAttachments: [] });
+        dispatch({ type: 'set-generating', isGenerating: true });
         pendingPromptRef.current = userMsg.content;
-        pendingActionRef.current = selectedAction;
+        pendingActionRef.current = state.selectedAction;
 
         try {
             await startGeneration(action?.endpoint ?? '/generations/image', {
@@ -455,21 +506,21 @@ function AssistantPageContent() {
             pendingPromptRef.current = null;
             pendingActionRef.current = null;
             pendingGenerationIdRef.current = null;
-            setIsGenerating(false);
-            setErrorMessage('Failed to start generation. Please try again.');
+            dispatch({ type: 'set-generating', isGenerating: false });
+            dispatch({ type: 'set-error', errorMessage: 'Failed to start generation. Please try again.' });
         }
     };
 
     const handleResetConversation = () => {
         reset();
-        setMessages([]);
-        setInput('');
-        setErrorMessage(null);
-        setSelectedAction(null);
-        setSelectedProvider('');
-        setIsGenerating(false);
-        setPendingAttachments([]);
-        setProjectError(null);
+        dispatch({ type: 'reset-conversation' });
+        dispatch({ type: 'set-input', input: '' });
+        dispatch({ type: 'set-error', errorMessage: null });
+        dispatch({ type: 'set-selected-action', selectedAction: null });
+        dispatch({ type: 'set-selected-provider', selectedProvider: '' });
+        dispatch({ type: 'set-generating', isGenerating: false });
+        dispatch({ type: 'set-pending-attachments', pendingAttachments: [] });
+        dispatch({ type: 'set-project-error', projectError: null });
         pendingPromptRef.current = null;
         pendingActionRef.current = null;
         pendingGenerationIdRef.current = null;
@@ -486,13 +537,16 @@ function AssistantPageContent() {
             return;
         }
 
-        setPendingAttachments((current) => [
-            ...(current ?? []),
-            {
-                type: file.type.startsWith('video/') ? 'video' : 'image',
-                url: uploaded.url,
-            },
-        ]);
+        dispatch({
+            type: 'set-pending-attachments',
+            pendingAttachments: [
+                ...state.pendingAttachments,
+                {
+                    type: file.type.startsWith('video/') ? 'video' : 'image',
+                    url: uploaded.url,
+                },
+            ],
+        });
         toast.success('Attachment added.');
         event.target.value = '';
     };
@@ -520,7 +574,7 @@ function AssistantPageContent() {
     };
 
     const handleReuseMessage = (text: string) => {
-        setInput(text);
+        dispatch({ type: 'set-input', input: text });
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -530,8 +584,8 @@ function AssistantPageContent() {
         }
     };
 
-    const isEmpty = messages.length === 0;
-    const canSend = Boolean((input.trim() || selectedAction) && !isGenerating);
+    const isEmpty = state.messages.length === 0;
+    const canSend = Boolean((state.input.trim() || state.selectedAction) && !state.isGenerating);
 
     return (
         <CreatorWorkspaceShell variant="stack">
@@ -551,9 +605,9 @@ function AssistantPageContent() {
                             </p>
                         </div>
 
-                        {errorMessage && (
+                        {state.errorMessage && (
                             <div className="mx-auto max-w-2xl rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive text-left">
-                                {errorMessage}
+                                {state.errorMessage}
                             </div>
                         )}
 
@@ -562,13 +616,13 @@ function AssistantPageContent() {
                             {quickActions.map((action) => (
                                 <button
                                     key={action.id}
-                                        onClick={() => {
-                                            setSelectedAction(action.id);
-                                            textareaRef.current?.focus();
-                                        }}
+                                    onClick={() => {
+                                        dispatch({ type: 'set-selected-action', selectedAction: action.id });
+                                        textareaRef.current?.focus();
+                                    }}
                                     className={cn(
                                         "flex items-center gap-2 px-4 py-2.5 rounded-full border transition-all text-sm",
-                                        selectedAction === action.id
+                                        state.selectedAction === action.id
                                             ? "bg-accent border-primary/20 text-foreground"
                                             : "bg-card border-border text-muted-foreground hover:text-foreground hover:bg-accent"
                                     )}
@@ -585,7 +639,7 @@ function AssistantPageContent() {
                                 size="sm"
                                 className="gap-2"
                                 onClick={handleResetConversation}
-                                disabled={messages.length === 0 && !input && !selectedAction}
+                                disabled={state.messages.length === 0 && !state.input && !state.selectedAction}
                             >
                                 <RefreshCcw className="size-4" />
                                 Reset conversation
@@ -598,13 +652,13 @@ function AssistantPageContent() {
                                 disabled={isProjectBusy}
                             >
                                 <Folder className="size-4" />
-                                {isProjectSaving ? 'Saving...' : 'Save Project'}
+                                {state.isProjectSaving ? 'Saving...' : 'Save Project'}
                             </Button>
                         </div>
 
-                        {projectError && (
+                        {state.projectError && (
                             <div className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 text-left">
-                                {projectError}
+                                {state.projectError}
                             </div>
                         )}
 
@@ -614,8 +668,8 @@ function AssistantPageContent() {
                                 <p className="text-sm text-muted-foreground">Use a live provider that supports the selected action.</p>
                             </div>
                             <select
-                                value={selectedProvider}
-                                onChange={(event) => setSelectedProvider(event.target.value)}
+                                value={state.selectedProvider}
+                                onChange={(event) => dispatch({ type: 'set-selected-provider', selectedProvider: event.target.value })}
                                 className="min-w-44 rounded-xl border border-border bg-background px-3 py-2 text-sm outline-none"
                             >
                                 {providerOptions.length > 0 ? (
@@ -635,8 +689,8 @@ function AssistantPageContent() {
                             <div className="relative bg-card border border-border rounded-2xl p-4 shadow-lg transition-all focus-within:border-ring focus-within:ring-1 focus-within:ring-ring">
                                 <textarea
                                     ref={textareaRef}
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
+                                    value={state.input}
+                                    onChange={(e) => dispatch({ type: 'set-input', input: e.target.value })}
                                     onKeyDown={handleKeyDown}
                                     placeholder="Describe your creation?"
                                     className="w-full bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground/50 min-h-[80px] resize-none"
@@ -656,7 +710,7 @@ function AssistantPageContent() {
                                         size="icon"
                                         className="size-9 rounded-full"
                                         onClick={handleSend}
-                                        disabled={!canSend || isGenerating || !resolveProviderForAction(selectedAction)}
+                                        disabled={!canSend || state.isGenerating || !resolveProviderForAction(state.selectedAction)}
                                     >
                                         <Send className="size-4" />
                                     </Button>
@@ -671,7 +725,7 @@ function AssistantPageContent() {
                                 {templates.map((t) => (
                                     <button
                                         key={t.label}
-                                        onClick={() => { setInput(t.prompt); textareaRef.current?.focus(); }}
+                                        onClick={() => { dispatch({ type: 'set-input', input: t.prompt }); textareaRef.current?.focus(); }}
                                         className="text-left p-4 rounded-xl border border-border bg-card hover:bg-accent transition-colors group"
                                     >
                                         <span className="text-xs font-semibold text-foreground/90 block">{t.label}</span>
@@ -689,7 +743,7 @@ function AssistantPageContent() {
                         <div className="max-w-4xl mx-auto p-6 space-y-6">
                             <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-card px-4 py-3 text-sm text-muted-foreground">
                                 <div>
-                                    Provider: <span className="font-medium text-foreground">{selectedProvider || 'backend default'}</span>
+                                    Provider: <span className="font-medium text-foreground">{state.selectedProvider || 'backend default'}</span>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button
@@ -697,7 +751,7 @@ function AssistantPageContent() {
                                         size="sm"
                                         className="gap-2"
                                         onClick={handleResetConversation}
-                                        disabled={messages.length === 0 && !input && !selectedAction}
+                                        disabled={state.messages.length === 0 && !state.input && !state.selectedAction}
                                     >
                                         <RefreshCcw className="size-4" />
                                         Reset
@@ -710,16 +764,16 @@ function AssistantPageContent() {
                                         disabled={isProjectBusy}
                                     >
                                         <Folder className="size-4" />
-                                        {isProjectSaving ? 'Saving...' : 'Save Project'}
+                                        {state.isProjectSaving ? 'Saving...' : 'Save Project'}
                                     </Button>
                                 </div>
                             </div>
-                            {projectError && (
+                            {state.projectError && (
                                 <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600">
-                                    {projectError}
+                                    {state.projectError}
                                 </div>
                             )}
-                            {messages.map((msg) => (
+                            {state.messages.map((msg) => (
                                 <div key={msg.id} className={cn("flex gap-3", msg.role === 'user' ? 'justify-end' : '')}>
                                     {msg.role === 'assistant' && (
                                         <div className="size-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 mt-1">
@@ -737,7 +791,7 @@ function AssistantPageContent() {
                                         </div>
                                         {msg.generatedImages && msg.generatedImages.length > 0 && (
                                             <div className="grid grid-cols-2 gap-2">
-                                                {msg.generatedImages.map((url, i) => (
+                                                {msg.generatedImages.map((url: string, i: number) => (
                                                     <div key={url} className="group relative aspect-square rounded-xl overflow-hidden border border-border">
                                                         <Image src={url} alt={`Generated ${i + 1}`} fill className="object-cover" sizes="(max-width: 768px) 100vw, 50vw" />
                                                         <div className="absolute inset-0 bg-zinc-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
@@ -764,7 +818,7 @@ function AssistantPageContent() {
                                     )}
                                 </div>
                             ))}
-                            {isGenerating && (
+                            {state.isGenerating && (
                                 <div className="flex gap-3">
                                     <div className="size-8 rounded-full bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
                                         <Bot className="size-4 text-primary" />
@@ -787,8 +841,8 @@ function AssistantPageContent() {
                             <div className="relative bg-card border border-border rounded-2xl p-3 focus-within:border-ring focus-within:ring-1 focus-within:ring-ring transition-all">
                                 <textarea
                                     ref={textareaRef}
-                                    value={input}
-                                    onChange={(e) => setInput(e.target.value)}
+                                    value={state.input}
+                                    onChange={(e) => dispatch({ type: 'set-input', input: e.target.value })}
                                     onKeyDown={handleKeyDown}
                                     placeholder="Type a message?"
                                     className="w-full bg-transparent border-none outline-none text-sm text-foreground placeholder:text-muted-foreground/50 min-h-[40px] max-h-[120px] resize-none"
@@ -799,7 +853,7 @@ function AssistantPageContent() {
                                         <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" onClick={() => attachmentInputRef.current?.click()}><Paperclip className="size-4" /></Button>
                                         <Button variant="ghost" size="icon" className="size-8 text-muted-foreground" onClick={() => document.getElementById('assistant-templates')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}><ImageIcon className="size-4" /></Button>
                                     </div>
-                                    <Button size="icon" className="size-8 rounded-full" onClick={handleSend} disabled={!canSend || isGenerating || !resolveProviderForAction(selectedAction)}>
+                                    <Button size="icon" className="size-8 rounded-full" onClick={handleSend} disabled={!canSend || state.isGenerating || !resolveProviderForAction(state.selectedAction)}>
                                         <Send className="size-4" />
                                     </Button>
                                 </div>

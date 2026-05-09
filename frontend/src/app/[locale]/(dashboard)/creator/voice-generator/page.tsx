@@ -69,6 +69,71 @@ type VoiceProjectPayload = {
     snapshot: Partial<VoiceSnapshot>;
 };
 
+type VoiceUiState = {
+    communityListings: VoiceListingItem[];
+    isCommunityLoading: boolean;
+    isAudioPickerOpen: boolean;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type VoiceUiAction =
+    | { type: 'setCommunityListings'; communityListings: VoiceListingItem[] }
+    | { type: 'setCommunityLoading'; isCommunityLoading: boolean }
+    | { type: 'setAudioPickerOpen'; isAudioPickerOpen: boolean }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | {
+        type: 'hydrate';
+        communityListings: VoiceListingItem[];
+        projectId: string | null;
+        isProjectLoading: boolean;
+        projectError: string | null;
+    };
+
+const initialUiState: VoiceUiState = {
+    communityListings: [],
+    isCommunityLoading: false,
+    isAudioPickerOpen: false,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+function uiReducer(state: VoiceUiState, action: VoiceUiAction): VoiceUiState {
+    switch (action.type) {
+        case 'setCommunityListings':
+            return { ...state, communityListings: action.communityListings };
+        case 'setCommunityLoading':
+            return { ...state, isCommunityLoading: action.isCommunityLoading };
+        case 'setAudioPickerOpen':
+            return { ...state, isAudioPickerOpen: action.isAudioPickerOpen };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'hydrate':
+            return {
+                ...state,
+                communityListings: action.communityListings,
+                projectId: action.projectId,
+                isProjectLoading: action.isProjectLoading,
+                projectError: action.projectError,
+            };
+        default:
+            return state;
+    }
+}
+
 const initialState: VoiceGeneratorState = {
     text: '',
     selectedVoice: 'aria',
@@ -143,35 +208,29 @@ export default function VoiceGeneratorPage() {
 
 function VoiceGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const { generateVoice, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const [communityListings, setCommunityListings] = useState<VoiceListingItem[]>([]);
-    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-    const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = uiState.isProjectLoading || uiState.isProjectSaving;
 
     useEffect(() => {
         if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
             fetchGenerations({ type: TemplateTypeEnum.VOICE_GENERATOR, limit: 12 });
         } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
             const fetchCommunity = async () => {
-                setIsCommunityLoading(true);
                 try {
                     const res = await import('@/lib/api').then(m => m.get<{ data: VoiceListingItem[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.VOICE_GENERATOR}&limit=12`));
-                    setCommunityListings(res.data || []);
+                    dispatchUi({ type: 'setCommunityListings', communityListings: res.data || [] });
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
                 } finally {
-                    setIsCommunityLoading(false);
+                    dispatchUi({ type: 'setCommunityLoading', isCommunityLoading: false });
                 }
             };
+            dispatchUi({ type: 'setCommunityLoading', isCommunityLoading: true });
             fetchCommunity();
         } else if (state.activeContentTab === TEMPLATES_TAB) { // Templates
             fetchTemplates(TemplateTypeEnum.VOICE_GENERATOR);
@@ -180,9 +239,10 @@ function VoiceGeneratorPageContent() {
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        const draftKey = 'voice-generator:draft:v1';
+        const draftRaw = localStorage.getItem(draftKey);
 
-        const applySnapshot = (snapshot: Partial<VoiceSnapshot>) => {
+        const applySnapshot = (snapshot: Partial<VoiceSnapshot>, projectError: string | null = null) => {
             dispatch({ type: 'setText', text: snapshot.text ?? '' });
             dispatch({ type: 'setSelectedVoice', selectedVoice: snapshot.selectedVoice ?? initialState.selectedVoice });
             dispatch({ type: 'setSelectedLanguage', selectedLanguage: snapshot.selectedLanguage ?? initialState.selectedLanguage });
@@ -194,27 +254,31 @@ function VoiceGeneratorPageContent() {
             dispatch({ type: 'setActiveContentTab', tab: snapshot.activeContentTab ?? initialState.activeContentTab });
             dispatch({ type: 'setSampleUrl', sampleUrl: snapshot.sampleUrl ?? null });
             dispatch({ type: 'setSampleName', sampleName: snapshot.sampleName ?? '' });
-            setProjectError(null);
+            dispatchUi({
+                type: 'hydrate',
+                communityListings: uiState.communityListings,
+                projectId: requestedProjectId,
+                isProjectLoading: false,
+                projectError,
+            });
         };
 
-        const loadDraft = () => {
-            const draftRaw = localStorage.getItem('voice-generator:draft:v1');
-            if (!draftRaw) return;
+        if (!requestedProjectId) {
+            if (!draftRaw) {
+                return;
+            }
 
             try {
                 applySnapshot(normalizeVoiceSnapshot(JSON.parse(draftRaw)));
             } catch (error) {
                 console.error('Failed to load voice draft', error);
             }
-        };
-
-        if (!requestedProjectId) {
-            loadDraft();
             return;
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatchUi({ type: 'setProjectLoading', isProjectLoading: true });
+        dispatchUi({ type: 'setProjectError', projectError: null });
 
         void (async () => {
             try {
@@ -225,12 +289,21 @@ function VoiceGeneratorPageContent() {
             } catch (error) {
                 console.error('Failed to load voice project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
-                    loadDraft();
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'setProjectError', projectError: 'Loaded local draft because backend project load failed.' });
+                    if (draftRaw) {
+                        try {
+                            applySnapshot(normalizeVoiceSnapshot(JSON.parse(draftRaw)), 'Loaded local draft because backend project load failed.');
+                        } catch (fallbackError) {
+                            console.error('Failed to load voice draft', fallbackError);
+                            dispatchUi({
+                                type: 'hydrate',
+                                communityListings: uiState.communityListings,
+                                projectId: requestedProjectId,
+                                isProjectLoading: false,
+                                projectError: 'Loaded local draft because backend project load failed.',
+                            });
+                        }
+                    }
                 }
             }
         })();
@@ -258,7 +331,7 @@ function VoiceGeneratorPageContent() {
 
     const handleReset = () => {
         dispatch({ type: 'reset' });
-        setProjectError(null);
+        dispatchUi({ type: 'setProjectError', projectError: null });
     };
 
     const handleSaveProject = () => {
@@ -283,10 +356,10 @@ function VoiceGeneratorPageContent() {
         localStorage.setItem('voice-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Voice Generator Draft',
                         description: 'Voice generator draft',
                         content: payload,
@@ -297,18 +370,18 @@ function VoiceGeneratorPageContent() {
                         description: 'Voice generator draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
-                setProjectError(null);
+                dispatchUi({ type: 'setProjectError', projectError: null });
                 toast.success('Voice saved to your projects.');
             } catch (error) {
                 console.error('Failed to persist voice project', error);
-                setProjectError('Saved locally, but backend project save failed.');
+                dispatchUi({ type: 'setProjectError', projectError: 'Saved locally, but backend project save failed.' });
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -336,24 +409,26 @@ function VoiceGeneratorPageContent() {
                 onGenerate={handleGenerate}
                 onReset={handleReset}
                 onSaveProject={handleSaveProject}
-                isGenerating={isGenerating}
+                loading={{
+                    isGenerating,
+                    isGenerationsLoading,
+                    isTemplatesLoading,
+                    isCommunityLoading: uiState.isCommunityLoading,
+                    isProjectLoading: uiState.isProjectLoading,
+                    isProjectSaving: uiState.isProjectSaving,
+                }}
                 generations={generations}
-                isGenerationsLoading={isGenerationsLoading}
                 templates={templates}
-                isTemplatesLoading={isTemplatesLoading}
-                communityListings={communityListings}
-                isCommunityLoading={isCommunityLoading}
+                communityListings={uiState.communityListings}
                 sampleUrl={state.sampleUrl}
                 sampleName={state.sampleName}
-                projectError={projectError}
-                isProjectLoading={isProjectLoading}
-                isProjectSaving={isProjectSaving}
-                onPickSample={() => setIsAudioPickerOpen(true)}
+                projectError={uiState.projectError}
+                onPickSample={() => dispatchUi({ type: 'setAudioPickerOpen', isAudioPickerOpen: true })}
                 onUploadSample={handleSampleUpload}
             />
             <MediaPickerModal
-                isOpen={isAudioPickerOpen}
-                onClose={() => setIsAudioPickerOpen(false)}
+                isOpen={uiState.isAudioPickerOpen}
+                onClose={() => dispatchUi({ type: 'setAudioPickerOpen', isAudioPickerOpen: false })}
                 onSelect={handleSampleSelect}
                 mediaType="audio"
             />

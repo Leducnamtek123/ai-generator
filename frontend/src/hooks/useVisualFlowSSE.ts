@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 /**
  * Visual Flow SSE Event Types (mirror of backend VFEventType)
  */
-export type VFEventType =
+type VFEventType =
   | 'pipeline:status'
   | 'scene:updated'
   | 'character:updated'
@@ -16,7 +16,7 @@ export type VFEventType =
   | 'export:completed'
   | 'heartbeat';
 
-export interface VFEvent {
+interface VFEvent {
   type: VFEventType;
   projectId: string;
   videoId?: string;

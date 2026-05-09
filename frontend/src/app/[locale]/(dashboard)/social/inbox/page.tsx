@@ -27,6 +27,95 @@ import { toast } from 'sonner';
 
 type InboxFilter = 'all' | 'mention' | 'comment' | 'dm';
 
+type InboxState = {
+    interactions: SocialInteraction[];
+    selectedId: number | string | null;
+    searchQuery: string;
+    replyText: string;
+    typeFilter: InboxFilter;
+    handledInteractionIds: string[];
+    isReplying: boolean;
+};
+
+type InboxAction =
+    | { type: 'setInteractions'; interactions: SocialInteraction[] }
+    | { type: 'prependInteraction'; interaction: SocialInteraction }
+    | { type: 'setSelectedId'; selectedId: number | string | null }
+    | { type: 'setSearchQuery'; searchQuery: string }
+    | { type: 'setReplyText'; replyText: string }
+    | { type: 'setTypeFilter'; typeFilter: InboxFilter }
+    | { type: 'markHandled'; interaction: SocialInteraction }
+    | { type: 'removeInteraction'; interaction: SocialInteraction }
+    | { type: 'patchInteraction'; interaction: SocialInteraction; patch: Partial<SocialInteraction> }
+    | { type: 'setIsReplying'; isReplying: boolean };
+
+const initialInboxState: InboxState = {
+    interactions: [],
+    selectedId: null,
+    searchQuery: '',
+    replyText: '',
+    typeFilter: 'all',
+    handledInteractionIds: [],
+    isReplying: false,
+};
+
+const getInteractionKey = (item: SocialInteraction) => {
+    const accountId = item.accountId ?? 'global';
+    return `${accountId}:${String(item.id)}`;
+};
+
+const inboxReducer = (state: InboxState, action: InboxAction): InboxState => {
+    switch (action.type) {
+        case 'setInteractions':
+            return { ...state, interactions: action.interactions };
+        case 'prependInteraction':
+            return { ...state, interactions: [action.interaction, ...state.interactions] };
+        case 'setSelectedId':
+            return { ...state, selectedId: action.selectedId };
+        case 'setSearchQuery':
+            return { ...state, searchQuery: action.searchQuery };
+        case 'setReplyText':
+            return { ...state, replyText: action.replyText };
+        case 'setTypeFilter':
+            return { ...state, typeFilter: action.typeFilter };
+        case 'markHandled': {
+            const key = getInteractionKey(action.interaction);
+            return {
+                ...state,
+                handledInteractionIds: state.handledInteractionIds.includes(key)
+                    ? state.handledInteractionIds
+                    : [...state.handledInteractionIds, key],
+                interactions: state.interactions.filter((entry) => getInteractionKey(entry) !== key),
+                selectedId: state.selectedId === action.interaction.id ? null : state.selectedId,
+            };
+        }
+        case 'removeInteraction': {
+            const key = getInteractionKey(action.interaction);
+            return {
+                ...state,
+                handledInteractionIds: state.handledInteractionIds.includes(key)
+                    ? state.handledInteractionIds
+                    : [...state.handledInteractionIds, key],
+                interactions: state.interactions.filter((entry) => getInteractionKey(entry) !== key),
+                selectedId: state.selectedId === action.interaction.id ? null : state.selectedId,
+            };
+        }
+        case 'patchInteraction': {
+            const key = getInteractionKey(action.interaction);
+            return {
+                ...state,
+                interactions: state.interactions.map((entry) =>
+                    getInteractionKey(entry) === key ? { ...entry, ...action.patch } : entry,
+                ),
+            };
+        }
+        case 'setIsReplying':
+            return { ...state, isReplying: action.isReplying };
+        default:
+            return state;
+    }
+};
+
 const ASSIGNEES = ['Me', 'Support', 'Sales', 'Marketing'] as const;
 const QUICK_LABELS = ['VIP', 'Bug', 'Lead', 'Escalation'] as const;
 const SAVED_REPLIES = [
@@ -43,27 +132,16 @@ const FILTERS: Array<{ key: InboxFilter; label: string }> = [
 ];
 
 export default function InboxPage() {
-    const [interactions, setInteractions] = React.useState<SocialInteraction[]>([]);
-    const [selectedId, setSelectedId] = React.useState<number | string | null>(null);
-    const [searchQuery, setSearchQuery] = React.useState('');
-    const [replyText, setReplyText] = React.useState('');
-    const [typeFilter, setTypeFilter] = React.useState<InboxFilter>('all');
-    const [handledInteractionIds, setHandledInteractionIds] = React.useState<string[]>([]);
-    const [isReplying, setIsReplying] = React.useState(false);
+    const [state, dispatch] = React.useReducer(inboxReducer, initialInboxState);
 
     const { socket } = useSocialSocket();
-
-    const getInteractionKey = React.useCallback((item: SocialInteraction) => {
-        const accountId = item.accountId ?? 'global';
-        return `${accountId}:${String(item.id)}`;
-    }, []);
 
     React.useEffect(() => {
         const fetchInbox = async () => {
             try {
                 const data = await socialHubApi.getInbox();
-                setInteractions(data);
-                if (data.length > 0) setSelectedId(data[0].id);
+                dispatch({ type: 'setInteractions', interactions: data });
+                if (data.length > 0) dispatch({ type: 'setSelectedId', selectedId: data[0].id });
             } catch (err) {
                 console.error('Failed to fetch inbox', err);
             }
@@ -77,8 +155,9 @@ export default function InboxPage() {
 
         socket.on('interaction:created', (newInteraction: SocialInteraction) => {
             console.log('Real-time interaction received:', newInteraction);
-            setInteractions(prev => [
-                {
+            dispatch({
+                type: 'prependInteraction',
+                interaction: {
                     id: `new_${Date.now()}`,
                     platform: newInteraction.platform,
                     type: newInteraction.type || 'mention',
@@ -87,8 +166,7 @@ export default function InboxPage() {
                     time: newInteraction.time || 'Just now',
                     isNew: true
                 },
-                ...prev
-            ]);
+            });
         });
 
         return () => {
@@ -97,58 +175,46 @@ export default function InboxPage() {
     }, [socket]);
 
     const visibleInteractions = React.useMemo(() => {
-        const normalizedQuery = searchQuery.trim().toLowerCase();
+        const normalizedQuery = state.searchQuery.trim().toLowerCase();
 
-        return interactions.filter((item) => {
+        return state.interactions.filter((item) => {
             const matchesSearch =
                 item.user.toLowerCase().includes(normalizedQuery) ||
                 item.content.toLowerCase().includes(normalizedQuery);
             const matchesType =
-                typeFilter === 'all' ? true : item.type.toLowerCase().includes(typeFilter);
-            const isHandled = handledInteractionIds.includes(getInteractionKey(item));
+                state.typeFilter === 'all' ? true : item.type.toLowerCase().includes(state.typeFilter);
+            const isHandled = state.handledInteractionIds.includes(getInteractionKey(item));
 
             return matchesSearch && matchesType && !isHandled;
         });
-    }, [getInteractionKey, handledInteractionIds, interactions, searchQuery, typeFilter]);
+    }, [state.handledInteractionIds, state.interactions, state.searchQuery, state.typeFilter]);
 
-    const selectedInteraction = visibleInteractions.find(i => i.id === selectedId) ?? visibleInteractions[0] ?? null;
-    const openCount = interactions.filter((item) => !handledInteractionIds.includes(getInteractionKey(item))).length;
-    const followUpCount = interactions.filter((item) => Boolean(item.followUp)).length;
-    const replyableCount = interactions.filter((item) => item.canReply !== false && !handledInteractionIds.includes(getInteractionKey(item))).length;
+    const selectedInteraction = visibleInteractions.find((i) => i.id === state.selectedId) ?? visibleInteractions[0] ?? null;
+    const openCount = state.interactions.filter((item) => !state.handledInteractionIds.includes(getInteractionKey(item))).length;
+    const followUpCount = state.interactions.filter((item) => Boolean(item.followUp)).length;
+    const replyableCount = state.interactions.filter((item) => item.canReply !== false && !state.handledInteractionIds.includes(getInteractionKey(item))).length;
     const selectedAssignment = selectedInteraction?.assignedTo ?? 'Unassigned';
     const selectedLabels = selectedInteraction?.labels ?? [];
     const selectedFollowUp = Boolean(selectedInteraction?.followUp);
 
     React.useEffect(() => {
         if (!visibleInteractions.length) {
-            setSelectedId(null);
+            dispatch({ type: 'setSelectedId', selectedId: null });
             return;
         }
 
-        if (!selectedInteraction || !visibleInteractions.some((item) => item.id === selectedId)) {
-            setSelectedId(visibleInteractions[0].id);
+        if (!selectedInteraction || !visibleInteractions.some((item) => item.id === state.selectedId)) {
+            dispatch({ type: 'setSelectedId', selectedId: visibleInteractions[0].id });
         }
-    }, [selectedId, selectedInteraction, visibleInteractions]);
+    }, [selectedInteraction, state.selectedId, visibleInteractions]);
 
     const hideInteractionLocally = React.useCallback((item: SocialInteraction) => {
-        setHandledInteractionIds((current) => {
-            const key = getInteractionKey(item);
-            return current.includes(key) ? current : [...current, key];
-        });
-        setInteractions((current) =>
-            current.filter((entry) => getInteractionKey(entry) !== getInteractionKey(item)),
-        );
-        setSelectedId((current) => (current === item.id ? null : current));
-    }, [getInteractionKey]);
+        dispatch({ type: 'markHandled', interaction: item });
+    }, []);
 
     const applyInteractionPatch = React.useCallback((item: SocialInteraction, patch: Partial<SocialInteraction>) => {
-        const key = getInteractionKey(item);
-        setInteractions((current) =>
-            current.map((entry) =>
-                getInteractionKey(entry) === key ? { ...entry, ...patch } : entry,
-            ),
-        );
-    }, [getInteractionKey]);
+        dispatch({ type: 'patchInteraction', interaction: item, patch });
+    }, []);
 
     const toggleFollowUp = React.useCallback(async (item: SocialInteraction) => {
         if (!item.accountId) {
@@ -226,20 +292,17 @@ export default function InboxPage() {
     }, [applyInteractionPatch]);
 
     const applySavedReply = (snippet: string) => {
-        setReplyText((current) => {
-            const prefix = current.trim().length > 0 ? `${current.trim()}\n\n` : '';
-            return `${prefix}${snippet}`;
+        dispatch({
+            type: 'setReplyText',
+            replyText: `${state.replyText.trim().length > 0 ? `${state.replyText.trim()}\n\n` : ''}${snippet}`,
         });
     };
 
     const insertReplySnippet = (snippet: string) => {
-        setReplyText((current) => {
-            const base = current.trimEnd();
-            if (!base) {
-                return snippet;
-            }
-
-            return `${base}${base.endsWith('\n') ? '' : ' '}${snippet}`;
+        const base = state.replyText.trimEnd();
+        dispatch({
+            type: 'setReplyText',
+            replyText: !base ? snippet : `${base}${base.endsWith('\n') ? '' : ' '}${snippet}`,
         });
     };
 
@@ -254,7 +317,7 @@ export default function InboxPage() {
     };
 
     const handleReply = async () => {
-        if (!replyText.trim()) {
+        if (!state.replyText.trim()) {
             toast.error('Please enter a reply message.');
             return;
         }
@@ -267,21 +330,21 @@ export default function InboxPage() {
             return;
         }
 
-        setIsReplying(true);
+        dispatch({ type: 'setIsReplying', isReplying: true });
         try {
             await socialHubApi.replyToInboxInteraction({
                 accountId: selectedInteraction.accountId,
                 interactionId: String(selectedInteraction.id),
-                message: replyText.trim(),
+                message: state.replyText.trim(),
             });
             toast.success('Response sent successfully!');
-            setReplyText('');
+            dispatch({ type: 'setReplyText', replyText: '' });
             hideInteractionLocally(selectedInteraction);
         } catch (err) {
             console.error('Failed to send reply', err);
             toast.error('Failed to send response.');
         }
-        setIsReplying(false);
+        dispatch({ type: 'setIsReplying', isReplying: false });
     };
 
     const handleMarkDone = async () => {
@@ -304,9 +367,9 @@ export default function InboxPage() {
     };
 
     const cycleFilter = () => {
-        const currentIndex = FILTERS.findIndex((filter) => filter.key === typeFilter);
+        const currentIndex = FILTERS.findIndex((filter) => filter.key === state.typeFilter);
         const nextFilter = FILTERS[(currentIndex + 1) % FILTERS.length];
-        setTypeFilter(nextFilter.key);
+        dispatch({ type: 'setTypeFilter', typeFilter: nextFilter.key });
     };
 
     return (
@@ -347,10 +410,10 @@ export default function InboxPage() {
                         {FILTERS.map((filter) => (
                             <Button
                                 key={filter.key}
-                                variant={typeFilter === filter.key ? 'default' : 'outline'}
+                                variant={state.typeFilter === filter.key ? 'default' : 'outline'}
                                 size="sm"
                                 className="h-8 text-xs"
-                                onClick={() => setTypeFilter(filter.key)}
+                                onClick={() => dispatch({ type: 'setTypeFilter', typeFilter: filter.key })}
                             >
                                 {filter.label}
                             </Button>
@@ -361,8 +424,8 @@ export default function InboxPage() {
                         <input 
                             className="w-full bg-muted/50 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary"
                             placeholder="Search interactions?"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
+                            value={state.searchQuery}
+                            onChange={(e) => dispatch({ type: 'setSearchQuery', searchQuery: e.target.value })}
                         />
                     </div>
                 </div>
@@ -376,10 +439,10 @@ export default function InboxPage() {
                                     initial={{ opacity: 0, x: -20, height: 0 }}
                                     animate={{ opacity: 1, x: 0, height: 'auto' }}
                                     exit={{ opacity: 0, scale: 0.95 }}
-                                    onClick={() => setSelectedId(item.id)}
+                                    onClick={() => dispatch({ type: 'setSelectedId', selectedId: item.id })}
                                     className={cn(
                                         "p-6 cursor-pointer border transition-all hover:bg-muted/30 relative rounded-xl",
-                                        selectedId === item.id ? "bg-primary/5 border-primary" : "border-border"
+                                        state.selectedId === item.id ? "bg-primary/5 border-primary" : "border-border"
                                     )}
                                 >
                                     {item.isNew && (
@@ -575,8 +638,8 @@ export default function InboxPage() {
                                     <textarea 
                                         className="w-full bg-transparent border-none focus:ring-0 text-sm resize-none min-h-[100px]"
                                         placeholder={`Reply to ${selectedInteraction.user}...`}
-                                        value={replyText}
-                                        onChange={(e) => setReplyText(e.target.value)}
+                                        value={state.replyText}
+                                        onChange={(e) => dispatch({ type: 'setReplyText', replyText: e.target.value })}
                                     />
                                     <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1">
@@ -590,10 +653,10 @@ export default function InboxPage() {
                                     <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
                                         {selectedFollowUp ? 'Marked for follow-up' : 'Ready to send'}
                                     </div>
-                                        <Button size="sm" onClick={() => void handleReply()} disabled={isReplying}>
+                                        <Button size="sm" onClick={() => void handleReply()} disabled={state.isReplying}>
                                             <Reply className="size-4 mr-2" />
-                                            {isReplying ? 'Sending...' : 'Send Response'}
-                                        </Button>
+                                        {state.isReplying ? 'Sending...' : 'Send Response'}
+                                    </Button>
                                     </div>
                                 </GlassCard>
                                 <div className="text-xs text-muted-foreground">

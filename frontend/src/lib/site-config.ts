@@ -1,4 +1,4 @@
-export type PlainObject = Record<string, unknown>;
+type PlainObject = Record<string, unknown>;
 
 const isPlainObject = (value: unknown): value is PlainObject =>
   Boolean(value) && typeof value === 'object' && !Array.isArray(value);

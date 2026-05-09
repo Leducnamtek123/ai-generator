@@ -92,6 +92,11 @@ type VideoPageState = {
     endImage: string | null;
     enhancePrompt: boolean;
     motionIntensity: number;
+    selectedProvider: string;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
 };
 
 type VideoPageAction =
@@ -106,6 +111,18 @@ type VideoPageAction =
     | { type: 'setEndImage'; endImage: string | null }
     | { type: 'toggleEnhancePrompt' }
     | { type: 'setMotionIntensity'; motionIntensity: number }
+    | { type: 'setSelectedProvider'; selectedProvider: string }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | {
+        type: 'hydrateSnapshot';
+        snapshot: Partial<VideoSnapshot>;
+        projectId: string | null;
+        isProjectLoading: boolean;
+        projectError: string | null;
+    }
     | { type: 'resetImages' }
     | { type: 'resetAll' };
 
@@ -138,6 +155,8 @@ type CommunityVideoListing = {
     thumbnail?: string;
 };
 
+type CommunityState = CommunityVideoListing[] | null;
+
 const initialState: VideoPageState = {
     activeContentTab: TUTORIALS_TAB,
     selectedModel: 'auto',
@@ -150,6 +169,11 @@ const initialState: VideoPageState = {
     endImage: null,
     enhancePrompt: false,
     motionIntensity: 50,
+    selectedProvider: '',
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
 };
 
 const normalizeVideoSnapshot = (value: unknown): Partial<VideoSnapshot> => {
@@ -197,6 +221,35 @@ function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState
             return { ...state, enhancePrompt: !state.enhancePrompt };
         case 'setMotionIntensity':
             return { ...state, motionIntensity: action.motionIntensity };
+        case 'setSelectedProvider':
+            return { ...state, selectedProvider: action.selectedProvider };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'hydrateSnapshot':
+            return {
+                ...state,
+                activeContentTab: action.snapshot.activeContentTab ?? state.activeContentTab,
+                selectedModel: action.snapshot.selectedModel ?? state.selectedModel,
+                showModelPicker: action.snapshot.showModelPicker ?? state.showModelPicker,
+                prompt: action.snapshot.prompt ?? state.prompt,
+                promptMode: action.snapshot.promptMode ?? state.promptMode,
+                duration: action.snapshot.duration ?? state.duration,
+                aspectRatio: action.snapshot.aspectRatio ?? state.aspectRatio,
+                startImage: action.snapshot.startImage ?? state.startImage,
+                endImage: action.snapshot.endImage ?? state.endImage,
+                enhancePrompt: action.snapshot.enhancePrompt ?? state.enhancePrompt,
+                motionIntensity: action.snapshot.motionIntensity ?? state.motionIntensity,
+                selectedProvider: action.snapshot.selectedProvider ?? state.selectedProvider,
+                projectId: action.projectId,
+                isProjectLoading: action.isProjectLoading,
+                projectError: action.projectError,
+            };
         case 'resetImages':
             return { ...state, startImage: null, endImage: null };
         case 'resetAll':
@@ -218,13 +271,7 @@ function VideoPageContent() {
     const { startGeneration, isGenerating, currentGeneration, reset, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const [state, dispatch] = useReducer(reducer, initialState);
-    const [communityListings, setCommunityListings] = useState<CommunityVideoListing[]>([]);
-    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-    const [selectedProvider, setSelectedProvider] = useState('');
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
+    const [communityState, setCommunityState] = useState<CommunityState>(null);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
@@ -239,51 +286,40 @@ function VideoPageContent() {
             return;
         }
 
-        if (!selectedProvider || !videoProviders.some((provider) => provider.name === selectedProvider)) {
-            setSelectedProvider(videoProviders[0].name);
+        if (!state.selectedProvider || !videoProviders.some((provider) => provider.name === state.selectedProvider)) {
+            dispatch({ type: 'setSelectedProvider', selectedProvider: videoProviders[0].name });
         }
-    }, [selectedProvider, videoProviders]);
+    }, [state.selectedProvider, videoProviders]);
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
-
-        const applySnapshot = (snapshot: Partial<VideoSnapshot>) => {
-            dispatch({ type: 'setActiveContentTab', activeContentTab: snapshot.activeContentTab ?? initialState.activeContentTab });
-            dispatch({ type: 'setSelectedModel', selectedModel: snapshot.selectedModel ?? initialState.selectedModel });
-            dispatch({ type: 'setShowModelPicker', showModelPicker: snapshot.showModelPicker ?? initialState.showModelPicker });
-            dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? '' });
-            dispatch({ type: 'setPromptMode', promptMode: snapshot.promptMode ?? initialState.promptMode });
-            dispatch({ type: 'setDuration', duration: snapshot.duration ?? initialState.duration });
-            dispatch({ type: 'setAspectRatio', aspectRatio: snapshot.aspectRatio ?? initialState.aspectRatio });
-            dispatch({ type: 'setStartImage', startImage: snapshot.startImage ?? null });
-            dispatch({ type: 'setEndImage', endImage: snapshot.endImage ?? null });
-            if (snapshot.enhancePrompt !== undefined && snapshot.enhancePrompt !== state.enhancePrompt) {
-                dispatch({ type: 'toggleEnhancePrompt' });
-            }
-            dispatch({ type: 'setMotionIntensity', motionIntensity: snapshot.motionIntensity ?? initialState.motionIntensity });
-            setSelectedProvider(snapshot.selectedProvider ?? '');
-            setProjectError(null);
+        const draftStorageKey = 'video-generator:draft:v1';
+        const draftRaw = localStorage.getItem(draftStorageKey);
+        const applySnapshot = (snapshot: Partial<VideoSnapshot>, projectError: string | null = null) => {
+            dispatch({
+                type: 'hydrateSnapshot',
+                snapshot,
+                projectId: requestedProjectId,
+                isProjectLoading: false,
+                projectError,
+            });
         };
 
-        const loadDraft = () => {
-            const draftRaw = localStorage.getItem('video-generator:draft:v1');
-            if (!draftRaw) return;
+        if (!requestedProjectId) {
+            if (!draftRaw) {
+                return;
+            }
 
             try {
                 applySnapshot(normalizeVideoSnapshot(JSON.parse(draftRaw)));
             } catch (error) {
                 console.error('Failed to load video draft', error);
             }
-        };
-
-        if (!requestedProjectId) {
-            loadDraft();
             return;
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatch({ type: 'setProjectLoading', isProjectLoading: true });
 
         void (async () => {
             try {
@@ -294,12 +330,31 @@ function VideoPageContent() {
             } catch (error) {
                 console.error('Failed to load video project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
-                    loadDraft();
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsProjectLoading(false);
+                    if (draftRaw) {
+                        try {
+                            applySnapshot(
+                                normalizeVideoSnapshot(JSON.parse(draftRaw)),
+                                'Loaded local draft because backend project load failed.',
+                            );
+                        } catch (draftError) {
+                            console.error('Failed to load video draft', draftError);
+                            dispatch({
+                                type: 'hydrateSnapshot',
+                                snapshot: {},
+                                projectId: requestedProjectId,
+                                isProjectLoading: false,
+                                projectError: 'Loaded local draft because backend project load failed.',
+                            });
+                        }
+                    } else {
+                        dispatch({
+                            type: 'hydrateSnapshot',
+                            snapshot: {},
+                            projectId: requestedProjectId,
+                            isProjectLoading: false,
+                            projectError: 'Loaded local draft because backend project load failed.',
+                        });
+                    }
                 }
             }
         })();
@@ -314,14 +369,12 @@ function VideoPageContent() {
             fetchGenerations({ type: TemplateTypeEnum.VIDEO_GENERATOR, limit: 12 });
         } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
             const fetchCommunity = async () => {
-                setIsCommunityLoading(true);
                 try {
                     const res = await import('@/lib/api').then(m => m.get<{ data: CommunityVideoListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.VIDEO_GENERATOR}&limit=12`));
-                    setCommunityListings(res.data || []);
+                    setCommunityState(res.data || []);
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
-                } finally {
-                    setIsCommunityLoading(false);
+                    setCommunityState([]);
                 }
             };
             fetchCommunity();
@@ -331,7 +384,7 @@ function VideoPageContent() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     const handleGenerate = async () => {
-        if (!state.prompt.trim() || isProjectLoading || isProjectSaving) return;
+        if (!state.prompt.trim() || state.isProjectLoading || state.isProjectSaving) return;
         reset();
 
         try {
@@ -342,7 +395,7 @@ function VideoPageContent() {
                 aspectRatio: state.aspectRatio,
                 startImageUrl: state.startImage || undefined,
                 endImageUrl: state.endImage || undefined,
-                provider: selectedProvider || undefined,
+                provider: state.selectedProvider || undefined,
             });
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to generate video');
@@ -352,8 +405,7 @@ function VideoPageContent() {
     const handleReset = () => {
         reset();
         dispatch({ type: 'resetAll' });
-        setSelectedProvider(videoProviders[0]?.name || '');
-        setProjectError(null);
+        dispatch({ type: 'setSelectedProvider', selectedProvider: videoProviders[0]?.name || '' });
     };
 
     const handleSave = () => {
@@ -372,7 +424,7 @@ function VideoPageContent() {
                 endImage: state.endImage,
                 enhancePrompt: state.enhancePrompt,
                 motionIntensity: state.motionIntensity,
-                selectedProvider,
+                selectedProvider: state.selectedProvider,
                 resultVideo,
             },
         };
@@ -380,10 +432,10 @@ function VideoPageContent() {
         localStorage.setItem('video-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Video Generator Draft',
                         description: 'Video generator draft',
                         content: payload,
@@ -394,18 +446,18 @@ function VideoPageContent() {
                         description: 'Video generator draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
-                setProjectError(null);
+                dispatch({ type: 'setProjectError', projectError: null });
                 toast.success('Video generator draft saved to your projects.');
             } catch (error) {
                 console.error('Failed to persist video project', error);
-                setProjectError('Saved locally, but backend project save failed.');
+                dispatch({ type: 'setProjectError', projectError: 'Saved locally, but backend project save failed.' });
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -425,7 +477,7 @@ function VideoPageContent() {
             endImage: state.endImage,
             enhancePrompt: state.enhancePrompt,
             motionIntensity: state.motionIntensity,
-            provider: selectedProvider,
+            provider: state.selectedProvider,
             resultVideo,
         };
 
@@ -516,8 +568,8 @@ function VideoPageContent() {
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Provider</h4>
                         <div className="bg-card rounded-xl border border-border px-4 py-3">
                             <select
-                                value={selectedProvider}
-                                onChange={(event) => setSelectedProvider(event.target.value)}
+                                value={state.selectedProvider}
+                                onChange={(event) => dispatch({ type: 'setSelectedProvider', selectedProvider: event.target.value })}
                                 className="w-full bg-transparent text-sm outline-none"
                                 disabled={isProvidersLoading}
                             >
@@ -642,9 +694,9 @@ function VideoPageContent() {
                             {currentGeneration.error}
                         </div>
                     )}
-                    {projectError && (
+                    {state.projectError && (
                         <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive">
-                            {projectError}
+                            {state.projectError}
                         </div>
                     )}
                 </div>
@@ -655,7 +707,7 @@ function VideoPageContent() {
                         Reset form
                     </Button>
                     <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleSave}>
-                        {isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
+                        {state.isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
                         Save project
                     </Button>
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
@@ -664,7 +716,7 @@ function VideoPageContent() {
                     </div>
                     <Button
                         onClick={handleGenerate}
-                        disabled={isGenerating || isProjectLoading || isProjectSaving || !state.prompt.trim()}
+                        disabled={isGenerating || state.isProjectLoading || state.isProjectSaving || !state.prompt.trim()}
                         className="w-full h-12 font-bold rounded-xl gap-2"
                     >
                         {isGenerating ? (
@@ -777,11 +829,11 @@ function VideoPageContent() {
                                 {state.activeContentTab === COMMUNITY_TAB && ( // Community
                                     <section>
                                         <h3 className="text-lg font-semibold mb-6">Community Showcase</h3>
-                                        {isCommunityLoading ? (
+                                        {communityState === null ? (
                                             <LoadingGrid />
-                                        ) : communityListings.length > 0 ? (
+                                        ) : communityState.length > 0 ? (
                                             <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                                {communityListings.map((listing) => (
+                                                {communityState.map((listing) => (
                                                     <VideoCard key={listing.id} generation={{ resultUrl: listing.thumbnail, prompt: listing.title }} />
                                                 ))}
                                             </div>

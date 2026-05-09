@@ -85,6 +85,81 @@ const getPageInitials = (name?: string | null) => {
     .join("") || "P";
 };
 
+type ChannelsState = {
+  accounts: SocialChannel[];
+  providers: SocialProvider[];
+  facebookPendingConnections: FacebookPendingConnection[];
+  isLoading: boolean;
+  isFacebookDialogOpen: boolean;
+  isFacebookReviewDialogOpen: boolean;
+  facebookReviewMode: 'pending' | 'connected' | null;
+  selectedFacebookPageIds: string[];
+  isRequestDialogOpen: boolean;
+  facebookAppId: string;
+  facebookAppSecret: string;
+  platformRequest: string;
+};
+
+type ChannelsAction =
+  | { type: 'setAccounts'; accounts: SocialChannel[] }
+  | { type: 'setProviders'; providers: SocialProvider[] }
+  | { type: 'setFacebookPendingConnections'; facebookPendingConnections: FacebookPendingConnection[] }
+  | { type: 'setIsLoading'; isLoading: boolean }
+  | { type: 'setIsFacebookDialogOpen'; isFacebookDialogOpen: boolean }
+  | { type: 'setIsFacebookReviewDialogOpen'; isFacebookReviewDialogOpen: boolean }
+  | { type: 'setFacebookReviewMode'; facebookReviewMode: 'pending' | 'connected' | null }
+  | { type: 'setSelectedFacebookPageIds'; selectedFacebookPageIds: string[] }
+  | { type: 'setIsRequestDialogOpen'; isRequestDialogOpen: boolean }
+  | { type: 'setFacebookAppId'; facebookAppId: string }
+  | { type: 'setFacebookAppSecret'; facebookAppSecret: string }
+  | { type: 'setPlatformRequest'; platformRequest: string };
+
+const initialChannelsState: ChannelsState = {
+  accounts: [],
+  providers: [],
+  facebookPendingConnections: [],
+  isLoading: true,
+  isFacebookDialogOpen: false,
+  isFacebookReviewDialogOpen: false,
+  facebookReviewMode: null,
+  selectedFacebookPageIds: [],
+  isRequestDialogOpen: false,
+  facebookAppId: "",
+  facebookAppSecret: "",
+  platformRequest: "",
+};
+
+function channelsReducer(state: ChannelsState, action: ChannelsAction): ChannelsState {
+  switch (action.type) {
+    case 'setAccounts':
+      return { ...state, accounts: action.accounts };
+    case 'setProviders':
+      return { ...state, providers: action.providers };
+    case 'setFacebookPendingConnections':
+      return { ...state, facebookPendingConnections: action.facebookPendingConnections };
+    case 'setIsLoading':
+      return { ...state, isLoading: action.isLoading };
+    case 'setIsFacebookDialogOpen':
+      return { ...state, isFacebookDialogOpen: action.isFacebookDialogOpen };
+    case 'setIsFacebookReviewDialogOpen':
+      return { ...state, isFacebookReviewDialogOpen: action.isFacebookReviewDialogOpen };
+    case 'setFacebookReviewMode':
+      return { ...state, facebookReviewMode: action.facebookReviewMode };
+    case 'setSelectedFacebookPageIds':
+      return { ...state, selectedFacebookPageIds: action.selectedFacebookPageIds };
+    case 'setIsRequestDialogOpen':
+      return { ...state, isRequestDialogOpen: action.isRequestDialogOpen };
+    case 'setFacebookAppId':
+      return { ...state, facebookAppId: action.facebookAppId };
+    case 'setFacebookAppSecret':
+      return { ...state, facebookAppSecret: action.facebookAppSecret };
+    case 'setPlatformRequest':
+      return { ...state, platformRequest: action.platformRequest };
+    default:
+      return state;
+  }
+}
+
 export default function ChannelsPage() {
     return (
         <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
@@ -98,19 +173,37 @@ function ChannelsPageContent() {
   const { replace } = useRouter();
   const searchParams = useSearchParams();
   const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-  const [accounts, setAccounts] = React.useState<SocialChannel[]>([]);
-  const [providers, setProviders] = React.useState<SocialProvider[]>([]);
-  const [facebookPendingConnections, setFacebookPendingConnections] = React.useState<FacebookPendingConnection[]>([]);
-  const [isLoading, setIsLoading] = React.useState(true);
-  const [isFacebookDialogOpen, setIsFacebookDialogOpen] = React.useState(false);
-  const [isFacebookReviewDialogOpen, setIsFacebookReviewDialogOpen] = React.useState(false);
-  const [facebookReviewMode, setFacebookReviewMode] = React.useState<'pending' | 'connected' | null>(null);
-  const [selectedFacebookPageIds, setSelectedFacebookPageIds] = React.useState<string[]>([]);
-  const [isRequestDialogOpen, setIsRequestDialogOpen] = React.useState(false);
-  const [facebookAppId, setFacebookAppId] = React.useState("");
-  const [facebookAppSecret, setFacebookAppSecret] = React.useState("");
-  const [platformRequest, setPlatformRequest] = React.useState("");
-  const [requestDraftReady, setRequestDraftReady] = React.useState(false);
+  const [state, dispatch] = React.useReducer(channelsReducer, initialChannelsState, (initial) => {
+    try {
+      const raw = window.localStorage.getItem("social-channels:request:draft");
+      if (!raw) {
+        return initial;
+      }
+
+      const parsed = JSON.parse(raw) as { platformRequest?: unknown };
+      return {
+        ...initial,
+        platformRequest: typeof parsed.platformRequest === "string" ? parsed.platformRequest : "",
+      };
+    } catch (error) {
+      console.error("Failed to restore social channels request draft", error);
+      return initial;
+    }
+  });
+  const {
+    accounts,
+    providers,
+    facebookPendingConnections,
+    isLoading,
+    isFacebookDialogOpen,
+    isFacebookReviewDialogOpen,
+    facebookReviewMode,
+    selectedFacebookPageIds,
+    isRequestDialogOpen,
+    facebookAppId,
+    facebookAppSecret,
+    platformRequest,
+  } = state;
   const REQUEST_DRAFT_KEY = "social-channels:request:draft";
 
   const fetchAccounts = React.useCallback(async () => {
@@ -119,15 +212,15 @@ function ChannelsPageContent() {
         socialHubApi.getChannels(),
         socialHubApi.getProviders()
       ]);
-      setAccounts(channels);
-      setProviders(providerList);
+      dispatch({ type: 'setAccounts', accounts: channels });
+      dispatch({ type: 'setProviders', providers: providerList });
       const pendingConnections = await socialHubApi.getFacebookPendingConnections();
-      setFacebookPendingConnections(pendingConnections);
+      dispatch({ type: 'setFacebookPendingConnections', facebookPendingConnections: pendingConnections });
     } catch (err) {
       console.error("Failed to fetch accounts", err);
       toast.error("Failed to load social channels");
     }
-    setIsLoading(false);
+    dispatch({ type: 'setIsLoading', isLoading: false });
   }, []);
 
   React.useEffect(() => {
@@ -178,38 +271,7 @@ function ChannelsPageContent() {
   );
 
   React.useEffect(() => {
-    if (facebookPendingConnections.length === 0) {
-      return;
-    }
-
-    setSelectedFacebookPageIds(
-      facebookPendingConnections[0]?.pages.map((page) => page.id) ?? [],
-    );
-    setFacebookReviewMode('pending');
-    setIsFacebookReviewDialogOpen(true);
-  }, [facebookPendingConnections]);
-
-  React.useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(REQUEST_DRAFT_KEY);
-      if (!raw) {
-        setRequestDraftReady(true);
-        return;
-      }
-
-      const parsed = JSON.parse(raw) as { platformRequest?: unknown };
-      if (typeof parsed.platformRequest === "string") {
-        setPlatformRequest(parsed.platformRequest);
-      }
-    } catch (error) {
-      console.error("Failed to restore social channels request draft", error);
-    } finally {
-      setRequestDraftReady(true);
-    }
-  }, []);
-
-  React.useEffect(() => {
-    if (!requestDraftReady || !isRequestDialogOpen) {
+    if (!isRequestDialogOpen) {
       return;
     }
 
@@ -226,7 +288,7 @@ function ChannelsPageContent() {
         platformRequest,
       }),
     );
-  }, [platformRequest, requestDraftReady]);
+  }, [platformRequest, isRequestDialogOpen]);
 
   const activeFacebookPendingConnection = facebookPendingConnections[0];
   const facebookAccounts = getProviderAccounts("facebook");
@@ -267,7 +329,7 @@ function ChannelsPageContent() {
         loading: "Saving selected Facebook pages...",
         success: () => {
           void fetchAccounts();
-          setIsFacebookReviewDialogOpen(false);
+          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: false });
           return "Facebook pages connected";
         },
         error: "Failed to connect selected Facebook pages",
@@ -286,7 +348,7 @@ function ChannelsPageContent() {
         loading: "Discarding pending Facebook setup...",
         success: () => {
           void fetchAccounts();
-          setIsFacebookReviewDialogOpen(false);
+          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: false });
           return "Pending Facebook setup discarded";
         },
         error: "Failed to discard pending Facebook setup",
@@ -305,7 +367,7 @@ function ChannelsPageContent() {
     );
 
     if (idsToRemove.length === 0) {
-      setIsFacebookReviewDialogOpen(false);
+      dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: false });
       return;
     }
 
@@ -313,7 +375,7 @@ function ChannelsPageContent() {
       loading: "Updating Facebook pages...",
       success: () => {
         void fetchAccounts();
-        setIsFacebookReviewDialogOpen(false);
+        dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: false });
         return "Facebook pages updated";
       },
       error: "Failed to update Facebook pages",
@@ -329,7 +391,7 @@ function ChannelsPageContent() {
       loading: "Disconnecting Facebook pages...",
       success: () => {
         void fetchAccounts();
-        setIsFacebookReviewDialogOpen(false);
+        dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: false });
         return "Facebook pages disconnected";
       },
       error: "Failed to disconnect Facebook pages",
@@ -359,7 +421,7 @@ function ChannelsPageContent() {
       appId: facebookAppId,
       appSecret: facebookAppSecret,
     });
-    setIsFacebookDialogOpen(false);
+    dispatch({ type: 'setIsFacebookDialogOpen', isFacebookDialogOpen: false });
   };
 
   const handleDisconnect = async (accountId: number) => {
@@ -381,8 +443,8 @@ function ChannelsPageContent() {
 
     toast.success("Request recorded. Our team will review the platform for future integration!");
     window.localStorage.removeItem(REQUEST_DRAFT_KEY);
-    setPlatformRequest("");
-    setIsRequestDialogOpen(false);
+    dispatch({ type: 'setPlatformRequest', platformRequest: "" });
+    dispatch({ type: 'setIsRequestDialogOpen', isRequestDialogOpen: false });
   };
 
   return (
@@ -545,9 +607,9 @@ function ChannelsPageContent() {
                         type="button"
                         className="text-primary transition-colors hover:text-primary/80"
                         onClick={() => {
-                          setSelectedFacebookPageIds(facebookAccounts.map((account) => String(account.id)));
-                          setFacebookReviewMode('connected');
-                          setIsFacebookReviewDialogOpen(true);
+                          dispatch({ type: 'setSelectedFacebookPageIds', selectedFacebookPageIds: facebookAccounts.map((account) => String(account.id)) });
+                          dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: 'connected' });
+                          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
                         }}
                       >
                         View all
@@ -594,13 +656,17 @@ function ChannelsPageContent() {
                   onClick={() => {
                     if (isConnected) {
                       if (provider.identifier === "facebook") {
-                        setSelectedFacebookPageIds(
-                          hasPendingFacebookConnection
+                        dispatch({
+                          type: 'setSelectedFacebookPageIds',
+                          selectedFacebookPageIds: hasPendingFacebookConnection
                             ? (activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [])
                             : facebookAccounts.map((account) => String(account.id)),
-                        );
-                        setFacebookReviewMode(hasPendingFacebookConnection ? 'pending' : 'connected');
-                        setIsFacebookReviewDialogOpen(true);
+                        });
+                        dispatch({
+                          type: 'setFacebookReviewMode',
+                          facebookReviewMode: hasPendingFacebookConnection ? 'pending' : 'connected',
+                        });
+                        dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
                         return;
                       }
 
@@ -610,15 +676,16 @@ function ChannelsPageContent() {
 
                     if (provider.identifier === "facebook") {
                       if (hasPendingFacebookConnection) {
-                        setSelectedFacebookPageIds(
-                          activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [],
-                        );
-                        setFacebookReviewMode('pending');
-                        setIsFacebookReviewDialogOpen(true);
+                        dispatch({
+                          type: 'setSelectedFacebookPageIds',
+                          selectedFacebookPageIds: activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [],
+                        });
+                        dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: 'pending' });
+                        dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
                         return;
                       }
 
-                      setIsFacebookDialogOpen(true);
+                      dispatch({ type: 'setIsFacebookDialogOpen', isFacebookDialogOpen: true });
                       return;
                     }
 
@@ -657,7 +724,7 @@ function ChannelsPageContent() {
               We&apos;re constantly adding new integrations. Let us know which one you need!
             </p>
           </div>
-          <Button variant="ghost" className="ml-auto" onClick={() => setIsRequestDialogOpen(true)}>
+          <Button variant="ghost" className="ml-auto" onClick={() => dispatch({ type: 'setIsRequestDialogOpen', isRequestDialogOpen: true })}>
             Send Request
           </Button>
         </div>
@@ -666,9 +733,9 @@ function ChannelsPageContent() {
       <Dialog
         open={isFacebookReviewDialogOpen}
         onOpenChange={(open) => {
-          setIsFacebookReviewDialogOpen(open);
+          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: open });
           if (!open) {
-            setFacebookReviewMode(null);
+            dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: null });
           }
         }}
       >
@@ -694,11 +761,12 @@ function ChannelsPageContent() {
                       className="mt-1 size-4 rounded border-border accent-primary"
                       checked={selectedFacebookPageIds.includes(page.id)}
                       onChange={() => {
-                        setSelectedFacebookPageIds((current) =>
-                          current.includes(page.id)
-                            ? current.filter((id) => id !== page.id)
-                            : [...current, page.id],
-                        );
+                        dispatch({
+                          type: 'setSelectedFacebookPageIds',
+                          selectedFacebookPageIds: selectedFacebookPageIds.includes(page.id)
+                            ? selectedFacebookPageIds.filter((id) => id !== page.id)
+                            : [...selectedFacebookPageIds, page.id],
+                        });
                       }}
                     />
                     {page.picture ? (
@@ -756,7 +824,7 @@ function ChannelsPageContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isFacebookDialogOpen} onOpenChange={setIsFacebookDialogOpen}>
+      <Dialog open={isFacebookDialogOpen} onOpenChange={(open) => dispatch({ type: 'setIsFacebookDialogOpen', isFacebookDialogOpen: open })}>
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>Connect Facebook Page</DialogTitle>
@@ -768,26 +836,26 @@ function ChannelsPageContent() {
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
               <Label htmlFor="facebookAppId">Facebook App ID</Label>
-              <Input
-                id="facebookAppId"
-                placeholder="123456789012345"
-                value={facebookAppId}
-                onChange={(e) => setFacebookAppId(e.target.value)}
-              />
+                <Input
+                  id="facebookAppId"
+                  placeholder="123456789012345"
+                  value={facebookAppId}
+                onChange={(e) => dispatch({ type: 'setFacebookAppId', facebookAppId: e.target.value })}
+                />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="facebookAppSecret">Facebook App Secret</Label>
-              <Input
-                id="facebookAppSecret"
-                type="password"
-                placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
-                value={facebookAppSecret}
-                onChange={(e) => setFacebookAppSecret(e.target.value)}
-              />
+                <Input
+                  id="facebookAppSecret"
+                  type="password"
+                  placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+                  value={facebookAppSecret}
+                onChange={(e) => dispatch({ type: 'setFacebookAppSecret', facebookAppSecret: e.target.value })}
+                />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsFacebookDialogOpen(false)}>
+            <Button variant="outline" onClick={() => dispatch({ type: 'setIsFacebookDialogOpen', isFacebookDialogOpen: false })}>
               Cancel
             </Button>
             <Button onClick={() => void handleFacebookConnect()}>Connect & Authorize</Button>
@@ -795,7 +863,7 @@ function ChannelsPageContent() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isRequestDialogOpen} onOpenChange={setIsRequestDialogOpen}>
+      <Dialog open={isRequestDialogOpen} onOpenChange={(open) => dispatch({ type: 'setIsRequestDialogOpen', isRequestDialogOpen: open })}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
             <DialogTitle>Request a new platform</DialogTitle>
@@ -808,11 +876,11 @@ function ChannelsPageContent() {
               className="min-h-[140px] w-full rounded-md border border-border bg-background p-3 text-sm"
               placeholder="Example: TikTok business account support for scheduling and analytics."
               value={platformRequest}
-              onChange={(e) => setPlatformRequest(e.target.value)}
+              onChange={(e) => dispatch({ type: 'setPlatformRequest', platformRequest: e.target.value })}
             />
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsRequestDialogOpen(false)}>
+            <Button variant="outline" onClick={() => dispatch({ type: 'setIsRequestDialogOpen', isRequestDialogOpen: false })}>
               Cancel
             </Button>
             <Button onClick={handlePlatformRequestSubmit}>Submit Request</Button>

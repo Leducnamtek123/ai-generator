@@ -15,7 +15,7 @@ export interface SocialChannel {
   metadata?: Record<string, unknown> | null;
 }
 
-export interface FacebookPendingPage {
+interface FacebookPendingPage {
   id: string;
   name: string;
   picture?: string | null;

@@ -21,7 +21,7 @@ import {
     Share2,
 } from 'lucide-react';
 
-export type ToolCategoryId = 'image' | 'video' | 'audio' | 'others';
+type ToolCategoryId = 'image' | 'video' | 'audio' | 'others';
 
 export interface SidebarItem {
     icon: LucideIcon;
@@ -33,13 +33,13 @@ export interface SidebarItem {
     pinnedByDefault?: boolean;
 }
 
-export interface ToolCategory {
+interface ToolCategory {
     id: ToolCategoryId;
     label: string;
     icon: LucideIcon;
 }
 
-export interface ToolHighlight {
+interface ToolHighlight {
     icon: LucideIcon;
     label: string;
     href: string;
@@ -47,7 +47,7 @@ export interface ToolHighlight {
     isNew?: boolean;
 }
 
-export interface TemplateSeed {
+interface TemplateSeed {
     id: string;
     title: string;
     thumbnail: string;
@@ -82,7 +82,7 @@ export const GALLERY_TABS = ['Personal', 'Community', 'Tutorials'] as const;
 export const MUSIC_CONTENT_TABS = ['My Creations', 'Community', 'Templates', 'Tutorials'] as const;
 export const DASHBOARD_TAGS = ['Templates', 'Community', 'Tutorials'] as const;
 
-export const navItems: SidebarItem[] = [
+const navItems: SidebarItem[] = [
     { icon: Home, label: 'Home', href: '/dashboard' },
     { icon: Box, label: 'Stock', href: '/stock' },
     { icon: Globe, label: 'Community', href: '/community' },
@@ -97,7 +97,7 @@ export const socialItems: SidebarItem[] = [
     { icon: MessageSquare, label: 'Interaction Inbox', href: '/social/inbox', isNew: true },
 ];
 
-export const bottomItems: SidebarItem[] = [
+const bottomItems: SidebarItem[] = [
     { icon: Box, label: 'Projects', href: '/projects' },
     { icon: Clock, label: 'History', href: '/history' },
     { icon: Bell, label: 'Notifications', href: '/notifications' },
@@ -158,7 +158,7 @@ export const CREATOR_TOOL_HIGHLIGHTS: ToolHighlight[] = [
     { icon: Music, label: 'Audio', href: '/creator/music-generator' },
 ];
 
-export const IMAGE_GENERATOR_PRESET_TEMPLATES: { new: TemplateSeed[]; featured: TemplateSeed[] } = {
+const IMAGE_GENERATOR_PRESET_TEMPLATES: { new: TemplateSeed[]; featured: TemplateSeed[] } = {
     new: [
         { id: '1', title: 'Create funny Valentine costume', thumbnail: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&h=400&fit=crop' },
         { id: '2', title: 'Create Valentine photobooth...', thumbnail: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300&h=400&fit=crop' },

@@ -1,18 +1,18 @@
 import { Download, Layers3, Palette, Sparkles, Wand2, Zap } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type LandingBrandLogo = {
+type LandingBrandLogo = {
   name: string;
   mark: string;
 };
 
-export type LandingWorkflowStep = {
+type LandingWorkflowStep = {
   icon: LucideIcon;
   title: string;
   description: string;
 };
 
-export type LandingFeatureCard = {
+type LandingFeatureCard = {
   icon: LucideIcon;
   title: string;
   description: string;
@@ -20,7 +20,7 @@ export type LandingFeatureCard = {
   image: string;
 };
 
-export type LandingGalleryItem = {
+type LandingGalleryItem = {
   id: number;
   category: string;
   title: string;
@@ -29,13 +29,13 @@ export type LandingGalleryItem = {
   image: string;
 };
 
-export type LandingTestimonial = {
+type LandingTestimonial = {
   quote: string;
   name: string;
   role: string;
 };
 
-export type LandingFaq = {
+type LandingFaq = {
   question: string;
   answer: string;
 };

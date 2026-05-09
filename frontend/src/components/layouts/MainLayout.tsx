@@ -35,7 +35,6 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const { user, isLoading } = useAuth();
     const { push } = useRouter();
     const { workflow, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
-    const { notifications, unreadCount, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } = useNotificationStore();
 
     const [isRenameOpen, setIsRenameOpen] = React.useState(false);
     const [newName, setNewName] = React.useState('');
@@ -47,20 +46,6 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         pathname === '/sign-in' ||
         pathname === '/sign-up';
     const isCreatorWorkspace = pathname.startsWith('/creator/') && pathname !== '/creator';
-
-    React.useEffect(() => {
-        if (!isLoading && !user && !isPublicRoute) {
-            const nextPath = `${pathname}${window.location.search}`;
-            window.location.replace(`/sign-in?next=${encodeURIComponent(nextPath)}`);
-        }
-    }, [user, isLoading, pathname, push, isPublicRoute]);
-
-    React.useEffect(() => {
-        if (user) {
-            fetchNotifications();
-            fetchUnreadCount();
-        }
-    }, [user, fetchNotifications, fetchUnreadCount]);
 
     if (isLoading) return <div className="h-screen w-full bg-background flex items-center justify-center"><Sparkles className="size-8 animate-pulse text-primary" /></div>;
 
@@ -229,76 +214,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                         </Button>
                         <div className="hidden sm:block h-4 w-px bg-border mx-1" />
 
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="icon" className="size-8 relative">
-                                    <Bell className="size-4 text-muted-foreground" />
-                                    {unreadCount > 0 && (
-                                        <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
-                                    )}
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-80 p-0">
-                                <div className="p-3 border-b border-border flex items-center justify-between">
-                                    <h3 className="font-semibold text-sm">Notifications</h3>
-                                    <button
-                                        onClick={() => markAllAsRead()}
-                                        className="text-xs text-muted-foreground hover:text-foreground"
-                                    >
-                                        Mark all as read
-                                    </button>
-                                </div>
-                                <div className="max-h-[300px] overflow-y-auto">
-                                    {notifications.length === 0 ? (
-                                        <div className="p-8 text-center text-muted-foreground text-xs space-y-3">
-                                            <p>No notifications yet</p>
-                                            <p className="leading-5">
-                                                Activity, billing, moderation, and admin alerts will appear here in a single inbox.
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        notifications.map((notification) => (
-                                            <button
-                                                key={notification.id}
-                                                type="button"
-                                                onClick={() => markAsRead(notification.id)}
-                                                className={cn(
-                                                    "w-full text-left p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 transition-colors",
-                                                    notification.isRead && "opacity-60"
-                                                )}
-                                            >
-                                                <div className={cn(
-                                                    "size-8 rounded-full flex items-center justify-center shrink-0",
-                                                    notification.type === 'success' && "bg-green-500/20 text-green-500",
-                                                    notification.type === 'info' && "bg-primary/20 text-primary",
-                                                    notification.type === 'warning' && "bg-yellow-500/20 text-yellow-500",
-                                                    notification.type === 'error' && "bg-red-500/20 text-red-500",
-                                                )}>
-                                                    {notification.type === 'success' ? <Sparkles className="size-4" /> :
-                                                        <Bell className="size-4" />}
-                                                </div>
-                                                <div className="space-y-1">
-                                                    <p className="text-sm font-medium leading-tight">{notification.title}</p>
-                                                    <p className="text-xs text-muted-foreground">{notification.message}</p>
-                                                    <p className="text-[10px] text-muted-foreground opacity-50">
-                                                        {notification.createdAt.slice(0, 10)}
-                                                    </p>
-                                                </div>
-                                            </button>
-                                        ))
-                                    )}
-                                </div>
-                                <div className="p-2 border-t border-border">
-                                    <Button
-                                        variant="ghost"
-                                        className="w-full text-xs h-8"
-                                        onClick={() => push('/notifications')}
-                                    >
-                                        View all notifications
-                                    </Button>
-                                </div>
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <NotificationsMenu />
 
                         <div className="hidden sm:block h-4 w-px bg-border mx-1" />
                         <UserMenu />
@@ -312,34 +228,156 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                     {children}
                 </div>
 
-                <Dialog open={isRenameOpen} onOpenChange={setIsRenameOpen}>
-                    <DialogContent className="sm:max-w-md">
-                        <DialogHeader>
-                            <DialogTitle>Rename Space</DialogTitle>
-                            <DialogDescription>
-                                Enter a new name for your space.
-                            </DialogDescription>
-                        </DialogHeader>
-                        <div className="flex items-center gap-x-2">
-                            <div className="grid flex-1 gap-2">
-                                <Input
-                                    id="link"
-                                    value={newName}
-                                    onChange={(e) => setNewName(e.target.value)}
-                                />
-                            </div>
-                        </div>
-                        <DialogFooter className="sm:justify-end">
-                            <Button type="button" variant="secondary" onClick={() => setIsRenameOpen(false)}>
-                                Cancel
-                            </Button>
-                            <Button type="button" onClick={confirmRename}>
-                                Rename
-                            </Button>
-                        </DialogFooter>
-                    </DialogContent>
-                </Dialog>
+                <RenameSpaceDialog
+                    open={isRenameOpen}
+                    onOpenChange={setIsRenameOpen}
+                    workflowId={workflow?.id}
+                    workflowName={workflow?.name}
+                    newName={newName}
+                    onNewNameChange={setNewName}
+                    onConfirm={confirmRename}
+                />
             </div>
         </div>
+    );
+}
+
+function NotificationsMenu() {
+    const { push } = useRouter();
+    const { notifications, unreadCount, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } = useNotificationStore();
+    const [isOpen, setIsOpen] = React.useState(false);
+
+    const handleOpenChange = (nextOpen: boolean) => {
+        setIsOpen(nextOpen);
+        if (nextOpen) {
+            void fetchNotifications();
+            void fetchUnreadCount();
+        }
+    };
+
+    return (
+        <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
+            <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="size-8 relative">
+                    <Bell className="size-4 text-muted-foreground" />
+                    {unreadCount > 0 && (
+                        <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-primary" />
+                    )}
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-80 p-0">
+                <div className="p-3 border-b border-border flex items-center justify-between">
+                    <h3 className="font-semibold text-sm">Notifications</h3>
+                    <button
+                        onClick={() => markAllAsRead()}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                    >
+                        Mark all as read
+                    </button>
+                </div>
+                <div className="max-h-[300px] overflow-y-auto">
+                    {notifications.length === 0 ? (
+                        <div className="p-8 text-center text-muted-foreground text-xs space-y-3">
+                            <p>No notifications yet</p>
+                            <p className="leading-5">
+                                Activity, billing, moderation, and admin alerts will appear here in a single inbox.
+                            </p>
+                        </div>
+                    ) : (
+                        notifications.map((notification) => (
+                            <button
+                                key={notification.id}
+                                type="button"
+                                onClick={() => markAsRead(notification.id)}
+                                className={cn(
+                                    "w-full text-left p-3 border-b border-border hover:bg-muted/50 cursor-pointer flex gap-3 transition-colors",
+                                    notification.isRead && "opacity-60"
+                                )}
+                            >
+                                <div className={cn(
+                                    "size-8 rounded-full flex items-center justify-center shrink-0",
+                                    notification.type === 'success' && "bg-green-500/20 text-green-500",
+                                    notification.type === 'info' && "bg-primary/20 text-primary",
+                                    notification.type === 'warning' && "bg-yellow-500/20 text-yellow-500",
+                                    notification.type === 'error' && "bg-red-500/20 text-red-500",
+                                )}>
+                                    {notification.type === 'success' ? <Sparkles className="size-4" /> :
+                                        <Bell className="size-4" />}
+                                </div>
+                                <div className="space-y-1">
+                                    <p className="text-sm font-medium leading-tight">{notification.title}</p>
+                                    <p className="text-xs text-muted-foreground">{notification.message}</p>
+                                    <p className="text-[10px] text-muted-foreground opacity-50">
+                                        {notification.createdAt.slice(0, 10)}
+                                    </p>
+                                </div>
+                            </button>
+                        ))
+                    )}
+                </div>
+                <div className="p-2 border-t border-border">
+                    <Button
+                        variant="ghost"
+                        className="w-full text-xs h-8"
+                        onClick={() => push('/notifications')}
+                    >
+                        View all notifications
+                    </Button>
+                </div>
+            </DropdownMenuContent>
+        </DropdownMenu>
+    );
+}
+
+function RenameSpaceDialog({
+    open,
+    onOpenChange,
+    workflowId,
+    workflowName,
+    newName,
+    onNewNameChange,
+    onConfirm,
+}: {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+    workflowId?: string;
+    workflowName?: string;
+    newName: string;
+    onNewNameChange: (value: string) => void;
+    onConfirm: () => void;
+}) {
+    if (!workflowId) {
+        return null;
+    }
+
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Rename Space</DialogTitle>
+                    <DialogDescription>
+                        Enter a new name for your space.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="flex items-center gap-x-2">
+                    <div className="grid flex-1 gap-2">
+                        <Input
+                            id="link"
+                            value={newName}
+                            onChange={(e) => onNewNameChange(e.target.value)}
+                            placeholder={workflowName ?? 'Untitled Studio'}
+                        />
+                    </div>
+                </div>
+                <DialogFooter className="sm:justify-end">
+                    <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
+                        Cancel
+                    </Button>
+                    <Button type="button" onClick={onConfirm}>
+                        Rename
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }

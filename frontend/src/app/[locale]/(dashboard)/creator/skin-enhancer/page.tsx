@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -40,6 +40,11 @@ type SkinEnhancerState = {
     wrinkleReduction: number;
     eyeEnhance: number;
     showOriginal: boolean;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    restoredResultImage: string | null;
 };
 
 type SkinEnhancerSnapshot = {
@@ -92,7 +97,12 @@ type SkinEnhancerAction =
     | { type: 'setEyeEnhance'; eyeEnhance: number }
     | { type: 'setShowOriginal'; showOriginal: boolean }
     | { type: 'toggleShowOriginal' }
-    | { type: 'reset' };
+    | { type: 'reset' }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'setRestoredResultImage'; restoredResultImage: string | null };
 
 const initialState: SkinEnhancerState = {
     uploadedImage: null,
@@ -104,6 +114,11 @@ const initialState: SkinEnhancerState = {
     wrinkleReduction: 40,
     eyeEnhance: 30,
     showOriginal: false,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    restoredResultImage: null,
 };
 
 function reducer(state: SkinEnhancerState, action: SkinEnhancerAction): SkinEnhancerState {
@@ -137,6 +152,16 @@ function reducer(state: SkinEnhancerState, action: SkinEnhancerAction): SkinEnha
             return { ...state, showOriginal: !state.showOriginal };
         case 'reset':
             return initialState;
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'setRestoredResultImage':
+            return { ...state, restoredResultImage: action.restoredResultImage };
         default:
             return state;
     }
@@ -153,24 +178,20 @@ export default function SkinEnhancerPage() {
 function SkinEnhancerPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
+    const { projectId, isProjectLoading, isProjectSaving, projectError } = state;
     const { skinEnhance, currentGeneration, reset, isGenerating } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const resultImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
+    const resultImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : state.restoredResultImage;
     const isProcessing = isGenerating;
 
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
-    }, [searchParams]);
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         let cancelled = false;
@@ -190,13 +211,13 @@ function SkinEnhancerPageContent() {
             dispatch({ type: 'setWrinkleReduction', wrinkleReduction: snapshot.wrinkleReduction ?? initialState.wrinkleReduction });
             dispatch({ type: 'setEyeEnhance', eyeEnhance: snapshot.eyeEnhance ?? initialState.eyeEnhance });
             dispatch({ type: 'setShowOriginal', showOriginal: snapshot.showOriginal ?? initialState.showOriginal });
-            setRestoredResultImage(snapshot.resultImage ?? null);
+            dispatch({ type: 'setRestoredResultImage', restoredResultImage: snapshot.resultImage ?? null });
         };
 
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('skin-enhancer:draft:v1');
 
-            if (!projectId) {
+            if (!state.projectId) {
                 try {
                     if (draftRaw) {
                         hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(draftRaw)));
@@ -207,10 +228,10 @@ function SkinEnhancerPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatch({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatch({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(state.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -219,7 +240,7 @@ function SkinEnhancerPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore skin enhancer project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved skin enhancer project. Falling back to a local draft.');
+                    dispatch({ type: 'setProjectError', projectError: 'Could not load the saved skin enhancer project. Falling back to a local draft.' });
                     try {
                         if (draftRaw) {
                             hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(draftRaw)));
@@ -230,7 +251,7 @@ function SkinEnhancerPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -294,10 +315,10 @@ function SkinEnhancerPageContent() {
         localStorage.setItem('skin-enhancer:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Skin Enhancer Draft',
                         description: 'Skin enhancer draft',
                         content: payload,
@@ -308,7 +329,7 @@ function SkinEnhancerPageContent() {
                         description: 'Skin enhancer draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -317,7 +338,7 @@ function SkinEnhancerPageContent() {
                 console.error('Failed to persist skin enhancer project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -355,8 +376,8 @@ function SkinEnhancerPageContent() {
     const handleReset = () => {
         reset();
         dispatch({ type: 'reset' });
-        setRestoredResultImage(null);
-        setProjectError(null);
+        dispatch({ type: 'setRestoredResultImage', restoredResultImage: null });
+        dispatch({ type: 'setProjectError', projectError: null });
     };
 
     return (

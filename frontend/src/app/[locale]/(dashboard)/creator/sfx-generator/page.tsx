@@ -51,6 +51,7 @@ type SfxAction =
     | { type: 'setIntensity'; intensity: number }
     | { type: 'togglePlaying'; playingId: string }
     | { type: 'setActiveContentTab'; tab: string }
+    | { type: 'hydrateSnapshot'; snapshot: Partial<SfxSnapshot> }
     | { type: 'reset' };
 
 type SfxSnapshot = {
@@ -83,6 +84,60 @@ const initialState: SfxState = {
     playingId: null,
     activeContentTab: TEMPLATES_TAB,
 };
+
+type SfxUiState = {
+    isAudioPickerOpen: boolean;
+    projectId: string | null;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    sampleUrl: string | null;
+    sampleName: string;
+};
+
+type SfxUiAction =
+    | { type: 'set-audio-picker-open'; isOpen: boolean }
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-saving'; isSaving: boolean }
+    | { type: 'set-project-error'; error: string | null }
+    | { type: 'set-sample-url'; sampleUrl: string | null }
+    | { type: 'set-sample-name'; sampleName: string }
+    | { type: 'hydrate'; projectId: string | null; projectError: string | null; sampleUrl: string | null; sampleName: string };
+
+const initialUiState: SfxUiState = {
+    isAudioPickerOpen: false,
+    projectId: null,
+    isProjectSaving: false,
+    projectError: null,
+    sampleUrl: null,
+    sampleName: '',
+};
+
+function uiReducer(state: SfxUiState, action: SfxUiAction): SfxUiState {
+    switch (action.type) {
+        case 'set-audio-picker-open':
+            return { ...state, isAudioPickerOpen: action.isOpen };
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.error };
+        case 'set-sample-url':
+            return { ...state, sampleUrl: action.sampleUrl };
+        case 'set-sample-name':
+            return { ...state, sampleName: action.sampleName };
+        case 'hydrate':
+            return {
+                ...state,
+                projectId: action.projectId,
+                projectError: action.projectError,
+                sampleUrl: action.sampleUrl,
+                sampleName: action.sampleName,
+            };
+        default:
+            return state;
+    }
+}
 
 const normalizeSfxSnapshot = (value: unknown): Partial<SfxSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
@@ -121,6 +176,17 @@ function reducer(state: SfxState, action: SfxAction): SfxState {
             return { ...state, playingId: state.playingId === action.playingId ? null : action.playingId };
         case 'setActiveContentTab':
             return { ...state, activeContentTab: action.tab };
+        case 'hydrateSnapshot':
+            return {
+                ...state,
+                prompt: action.snapshot.prompt ?? state.prompt,
+                selectedCategory: action.snapshot.selectedCategory ?? state.selectedCategory,
+                duration: action.snapshot.duration ?? state.duration,
+                variations: action.snapshot.variations ?? state.variations,
+                intensity: action.snapshot.intensity ?? state.intensity,
+                activeContentTab: action.snapshot.activeContentTab ?? state.activeContentTab,
+                playingId: null,
+            };
         case 'reset':
             return initialState;
         default:
@@ -138,37 +204,29 @@ export default function SfxGeneratorPage() {
 
 function SfxGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const { generateSfx, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const [communityListings, setCommunityListings] = useState<Array<{ id: string; title: string; description?: string }>>([]);
-    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-    const [sampleUrl, setSampleUrl] = useState<string | null>(null);
-    const [sampleName, setSampleName] = useState('');
-    const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
+    const [communityListings, setCommunityListings] = useState<Array<{ id: string; title: string; description?: string }> | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = uiState.isProjectSaving;
 
     useEffect(() => {
         if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
             fetchGenerations({ type: TemplateTypeEnum.SOUND_EFFECT_GENERATOR, limit: 12 });
         } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
             const fetchCommunity = async () => {
-                setIsCommunityLoading(true);
+                let nextListings: Array<{ id: string; title: string; description?: string }> = [];
                 try {
                     const res = await import('@/lib/api').then(m => m.get<{ data: Array<{ id: string; title: string; description?: string }> }>(`/community-marketplace/listings?type=${TemplateTypeEnum.SOUND_EFFECT_GENERATOR}&limit=12`));
-                    setCommunityListings(res.data || []);
+                    nextListings = res.data || [];
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
-                } finally {
-                    setIsCommunityLoading(false);
                 }
+                setCommunityListings(nextListings);
             };
             fetchCommunity();
         } else if (state.activeContentTab === TEMPLATES_TAB) { // Templates
@@ -178,56 +236,63 @@ function SfxGeneratorPageContent() {
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
-
-        const applySnapshot = (snapshot: Partial<SfxSnapshot>) => {
-            dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? '' });
-            dispatch({ type: 'setCategory', categoryId: snapshot.selectedCategory ?? null });
-            dispatch({ type: 'setDuration', duration: snapshot.duration ?? initialState.duration });
-            dispatch({ type: 'setVariations', variations: snapshot.variations ?? initialState.variations });
-            dispatch({ type: 'setIntensity', intensity: snapshot.intensity ?? initialState.intensity });
-            dispatch({ type: 'setActiveContentTab', tab: snapshot.activeContentTab ?? initialState.activeContentTab });
-            setSampleUrl(snapshot.sampleUrl ?? null);
-            setSampleName(snapshot.sampleName ?? '');
-            setProjectError(null);
-        };
-
-        const loadDraft = () => {
-            const draftRaw = localStorage.getItem('sfx-generator:draft:v1');
-            if (!draftRaw) return;
-
-            try {
-                const snapshot = normalizeSfxSnapshot(JSON.parse(draftRaw));
-                applySnapshot(snapshot);
-            } catch (error) {
-                console.error('Failed to load sfx draft', error);
-            }
+        const draftRaw = localStorage.getItem('sfx-generator:draft:v1');
+        const applySnapshot = (snapshot: Partial<SfxSnapshot>, error: string | null = null) => {
+            dispatch({ type: 'hydrateSnapshot', snapshot });
+            dispatchUi({
+                type: 'hydrate',
+                projectId: requestedProjectId,
+                projectError: error,
+                sampleUrl: snapshot.sampleUrl ?? null,
+                sampleName: snapshot.sampleName ?? '',
+            });
         };
 
         if (!requestedProjectId) {
-            loadDraft();
+            if (!draftRaw) {
+                return;
+            }
+
+            try {
+                applySnapshot(normalizeSfxSnapshot(JSON.parse(draftRaw)));
+            } catch (error) {
+                console.error('Failed to load sfx draft', error);
+            }
             return;
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
-
         void (async () => {
             try {
                 const project = await projectApi.get(requestedProjectId);
                 if (cancelled) return;
 
-                const snapshot = normalizeSfxSnapshot(project.content);
-                applySnapshot(snapshot);
+                applySnapshot(normalizeSfxSnapshot(project.content));
             } catch (error) {
                 console.error('Failed to load sfx project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
-                    loadDraft();
-                }
-            } finally {
-                if (!cancelled) {
-                    setIsProjectLoading(false);
+                    if (draftRaw) {
+                        try {
+                            applySnapshot(normalizeSfxSnapshot(JSON.parse(draftRaw)), 'Loaded local draft because backend project load failed.');
+                        } catch (draftError) {
+                            console.error('Failed to load sfx draft', draftError);
+                            dispatchUi({
+                                type: 'hydrate',
+                                projectId: requestedProjectId,
+                                projectError: 'Loaded local draft because backend project load failed.',
+                                sampleUrl: null,
+                                sampleName: '',
+                            });
+                        }
+                    } else {
+                        dispatchUi({
+                            type: 'hydrate',
+                            projectId: requestedProjectId,
+                            projectError: 'Loaded local draft because backend project load failed.',
+                            sampleUrl: null,
+                            sampleName: '',
+                        });
+                    }
                 }
             }
         })();
@@ -254,21 +319,21 @@ function SfxGeneratorPageContent() {
         const uploaded = await uploadFileWithToast(file, file.name);
         if (!uploaded?.url) return;
 
-        setSampleUrl(uploaded.url);
-        setSampleName(file.name);
+        dispatchUi({ type: 'set-sample-url', sampleUrl: uploaded.url });
+        dispatchUi({ type: 'set-sample-name', sampleName: file.name });
     };
 
     const handleSampleSelect = (media: MediaItem) => {
-        setSampleUrl(media.url);
-        setSampleName(media.name);
+        dispatchUi({ type: 'set-sample-url', sampleUrl: media.url });
+        dispatchUi({ type: 'set-sample-name', sampleName: media.name });
     };
 
     const handleReset = () => {
         dispatch({ type: 'reset' });
-        setSampleUrl(null);
-        setSampleName('');
-        setIsAudioPickerOpen(false);
-        setProjectError(null);
+        dispatchUi({ type: 'set-sample-url', sampleUrl: null });
+        dispatchUi({ type: 'set-sample-name', sampleName: '' });
+        dispatchUi({ type: 'set-audio-picker-open', isOpen: false });
+        dispatchUi({ type: 'set-project-error', error: null });
     };
 
     useEffect(() => {
@@ -352,18 +417,18 @@ function SfxGeneratorPageContent() {
                 variations: state.variations,
                 intensity: state.intensity,
                 activeContentTab: state.activeContentTab,
-                sampleUrl,
-                sampleName,
+                sampleUrl: uiState.sampleUrl,
+                sampleName: uiState.sampleName,
             },
         };
 
         localStorage.setItem('sfx-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+                    dispatchUi({ type: 'set-project-saving', isSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'SFX Generator Draft',
                         description: 'SFX generator draft',
                         content: payload,
@@ -374,18 +439,18 @@ function SfxGeneratorPageContent() {
                         description: 'SFX generator draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'set-project-id', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
-                setProjectError(null);
+                dispatchUi({ type: 'set-project-error', error: null });
                 toast.success('Sound effect saved to your projects.');
             } catch (error) {
                 console.error('Failed to persist sfx project', error);
-                setProjectError('Saved locally, but backend project save failed.');
+                dispatchUi({ type: 'set-project-error', error: 'Saved locally, but backend project save failed.' });
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'set-project-saving', isSaving: false });
             }
         };
 
@@ -456,17 +521,17 @@ function SfxGeneratorPageContent() {
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Reference Sample (Optional)</h4>
                         <button
                             type="button"
-                            onClick={() => setIsAudioPickerOpen(true)}
+                            onClick={() => dispatchUi({ type: 'set-audio-picker-open', isOpen: true })}
                             className="w-full rounded-xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-all gap-2 px-4 py-8"
                         >
                             <Upload className="size-6 text-muted-foreground/50" />
                             <div className="text-center">
-                                <p className="text-xs font-medium">{sampleName || 'Upload Sample'}</p>
+                                    <p className="text-xs font-medium">{uiState.sampleName || 'Upload Sample'}</p>
                                 <p className="text-[10px] text-muted-foreground">Drop audio or click</p>
                             </div>
                         </button>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => setIsAudioPickerOpen(true)}>
+                            <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={() => dispatchUi({ type: 'set-audio-picker-open', isOpen: true })}>
                                 <Folder className="size-4" />
                                 Choose from uploads
                             </Button>
@@ -491,7 +556,7 @@ function SfxGeneratorPageContent() {
                                 Upload file
                             </Button>
                         </div>
-                        {sampleUrl && <audio className="w-full" controls src={sampleUrl} />}
+                        {uiState.sampleUrl && <audio className="w-full" controls src={uiState.sampleUrl} />}
                     </div>
                 </div>
 
@@ -502,7 +567,7 @@ function SfxGeneratorPageContent() {
                             Reset
                         </Button>
                         <Button variant="outline" onClick={handleSaveProject} disabled={isProjectBusy || isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
-                            {isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
+                            {uiState.isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
                             Save
                         </Button>
                         <Button onClick={handleGenerate} disabled={isGenerating || isProjectBusy || !state.prompt.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
@@ -533,16 +598,16 @@ function SfxGeneratorPageContent() {
                             <Input placeholder="Search" className="w-56 h-9 pl-10 pr-4" />
                         </div>
                         <Button variant="outline" size="sm" onClick={handleSaveProject} disabled={isProjectBusy || isGenerating} className="gap-2">
-                            {isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
+                            {uiState.isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
                             Save project
                         </Button>
                     </div>
                 </div>
 
-                {projectError && (
+                {uiState.projectError && (
                     <div className="px-6 pt-4">
                         <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                            {projectError}
+                            {uiState.projectError}
                         </div>
                     </div>
                 )}
@@ -574,7 +639,7 @@ function SfxGeneratorPageContent() {
                     {state.activeContentTab === COMMUNITY_TAB && ( // Community
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Community SFX</h2>
-                            {isCommunityLoading ? (
+                            {communityListings === null ? (
                                 <LoadingGrid />
                             ) : communityListings.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -615,8 +680,8 @@ function SfxGeneratorPageContent() {
             />
 
             <MediaPickerModal
-                isOpen={isAudioPickerOpen}
-                onClose={() => setIsAudioPickerOpen(false)}
+                isOpen={uiState.isAudioPickerOpen}
+                onClose={() => dispatchUi({ type: 'set-audio-picker-open', isOpen: false })}
                 onSelect={handleSampleSelect}
                 mediaType="audio"
             />

@@ -28,26 +28,31 @@ import type { VisualScene } from '@/services/visualFlowApi';
 
 function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
+  const [playerState, setPlayerState] = useState({
+    isPlaying: false,
+    progress: 0,
+    duration: 0,
+  });
+  const updatePlayerState = (next: Partial<typeof playerState>) => {
+    setPlayerState((current) => ({ ...current, ...next }));
+  };
 
   const togglePlay = () => {
     if (!videoRef.current) return;
-    if (isPlaying) {
+    if (playerState.isPlaying) {
       videoRef.current.pause();
     } else {
       videoRef.current.play();
     }
-    setIsPlaying(!isPlaying);
+    setPlayerState((current) => ({ ...current, isPlaying: !current.isPlaying }));
   };
 
   useEffect(() => {
     const v = videoRef.current;
     if (!v) return;
-    const onTime = () => setProgress(v.currentTime);
-    const onDur = () => setDuration(v.duration || 0);
-    const onEnd = () => setIsPlaying(false);
+    const onTime = () => updatePlayerState({ progress: v.currentTime });
+    const onDur = () => updatePlayerState({ duration: v.duration || 0 });
+    const onEnd = () => updatePlayerState({ isPlaying: false });
     v.addEventListener('timeupdate', onTime);
     v.addEventListener('loadedmetadata', onDur);
     v.addEventListener('ended', onEnd);
@@ -58,7 +63,7 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
     };
   }, [src]);
 
-  const pct = duration > 0 ? (progress / duration) * 100 : 0;
+  const pct = playerState.duration > 0 ? (playerState.progress / playerState.duration) * 100 : 0;
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -85,12 +90,12 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const pctClicked = (e.clientX - rect.left) / rect.width;
-            if (videoRef.current) videoRef.current.currentTime = pctClicked * duration;
+            if (videoRef.current) videoRef.current.currentTime = pctClicked * playerState.duration;
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault();
-              if (videoRef.current) videoRef.current.currentTime = duration / 2;
+              if (videoRef.current) videoRef.current.currentTime = playerState.duration / 2;
             }
           }}
         >
@@ -98,10 +103,10 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
         </button>
         <div className="flex items-center gap-2">
           <button onClick={togglePlay} className="text-white/80 hover:text-white transition">
-            {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
+            {playerState.isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
           </button>
           <span className="text-[10px] text-white/50 font-mono">
-            {formatTime(progress)} / {formatTime(duration)}
+            {formatTime(playerState.progress)} / {formatTime(playerState.duration)}
           </span>
           <div className="flex-1" />
           <button
@@ -113,7 +118,7 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
         </div>
       </div>
       {/* Center play button when paused */}
-      {!isPlaying && (
+      {!playerState.isPlaying && (
         <button
           onClick={togglePlay}
           className="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]/20"
@@ -138,29 +143,28 @@ interface ScenePropertiesProps {
 }
 
 export function SceneProperties({ scene, onUpdate, availableCharacters }: ScenePropertiesProps) {
-  const [editingField, setEditingField] = useState<string | null>(null);
-  const [promptDraft, setPromptDraft] = useState('');
-  const [videoPromptDraft, setVideoPromptDraft] = useState('');
-
-  // Sync on scene change
-  React.useEffect(() => {
-    setPromptDraft(scene.prompt);
-    setVideoPromptDraft(scene.videoPrompt ?? '');
-    setEditingField(null);
-  }, [scene.id, scene.prompt, scene.videoPrompt]);
+  const [draft, setDraft] = useState<{
+    editingField: string | null;
+    prompt: string;
+    videoPrompt: string;
+  }>(() => ({
+    editingField: null,
+    prompt: scene.prompt,
+    videoPrompt: scene.videoPrompt ?? '',
+  }));
 
   const savePrompt = async () => {
-    if (promptDraft !== scene.prompt) {
-      await onUpdate({ prompt: promptDraft });
+    if (draft.prompt !== scene.prompt) {
+      await onUpdate({ prompt: draft.prompt });
     }
-    setEditingField(null);
+    setDraft((current) => ({ ...current, editingField: null, prompt: draft.prompt }));
   };
 
   const saveVideoPrompt = async () => {
-    if (videoPromptDraft !== (scene.videoPrompt ?? '')) {
-      await onUpdate({ videoPrompt: videoPromptDraft });
+    if (draft.videoPrompt !== (scene.videoPrompt ?? '')) {
+      await onUpdate({ videoPrompt: draft.videoPrompt });
     }
-    setEditingField(null);
+    setDraft((current) => ({ ...current, editingField: null, videoPrompt: draft.videoPrompt }));
   };
 
   const toggleChar = async (name: string) => {
@@ -234,23 +238,23 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
             <div className="flex items-center justify-between mb-1.5">
               <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Image Prompt</div>
               <button
-                onClick={() => editingField === 'prompt' ? savePrompt() : setEditingField('prompt')}
+                onClick={() => draft.editingField === 'prompt' ? savePrompt() : setDraft((current) => ({ ...current, editingField: 'prompt' }))}
                 className="text-white/20 hover:text-white/50 transition"
               >
                 <Edit3 className="size-3" />
               </button>
             </div>
-            {editingField === 'prompt' ? (
+            {draft.editingField === 'prompt' ? (
               <div className="space-y-1.5">
                 <Textarea
-                  value={promptDraft}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setPromptDraft(e.target.value)}
+                  value={draft.prompt}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraft((current) => ({ ...current, prompt: e.target.value }))}
                   rows={4}
                   className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
                 />
                 <div className="flex gap-1">
                   <Button size="xs" onClick={savePrompt} className="bg-violet-600 text-white text-[10px] h-5 px-2">Save</Button>
-                  <Button size="xs" variant="ghost" onClick={() => { setEditingField(null); setPromptDraft(scene.prompt); }} className="text-white/30 text-[10px] h-5 px-2">Cancel</Button>
+                  <Button size="xs" variant="ghost" onClick={() => setDraft((current) => ({ ...current, editingField: null, prompt: scene.prompt }))} className="text-white/30 text-[10px] h-5 px-2">Cancel</Button>
                 </div>
               </div>
             ) : (
@@ -263,24 +267,24 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
             <div className="flex items-center justify-between mb-1.5">
               <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Video Motion Prompt</div>
               <button
-                onClick={() => editingField === 'videoPrompt' ? saveVideoPrompt() : setEditingField('videoPrompt')}
+                onClick={() => draft.editingField === 'videoPrompt' ? saveVideoPrompt() : setDraft((current) => ({ ...current, editingField: 'videoPrompt' }))}
                 className="text-white/20 hover:text-white/50 transition"
               >
                 <Edit3 className="size-3" />
               </button>
             </div>
-            {editingField === 'videoPrompt' ? (
+            {draft.editingField === 'videoPrompt' ? (
               <div className="space-y-1.5">
                 <Textarea
-                  value={videoPromptDraft}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setVideoPromptDraft(e.target.value)}
+                  value={draft.videoPrompt}
+                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraft((current) => ({ ...current, videoPrompt: e.target.value }))}
                   rows={3}
                   placeholder="e.g. 0-3s: wide crane down. 3-6s: tracking shot."
                   className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
                 />
                 <div className="flex gap-1">
                   <Button size="xs" onClick={saveVideoPrompt} className="bg-violet-600 text-white text-[10px] h-5 px-2">Save</Button>
-                  <Button size="xs" variant="ghost" onClick={() => { setEditingField(null); setVideoPromptDraft(scene.videoPrompt ?? ''); }} className="text-white/30 text-[10px] h-5 px-2">Cancel</Button>
+                  <Button size="xs" variant="ghost" onClick={() => setDraft((current) => ({ ...current, editingField: null, videoPrompt: scene.videoPrompt ?? '' }))} className="text-white/30 text-[10px] h-5 px-2">Cancel</Button>
                 </div>
               </div>
             ) : (

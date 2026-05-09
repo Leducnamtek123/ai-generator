@@ -63,7 +63,7 @@ import type {
 // NODE CONFIGURATION
 // ============================================
 
-export interface NodeConfig {
+interface NodeConfig {
   type: WorkflowNodeType;
   label: string;
   icon: React.ElementType;
@@ -299,19 +299,4 @@ export const QUICK_START_NODES = [
   WorkflowNodeType.IMAGE_GEN,
   WorkflowNodeType.VIDEO_GEN,
   WorkflowNodeType.ASSISTANT
-];
-
-export const MAIN_NODES = [
-  WorkflowNodeType.TEXT,
-  WorkflowNodeType.IMAGE_GEN,
-  WorkflowNodeType.VIDEO_GEN,
-  WorkflowNodeType.ASSISTANT,
-  WorkflowNodeType.UPSCALE,
-  WorkflowNodeType.CAMERA
-];
-
-export const UTILITY_NODES = [
-  WorkflowNodeType.STICKY_NOTE,
-  WorkflowNodeType.STICKER,
-  WorkflowNodeType.GROUP
 ];

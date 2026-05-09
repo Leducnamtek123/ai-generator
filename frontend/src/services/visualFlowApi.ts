@@ -6,10 +6,10 @@ import { api } from '@/lib/api';
 
 export type EntityType = 'character' | 'location' | 'creature' | 'visual_asset';
 export type ChainType = 'ROOT' | 'CONTINUATION' | 'INSERT';
-export type RefStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+type RefStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export type SceneStatus = 'PENDING' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 export type ProjectStatus = 'ACTIVE' | 'ARCHIVED';
-export type VideoStatus = 'DRAFT' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
+type VideoStatus = 'DRAFT' | 'PROCESSING' | 'COMPLETED' | 'FAILED';
 type Orientation = 'VERTICAL' | 'HORIZONTAL' | 'BOTH';
 
 export interface VisualCharacter {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useReducer } from 'react';
 import {
   Download,
   Film,
@@ -29,6 +29,56 @@ interface ExportPanelProps {
 }
 
 type ExportStep = 'idle' | 'concat' | 'music' | 'narration' | 'done';
+
+type ExportPanelState = {
+  step: ExportStep;
+  orientation: 'VERTICAL' | 'HORIZONTAL';
+  musicUrl: string;
+  musicVolume: number[];
+  resultUrl: string | null;
+  isGeneratingMusic: boolean;
+  musicPrompt: string;
+};
+
+type ExportPanelAction =
+  | { type: 'setStep'; step: ExportStep }
+  | { type: 'setOrientation'; orientation: 'VERTICAL' | 'HORIZONTAL' }
+  | { type: 'setMusicUrl'; musicUrl: string }
+  | { type: 'setMusicVolume'; musicVolume: number[] }
+  | { type: 'setResultUrl'; resultUrl: string | null }
+  | { type: 'setIsGeneratingMusic'; isGeneratingMusic: boolean }
+  | { type: 'setMusicPrompt'; musicPrompt: string };
+
+const initialExportPanelState: ExportPanelState = {
+  step: 'idle',
+  orientation: 'VERTICAL',
+  musicUrl: '',
+  musicVolume: [30],
+  resultUrl: null,
+  isGeneratingMusic: false,
+  musicPrompt: '',
+};
+
+function exportPanelReducer(state: ExportPanelState, action: ExportPanelAction): ExportPanelState {
+  switch (action.type) {
+    case 'setStep':
+      return { ...state, step: action.step };
+    case 'setOrientation':
+      return { ...state, orientation: action.orientation };
+    case 'setMusicUrl':
+      return { ...state, musicUrl: action.musicUrl };
+    case 'setMusicVolume':
+      return { ...state, musicVolume: action.musicVolume };
+    case 'setResultUrl':
+      return { ...state, resultUrl: action.resultUrl };
+    case 'setIsGeneratingMusic':
+      return { ...state, isGeneratingMusic: action.isGeneratingMusic };
+    case 'setMusicPrompt':
+      return { ...state, musicPrompt: action.musicPrompt };
+    default:
+      return state;
+  }
+}
 
 const isMissingRenderedVideoError = (error: unknown) => {
   let message = '';
@@ -62,25 +112,20 @@ const isMissingRenderedVideoError = (error: unknown) => {
 // ─────────────────────────────────────────────
 
 export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps) {
-  const [step, setStep] = useState<ExportStep>('idle');
-  const [orientation, setOrientation] = useState<'VERTICAL' | 'HORIZONTAL'>('VERTICAL');
-  const [musicUrl, setMusicUrl] = useState('');
-  const [musicVolume, setMusicVolume] = useState([30]);
-  const [resultUrl, setResultUrl] = useState<string | null>(null);
-  const [isGeneratingMusic, setIsGeneratingMusic] = useState(false);
-  const [musicPrompt, setMusicPrompt] = useState('');
+  const [state, dispatch] = useReducer(exportPanelReducer, initialExportPanelState);
+  const { step, orientation, musicUrl, musicVolume, resultUrl, isGeneratingMusic, musicPrompt } = state;
 
   // ── Concat ──────────────────────────────
   const handleConcat = async () => {
-    setStep('concat');
+    dispatch({ type: 'setStep', step: 'concat' });
     try {
       const result = await visualFlowApi.pipeline.concat(projectId, videoId, {
         orientation,
         musicUrl: musicUrl || undefined,
         musicVolume: musicVolume[0] / 100,
       });
-      setResultUrl(result?.url || result?.outputUrl || null);
-      setStep('done');
+      dispatch({ type: 'setResultUrl', resultUrl: result?.url || result?.outputUrl || null });
+      dispatch({ type: 'setStep', step: 'done' });
       toast.success('Video exported successfully!');
     } catch (error) {
       if (isMissingRenderedVideoError(error)) {
@@ -91,8 +136,8 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
             musicVolume: musicVolume[0] / 100,
             zoomEffect: true,
           });
-          setResultUrl(fallback?.url || fallback?.outputUrl || null);
-          setStep('done');
+          dispatch({ type: 'setResultUrl', resultUrl: fallback?.url || fallback?.outputUrl || null });
+          dispatch({ type: 'setStep', step: 'done' });
           toast.success('No rendered clips were ready yet, so a slideshow export was created instead.');
           return;
         } catch (fallbackError) {
@@ -106,13 +151,13 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
           ? 'No rendered scene videos were ready yet. Generate videos first or use the slideshow export.'
           : 'Export failed',
       );
-      setStep('idle');
+      dispatch({ type: 'setStep', step: 'idle' });
     }
   };
 
   // ── Slideshow ───────────────────────────
   const handleSlideshow = async () => {
-    setStep('concat');
+    dispatch({ type: 'setStep', step: 'concat' });
     try {
       const result = await visualFlowApi.pipeline.slideshow(projectId, videoId, {
         orientation,
@@ -120,20 +165,20 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
         musicVolume: musicVolume[0] / 100,
         zoomEffect: true,
       });
-      setResultUrl(result?.url || result?.outputUrl || null);
-      setStep('done');
+      dispatch({ type: 'setResultUrl', resultUrl: result?.url || result?.outputUrl || null });
+      dispatch({ type: 'setStep', step: 'done' });
       toast.success('Slideshow created!');
     } catch (error) {
       console.error('Slideshow failed', error);
       toast.error('Slideshow failed');
-      setStep('idle');
+      dispatch({ type: 'setStep', step: 'idle' });
     }
   };
 
   // ── Generate Music ──────────────────────
   const handleGenerateMusic = async () => {
     if (!musicPrompt.trim()) return;
-    setIsGeneratingMusic(true);
+    dispatch({ type: 'setIsGeneratingMusic', isGeneratingMusic: true });
     try {
       const result = await visualFlowApi.music.generate({
         prompt: musicPrompt,
@@ -141,30 +186,30 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
         poll: true,
       });
       if (result?.audioUrl) {
-        setMusicUrl(result.audioUrl);
+        dispatch({ type: 'setMusicUrl', musicUrl: result.audioUrl });
         toast.success('Music generated!');
       }
     } catch (error) {
       console.error('Music gen failed', error);
       toast.error('Failed to generate music');
     }
-    setIsGeneratingMusic(false);
+    dispatch({ type: 'setIsGeneratingMusic', isGeneratingMusic: false });
   };
 
   // ── Narration ───────────────────────────
   const handleNarration = async () => {
-    setStep('narration');
+    dispatch({ type: 'setStep', step: 'narration' });
     try {
       await visualFlowApi.tts.generateNarration(projectId, videoId, {
         orientation: orientation,
         overlayOnVideos: true,
       });
       toast.success('Narration added!');
-      setStep('idle');
+      dispatch({ type: 'setStep', step: 'idle' });
     } catch (error) {
       console.error('Narration failed', error);
       toast.error('Narration failed');
-      setStep('idle');
+      dispatch({ type: 'setStep', step: 'idle' });
     }
   };
 
@@ -190,7 +235,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
           {(['VERTICAL', 'HORIZONTAL'] as const).map((o) => (
             <button
               key={o}
-              onClick={() => setOrientation(o)}
+              onClick={() => dispatch({ type: 'setOrientation', orientation: o })}
               className={cn(
                 'flex-1 py-2 rounded-lg text-xs font-medium border transition-all',
                 orientation === o
@@ -212,7 +257,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
         <Input
           id="export-background-music-url"
           value={musicUrl}
-          onChange={(e) => setMusicUrl(e.target.value)}
+          onChange={(e) => dispatch({ type: 'setMusicUrl', musicUrl: e.target.value })}
           placeholder="Music URL (optional)?"
           className="h-8 bg-white/5 border-white/[0.08] text-white text-xs placeholder:text-white/15"
         />
@@ -221,7 +266,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
         <div className="flex gap-1.5">
           <Input
             value={musicPrompt}
-            onChange={(e) => setMusicPrompt(e.target.value)}
+            onChange={(e) => dispatch({ type: 'setMusicPrompt', musicPrompt: e.target.value })}
             placeholder="Generate: 'epic cinematic orchestra'?"
             className="h-7 bg-white/[0.03] border-white/[0.06] text-white text-[10px] placeholder:text-white/15 flex-1"
           />
@@ -241,7 +286,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
             <Volume2 className="size-3 text-white/20" />
             <Slider
               value={musicVolume}
-              onValueChange={setMusicVolume}
+              onValueChange={(value) => dispatch({ type: 'setMusicVolume', musicVolume: value })}
               max={100}
               step={5}
               className="flex-1"

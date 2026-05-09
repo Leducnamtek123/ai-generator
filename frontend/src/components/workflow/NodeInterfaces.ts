@@ -26,13 +26,11 @@ import {
     ToolType,
 } from './NodeEnums';
 
-export type { MediaItem, MediaFolder, MediaLibraryResponse } from '@/types/media';
-
 // ============================================
 // NODE DATA INTERFACES
 // ============================================
 
-export interface BaseNodeData {
+interface BaseNodeData {
     label: string;
     status: NodeStatus;
     error?: string;
@@ -165,7 +163,7 @@ export interface ConnectionConfig {
 // API REQUEST/RESPONSE TYPES
 // ============================================
 
-export interface GenerateImageRequest {
+interface GenerateImageRequest {
     nodeId: string;
     workflowId: string;
     prompt: string;
@@ -178,7 +176,7 @@ export interface GenerateImageRequest {
     seed?: number;
 }
 
-export interface GenerateVideoRequest {
+interface GenerateVideoRequest {
     nodeId: string;
     workflowId: string;
     prompt: string;
@@ -188,7 +186,7 @@ export interface GenerateVideoRequest {
     inputImageUrl?: string;
 }
 
-export interface EnhancePromptRequest {
+interface EnhancePromptRequest {
     nodeId: string;
     workflowId: string;
     inputText: string;
@@ -197,7 +195,7 @@ export interface EnhancePromptRequest {
     detailLevel: AssistantNodeData['detailLevel'];
 }
 
-export interface UpscaleImageRequest {
+interface UpscaleImageRequest {
     nodeId: string;
     workflowId: string;
     inputImageUrl: string;
@@ -209,7 +207,7 @@ export interface UpscaleImageRequest {
     grain: UpscaleNodeData['grain'];
 }
 
-export interface GenerationResult {
+interface GenerationResult {
     success: boolean;
     nodeId: string;
     generationId: string;
@@ -221,7 +219,7 @@ export interface GenerationResult {
     creditsUsed?: number;
 }
 
-export interface WorkflowData {
+interface WorkflowData {
     id: string;
     name: string;
     nodes: SerializedNode[];
@@ -231,14 +229,14 @@ export interface WorkflowData {
     userId: string;
 }
 
-export interface SerializedNode {
+interface SerializedNode {
     id: string;
     type: WorkflowNodeType;
     position: { x: number; y: number };
     data: WorkflowNodeData;
 }
 
-export interface SerializedEdge {
+interface SerializedEdge {
     id: string;
     source: string;
     target: string;

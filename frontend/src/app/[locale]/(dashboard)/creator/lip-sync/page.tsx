@@ -55,6 +55,76 @@ type LipSyncProjectPayload = {
     snapshot: Partial<LipSyncSnapshot>;
 };
 
+type LipSyncUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    restoredResultVideo: string | null;
+    isCommunityLoading: boolean;
+    isMediaPickerOpen: boolean;
+    mediaPickerType: 'video' | 'audio';
+};
+
+type LipSyncUiAction =
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'setRestoredResultVideo'; restoredResultVideo: string | null }
+    | { type: 'setCommunityLoading'; isCommunityLoading: boolean }
+    | { type: 'setMediaPickerOpen'; isMediaPickerOpen: boolean }
+    | { type: 'setMediaPickerType'; mediaPickerType: 'video' | 'audio' }
+    | {
+        type: 'hydrate';
+        projectId: string | null;
+        projectError: string | null;
+        restoredResultVideo: string | null;
+        isCommunityLoading: boolean;
+    };
+
+const initialUiState: LipSyncUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    restoredResultVideo: null,
+    isCommunityLoading: false,
+    isMediaPickerOpen: false,
+    mediaPickerType: 'video',
+};
+
+function uiReducer(state: LipSyncUiState, action: LipSyncUiAction): LipSyncUiState {
+    switch (action.type) {
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'setRestoredResultVideo':
+            return { ...state, restoredResultVideo: action.restoredResultVideo };
+        case 'setCommunityLoading':
+            return { ...state, isCommunityLoading: action.isCommunityLoading };
+        case 'setMediaPickerOpen':
+            return { ...state, isMediaPickerOpen: action.isMediaPickerOpen };
+        case 'setMediaPickerType':
+            return { ...state, mediaPickerType: action.mediaPickerType };
+        case 'hydrate':
+            return {
+                ...state,
+                projectId: action.projectId,
+                projectError: action.projectError,
+                restoredResultVideo: action.restoredResultVideo,
+                isCommunityLoading: action.isCommunityLoading,
+            };
+        default:
+            return state;
+    }
+}
+
 const normalizeLipSyncSnapshot = (value: unknown): Partial<LipSyncSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -128,37 +198,30 @@ export default function LipSyncPage() {
 
 function LipSyncPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const videoInputRef = useRef<HTMLInputElement>(null);
     const audioInputRef = useRef<HTMLInputElement>(null);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const [restoredResultVideo, setRestoredResultVideo] = useState<string | null>(null);
     const { lipSync, currentGeneration, reset, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const [communityListings, setCommunityListings] = useState<Array<{ id: string; title: string; description?: string }>>([]);
-    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-    const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
-    const [mediaPickerType, setMediaPickerType] = useState<'video' | 'audio'>('video');
+    const communityListingsRef = useRef<Array<{ id: string; title: string; description?: string }>>([]);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = uiState.isProjectLoading || uiState.isProjectSaving;
 
     useEffect(() => {
         if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
             fetchGenerations({ type: 'lip-sync', limit: 12 });
         } else if (state.activeContentTab === COMMUNITY_TAB) { // Community
             const fetchCommunity = async () => {
-                setIsCommunityLoading(true);
+                dispatchUi({ type: 'setCommunityLoading', isCommunityLoading: true });
                 try {
                     const res = await import('@/lib/api').then(m => m.get<{ data: Array<{ id: string; title: string; description?: string }> }>('/community-marketplace/listings?type=lip-sync&limit=12'));
-                    setCommunityListings(res.data || []);
+                    communityListingsRef.current = res.data || [];
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
                 } finally {
-                    setIsCommunityLoading(false);
+                    dispatchUi({ type: 'setCommunityLoading', isCommunityLoading: false });
                 }
             };
             fetchCommunity();
@@ -167,12 +230,12 @@ function LipSyncPageContent() {
         }
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
-    const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultVideo;
+    const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : uiState.restoredResultVideo;
 
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatchUi({ type: 'setProjectId', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -194,11 +257,11 @@ function LipSyncPageContent() {
                 dispatch({ type: 'toggleFaceDetection' });
             }
             dispatch({ type: 'setActiveContentTab', tab: snapshot.activeContentTab ?? initialState.activeContentTab });
-            setRestoredResultVideo(snapshot.resultVideo ?? null);
+            dispatchUi({ type: 'setRestoredResultVideo', restoredResultVideo: snapshot.resultVideo ?? null });
         };
 
         const loadProject = async () => {
-            if (!projectId) {
+        if (!uiState.projectId) {
                 try {
                     const draftKey = 'lip-sync:draft:v1';
                     const raw = localStorage.getItem(draftKey);
@@ -211,10 +274,10 @@ function LipSyncPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatchUi({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatchUi({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(uiState.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -223,7 +286,7 @@ function LipSyncPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore lip sync project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved lip sync project. Falling back to a local draft.');
+                    dispatchUi({ type: 'setProjectError', projectError: 'Could not load the saved lip sync project. Falling back to a local draft.' });
                     try {
                         const draftKey = 'lip-sync:draft:v1';
                         const raw = localStorage.getItem(draftKey);
@@ -236,7 +299,7 @@ function LipSyncPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -246,7 +309,7 @@ function LipSyncPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [uiState.projectId]);
 
     const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -271,8 +334,8 @@ function LipSyncPageContent() {
     };
 
     const openMediaPicker = (type: 'video' | 'audio') => {
-        setMediaPickerType(type);
-        setIsMediaPickerOpen(true);
+        dispatchUi({ type: 'setMediaPickerType', mediaPickerType: type });
+        dispatchUi({ type: 'setMediaPickerOpen', isMediaPickerOpen: true });
     };
 
     const handleMediaSelect = (media: MediaItem) => {
@@ -303,8 +366,8 @@ function LipSyncPageContent() {
     const handleReset = () => {
         reset();
         dispatch({ type: 'reset' });
-        setRestoredResultVideo(null);
-        setProjectError(null);
+        dispatchUi({ type: 'setRestoredResultVideo', restoredResultVideo: null });
+        dispatchUi({ type: 'setProjectError', projectError: null });
     };
 
     const handleDownloadResult = (url: string, filename: string) => {
@@ -336,10 +399,10 @@ function LipSyncPageContent() {
         localStorage.setItem('lip-sync:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Lip Sync Draft',
                         description: 'Lip sync draft',
                         content: payload,
@@ -350,7 +413,7 @@ function LipSyncPageContent() {
                         description: 'Lip sync draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -359,7 +422,7 @@ function LipSyncPageContent() {
                 console.error('Failed to persist lip sync project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -372,14 +435,14 @@ function LipSyncPageContent() {
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                     <div className="flex items-center gap-3">
                         <h2 className="font-semibold text-muted-foreground">Lip Sync</h2>
-                        {(isProjectLoading || isProjectSaving || projectError) && (
+                        {(uiState.isProjectLoading || uiState.isProjectSaving || uiState.projectError) && (
                             <span className={cn(
                                 'text-[10px] px-2 py-1 rounded-full border',
-                                projectError
+                                uiState.projectError
                                     ? 'border-amber-500/30 text-amber-500'
                                     : 'border-muted-foreground/20 text-muted-foreground',
                             )}>
-                                {isProjectLoading ? 'Loading project' : isProjectSaving ? 'Saving project' : 'Draft restored'}
+                                {uiState.isProjectLoading ? 'Loading project' : uiState.isProjectSaving ? 'Saving project' : 'Draft restored'}
                             </span>
                         )}
                     </div>
@@ -443,12 +506,12 @@ function LipSyncPageContent() {
                             Reset
                         </Button>
                         <Button variant="outline" onClick={handleSave} disabled={isProjectBusy} className="h-11 rounded-xl gap-2">
-                            {isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : null}
+                        {uiState.isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : null}
                             Save
                         </Button>
                     </div>
-                    {projectError && (
-                        <p className="text-xs text-amber-500/90 leading-relaxed">{projectError}</p>
+                    {uiState.projectError && (
+                        <p className="text-xs text-amber-500/90 leading-relaxed">{uiState.projectError}</p>
                     )}
                 </div>
             </div>
@@ -497,7 +560,7 @@ function LipSyncPageContent() {
                     {state.activeContentTab === COMMUNITY_TAB && ( // Community
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Community Showcases</h2>
-                            {isCommunityLoading ? <LoadingGrid /> : <EmptyState message="No community lip sync found." />}
+                            {uiState.isCommunityLoading ? <LoadingGrid /> : <EmptyState message="No community lip sync found." />}
                         </section>
                     )}
 
@@ -525,10 +588,10 @@ function LipSyncPageContent() {
             </div>
 
             <MediaPickerModal
-                isOpen={isMediaPickerOpen}
-                onClose={() => setIsMediaPickerOpen(false)}
+                isOpen={uiState.isMediaPickerOpen}
+                onClose={() => dispatchUi({ type: 'setMediaPickerOpen', isMediaPickerOpen: false })}
                 onSelect={handleMediaSelect}
-                mediaType={mediaPickerType}
+                mediaType={uiState.mediaPickerType}
             />
         </CreatorWorkspaceShell>
     );

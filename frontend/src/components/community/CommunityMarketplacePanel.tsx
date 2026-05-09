@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useReducer } from 'react';
 import Image from 'next/image';
 import axios from 'axios';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -62,6 +62,84 @@ type MarketplaceContent = {
   summary?: string;
   note?: string;
 };
+
+type MarketplaceState = {
+  page: number;
+  search: string;
+  typeFilter: 'all' | TemplateTypeEnum;
+  title: string;
+  description: string;
+  thumbnail: string;
+  templateType: TemplateTypeEnum;
+  prompt: string;
+  priceCredits: number;
+  platformFeeBps: number;
+  tags: string;
+  listed: boolean;
+};
+
+type MarketplaceAction =
+  | { type: 'setPage'; page: number }
+  | { type: 'setSearch'; search: string }
+  | { type: 'setTypeFilter'; typeFilter: 'all' | TemplateTypeEnum }
+  | { type: 'setTitle'; title: string }
+  | { type: 'setDescription'; description: string }
+  | { type: 'setThumbnail'; thumbnail: string }
+  | { type: 'setTemplateType'; templateType: TemplateTypeEnum }
+  | { type: 'setPrompt'; prompt: string }
+  | { type: 'setPriceCredits'; priceCredits: number }
+  | { type: 'setPlatformFeeBps'; platformFeeBps: number }
+  | { type: 'setTags'; tags: string }
+  | { type: 'setListed'; listed: boolean }
+  | { type: 'resetDraft' };
+
+const initialMarketplaceState: MarketplaceState = {
+  page: 1,
+  search: '',
+  typeFilter: 'all',
+  title: '',
+  description: '',
+  thumbnail: '',
+  templateType: TemplateTypeEnum.IMAGE_GENERATOR,
+  prompt: '',
+  priceCredits: 25,
+  platformFeeBps: 1500,
+  tags: 'prompt,community,template',
+  listed: true,
+};
+
+function marketplaceReducer(state: MarketplaceState, action: MarketplaceAction): MarketplaceState {
+  switch (action.type) {
+    case 'setPage':
+      return { ...state, page: action.page };
+    case 'setSearch':
+      return { ...state, search: action.search, page: 1 };
+    case 'setTypeFilter':
+      return { ...state, typeFilter: action.typeFilter, page: 1 };
+    case 'setTitle':
+      return { ...state, title: action.title };
+    case 'setDescription':
+      return { ...state, description: action.description };
+    case 'setThumbnail':
+      return { ...state, thumbnail: action.thumbnail };
+    case 'setTemplateType':
+      return { ...state, templateType: action.templateType };
+    case 'setPrompt':
+      return { ...state, prompt: action.prompt };
+    case 'setPriceCredits':
+      return { ...state, priceCredits: action.priceCredits };
+    case 'setPlatformFeeBps':
+      return { ...state, platformFeeBps: action.platformFeeBps };
+    case 'setTags':
+      return { ...state, tags: action.tags };
+    case 'setListed':
+      return { ...state, listed: action.listed };
+    case 'resetDraft':
+      return { ...initialMarketplaceState };
+    default:
+      return state;
+  }
+}
 
 const BROWSE_TEMPLATE_TYPES: TemplateTypeOption[] = [
   {
@@ -636,33 +714,20 @@ export function CommunityMarketplacePanel() {
   const { push } = useRouter();
   const queryClient = useQueryClient();
   const { balance, fetchBalance } = useCreditStore();
-  const [page, setPage] = React.useState(1);
-  const [search, setSearch] = React.useState('');
-  const [typeFilter, setTypeFilter] = React.useState<'all' | TemplateTypeEnum>('all');
-  const [title, setTitle] = React.useState('');
-  const [description, setDescription] = React.useState('');
-  const [thumbnail, setThumbnail] = React.useState('');
-  const [templateType, setTemplateType] = React.useState<TemplateTypeEnum>(
-    TemplateTypeEnum.IMAGE_GENERATOR,
-  );
-  const [prompt, setPrompt] = React.useState('');
-  const [priceCredits, setPriceCredits] = React.useState(25);
-  const [platformFeeBps, setPlatformFeeBps] = React.useState(1500);
-  const [tags, setTags] = React.useState('prompt,community,template');
-  const [listed, setListed] = React.useState(true);
+  const [state, dispatch] = useReducer(marketplaceReducer, initialMarketplaceState);
 
   React.useEffect(() => {
     void fetchBalance();
   }, [fetchBalance]);
 
   const listingsQuery = useQuery({
-    queryKey: ['community-marketplace', page, search.trim(), typeFilter],
+    queryKey: ['community-marketplace', state.page, state.search.trim(), state.typeFilter],
     queryFn: () =>
       communityMarketplaceApi.getListings({
-        page,
+        page: state.page,
         limit: 12,
-        q: search.trim(),
-        type: typeFilter,
+        q: state.search.trim(),
+        type: state.typeFilter,
       }),
     placeholderData: (previousData) => previousData,
   });
@@ -685,14 +750,7 @@ export function CommunityMarketplacePanel() {
           ? 'Template listed on the community marketplace'
           : 'Template saved as a draft',
       );
-      setTitle('');
-      setDescription('');
-      setThumbnail('');
-      setPrompt('');
-      setPriceCredits(25);
-      setPlatformFeeBps(1500);
-      setTags('prompt,community,template');
-      setListed(true);
+      dispatch({ type: 'resetDraft' });
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: ['community-marketplace'] }),
         queryClient.invalidateQueries({ queryKey: ['community-marketplace-mine'] }),
@@ -724,34 +782,34 @@ export function CommunityMarketplacePanel() {
   const submitListing = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
-    if (!title.trim()) {
+    if (!state.title.trim()) {
       toast.error('Add a title before listing');
       return;
     }
 
-    if (!prompt.trim()) {
+    if (!state.prompt.trim()) {
       toast.error('Add a prompt or workflow summary before listing');
       return;
     }
 
-    if (priceCredits < 1) {
+    if (state.priceCredits < 1) {
       toast.error('Price must be at least 1 credit');
       return;
     }
 
     createListingMutation.mutate({
-      title: title.trim(),
-      description: description.trim() || undefined,
-      thumbnail: thumbnail.trim() || undefined,
-      type: templateType,
-      priceCredits,
-      platformFeeBps,
-      tags: parseTags(tags),
-      listed,
+      title: state.title.trim(),
+      description: state.description.trim() || undefined,
+      thumbnail: state.thumbnail.trim() || undefined,
+      type: state.templateType,
+      priceCredits: state.priceCredits,
+      platformFeeBps: state.platformFeeBps,
+      tags: parseTags(state.tags),
+      listed: state.listed,
       content: {
-        prompt: prompt.trim(),
-        marketplacePitch: description.trim() || title.trim(),
-        thumbnail: thumbnail.trim() || undefined,
+        prompt: state.prompt.trim(),
+        marketplacePitch: state.description.trim() || state.title.trim(),
+        thumbnail: state.thumbnail.trim() || undefined,
       },
     });
   };
@@ -767,10 +825,10 @@ export function CommunityMarketplacePanel() {
   };
 
   const selectedTypeDescription =
-    TEMPLATE_TYPE_DESCRIPTIONS.get(templateType) ?? 'Selected template type';
+    TEMPLATE_TYPE_DESCRIPTIONS.get(state.templateType) ?? 'Selected template type';
 
-  const draftFeeCredits = getFeeCredits(priceCredits, platformFeeBps);
-  const draftCreatorCredits = Math.max(0, priceCredits - draftFeeCredits);
+  const draftFeeCredits = getFeeCredits(state.priceCredits, state.platformFeeBps);
+  const draftCreatorCredits = Math.max(0, state.priceCredits - draftFeeCredits);
 
   return (
     <div className="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
@@ -827,12 +885,11 @@ export function CommunityMarketplacePanel() {
                     type="button"
                     key={option.value}
                     onClick={() => {
-                      setTypeFilter(option.value);
-                      setPage(1);
+                      dispatch({ type: 'setTypeFilter', typeFilter: option.value });
                     }}
                     className={cn(
                       'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm transition-colors',
-                      typeFilter === option.value
+                      state.typeFilter === option.value
                         ? 'border-foreground bg-foreground text-background'
                         : 'border-border bg-background text-muted-foreground hover:border-foreground/40 hover:text-foreground',
                     )}
@@ -847,10 +904,9 @@ export function CommunityMarketplacePanel() {
             <div className="relative">
               <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
               <Input
-                value={search}
+                value={state.search}
                 onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
+                  dispatch({ type: 'setSearch', search: event.target.value });
                 }}
                 placeholder="Search titles, prompts, and creators"
                 className="pl-10"
@@ -911,20 +967,20 @@ export function CommunityMarketplacePanel() {
           </CardContent>
 
           <CardFooter className="justify-between border-t border-border/70 pt-6">
-            <p className="text-sm text-muted-foreground">Showing page {page}</p>
+            <p className="text-sm text-muted-foreground">Showing page {state.page}</p>
             <div className="flex items-center gap-2">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={page === 1}
+                onClick={() => dispatch({ type: 'setPage', page: Math.max(1, state.page - 1) })}
+                disabled={state.page === 1}
               >
                 Previous
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => setPage((current) => current + 1)}
+                onClick={() => dispatch({ type: 'setPage', page: state.page + 1 })}
                 disabled={!hasNextPage}
               >
                 Next
@@ -953,8 +1009,8 @@ export function CommunityMarketplacePanel() {
                 <Label htmlFor="community-title">Title</Label>
                 <Input
                   id="community-title"
-                  value={title}
-                  onChange={(event) => setTitle(event.target.value)}
+                  value={state.title}
+                  onChange={(event) => dispatch({ type: 'setTitle', title: event.target.value })}
                   placeholder="Template title"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -966,8 +1022,10 @@ export function CommunityMarketplacePanel() {
                 <Label htmlFor="community-description">Short description</Label>
                 <Textarea
                   id="community-description"
-                  value={description}
-                  onChange={(event) => setDescription(event.target.value)}
+                  value={state.description}
+                  onChange={(event) =>
+                    dispatch({ type: 'setDescription', description: event.target.value })
+                  }
                   placeholder="Describe the outcome, workflow, or style pack"
                   className="min-h-24"
                 />
@@ -980,8 +1038,8 @@ export function CommunityMarketplacePanel() {
                 <Label htmlFor="community-thumbnail">Cover image URL</Label>
                 <Input
                   id="community-thumbnail"
-                  value={thumbnail}
-                  onChange={(event) => setThumbnail(event.target.value)}
+                  value={state.thumbnail}
+                  onChange={(event) => dispatch({ type: 'setThumbnail', thumbnail: event.target.value })}
                   placeholder="https://example.com/cover.png"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -994,8 +1052,8 @@ export function CommunityMarketplacePanel() {
                 <Label htmlFor="community-prompt">Prompt / template content</Label>
                 <Textarea
                   id="community-prompt"
-                  value={prompt}
-                  onChange={(event) => setPrompt(event.target.value)}
+                  value={state.prompt}
+                  onChange={(event) => dispatch({ type: 'setPrompt', prompt: event.target.value })}
                   placeholder="Paste the prompt body, workflow notes, or instructions"
                   className="min-h-32"
                 />
@@ -1008,8 +1066,10 @@ export function CommunityMarketplacePanel() {
                 <div className="space-y-2">
                   <Label htmlFor="community-type">Type</Label>
                   <Select
-                    value={templateType}
-                    onValueChange={(value) => setTemplateType(value as TemplateTypeEnum)}
+                    value={state.templateType}
+                    onValueChange={(value) =>
+                      dispatch({ type: 'setTemplateType', templateType: value as TemplateTypeEnum })
+                    }
                   >
                     <SelectTrigger id="community-type" className="w-full">
                       <SelectValue placeholder="Choose a template type" />
@@ -1038,10 +1098,13 @@ export function CommunityMarketplacePanel() {
                     id="community-price"
                     type="number"
                     min={1}
-                    value={priceCredits}
+                    value={state.priceCredits}
                     onChange={(event) => {
                       const nextValue = Number(event.target.value);
-                      setPriceCredits(Number.isFinite(nextValue) ? Math.max(1, nextValue) : 1);
+                      dispatch({
+                        type: 'setPriceCredits',
+                        priceCredits: Number.isFinite(nextValue) ? Math.max(1, nextValue) : 1,
+                      });
                     }}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -1057,10 +1120,13 @@ export function CommunityMarketplacePanel() {
                   id="community-platform-fee"
                   type="number"
                   min={0}
-                  value={platformFeeBps}
+                  value={state.platformFeeBps}
                   onChange={(event) => {
                     const nextValue = Number(event.target.value);
-                    setPlatformFeeBps(Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0);
+                    dispatch({
+                      type: 'setPlatformFeeBps',
+                      platformFeeBps: Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0,
+                    });
                   }}
                 />
                 <p className="text-xs text-muted-foreground">
@@ -1072,8 +1138,8 @@ export function CommunityMarketplacePanel() {
                 <Label htmlFor="community-tags">Tags</Label>
                 <Input
                   id="community-tags"
-                  value={tags}
-                  onChange={(event) => setTags(event.target.value)}
+                  value={state.tags}
+                  onChange={(event) => dispatch({ type: 'setTags', tags: event.target.value })}
                   placeholder="prompt,community,template"
                 />
                 <p className="text-xs text-muted-foreground">
@@ -1091,8 +1157,8 @@ export function CommunityMarketplacePanel() {
                 <input
                   id="community-listed"
                   type="checkbox"
-                  checked={listed}
-                  onChange={(event) => setListed(event.target.checked)}
+                  checked={state.listed}
+                  onChange={(event) => dispatch({ type: 'setListed', listed: event.target.checked })}
                   className="size-4 rounded border-border text-primary focus:ring-primary"
                 />
               </div>
@@ -1103,21 +1169,21 @@ export function CommunityMarketplacePanel() {
                 ) : (
                   <Sparkles className="size-4" />
                 )}
-                {listed ? 'Publish listing' : 'Save draft'}
+                {state.listed ? 'Publish listing' : 'Save draft'}
               </Button>
             </form>
 
             <Separator />
 
             <ListingDraftPreview
-              title={title}
-              description={description}
-              prompt={prompt}
-              thumbnail={thumbnail}
-              templateType={templateType}
-              priceCredits={priceCredits}
-              platformFeeBps={platformFeeBps}
-              tags={tags}
+              title={state.title}
+              description={state.description}
+              prompt={state.prompt}
+              thumbnail={state.thumbnail}
+              templateType={state.templateType}
+              priceCredits={state.priceCredits}
+              platformFeeBps={state.platformFeeBps}
+              tags={state.tags}
             />
 
             <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">

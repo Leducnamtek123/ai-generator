@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { siteConfigApi } from '@/services/siteConfigApi';
 
-export const SITE_CONFIG_KEYS = {
+const SITE_CONFIG_KEYS = {
   all: ['site-config'] as const,
   detail: (key: string, locale: string) => [...SITE_CONFIG_KEYS.all, key, locale] as const,
   adminList: (key?: string, locale?: string) =>
@@ -18,7 +18,7 @@ export function useSiteConfig(key: string, locale?: string) {
   });
 }
 
-export function useAdminSiteConfigs(key?: string, locale?: string) {
+function useAdminSiteConfigs(key?: string, locale?: string) {
   return useQuery({
     queryKey: SITE_CONFIG_KEYS.adminList(key, locale),
     queryFn: () => siteConfigApi.getAdminSiteConfigs({ key, locale }),

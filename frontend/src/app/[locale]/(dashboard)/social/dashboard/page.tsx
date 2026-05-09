@@ -64,12 +64,51 @@ const SOCIAL_PIPELINE = [
     { label: 'Analytics / optimize', detail: 'Measure performance and improve the next draft.' },
 ] as const;
 
+type DashboardState = {
+    stats: SocialAnalytics | null;
+    channels: SocialChannel[];
+    posts: SocialPost[];
+    inboxItems: SocialInteraction[];
+    isLoading: boolean;
+};
+
+type DashboardAction =
+    | { type: 'setLoading'; isLoading: boolean }
+    | {
+        type: 'setData';
+        stats: SocialAnalytics;
+        channels: SocialChannel[];
+        posts: SocialPost[];
+        inboxItems: SocialInteraction[];
+    };
+
+const initialDashboardState: DashboardState = {
+    stats: null,
+    channels: [],
+    posts: [],
+    inboxItems: [],
+    isLoading: true,
+};
+
+function dashboardReducer(state: DashboardState, action: DashboardAction): DashboardState {
+    switch (action.type) {
+        case 'setLoading':
+            return { ...state, isLoading: action.isLoading };
+        case 'setData':
+            return {
+                stats: action.stats,
+                channels: action.channels,
+                posts: action.posts,
+                inboxItems: action.inboxItems,
+                isLoading: false,
+            };
+        default:
+            return state;
+    }
+}
+
 export default function SocialDashboardPage() {
-    const [stats, setStats] = React.useState<SocialAnalytics | null>(null);
-    const [channels, setChannels] = React.useState<SocialChannel[]>([]);
-    const [posts, setPosts] = React.useState<SocialPost[]>([]);
-    const [inboxItems, setInboxItems] = React.useState<SocialInteraction[]>([]);
-    const [isLoading, setIsLoading] = React.useState(true);
+    const [dashboard, dispatch] = React.useReducer(dashboardReducer, initialDashboardState);
     const [daysRange, setDaysRange] = React.useState<7 | 30>(7);
     const platformMeta = {
         facebook: { icon: Facebook, color: '#1877F2', label: 'Facebook' },
@@ -81,7 +120,7 @@ export default function SocialDashboardPage() {
 
     React.useEffect(() => {
         const fetchStats = async () => {
-            setIsLoading(true);
+            dispatch({ type: 'setLoading', isLoading: true });
             try {
                 const [analytics, channelData, postData, inboxData] = await Promise.all([
                     socialHubApi.getAnalytics(daysRange),
@@ -89,41 +128,44 @@ export default function SocialDashboardPage() {
                     socialHubApi.getPosts(),
                     socialHubApi.getInbox(),
                 ]);
-                setStats(analytics);
-                setChannels(channelData);
-                setPosts(postData);
-                setInboxItems(inboxData);
+                dispatch({
+                    type: 'setData',
+                    stats: analytics,
+                    channels: channelData,
+                    posts: postData,
+                    inboxItems: inboxData,
+                });
             } catch (err) {
                 console.error('Failed to fetch analytics', err);
+                dispatch({ type: 'setLoading', isLoading: false });
             }
-            setIsLoading(false);
         };
         fetchStats();
     }, [daysRange]);
 
-    if (isLoading || !stats) {
+    if (dashboard.isLoading || !dashboard.stats) {
         return <div className="p-8 text-muted-foreground">Loading analytics?</div>;
     }
 
     const DISPLAY_STATS = [
-        { label: 'Total Engagement', value: stats.totals.likes + stats.totals.comments + stats.totals.shares, change: '+12.4%', type: 'up', icon: BarChart3 },
-        { label: 'Total Likes', value: stats.totals.likes, change: '+8.2%', type: 'up', icon: Users },
-        { label: 'Total Comments', value: stats.totals.comments, change: '+5.1%', type: 'up', icon: MessageSquare },
-        { label: 'Total Shares', value: stats.totals.shares, change: '-2.4%', type: 'down', icon: Share2 },
+        { label: 'Total Engagement', value: dashboard.stats.totals.likes + dashboard.stats.totals.comments + dashboard.stats.totals.shares, change: '+12.4%', type: 'up', icon: BarChart3 },
+        { label: 'Total Likes', value: dashboard.stats.totals.likes, change: '+8.2%', type: 'up', icon: Users },
+        { label: 'Total Comments', value: dashboard.stats.totals.comments, change: '+5.1%', type: 'up', icon: MessageSquare },
+        { label: 'Total Shares', value: dashboard.stats.totals.shares, change: '-2.4%', type: 'down', icon: Share2 },
     ];
-    const platformBreakdown = stats.platformBreakdown ?? {};
+    const platformBreakdown = dashboard.stats.platformBreakdown ?? {};
     const totalPosts =
-        stats.totals.totalPosts ??
+        dashboard.stats.totals.totalPosts ??
         Object.values(platformBreakdown).reduce((sum, item) => sum + (item.posts || 0), 0);
     const now = new Date();
-    const connectedAccounts = channels.length;
-    const connectedFacebookPages = channels.filter((account) => account.platform === 'facebook').length;
-    const accountsNeedingReauth = channels.filter((account) => account.needsReauth).length;
-    const scheduledPosts = posts.filter((post) => post.status === 'scheduled');
-    const draftPosts = posts.filter((post) => post.status === 'draft');
-    const publishedPosts = posts.filter((post) => post.status === 'published');
-    const failedPosts = posts.filter((post) => post.status === 'failed');
-    const openInboxItems = inboxItems.filter((item) => {
+    const connectedAccounts = dashboard.channels.length;
+    const connectedFacebookPages = dashboard.channels.filter((account) => account.platform === 'facebook').length;
+    const accountsNeedingReauth = dashboard.channels.filter((account) => account.needsReauth).length;
+    const scheduledPosts = dashboard.posts.filter((post) => post.status === 'scheduled');
+    const draftPosts = dashboard.posts.filter((post) => post.status === 'draft');
+    const publishedPosts = dashboard.posts.filter((post) => post.status === 'published');
+    const failedPosts = dashboard.posts.filter((post) => post.status === 'failed');
+    const openInboxItems = dashboard.inboxItems.filter((item) => {
         const status = (item.status || '').toLowerCase();
         return status !== 'handled' && status !== 'done' && status !== 'closed';
     });
@@ -392,7 +434,7 @@ export default function SocialDashboardPage() {
                             minWidth={0}
                             minHeight={220}
                         >
-                            <AreaChart data={stats.chartData}>
+                            <AreaChart data={dashboard.stats.chartData}>
                                 <defs>
                                     <linearGradient id="colorEngage" x1="0" y1="0" x2="0" y2="1">
                                         <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>

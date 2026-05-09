@@ -160,9 +160,60 @@ function toDatetimeLocal(date: Date) {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
+type CalendarTextKind = "time" | "monthDayTime" | "selectedDay";
+
+function formatCalendarText(value: string | Date, kind: CalendarTextKind) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  switch (kind) {
+    case "time":
+      return date.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    case "monthDayTime":
+      return date.toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      });
+    case "selectedDay":
+      return date.toLocaleDateString(undefined, {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric"
+      });
+  }
+}
+
+function ClientCalendarText({
+  value,
+  kind,
+  fallback = ""
+}: {
+  value: string | Date;
+  kind: CalendarTextKind;
+  fallback?: string;
+}) {
+  const subscribe = React.useCallback(() => () => {}, []);
+  const getSnapshot = React.useCallback(() => formatCalendarText(value, kind) || fallback, [
+    fallback,
+    kind,
+    value
+  ]);
+
+  const text = React.useSyncExternalStore(subscribe, getSnapshot, () => fallback);
+  return <span suppressHydrationWarning>{text}</span>;
+}
+
 export default function CalendarPage() {
   const [state, dispatch] = React.useReducer(reducer, initialState);
-  const [draftReady, setDraftReady] = React.useState(false);
+  const draftReadyRef = React.useRef(false);
 
   const monthName = MONTHS[state.currentDate.getMonth()];
   const year = state.currentDate.getFullYear();
@@ -177,6 +228,11 @@ export default function CalendarPage() {
     [weekStart]
   );
   const selectedDayKey = toDayKey(state.currentDate);
+  const todayKey = React.useSyncExternalStore(
+    React.useCallback(() => () => {}, []),
+    React.useCallback(() => toDayKey(new Date()), []),
+    () => ""
+  );
 
   const fetchData = React.useCallback(async () => {
     try {
@@ -205,8 +261,8 @@ export default function CalendarPage() {
   React.useEffect(() => {
     try {
       const raw = window.localStorage.getItem(COMPOSER_DRAFT_KEY);
-      if (!raw) {
-        setDraftReady(true);
+        if (!raw) {
+        draftReadyRef.current = true;
         return;
       }
 
@@ -230,12 +286,12 @@ export default function CalendarPage() {
     } catch (error) {
       console.error("Failed to restore calendar composer draft", error);
     } finally {
-      setDraftReady(true);
+      draftReadyRef.current = true;
     }
   }, []);
 
   React.useEffect(() => {
-    if (!draftReady) {
+    if (!draftReadyRef.current) {
       return;
     }
 
@@ -250,7 +306,7 @@ export default function CalendarPage() {
       },
     };
     window.localStorage.setItem(COMPOSER_DRAFT_KEY, JSON.stringify(draft));
-  }, [draftReady, state.content, state.isComposerOpen, state.scheduledAt, state.selectedAccountId]);
+  }, [state.content, state.isComposerOpen, state.scheduledAt, state.selectedAccountId]);
 
   const base = startOfMonth(state.currentDate);
   const offset = getMondayBasedOffset(base);
@@ -301,14 +357,6 @@ export default function CalendarPage() {
       nextScheduledTime = scheduledTime;
     }
   }
-  const nextScheduledLabel = nextScheduledPost?.scheduledAt
-    ? new Date(nextScheduledPost.scheduledAt).toLocaleString([], {
-        month: "short",
-        day: "numeric",
-        hour: "numeric",
-        minute: "2-digit"
-      })
-    : null;
   const activeChannels = state.channels.length;
 
   const visibleMonthLabel =
@@ -402,6 +450,10 @@ export default function CalendarPage() {
     dispatch({ type: "setCurrentDate", currentDate: next });
   };
 
+  const handleTodayClick = () => {
+    dispatch({ type: "setCurrentDate", currentDate: new Date() });
+  };
+
   return (
     <div className="mx-auto flex min-h-full max-w-7xl flex-col gap-y-8 p-8 pb-8">
       <div className="flex items-center justify-between">
@@ -482,7 +534,13 @@ export default function CalendarPage() {
               {state.view} view
             </span>
             <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-muted-foreground">
-              {nextScheduledPost ? `Next at ${nextScheduledLabel}` : 'No future schedule yet'}
+              {nextScheduledPost ? (
+                <>
+                  Next at <ClientCalendarText value={nextScheduledPost.scheduledAt as string} kind="monthDayTime" />
+                </>
+              ) : (
+                "No future schedule yet"
+              )}
             </span>
           </div>
         </div>
@@ -525,7 +583,7 @@ export default function CalendarPage() {
               variant="outline"
               size="sm"
               className="h-8 text-xs"
-              onClick={() => dispatch({ type: "setCurrentDate", currentDate: new Date() })}
+              onClick={handleTodayClick}
             >
               Today
             </Button>
@@ -569,7 +627,7 @@ export default function CalendarPage() {
               const key = toDayKey(day);
               const dayPosts = postsByDay.get(key) ?? [];
               const isCurrentMonth = day.getMonth() === state.currentDate.getMonth();
-              const isToday = key === toDayKey(new Date());
+              const isToday = todayKey ? key === todayKey : false;
 
               return (
                 <div
@@ -612,10 +670,7 @@ export default function CalendarPage() {
                             {post.socialAccount?.platform || "general"}
                           </span>
                           <span className="opacity-70">
-                            {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
-                              hour: "2-digit",
-                              minute: "2-digit"
-                            })}
+                            <ClientCalendarText value={post.scheduledAt || post.createdAt} kind="time" />
                           </span>
                         </div>
                         <span className="truncate font-medium">{post.content}</span>
@@ -656,7 +711,7 @@ export default function CalendarPage() {
             {weekDays.map((day) => {
               const key = toDayKey(day);
               const dayPosts = postsByDay.get(key) ?? [];
-              const isToday = key === toDayKey(new Date());
+              const isToday = todayKey ? key === todayKey : false;
 
               return (
                 <div key={key} className="min-h-[320px] border-r border-white/5 last:border-r-0">
@@ -691,10 +746,7 @@ export default function CalendarPage() {
                               {post.socialAccount?.platform || "general"}
                             </span>
                             <span className="opacity-70">
-                              {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
-                                hour: "2-digit",
-                                minute: "2-digit"
-                              })}
+                              <ClientCalendarText value={post.scheduledAt || post.createdAt} kind="time" />
                             </span>
                           </div>
                           <p className="mt-1 line-clamp-3">{post.content}</p>
@@ -741,12 +793,7 @@ export default function CalendarPage() {
                   Selected day
                 </p>
                 <h3 className="text-xl font-semibold">
-                  {state.currentDate.toLocaleDateString(undefined, {
-                    weekday: "long",
-                    month: "long",
-                    day: "numeric",
-                    year: "numeric"
-                  })}
+                  <ClientCalendarText value={state.currentDate} kind="selectedDay" />
                 </h3>
               </div>
               <Button onClick={() => openComposer(state.currentDate)}>
@@ -779,10 +826,7 @@ export default function CalendarPage() {
                           {post.socialAccount?.platform || "general"}
                         </div>
                         <div className="text-sm font-semibold">
-                          {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit"
-                          })}
+                          <ClientCalendarText value={post.scheduledAt || post.createdAt} kind="time" />
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useReducer, useRef, useEffect, useCallback, useState, useMemo } from 'react';
+import { Suspense, useReducer, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -47,6 +47,11 @@ type State = {
     selectedStyle: string;
     strength: number;
     canvasInitialized: boolean;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    restoredResultImage: string | null;
 };
 
 type Action =
@@ -58,6 +63,11 @@ type Action =
     | { type: 'setSelectedStyle'; selectedStyle: string }
     | { type: 'setStrength'; strength: number }
     | { type: 'setCanvasInitialized'; canvasInitialized: boolean }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setIsProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setIsProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'setRestoredResultImage'; restoredResultImage: string | null }
     | { type: 'reset' };
 
 const initialState: State = {
@@ -69,6 +79,11 @@ const initialState: State = {
     selectedStyle: 'realistic',
     strength: 75,
     canvasInitialized: false,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    restoredResultImage: null,
 };
 
 type SketchSnapshot = {
@@ -116,6 +131,16 @@ function reducer(state: State, action: Action): State {
             return { ...state, strength: action.strength };
         case 'setCanvasInitialized':
             return { ...state, canvasInitialized: action.canvasInitialized };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setIsProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setIsProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'setRestoredResultImage':
+            return { ...state, restoredResultImage: action.restoredResultImage };
         case 'reset':
             return initialState;
         default:
@@ -134,12 +159,8 @@ export default function SketchToImagePage() {
 function SketchToImagePageContent() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [state, dispatch] = useReducer(reducer, initialState);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const [restoredCanvasDataUrl, setRestoredCanvasDataUrl] = useState<string | null>(null);
-    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
+    const { projectId, isProjectLoading, isProjectSaving, projectError, restoredResultImage } = state;
+    const restoredCanvasDataUrlRef = useRef<string | null>(null);
     const { sketchToImage, isGenerating, currentGeneration } = useGenerationStore();
     const completedImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
     const { replace } = useRouter();
@@ -187,7 +208,7 @@ function SketchToImagePageContent() {
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -198,8 +219,8 @@ function SketchToImagePageContent() {
             dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? initialState.prompt });
             dispatch({ type: 'setSelectedStyle', selectedStyle: snapshot.selectedStyle ?? initialState.selectedStyle });
             dispatch({ type: 'setStrength', strength: snapshot.strength ?? initialState.strength });
-            setRestoredCanvasDataUrl(snapshot.canvas ?? null);
-            setRestoredResultImage(snapshot.resultImage ?? null);
+            restoredCanvasDataUrlRef.current = snapshot.canvas ?? null;
+            dispatch({ type: 'setRestoredResultImage', restoredResultImage: snapshot.resultImage ?? null });
         };
 
         const loadProject = async () => {
@@ -216,8 +237,8 @@ function SketchToImagePageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatch({ type: 'setIsProjectLoading', isProjectLoading: true });
+            dispatch({ type: 'setProjectError', projectError: null });
             try {
                 const project = await projectApi.get(projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
@@ -228,7 +249,7 @@ function SketchToImagePageContent() {
             } catch (loadError) {
                 console.error('Failed to restore sketch project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved sketch project. Falling back to a local draft.');
+                    dispatch({ type: 'setProjectError', projectError: 'Could not load the saved sketch project. Falling back to a local draft.' });
                     try {
                         if (draftRaw) {
                             hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(draftRaw)));
@@ -239,7 +260,7 @@ function SketchToImagePageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setIsProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -253,8 +274,8 @@ function SketchToImagePageContent() {
 
     useEffect(() => {
         if (!state.canvasInitialized) return;
-        hydrateCanvas(restoredCanvasDataUrl);
-    }, [state.canvasInitialized, restoredCanvasDataUrl, hydrateCanvas]);
+        hydrateCanvas(restoredCanvasDataUrlRef.current);
+    }, [state.canvasInitialized, hydrateCanvas]);
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
@@ -364,7 +385,7 @@ function SketchToImagePageContent() {
         localStorage.setItem('sketch-to-image:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setIsProjectSaving', isProjectSaving: true });
             try {
                 if (projectId) {
                     await projectApi.update(projectId, {
@@ -378,7 +399,7 @@ function SketchToImagePageContent() {
                         description: 'Sketch to image draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -387,7 +408,7 @@ function SketchToImagePageContent() {
                 console.error('Failed to persist sketch project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setIsProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -419,8 +440,8 @@ function SketchToImagePageContent() {
         clearCanvas();
         dispatch({ type: 'reset' });
         dispatch({ type: 'setCanvasInitialized', canvasInitialized: false });
-        setRestoredCanvasDataUrl(null);
-        setProjectError(null);
+        restoredCanvasDataUrlRef.current = null;
+        dispatch({ type: 'setProjectError', projectError: null });
     };
 
     return (

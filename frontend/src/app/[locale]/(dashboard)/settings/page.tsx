@@ -72,6 +72,32 @@ type UserProfile = {
   } | null;
 };
 
+function ClientDateText({
+  value,
+  locale,
+  format,
+  fallback = "—"
+}: {
+  value?: string | null;
+  locale: string;
+  format: "date" | "dateTime";
+  fallback?: string;
+}) {
+  const [text, setText] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!value) {
+      setText(fallback);
+      return;
+    }
+
+    const date = new Date(value);
+    setText(format === "date" ? date.toLocaleDateString(locale) : date.toLocaleString(locale));
+  }, [fallback, format, locale, value]);
+
+  return <span suppressHydrationWarning>{text ?? fallback}</span>;
+}
+
 export default function SettingsPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-background text-foreground" />}>
@@ -244,14 +270,49 @@ function ProfileSettings({
   const t = useTranslations("Settings");
   const { data: session } = useSession();
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-  const [firstName, setFirstName] = useState(profile?.firstName ?? "");
-  const [lastName, setLastName] = useState(profile?.lastName ?? "");
-  const [email, setEmail] = useState(profile?.email ?? "");
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [state, dispatch] = useReducer(
+    (
+      s: {
+        firstName: string;
+        lastName: string;
+        email: string;
+        isSaving: boolean;
+        isUploadingAvatar: boolean;
+      },
+      a:
+        | { type: "setFirstName"; firstName: string }
+        | { type: "setLastName"; lastName: string }
+        | { type: "setEmail"; email: string }
+        | { type: "setIsSaving"; isSaving: boolean }
+        | { type: "setIsUploadingAvatar"; isUploadingAvatar: boolean }
+    ) => {
+      switch (a.type) {
+        case "setFirstName":
+          return { ...s, firstName: a.firstName };
+        case "setLastName":
+          return { ...s, lastName: a.lastName };
+        case "setEmail":
+          return { ...s, email: a.email };
+        case "setIsSaving":
+          return { ...s, isSaving: a.isSaving };
+        case "setIsUploadingAvatar":
+          return { ...s, isUploadingAvatar: a.isUploadingAvatar };
+        default:
+          return s;
+      }
+    },
+    {
+      firstName: profile?.firstName ?? "",
+      lastName: profile?.lastName ?? "",
+      email: profile?.email ?? "",
+      isSaving: false,
+      isUploadingAvatar: false,
+    }
+  );
+  const { firstName, lastName, email, isSaving, isUploadingAvatar } = state;
 
   const handleSave = async () => {
-    setIsSaving(true);
+    dispatch({ type: "setIsSaving", isSaving: true });
     try {
       await authApi.updateProfile({ firstName, lastName, email });
       toast.success(t("profile.toasts.updated"));
@@ -260,7 +321,7 @@ function ProfileSettings({
       const message = error instanceof Error ? error.message : t("profile.toasts.updateFailed");
       toast.error(message);
     }
-    setIsSaving(false);
+    dispatch({ type: "setIsSaving", isSaving: false });
   };
 
   const handleAvatarChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -269,7 +330,7 @@ function ProfileSettings({
 
     if (!file) return;
 
-    setIsUploadingAvatar(true);
+    dispatch({ type: "setIsUploadingAvatar", isUploadingAvatar: true });
     try {
       const uploaded = await uploadFile(file);
       await authApi.updateProfile({ photo: { id: uploaded.id } });
@@ -279,7 +340,7 @@ function ProfileSettings({
       const message = error instanceof Error ? error.message : t("profile.toasts.avatarUpdateFailed");
       toast.error(message);
     }
-    setIsUploadingAvatar(false);
+    dispatch({ type: "setIsUploadingAvatar", isUploadingAvatar: false });
   };
 
   const initials = useMemo(
@@ -351,7 +412,7 @@ function ProfileSettings({
           <Label className="text-xs tracking-wider text-muted-foreground uppercase">
             {t("profile.firstNameLabel")}
           </Label>
-          <Input value={firstName} onChange={(e) => setFirstName(e.target.value)} placeholder={t("profile.firstNamePlaceholder")} />
+          <Input value={firstName} onChange={(e) => dispatch({ type: "setFirstName", firstName: e.target.value })} placeholder={t("profile.firstNamePlaceholder")} />
         </div>
         <div className="space-y-2">
           <Label className="text-xs tracking-wider text-muted-foreground uppercase">
@@ -359,7 +420,7 @@ function ProfileSettings({
           </Label>
           <Input
             value={lastName}
-            onChange={(e) => setLastName(e.target.value)}
+            onChange={(e) => dispatch({ type: "setLastName", lastName: e.target.value })}
             placeholder={t("profile.lastNamePlaceholder")}
           />
         </div>
@@ -371,7 +432,7 @@ function ProfileSettings({
         </Label>
         <Input
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) => dispatch({ type: "setEmail", email: e.target.value })}
           placeholder={t("profile.emailPlaceholder")}
           type="email"
         />
@@ -845,23 +906,58 @@ function AccountSettings() {
 function BillingSettings() {
   const t = useTranslations("Settings");
   const locale = useLocale();
-  const [catalog, setCatalog] = useState<BillingCatalogResponse | null>(null);
-  const [wallet, setWallet] = useState<BillingWalletSummary | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPaying, setIsPaying] = useState<string | null>(null);
-  const [segment, setSegment] = useState<BillingPlanSegment>("individual");
+  const [state, dispatch] = useReducer(
+    (
+      s: {
+        catalog: BillingCatalogResponse | null;
+        wallet: BillingWalletSummary | null;
+        isLoading: boolean;
+        isPaying: string | null;
+        segment: BillingPlanSegment;
+      },
+      a:
+        | { type: "setCatalog"; catalog: BillingCatalogResponse | null }
+        | { type: "setWallet"; wallet: BillingWalletSummary | null }
+        | { type: "setIsLoading"; isLoading: boolean }
+        | { type: "setIsPaying"; isPaying: string | null }
+        | { type: "setSegment"; segment: BillingPlanSegment }
+    ) => {
+      switch (a.type) {
+        case "setCatalog":
+          return { ...s, catalog: a.catalog };
+        case "setWallet":
+          return { ...s, wallet: a.wallet };
+        case "setIsLoading":
+          return { ...s, isLoading: a.isLoading };
+        case "setIsPaying":
+          return { ...s, isPaying: a.isPaying };
+        case "setSegment":
+          return { ...s, segment: a.segment };
+        default:
+          return s;
+      }
+    },
+    {
+      catalog: null,
+      wallet: null,
+      isLoading: true,
+      isPaying: null,
+      segment: "individual",
+    }
+  );
+  const { catalog, wallet, isLoading, isPaying, segment } = state;
 
   const loadBilling = useCallback(async () => {
-    setIsLoading(true);
+    dispatch({ type: "setIsLoading", isLoading: true });
     try {
       const catalogResponse = await billingApi.getCatalog();
-      setCatalog(catalogResponse);
-      setWallet(await billingApi.getMe());
+      dispatch({ type: "setCatalog", catalog: catalogResponse });
+      dispatch({ type: "setWallet", wallet: await billingApi.getMe() });
     } catch (error) {
       console.error("Failed to load billing summary", error);
       toast.error(t("billing.toasts.loadFailed"));
     }
-    setIsLoading(false);
+    dispatch({ type: "setIsLoading", isLoading: false });
   }, [t]);
 
   useEffect(() => {
@@ -878,7 +974,7 @@ function BillingSettings() {
     const planId = itemId as BillingPlanId;
     const topUpPackageId = itemId as TopUpPackageId;
     try {
-      setIsPaying(itemId);
+      dispatch({ type: "setIsPaying", isPaying: itemId });
       const checkout = await paymentApi.checkout(
         purchaseType === "subscription"
           ? {
@@ -903,7 +999,7 @@ function BillingSettings() {
       const message = error instanceof Error ? error.message : t("billing.toasts.checkoutFailed");
       toast.error(message);
     } finally {
-      setIsPaying(null);
+      dispatch({ type: "setIsPaying", isPaying: null });
     }
   };
 
@@ -991,7 +1087,7 @@ function BillingSettings() {
               <button
                 key={item}
                 type="button"
-                onClick={() => setSegment(item)}
+                onClick={() => dispatch({ type: "setSegment", segment: item })}
                 className={cn(
                   "rounded-full px-4 py-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors",
                   segment === item
@@ -1456,21 +1552,62 @@ function NotificationSettings() {
 function ApiKeySettings() {
   const t = useTranslations("Settings");
   const locale = useLocale();
-  const [keys, setKeys] = useState<ApiKey[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [newKeyName, setNewKeyName] = useState("");
-  const [showKeys, setShowKeys] = useState<Record<string, boolean>>({});
+  const [state, dispatch] = useReducer(
+    (
+      s: {
+        keys: ApiKey[];
+        isLoading: boolean;
+        isGenerating: boolean;
+        newKeyName: string;
+        showKeys: Record<string, boolean>;
+      },
+      a:
+        | { type: "setKeys"; keys: ApiKey[] }
+        | { type: "setIsLoading"; isLoading: boolean }
+        | { type: "setIsGenerating"; isGenerating: boolean }
+        | { type: "setNewKeyName"; newKeyName: string }
+        | { type: "toggleShowKey"; id: string }
+        | { type: "resetNewKeyName" }
+    ) => {
+      switch (a.type) {
+        case "setKeys":
+          return { ...s, keys: a.keys };
+        case "setIsLoading":
+          return { ...s, isLoading: a.isLoading };
+        case "setIsGenerating":
+          return { ...s, isGenerating: a.isGenerating };
+        case "setNewKeyName":
+          return { ...s, newKeyName: a.newKeyName };
+        case "toggleShowKey":
+          return {
+            ...s,
+            showKeys: { ...s.showKeys, [a.id]: !s.showKeys[a.id] },
+          };
+        case "resetNewKeyName":
+          return { ...s, newKeyName: "" };
+        default:
+          return s;
+      }
+    },
+    {
+      keys: [],
+      isLoading: true,
+      isGenerating: false,
+      newKeyName: "",
+      showKeys: {},
+    }
+  );
+  const { keys, isLoading, isGenerating, newKeyName, showKeys } = state;
 
   const fetchKeys = useCallback(async () => {
-    setIsLoading(true);
+    dispatch({ type: "setIsLoading", isLoading: true });
     try {
       const data = await developerApi.getKeys();
-      setKeys(data);
+      dispatch({ type: "setKeys", keys: data });
     } catch (error) {
       console.error("Failed to fetch keys", error);
     }
-    setIsLoading(false);
+    dispatch({ type: "setIsLoading", isLoading: false });
   }, []);
 
   useEffect(() => {
@@ -1484,22 +1621,22 @@ function ApiKeySettings() {
       toast.error(t("apiKeys.toasts.nameRequired"));
       return;
     }
-    setIsGenerating(true);
+    dispatch({ type: "setIsGenerating", isGenerating: true });
     try {
       const newKey = await developerApi.generateKey(newKeyName);
-      setKeys((prev) => [...prev, newKey]);
-      setNewKeyName("");
+      dispatch({ type: "setKeys", keys: [...keys, newKey] });
+      dispatch({ type: "resetNewKeyName" });
       toast.success(t("apiKeys.toasts.generateSuccess"));
     } catch (error) {
       toast.error(t("apiKeys.toasts.generateFailed"));
     }
-    setIsGenerating(false);
+    dispatch({ type: "setIsGenerating", isGenerating: false });
   };
 
   const handleRevoke = async (id: string) => {
     try {
       await developerApi.revokeKey(id);
-      setKeys((prev) => prev.filter((k) => k.id !== id));
+      dispatch({ type: "setKeys", keys: keys.filter((k) => k.id !== id) });
       toast.success(t("apiKeys.toasts.revokeSuccess"));
     } catch (error) {
       toast.error(t("apiKeys.toasts.revokeFailed"));
@@ -1507,7 +1644,7 @@ function ApiKeySettings() {
   };
 
   const toggleShow = (id: string) => {
-    setShowKeys((prev) => ({ ...prev, [id]: !prev[id] }));
+    dispatch({ type: "toggleShowKey", id });
   };
 
   const copyToClipboard = (text: string) => {
@@ -1530,7 +1667,7 @@ function ApiKeySettings() {
             </Label>
             <Input
               value={newKeyName}
-              onChange={(e) => setNewKeyName(e.target.value)}
+              onChange={(e) => dispatch({ type: "setNewKeyName", newKeyName: e.target.value })}
               placeholder={t("apiKeys.newKeyNamePlaceholder")}
             />
           </div>
@@ -1610,11 +1747,15 @@ function ApiKeySettings() {
                   </div>
                   <div className="flex items-center justify-between text-[10px] text-muted-foreground">
                     <span>
-                      {t("apiKeys.created")}: {new Date(key.createdAt).toLocaleDateString(locale)}
+                      {t("apiKeys.created")}: <ClientDateText value={key.createdAt} locale={locale} format="date" />
                     </span>
                     <span>
                       {t("apiKeys.lastUsed")}:{" "}
-                      {key.lastUsedAt ? new Date(key.lastUsedAt).toLocaleString(locale) : t("apiKeys.never")}
+                      {key.lastUsedAt ? (
+                        <ClientDateText value={key.lastUsedAt} locale={locale} format="dateTime" />
+                      ) : (
+                        t("apiKeys.never")
+                      )}
                     </span>
                   </div>
                 </div>

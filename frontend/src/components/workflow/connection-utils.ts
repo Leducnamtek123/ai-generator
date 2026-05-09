@@ -6,9 +6,9 @@ import { ConnectionType, FileMediaType, WorkflowNodeType } from "./types";
 
 export type WorkflowConnectionSlot = "prompt" | "image" | "video" | "media" | "reference";
 
-export type WorkflowConnectionFlags = Partial<Record<WorkflowConnectionSlot, boolean>>;
+type WorkflowConnectionFlags = Partial<Record<WorkflowConnectionSlot, boolean>>;
 
-export type WorkflowConnectionSummary = {
+type WorkflowConnectionSummary = {
   sourceId: string;
   sourceLabel: string;
   sourceType: ConnectionType;
@@ -16,7 +16,7 @@ export type WorkflowConnectionSummary = {
   valuePreview?: string;
 };
 
-export type WorkflowConnectionSnapshot = {
+type WorkflowConnectionSnapshot = {
   inputs: WorkflowConnectionFlags;
   inputText?: string;
   inputPrompt?: string;
@@ -114,7 +114,7 @@ export function inferNodeOutputType(node: Node): ConnectionType | null {
   }
 }
 
-export function getNodeOutputValue(node: Node, outputType: ConnectionType | null) {
+function getNodeOutputValue(node: Node, outputType: ConnectionType | null) {
   switch (outputType) {
     case ConnectionType.TEXT:
       return (

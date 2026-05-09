@@ -215,30 +215,40 @@ function TopUpCard({
 }
 
 export default function PricingShowcasePage() {
-  const [catalog, setCatalog] = useState<BillingCatalogResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [segment, setSegment] = useState<PricingSegment>("individual");
+  const [state, setState] = useState<{
+    catalog: BillingCatalogResponse | null;
+    loading: boolean;
+    segment: PricingSegment;
+  }>({
+    catalog: null,
+    loading: true,
+    segment: "individual",
+  });
 
   useEffect(() => {
     let active = true;
 
-    void billingApi
-      .getCatalog()
-      .then((response) => {
-        if (active) {
-          setCatalog(response);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setCatalog(null);
-        }
-      })
-      .finally(() => {
-        if (active) {
-          setLoading(false);
-        }
-      });
+    const loadCatalog = async () => {
+      let nextCatalog: BillingCatalogResponse | null = null;
+
+      try {
+        nextCatalog = await billingApi.getCatalog();
+      } catch {
+        nextCatalog = null;
+      }
+
+      if (!active) {
+        return;
+      }
+
+      setState((current) => ({
+        ...current,
+        catalog: nextCatalog,
+        loading: false,
+      }));
+    };
+
+    void loadCatalog();
 
     return () => {
       active = false;
@@ -246,6 +256,7 @@ export default function PricingShowcasePage() {
   }, []);
 
   const plans = useMemo(() => {
+    const { catalog, segment } = state;
     const allPlans =
       catalog?.plans ?? [
         ...(catalog?.individualPlans ?? []),
@@ -255,10 +266,10 @@ export default function PricingShowcasePage() {
     return segment === "individual"
       ? allPlans.filter((plan) => plan.segment === "individual")
       : allPlans.filter((plan) => plan.segment === "team");
-  }, [catalog, segment]);
+  }, [state]);
 
-  const topUpPackages = catalog?.topUpPackages ?? [];
-  const creditCostGuide = catalog?.creditCostGuide ?? [];
+  const topUpPackages = state.catalog?.topUpPackages ?? [];
+  const creditCostGuide = state.catalog?.creditCostGuide ?? [];
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#050608] text-white selection:bg-sky-400/30 selection:text-white">
@@ -296,7 +307,7 @@ export default function PricingShowcasePage() {
                   Compare by billing scope
                 </h2>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-white/56">
-                  {segmentMeta[segment].title}: {segmentMeta[segment].description}
+                  {segmentMeta[state.segment].title}: {segmentMeta[state.segment].description}
                 </p>
               </div>
 
@@ -305,10 +316,12 @@ export default function PricingShowcasePage() {
                   <button
                     key={item}
                     type="button"
-                    onClick={() => setSegment(item)}
+                    onClick={() =>
+                      setState((current) => ({ ...current, segment: item }))
+                    }
                     className={cn(
                       "rounded-full px-4 py-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors",
-                      segment === item
+                      state.segment === item
                         ? "bg-white text-black"
                         : "text-white/60 hover:text-white",
                     )}
@@ -336,9 +349,9 @@ export default function PricingShowcasePage() {
               </span>
             </div>
 
-            {loading ? (
+            {state.loading ? (
               <div className="mt-8 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                {Array.from({ length: segment === "individual" ? 3 : 2 }).map(
+                {Array.from({ length: state.segment === "individual" ? 3 : 2 }).map(
                   (_, index) => (
                     <div
                       key={index}
@@ -356,13 +369,13 @@ export default function PricingShowcasePage() {
               <div
                 className={cn(
                   "mt-8 grid gap-4",
-                  segment === "individual"
+                  state.segment === "individual"
                     ? "lg:grid-cols-3"
                     : "lg:grid-cols-2",
                 )}
               >
                 {plans.map((plan) => (
-                  <PlanCard key={plan.id} plan={plan} segment={segment} />
+                  <PlanCard key={plan.id} plan={plan} segment={state.segment} />
                 ))}
               </div>
             )}

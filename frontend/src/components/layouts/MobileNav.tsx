@@ -90,10 +90,6 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
         return () => { document.body.style.overflow = 'unset'; };
     }, [isOpen]);
 
-    useEffect(() => {
-        onOpenChange(false);
-    }, [pathname, onOpenChange]);
-
     if (!user) return null;
 
     const visibleBottomItems = navigationData.bottomItems.filter((item) => item.href !== '/admin' || canAccessAdmin(user));

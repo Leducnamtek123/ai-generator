@@ -102,6 +102,41 @@ type ImageEditorProjectPayload = {
     snapshot: ImageEditorSnapshot;
 };
 
+type ImageEditorUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type ImageEditorUiAction =
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-loading'; isLoading: boolean }
+    | { type: 'set-project-saving'; isSaving: boolean }
+    | { type: 'set-project-error'; error: string | null };
+
+const initialUiState: ImageEditorUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+function uiReducer(state: ImageEditorUiState, action: ImageEditorUiAction): ImageEditorUiState {
+    switch (action.type) {
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.isLoading };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.error };
+        default:
+            return state;
+    }
+}
+
 type ImageEditorState = {
     uploadedImage: string | null;
     activeTool: string;
@@ -253,6 +288,7 @@ export default function ImageEditorPage() {
 
 function ImageEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { startGeneration, reset } = useGenerationStore();
     const { replace } = useRouter();
@@ -260,10 +296,6 @@ function ImageEditorPageContent() {
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isExporting, setIsExporting] = useState(false);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const [pastSnapshots, setPastSnapshots] = useState<Array<{
         uploadedImage: string | null;
         activeTool: string;
@@ -287,7 +319,7 @@ function ImageEditorPageContent() {
         adjustments: Record<AdjustmentKey, number>;
         }>>([]);
 
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = uiState.isProjectLoading || uiState.isProjectSaving;
 
     const buildSnapshot = () => ({
         uploadedImage: state.uploadedImage,
@@ -308,11 +340,11 @@ function ImageEditorPageContent() {
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        dispatchUi({ type: 'set-project-id', projectId: requestedProjectId });
 
         const applySnapshot = (snapshot: ImageEditorSnapshot) => {
             dispatch({ type: 'restoreSnapshot', snapshot });
-            setProjectError(null);
+            dispatchUi({ type: 'set-project-error', error: null });
         };
 
         const loadDraft = () => {
@@ -333,7 +365,7 @@ function ImageEditorPageContent() {
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatchUi({ type: 'set-project-loading', isLoading: true });
 
         void (async () => {
             try {
@@ -344,12 +376,12 @@ function ImageEditorPageContent() {
             } catch (error) {
                 console.error('Failed to load image editor project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
+                    dispatchUi({ type: 'set-project-error', error: 'Loaded local draft because backend project load failed.' });
                     loadDraft();
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'set-project-loading', isLoading: false });
                 }
             }
         })();
@@ -447,7 +479,7 @@ function ImageEditorPageContent() {
         dispatch({ type: 'setFlipX', flipX: false });
         dispatch({ type: 'setFlipY', flipY: false });
         setErrorMessage(null);
-        setProjectError(null);
+        dispatchUi({ type: 'set-project-error', error: null });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -464,10 +496,10 @@ function ImageEditorPageContent() {
         setErrorMessage(null);
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'set-project-saving', isSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Image Editor Draft',
                         description: 'Image editor draft',
                         content: payload,
@@ -478,18 +510,18 @@ function ImageEditorPageContent() {
                         description: 'Image editor draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'set-project-id', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
-                setProjectError(null);
+                dispatchUi({ type: 'set-project-error', error: null });
                 toast.success('Image editor draft saved to your projects.');
             } catch (error) {
                 console.error('Failed to persist image editor project', error);
-                setProjectError('Saved locally, but backend project save failed.');
+                dispatchUi({ type: 'set-project-error', error: 'Saved locally, but backend project save failed.' });
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'set-project-saving', isSaving: false });
             }
         };
 
@@ -690,7 +722,7 @@ function ImageEditorPageContent() {
                         </Button>
                         <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectBusy}>
                             <Folder className="size-4" />
-                            {isProjectSaving ? 'Saving...' : 'Save Project'}
+                            {uiState.isProjectSaving ? 'Saving...' : 'Save Project'}
                         </Button>
                         <Button size="sm" className="gap-2" onClick={handleExport} disabled={isExporting || isProjectBusy}>
                             <Download className="size-4" />
@@ -700,9 +732,9 @@ function ImageEditorPageContent() {
                 </div>
 
                 <div className="flex-1 flex items-center justify-center p-8 bg-muted/30 overflow-auto">
-                    {projectError && (
+                    {uiState.projectError && (
                         <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-2 text-sm text-amber-700 dark:text-amber-300">
-                            {projectError}
+                            {uiState.projectError}
                         </div>
                     )}
                     {errorMessage && (

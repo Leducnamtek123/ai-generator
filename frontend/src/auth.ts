@@ -56,7 +56,7 @@ function clearAuthTokenState(token: JWT) {
   token.tokenExpires = undefined;
 }
 
-export const { handlers, auth } = NextAuth({
+export const { handlers } = NextAuth({
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID!,

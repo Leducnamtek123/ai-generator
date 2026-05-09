@@ -1,27 +1,5 @@
 "use client";
 
-export type AsyncOperationStatus =
-  | "idle"
-  | "loading"
-  | "retrying"
-  | "success"
-  | "error"
-  | "cancelled";
-
-export interface AsyncOperationState<T> {
-  status: AsyncOperationStatus;
-  data: T | null;
-  error: string | null;
-}
-
-export function createAsyncOperationState<T>(data: T | null = null): AsyncOperationState<T> {
-  return {
-    status: "idle",
-    data,
-    error: null,
-  };
-}
-
 export function isAbortError(error: unknown): boolean {
   if (!error || typeof error !== "object") {
     return false;

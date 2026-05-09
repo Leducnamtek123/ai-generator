@@ -47,10 +47,10 @@ interface CreateAssetDto {
     metadata?: Record<string, unknown>;
 }
 
-export async function createAsset(data: CreateAssetDto) {
+async function createAsset(data: CreateAssetDto) {
     return post<Asset>('/assets', data);
 }
 
-export async function deleteAsset(id: string) {
+async function deleteAsset(id: string) {
     return del(`/assets/${id}`);
 }

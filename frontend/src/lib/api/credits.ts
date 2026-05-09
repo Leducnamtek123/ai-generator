@@ -10,6 +10,6 @@ export async function getCreditsBalance(): Promise<number> {
 /**
  * Get credit transaction history
  */
-export async function getCreditHistory(page = 1, limit = 10) {
+async function getCreditHistory(page = 1, limit = 10) {
     return get<unknown[]>(`/credits?page=${page}&limit=${limit}`);
 }

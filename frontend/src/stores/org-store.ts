@@ -2,7 +2,7 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import type { Organization, Member } from "@/services/orgApi";
 
-export type UserRole = "OWNER" | "ADMIN" | "MEMBER" | "BILLING" | "VIEWER";
+type UserRole = "OWNER" | "ADMIN" | "MEMBER" | "BILLING" | "VIEWER";
 
 interface OrgState {
   // Current selected organization

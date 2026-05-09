@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -69,6 +69,52 @@ type BgRemoverLegacyDraft = Partial<BgRemoverSnapshot> & {
     settings?: Partial<BgRemoverSnapshot>;
     previewImage?: string | null;
 };
+
+type BgRemoverUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    restoredResultImage: string | null;
+};
+
+type BgRemoverUiAction =
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'setRestoredResultImage'; restoredResultImage: string | null }
+    | { type: 'reset' };
+
+const initialUiState: BgRemoverUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    restoredResultImage: null,
+};
+
+function uiReducer(state: BgRemoverUiState, action: BgRemoverUiAction): BgRemoverUiState {
+    switch (action.type) {
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'setRestoredResultImage':
+            return { ...state, restoredResultImage: action.restoredResultImage };
+        case 'reset':
+            return {
+                ...initialUiState,
+                projectId: state.projectId,
+            };
+        default:
+            return state;
+    }
+}
 
 const normalizeBgRemoverSnapshot = (value: unknown): Partial<BgRemoverSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
@@ -144,11 +190,7 @@ export default function BgRemoverPage() {
 function BgRemoverPageContent() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [state, dispatch] = useReducer(bgRemoverReducer, initialState);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const { removeBackground, currentGeneration, reset } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
@@ -157,15 +199,12 @@ function BgRemoverPageContent() {
     const isProcessing = currentGeneration?.status === 'pending' || currentGeneration?.status === 'processing';
     const resultImage = currentGeneration?.status === 'completed'
         ? currentGeneration.resultUrl || state.uploadedImage
-        : restoredResultImage;
+        : uiState.restoredResultImage;
     const previewImage = state.showOriginal || !resultImage ? state.uploadedImage : resultImage;
 
     useEffect(() => {
-        const queryProjectId = searchParamsSnapshot.get('projectId');
-        if (queryProjectId) {
-            setProjectId(queryProjectId);
-        }
-    }, [searchParams]);
+        dispatchUi({ type: 'setProjectId', projectId: searchParamsSnapshot.get('projectId') });
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         let cancelled = false;
@@ -191,13 +230,13 @@ function BgRemoverPageContent() {
                 type: 'setEdgeRefinement',
                 edgeRefinement: snapshot.edgeRefinement ?? initialState.edgeRefinement,
             });
-            setRestoredResultImage(snapshot.resultImage ?? null);
+            dispatchUi({ type: 'setRestoredResultImage', restoredResultImage: snapshot.resultImage ?? null });
         };
 
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('bg-remover:draft:v1');
 
-            if (!projectId) {
+            if (!uiState.projectId) {
                 try {
                     if (draftRaw) {
                         const parsed = JSON.parse(draftRaw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
@@ -209,10 +248,10 @@ function BgRemoverPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatchUi({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatchUi({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(uiState.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string'
                     ? (JSON.parse(rawContent) as Partial<BgRemoverProjectPayload>)
@@ -225,7 +264,10 @@ function BgRemoverPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore background remover project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved background remover project. Falling back to a local draft.');
+                    dispatchUi({
+                        type: 'setProjectError',
+                        projectError: 'Could not load the saved background remover project. Falling back to a local draft.',
+                    });
                     try {
                         if (draftRaw) {
                             const parsed = JSON.parse(draftRaw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
@@ -237,7 +279,7 @@ function BgRemoverPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -247,14 +289,14 @@ function BgRemoverPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [uiState.projectId]);
 
     const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         reset();
-        setRestoredResultImage(null);
+        dispatchUi({ type: 'setRestoredResultImage', restoredResultImage: null });
         const uploaded = await mediaApi.uploadMedia(file);
         if (!uploaded?.url) {
             toast.error('Failed to upload image');
@@ -296,10 +338,10 @@ function BgRemoverPageContent() {
         localStorage.setItem('bg-remover:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Background Remover Draft',
                         description: 'Background remover draft',
                         content: payload,
@@ -310,7 +352,7 @@ function BgRemoverPageContent() {
                         description: 'Background remover draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -319,7 +361,7 @@ function BgRemoverPageContent() {
                 console.error('Failed to persist background remover project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -368,8 +410,7 @@ function BgRemoverPageContent() {
     const handleReset = () => {
         reset();
         dispatch({ type: 'reset' });
-        setRestoredResultImage(null);
-        setProjectError(null);
+        dispatchUi({ type: 'reset' });
     };
 
     return (
@@ -378,7 +419,7 @@ function BgRemoverPageContent() {
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Background Remover</h2>
                     <span className="text-xs text-muted-foreground">
-                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                        {uiState.isProjectLoading ? 'Loading project...' : uiState.projectError ?? ''}
                     </span>
                 </div>
 
@@ -499,7 +540,7 @@ function BgRemoverPageContent() {
                     </div>
                     <Button
                         onClick={handleRemoveBg}
-                        disabled={isProcessing || !state.uploadedImage || isProjectLoading || isProjectSaving}
+                        disabled={isProcessing || !state.uploadedImage || uiState.isProjectLoading || uiState.isProjectSaving}
                         className="w-full h-12 font-bold rounded-xl gap-2 shadow-sm"
                     >
                         {isProcessing ? (

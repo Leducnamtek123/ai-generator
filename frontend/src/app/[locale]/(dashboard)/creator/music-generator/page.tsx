@@ -2,7 +2,7 @@
 
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
-import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import {
@@ -122,6 +122,136 @@ type CommunityMusicListing = {
     resultUrl?: string | null;
 };
 
+type MusicGeneratorState = MusicSnapshot & {
+    communityListings: CommunityMusicListing[];
+    isCommunityLoading: boolean;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    playingTrackId: string | null;
+    isAudioPickerOpen: boolean;
+};
+
+type MusicGeneratorAction =
+    | { type: 'set-content-tab'; tab: string }
+    | { type: 'set-community-listings'; listings: CommunityMusicListing[] }
+    | { type: 'set-community-loading'; value: boolean }
+    | { type: 'set-project-id'; value: string | null }
+    | { type: 'set-project-loading'; value: boolean }
+    | { type: 'set-project-saving'; value: boolean }
+    | { type: 'set-project-error'; value: string | null }
+    | { type: 'apply-snapshot'; snapshot: Partial<MusicSnapshot> }
+    | { type: 'set-selected-genre'; value: string | null }
+    | { type: 'toggle-mood'; id: string }
+    | { type: 'toggle-instrument'; id: string }
+    | { type: 'set-prompt'; value: string }
+    | { type: 'set-duration'; value: string }
+    | { type: 'set-tempo'; value: number }
+    | { type: 'set-playing-track-id'; value: string | null }
+    | { type: 'set-reference-track'; url: string | null; name: string }
+    | { type: 'set-audio-picker-open'; value: boolean }
+    | { type: 'reset-form' };
+
+const initialMusicGeneratorState: MusicGeneratorState = {
+    activeContentTab: MUSIC_CONTENT_TABS[0],
+    communityListings: [],
+    isCommunityLoading: false,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    selectedGenre: null,
+    selectedMoods: [],
+    selectedInstruments: [],
+    prompt: '',
+    duration: '30',
+    tempo: 120,
+    referenceTrackUrl: null,
+    referenceTrackName: '',
+    playingTrackId: null,
+    isAudioPickerOpen: false,
+};
+
+const musicGeneratorReducer = (state: MusicGeneratorState, action: MusicGeneratorAction): MusicGeneratorState => {
+    switch (action.type) {
+        case 'set-content-tab':
+            return { ...state, activeContentTab: action.tab };
+        case 'set-community-listings':
+            return { ...state, communityListings: action.listings };
+        case 'set-community-loading':
+            return { ...state, isCommunityLoading: action.value };
+        case 'set-project-id':
+            return { ...state, projectId: action.value };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.value };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.value };
+        case 'set-project-error':
+            return { ...state, projectError: action.value };
+        case 'apply-snapshot':
+            return {
+                ...state,
+                activeContentTab: action.snapshot.activeContentTab ?? MUSIC_CONTENT_TABS[0],
+                selectedGenre: action.snapshot.selectedGenre ?? null,
+                selectedMoods: action.snapshot.selectedMoods ?? [],
+                selectedInstruments: action.snapshot.selectedInstruments ?? [],
+                prompt: action.snapshot.prompt ?? '',
+                duration: action.snapshot.duration ?? '30',
+                tempo: action.snapshot.tempo ?? 120,
+                referenceTrackUrl: action.snapshot.referenceTrackUrl ?? null,
+                referenceTrackName: action.snapshot.referenceTrackName ?? '',
+                playingTrackId: null,
+                projectError: null,
+            };
+        case 'set-selected-genre':
+            return { ...state, selectedGenre: action.value };
+        case 'toggle-mood':
+            return {
+                ...state,
+                selectedMoods: state.selectedMoods.includes(action.id)
+                    ? state.selectedMoods.filter((mood) => mood !== action.id)
+                    : [...state.selectedMoods, action.id],
+            };
+        case 'toggle-instrument':
+            return {
+                ...state,
+                selectedInstruments: state.selectedInstruments.includes(action.id)
+                    ? state.selectedInstruments.filter((instrument) => instrument !== action.id)
+                    : [...state.selectedInstruments, action.id],
+            };
+        case 'set-prompt':
+            return { ...state, prompt: action.value };
+        case 'set-duration':
+            return { ...state, duration: action.value };
+        case 'set-tempo':
+            return { ...state, tempo: action.value };
+        case 'set-playing-track-id':
+            return { ...state, playingTrackId: action.value };
+        case 'set-reference-track':
+            return { ...state, referenceTrackUrl: action.url, referenceTrackName: action.name };
+        case 'set-audio-picker-open':
+            return { ...state, isAudioPickerOpen: action.value };
+        case 'reset-form':
+            return {
+                ...state,
+                selectedGenre: null,
+                selectedMoods: [],
+                selectedInstruments: [],
+                prompt: '',
+                duration: '30',
+                tempo: 120,
+                playingTrackId: null,
+                referenceTrackUrl: null,
+                referenceTrackName: '',
+                isAudioPickerOpen: false,
+                projectError: null,
+            };
+        default:
+            return state;
+    }
+};
+
 const normalizeMusicSnapshot = (value: unknown): Partial<MusicSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -148,76 +278,48 @@ export default function MusicGeneratorPage() {
 }
 
 function MusicGeneratorPageContent() {
-    const { 
-        generateMusic, 
-        isGenerating, 
-        generations, 
-        fetchGenerations, 
-        isLoading: isGenerationsLoading 
+    const {
+        generateMusic,
+        isGenerating,
+        generations,
+        fetchGenerations,
+        isLoading: isGenerationsLoading
     } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    
-    const [activeContentTab, setActiveContentTab] = useState<string>(MUSIC_CONTENT_TABS[0]); // Default to My Creations
-    const [communityListings, setCommunityListings] = useState<CommunityMusicListing[]>([]);
-    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    
-    const [selectedGenre, setSelectedGenre] = useState<string | null>(null);
-    const [selectedMoods, setSelectedMoods] = useState<string[]>([]);
-    const [selectedInstruments, setSelectedInstruments] = useState<string[]>([]);
-    const [prompt, setPrompt] = useState('');
-    const [duration, setDuration] = useState('30');
-    const [tempo, setTempo] = useState(120);
-    const [playingTrackId, setPlayingTrackId] = useState<string | null>(null);
-    const [referenceTrackUrl, setReferenceTrackUrl] = useState<string | null>(null);
-    const [referenceTrackName, setReferenceTrackName] = useState<string>('');
-    const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
+    const [state, dispatch] = useReducer(musicGeneratorReducer, initialMusicGeneratorState);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = state.isProjectLoading || state.isProjectSaving;
 
     useEffect(() => {
-        if (activeContentTab === MUSIC_CONTENT_TABS[0]) { // My Creations
+        if (state.activeContentTab === MUSIC_CONTENT_TABS[0]) {
             fetchGenerations({ type: TemplateTypeEnum.MUSIC_GENERATOR, limit: 12 });
-        } else if (activeContentTab === MUSIC_CONTENT_TABS[1]) { // Community
+        } else if (state.activeContentTab === MUSIC_CONTENT_TABS[1]) {
             const fetchCommunity = async () => {
-                setIsCommunityLoading(true);
+                dispatch({ type: 'set-community-loading', value: true });
                 try {
-                    const res = await import('@/lib/api').then(m => m.get<{ data: CommunityMusicListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.MUSIC_GENERATOR}&limit=12`));
-                    setCommunityListings(res.data || []);
+                    const res = await import('@/lib/api').then((m) => m.get<{ data: CommunityMusicListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.MUSIC_GENERATOR}&limit=12`));
+                    dispatch({ type: 'set-community-listings', listings: res.data || [] });
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
                 } finally {
-                    setIsCommunityLoading(false);
+                    dispatch({ type: 'set-community-loading', value: false });
                 }
             };
             fetchCommunity();
-        } else if (activeContentTab === MUSIC_CONTENT_TABS[2]) { // Templates
+        } else if (state.activeContentTab === MUSIC_CONTENT_TABS[2]) {
             fetchTemplates(TemplateTypeEnum.MUSIC_GENERATOR);
         }
-    }, [activeContentTab, fetchGenerations, fetchTemplates]);
+    }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        dispatch({ type: 'set-project-id', value: requestedProjectId });
 
         const applySnapshot = (snapshot: Partial<MusicSnapshot>) => {
-            setActiveContentTab(snapshot.activeContentTab ?? MUSIC_CONTENT_TABS[0]);
-            setSelectedGenre(snapshot.selectedGenre ?? null);
-            setSelectedMoods(snapshot.selectedMoods ?? []);
-            setSelectedInstruments(snapshot.selectedInstruments ?? []);
-            setPrompt(snapshot.prompt ?? '');
-            setDuration(snapshot.duration ?? '30');
-            setTempo(snapshot.tempo ?? 120);
-            setReferenceTrackUrl(snapshot.referenceTrackUrl ?? null);
-            setReferenceTrackName(snapshot.referenceTrackName ?? '');
-            setPlayingTrackId(null);
-            setProjectError(null);
+            dispatch({ type: 'apply-snapshot', snapshot });
         };
 
         const loadDraft = () => {
@@ -237,7 +339,7 @@ function MusicGeneratorPageContent() {
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatch({ type: 'set-project-loading', value: true });
 
         void (async () => {
             try {
@@ -248,12 +350,12 @@ function MusicGeneratorPageContent() {
             } catch (error) {
                 console.error('Failed to load music project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
+                    dispatch({ type: 'set-project-error', value: 'Loaded local draft because backend project load failed.' });
                     loadDraft();
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'set-project-loading', value: false });
                 }
             }
         })();
@@ -261,26 +363,27 @@ function MusicGeneratorPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [searchParams]);
+    }, [searchParamsSnapshot]);
 
     const toggleMood = (id: string) => {
-        setSelectedMoods(prev => prev.includes(id) ? prev.filter(m => m !== id) : [...prev, id]);
+        dispatch({ type: 'toggle-mood', id });
     };
 
     const toggleInstrument = (id: string) => {
-        setSelectedInstruments(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]);
+        dispatch({ type: 'toggle-instrument', id });
     };
 
     const handleGenerate = async () => {
-        if (!prompt.trim() || isProjectBusy) return;
+        if (!state.prompt.trim() || isProjectBusy) return;
+
         try {
             await generateMusic({
-                prompt,
-                genre: selectedGenre || undefined,
-                moods: selectedMoods.length > 0 ? selectedMoods : undefined,
-                instruments: selectedInstruments.length > 0 ? selectedInstruments : undefined,
-                duration: parseInt(duration),
-                tempo,
+                prompt: state.prompt,
+                genre: state.selectedGenre || undefined,
+                moods: state.selectedMoods.length > 0 ? state.selectedMoods : undefined,
+                instruments: state.selectedInstruments.length > 0 ? state.selectedInstruments : undefined,
+                duration: parseInt(state.duration),
+                tempo: state.tempo,
             });
         } catch (error) {
             toast.error(getUserFacingErrorMessage(error, 'Failed to generate music'));
@@ -288,31 +391,21 @@ function MusicGeneratorPageContent() {
     };
 
     const handleReset = () => {
-        setSelectedGenre(null);
-        setSelectedMoods([]);
-        setSelectedInstruments([]);
-        setPrompt('');
-        setDuration('30');
-        setTempo(120);
-        setPlayingTrackId(null);
-        setReferenceTrackUrl(null);
-        setReferenceTrackName('');
-        setIsAudioPickerOpen(false);
-        setProjectError(null);
+        dispatch({ type: 'reset-form' });
     };
 
     useEffect(() => {
         const audio = audioRef.current;
         if (!audio) return;
 
-        if (!playingTrackId) {
+        if (!state.playingTrackId) {
             audio.pause();
             audio.removeAttribute('src');
             audio.load();
             return;
         }
 
-        const currentTrack = generations.find((gen) => gen.id === playingTrackId);
+        const currentTrack = generations.find((gen) => gen.id === state.playingTrackId);
         const previewUrl = currentTrack?.resultUrl?.trim();
 
         if (!previewUrl) {
@@ -324,35 +417,35 @@ function MusicGeneratorPageContent() {
         audio.currentTime = 0;
 
         void audio.play().catch(() => {
-            setPlayingTrackId(null);
+            dispatch({ type: 'set-playing-track-id', value: null });
             toast.error('Unable to preview this track right now.');
         });
-    }, [playingTrackId, generations]);
+    }, [state.playingTrackId, generations]);
 
     const handleSaveProject = () => {
         const payload: MusicProjectPayload = {
             version: 1,
             savedAt: new Date().toISOString(),
             snapshot: {
-                activeContentTab,
-                selectedGenre,
-                selectedMoods,
-                selectedInstruments,
-                prompt,
-                duration,
-                tempo,
-                referenceTrackUrl,
-                referenceTrackName,
+                activeContentTab: state.activeContentTab,
+                selectedGenre: state.selectedGenre,
+                selectedMoods: state.selectedMoods,
+                selectedInstruments: state.selectedInstruments,
+                prompt: state.prompt,
+                duration: state.duration,
+                tempo: state.tempo,
+                referenceTrackUrl: state.referenceTrackUrl,
+                referenceTrackName: state.referenceTrackName,
             },
         };
 
         localStorage.setItem('music-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'set-project-saving', value: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Music Generator Draft',
                         description: 'Music generator draft',
                         content: payload,
@@ -363,18 +456,18 @@ function MusicGeneratorPageContent() {
                         description: 'Music generator draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'set-project-id', value: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
-                setProjectError(null);
+                dispatch({ type: 'set-project-error', value: null });
                 toast.success('Music saved to your projects.');
             } catch (error) {
                 console.error('Failed to persist music project', error);
-                setProjectError('Saved locally, but backend project save failed.');
+                dispatch({ type: 'set-project-error', value: 'Saved locally, but backend project save failed.' });
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'set-project-saving', value: false });
             }
         };
 
@@ -385,13 +478,11 @@ function MusicGeneratorPageContent() {
         const uploaded = await uploadFileWithToast(file, file.name);
         if (!uploaded?.url) return;
 
-        setReferenceTrackUrl(uploaded.url);
-        setReferenceTrackName(file.name);
+        dispatch({ type: 'set-reference-track', url: uploaded.url, name: file.name });
     };
 
     const handleReferenceSelect = (media: MediaItem) => {
-        setReferenceTrackUrl(media.url);
-        setReferenceTrackName(media.name);
+        dispatch({ type: 'set-reference-track', url: media.url, name: media.name });
     };
 
     const downloadJson = (filename: string, payload: unknown) => {
@@ -447,26 +538,24 @@ function MusicGeneratorPageContent() {
             return;
         }
 
-        if (playingTrackId === track.id) {
-            setPlayingTrackId(null);
+        if (state.playingTrackId === track.id) {
+            dispatch({ type: 'set-playing-track-id', value: null });
             return;
         }
 
-        setPlayingTrackId(track.id);
+        dispatch({ type: 'set-playing-track-id', value: track.id });
     };
 
     return (
         <CreatorWorkspaceShell>
-            {/* Left Control Panel */}
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Music Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4  gap-y-6">
-                    {/* Browse Presets */}
-                    <button 
-                        onClick={() => setActiveContentTab(MUSIC_CONTENT_TABS[2])} // Templates
+                <div className="flex-1 overflow-y-auto p-4 gap-y-6">
+                    <button
+                        onClick={() => dispatch({ type: 'set-content-tab', tab: MUSIC_CONTENT_TABS[2] })}
                         className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
                     >
                         <div className="flex items-center gap-3">
@@ -478,19 +567,18 @@ function MusicGeneratorPageContent() {
                         <Grid3X3 className="size-4 text-muted-foreground" />
                     </button>
 
-                    {/* Genre Selection */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Genre</h4>
                         <div className="grid grid-cols-4 gap-1.5">
                             {genres.map((genre) => (
                                 <button
                                     key={genre.id}
-                                    onClick={() => setSelectedGenre(selectedGenre === genre.id ? null : genre.id)}
+                                    onClick={() => dispatch({ type: 'set-selected-genre', value: state.selectedGenre === genre.id ? null : genre.id })}
                                     className={cn(
-                                        "p-2 rounded-xl flex flex-col items-center gap-1 text-[10px] transition-all border",
-                                        selectedGenre === genre.id
-                                            ? "bg-accent border-primary/20 text-foreground"
-                                    : "bg-card border-border text-muted-foreground hover:border-border/80"
+                                        'p-2 rounded-xl flex flex-col items-center gap-1 text-[10px] transition-all border',
+                                        state.selectedGenre === genre.id
+                                            ? 'bg-accent border-primary/20 text-foreground'
+                                            : 'bg-card border-border text-muted-foreground hover:border-border/80'
                                     )}
                                 >
                                     <genre.icon className="size-4 text-muted-foreground" />
@@ -500,7 +588,6 @@ function MusicGeneratorPageContent() {
                         </div>
                     </div>
 
-                    {/* Mood */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Mood</h4>
                         <div className="flex flex-wrap gap-1.5">
@@ -509,10 +596,10 @@ function MusicGeneratorPageContent() {
                                     key={mood.id}
                                     onClick={() => toggleMood(mood.id)}
                                     className={cn(
-                                        "flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all",
-                                        selectedMoods.includes(mood.id)
-                                            ? "bg-accent border border-primary/20 text-foreground"
-                                    : "bg-card border border-border text-muted-foreground"
+                                        'flex items-center gap-1 px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all',
+                                        state.selectedMoods.includes(mood.id)
+                                            ? 'bg-accent border border-primary/20 text-foreground'
+                                            : 'bg-card border border-border text-muted-foreground'
                                     )}
                                 >
                                     <mood.icon className="size-3.5" />
@@ -522,7 +609,6 @@ function MusicGeneratorPageContent() {
                         </div>
                     </div>
 
-                    {/* Instruments */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Instruments</h4>
                         <div className="flex flex-wrap gap-1.5">
@@ -531,10 +617,10 @@ function MusicGeneratorPageContent() {
                                     key={inst.id}
                                     onClick={() => toggleInstrument(inst.id)}
                                     className={cn(
-                                        "px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all",
-                                        selectedInstruments.includes(inst.id)
-                                            ? "bg-accent border border-primary/20 text-foreground"
-                                            : "bg-card border border-border text-muted-foreground"
+                                        'px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all',
+                                        state.selectedInstruments.includes(inst.id)
+                                            ? 'bg-accent border border-primary/20 text-foreground'
+                                            : 'bg-card border border-border text-muted-foreground'
                                     )}
                                 >
                                     {inst.label}
@@ -543,66 +629,74 @@ function MusicGeneratorPageContent() {
                         </div>
                     </div>
 
-                    {/* Duration */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Duration</h4>
                         <div className="flex items-center gap-1.5">
-                            {['15', '30', '60', '120', '180'].map((d) => (
+                            {['15', '30', '60', '120', '180'].map((duration) => (
                                 <button
-                                    key={d}
-                                    onClick={() => setDuration(d)}
+                                    key={duration}
+                                    onClick={() => dispatch({ type: 'set-duration', value: duration })}
                                     className={cn(
-                                        "flex-1 py-2 rounded-lg text-[10px] font-medium transition-all",
-                                        duration === d
-                                            ? "bg-accent border border-primary/20 text-foreground"
-                                            : "bg-card border border-border text-muted-foreground"
+                                        'flex-1 py-2 rounded-lg text-[10px] font-medium transition-all',
+                                        state.duration === duration
+                                            ? 'bg-accent border border-primary/20 text-foreground'
+                                            : 'bg-card border border-border text-muted-foreground'
                                     )}
                                 >
-                                    {d}s
+                                    {duration}s
                                 </button>
                             ))}
                         </div>
                     </div>
 
-                    {/* Tempo */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
                             <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Tempo</Label>
-                            <span className="text-[11px] font-mono text-foreground">{tempo} BPM</span>
+                            <span className="text-[11px] font-mono text-foreground">{state.tempo} BPM</span>
                         </div>
-                        <Slider min={60} max={200} step={5} value={[tempo]} onValueChange={([v]) => setTempo(v)} />
+                        <Slider
+                            min={60}
+                            max={200}
+                            step={5}
+                            value={[state.tempo]}
+                            onValueChange={([value]) => dispatch({ type: 'set-tempo', value })}
+                        />
                     </div>
 
-                    {/* Prompt */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Description</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
-                                value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
+                                value={state.prompt}
+                                onChange={(e) => dispatch({ type: 'set-prompt', value: e.target.value })}
                                 placeholder="Describe the music you want to create? e.g., 'Upbeat energetic music for a workout video with strong drums and synths'"
                                 className="w-full h-28 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
                     </div>
 
-                    {/* Reference Track */}
                     <div className="space-y-3">
                         <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Reference (Optional)</h4>
                         <button
                             type="button"
-                            onClick={() => setIsAudioPickerOpen(true)}
+                            onClick={() => dispatch({ type: 'set-audio-picker-open', value: true })}
                             className="w-full aspect-[4/1] rounded-xl bg-muted border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary/30 transition-all gap-2 text-left px-4"
                         >
                             <div className="flex flex-col items-center gap-2">
                                 <Upload className="size-5 text-muted-foreground/50" />
                                 <span className="text-xs text-muted-foreground">
-                                    {referenceTrackName || 'Drop audio or click'}
+                                    {state.referenceTrackName || 'Drop audio or click'}
                                 </span>
                             </div>
                         </button>
                         <div className="flex gap-2">
-                            <Button type="button" variant="outline" size="sm" className="flex-1 gap-2" onClick={() => setIsAudioPickerOpen(true)}>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="flex-1 gap-2"
+                                onClick={() => dispatch({ type: 'set-audio-picker-open', value: true })}
+                            >
                                 <Folder className="size-4" />
                                 Choose from uploads
                             </Button>
@@ -628,17 +722,16 @@ function MusicGeneratorPageContent() {
                                 Upload file
                             </Button>
                         </div>
-                        {referenceTrackUrl && (
-                            <audio className="w-full" controls src={referenceTrackUrl} />
+                        {state.referenceTrackUrl && (
+                            <audio className="w-full" controls src={state.referenceTrackUrl} />
                         )}
                     </div>
                 </div>
 
-                {/* Generate Button */}
                 <div className="p-4 border-t border-border space-y-3">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                         <span>Cost:</span>
-                        <span className="font-medium text-foreground">{parseInt(duration) <= 30 ? '2' : parseInt(duration) <= 60 ? '4' : '8'} Credits</span>
+                        <span className="font-medium text-foreground">{parseInt(state.duration) <= 30 ? '2' : parseInt(state.duration) <= 60 ? '4' : '8'} Credits</span>
                     </div>
                     <div className="flex gap-2">
                         <Button
@@ -652,7 +745,7 @@ function MusicGeneratorPageContent() {
                         </Button>
                         <Button
                             onClick={handleGenerate}
-                            disabled={isGenerating || isProjectBusy || !prompt.trim()}
+                            disabled={isGenerating || isProjectBusy || !state.prompt.trim()}
                             className="h-12 flex-[2] font-bold rounded-xl gap-2"
                         >
                             {isGenerating ? (
@@ -665,38 +758,36 @@ function MusicGeneratorPageContent() {
                 </div>
 
                 <MediaPickerModal
-                    isOpen={isAudioPickerOpen}
-                    onClose={() => setIsAudioPickerOpen(false)}
+                    isOpen={state.isAudioPickerOpen}
+                    onClose={() => dispatch({ type: 'set-audio-picker-open', value: false })}
                     onSelect={handleReferenceSelect}
                     mediaType="audio"
                 />
-                </div>
+            </div>
 
-                <audio
-                    ref={audioRef}
-                    className="hidden"
-                    onEnded={() => setPlayingTrackId(null)}
-                    onPause={() => {
-                        if (audioRef.current && audioRef.current.currentTime === 0) {
-                            setPlayingTrackId(null);
-                        }
-                    }}
-                />
+            <audio
+                ref={audioRef}
+                className="hidden"
+                onEnded={() => dispatch({ type: 'set-playing-track-id', value: null })}
+                onPause={() => {
+                    if (audioRef.current && audioRef.current.currentTime === 0) {
+                        dispatch({ type: 'set-playing-track-id', value: null });
+                    }
+                }}
+            />
 
-                {/* Main Content Grid */}
             <div className="flex-1 overflow-y-auto bg-background">
-                {/* Content Header */}
                 <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-sm px-6 h-14 flex items-center justify-between border-b border-border">
                     <div className="flex items-center gap-1">
                         {MUSIC_CONTENT_TABS.map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => setActiveContentTab(tab)}
+                                onClick={() => dispatch({ type: 'set-content-tab', tab })}
                                 className={cn(
-                                    "px-4 py-2 text-sm font-medium rounded-full transition-colors",
-                                    activeContentTab === tab
-                                        ? "bg-accent text-accent-foreground"
-                                        : "text-muted-foreground hover:text-foreground"
+                                    'px-4 py-2 text-sm font-medium rounded-full transition-colors',
+                                    state.activeContentTab === tab
+                                        ? 'bg-accent text-accent-foreground'
+                                        : 'text-muted-foreground hover:text-foreground'
                                 )}
                             >
                                 {tab}
@@ -704,7 +795,7 @@ function MusicGeneratorPageContent() {
                         ))}
                     </div>
                     <div className="flex items-center gap-3">
-                        {projectError && <span className="text-xs text-destructive">{projectError}</span>}
+                        {state.projectError && <span className="text-xs text-destructive">{state.projectError}</span>}
                         <Button
                             variant="outline"
                             size="sm"
@@ -712,82 +803,78 @@ function MusicGeneratorPageContent() {
                             disabled={isProjectBusy || isGenerating}
                             className="gap-2"
                         >
-                            {isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
+                            {state.isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
                             Save project
                         </Button>
                     </div>
                 </div>
 
                 <div className="p-6">
-                    {activeContentTab === MUSIC_CONTENT_TABS[0] && ( // My Creations
+                    {state.activeContentTab === MUSIC_CONTENT_TABS[0] && (
                         <section>
                             <h3 className="text-lg font-semibold mb-4">My Creations</h3>
                             {isGenerationsLoading ? (
                                 <LoadingList />
                             ) : generations.length > 0 ? (
                                 <div className="space-y-3">
-                                    {generations.map((gen) => (
-                                        (() => {
-                                            const track = toMusicTrackRow({
-                                                id: gen.id,
-                                                title: gen.prompt || 'AI Generated Track',
-                                                genre: typeof gen.metadata?.genre === 'string' ? gen.metadata.genre : 'AI Generated',
-                                                duration: `${typeof gen.metadata?.duration === 'number' ? gen.metadata.duration : 0}s`,
-                                                bpm: typeof gen.metadata?.tempo === 'number' ? gen.metadata.tempo : 120,
-                                                time: 'Just now',
-                                                resultUrl: typeof gen.resultUrl === 'string' ? gen.resultUrl : undefined,
-                                            });
+                                    {generations.map((generation) => {
+                                        const track = toMusicTrackRow({
+                                            id: generation.id,
+                                            title: generation.prompt || 'AI Generated Track',
+                                            genre: typeof generation.metadata?.genre === 'string' ? generation.metadata.genre : 'AI Generated',
+                                            duration: `${typeof generation.metadata?.duration === 'number' ? generation.metadata.duration : 0}s`,
+                                            bpm: typeof generation.metadata?.tempo === 'number' ? generation.metadata.tempo : 120,
+                                            time: 'Just now',
+                                            resultUrl: typeof generation.resultUrl === 'string' ? generation.resultUrl : undefined,
+                                        });
 
-                                            return (
-                                                <TrackRow
-                                                    key={gen.id}
-                                                    track={track}
-                                                    isPlaying={playingTrackId === gen.id}
-                                                    onTogglePlay={() => toggleTrackPlayback(track)}
-                                                    onSave={() => handleTrackSave(track)}
-                                                    onDownload={() => handleTrackDownload(track)}
-                                                />
-                                            );
-                                        })()
-                                    ))}
+                                        return (
+                                            <TrackRow
+                                                key={generation.id}
+                                                track={track}
+                                                isPlaying={state.playingTrackId === generation.id}
+                                                onTogglePlay={() => toggleTrackPlayback(track)}
+                                                onSave={() => handleTrackSave(track)}
+                                                onDownload={() => handleTrackDownload(track)}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             ) : (
-                                <EmptyState message="No music generated yet." />
+                                <EmptyState message="No generated tracks yet." />
                             )}
                         </section>
                     )}
 
-                    {activeContentTab === MUSIC_CONTENT_TABS[1] && ( // Community
+                    {state.activeContentTab === MUSIC_CONTENT_TABS[1] && (
                         <section>
                             <h3 className="text-lg font-semibold mb-4">Community Showcase</h3>
-                            {isCommunityLoading ? (
+                            {state.isCommunityLoading ? (
                                 <LoadingList />
-                            ) : communityListings.length > 0 ? (
+                            ) : state.communityListings.length > 0 ? (
                                 <div className="space-y-3">
-                                    {communityListings.map((listing) => (
-                                        (() => {
-                                            const track = toMusicTrackRow({
-                                                id: listing.id,
-                                                title: listing.title,
-                                                genre: typeof listing.metadata?.genre === 'string' ? listing.metadata.genre : 'Community',
-                                                duration: typeof listing.metadata?.duration === 'string' ? listing.metadata.duration : '3:00',
-                                                bpm: typeof listing.metadata?.bpm === 'number' ? listing.metadata.bpm : 120,
-                                                time: 'Recently',
-                                                resultUrl: typeof listing.resultUrl === 'string' ? listing.resultUrl : undefined,
-                                            });
+                                    {state.communityListings.map((listing) => {
+                                        const track = toMusicTrackRow({
+                                            id: listing.id,
+                                            title: listing.title,
+                                            genre: typeof listing.metadata?.genre === 'string' ? listing.metadata.genre : 'Community',
+                                            duration: typeof listing.metadata?.duration === 'string' ? listing.metadata.duration : '3:00',
+                                            bpm: typeof listing.metadata?.bpm === 'number' ? listing.metadata.bpm : 120,
+                                            time: 'Recently',
+                                            resultUrl: typeof listing.resultUrl === 'string' ? listing.resultUrl : undefined,
+                                        });
 
-                                            return (
-                                                <TrackRow
-                                                    key={listing.id}
-                                                    track={track}
-                                                    isPlaying={playingTrackId === listing.id}
-                                                    onTogglePlay={() => toggleTrackPlayback(track)}
-                                                    onSave={() => handleTrackSave(track)}
-                                                    onDownload={() => handleTrackDownload(track)}
-                                                />
-                                            );
-                                        })()
-                                    ))}
+                                        return (
+                                            <TrackRow
+                                                key={listing.id}
+                                                track={track}
+                                                isPlaying={state.playingTrackId === listing.id}
+                                                onTogglePlay={() => toggleTrackPlayback(track)}
+                                                onSave={() => handleTrackSave(track)}
+                                                onDownload={() => handleTrackDownload(track)}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <EmptyState message="No community tracks found." />
@@ -795,44 +882,42 @@ function MusicGeneratorPageContent() {
                         </section>
                     )}
 
-                    {activeContentTab === MUSIC_CONTENT_TABS[2] && ( // Templates
+                    {state.activeContentTab === MUSIC_CONTENT_TABS[2] && (
                         <section>
                             <h3 className="text-lg font-semibold mb-4">Music Presets</h3>
                             {isTemplatesLoading ? (
                                 <LoadingList />
                             ) : templates.length > 0 ? (
                                 <div className="space-y-3">
-                                    {templates.map((track) => (
-                                        (() => {
-                                            const trackRow = toMusicTrackRow({
-                                                id: track.id,
-                                                title: track.title,
-                                                genre: track.type,
-                                                duration: '0:30',
-                                                bpm: 120,
-                                                time: 'Preset',
-                                            });
+                                    {templates.map((template) => {
+                                        const trackRow = toMusicTrackRow({
+                                            id: template.id,
+                                            title: template.title,
+                                            genre: template.type,
+                                            duration: '0:30',
+                                            bpm: 120,
+                                            time: 'Preset',
+                                        });
 
-                                            return (
-                                                <TrackRow
-                                                    key={track.id}
-                                                    track={trackRow}
-                                                    isPlaying={playingTrackId === track.id}
-                                                    onTogglePlay={() => toggleTrackPlayback(trackRow)}
-                                                    onSave={() => handleTrackSave(trackRow)}
-                                                    onDownload={() => handleTrackDownload(trackRow)}
-                                                />
-                                            );
-                                        })()
-                                    ))}
+                                        return (
+                                            <TrackRow
+                                                key={template.id}
+                                                track={trackRow}
+                                                isPlaying={state.playingTrackId === template.id}
+                                                onTogglePlay={() => toggleTrackPlayback(trackRow)}
+                                                onSave={() => handleTrackSave(trackRow)}
+                                                onDownload={() => handleTrackDownload(trackRow)}
+                                            />
+                                        );
+                                    })}
                                 </div>
                             ) : (
                                 <div className="space-y-3">
                                     {sampleTracks.map((track) => (
-                                        <TrackRow 
-                                            key={track.id} 
+                                        <TrackRow
+                                            key={track.id}
                                             track={toMusicTrackRow(track)}
-                                            isPlaying={playingTrackId === track.id}
+                                            isPlaying={state.playingTrackId === track.id}
                                             onTogglePlay={() => toggleTrackPlayback(toMusicTrackRow(track))}
                                             onSave={() => handleTrackSave(toMusicTrackRow(track))}
                                             onDownload={() => handleTrackDownload(toMusicTrackRow(track))}
@@ -843,7 +928,7 @@ function MusicGeneratorPageContent() {
                         </section>
                     )}
 
-                    {activeContentTab === MUSIC_CONTENT_TABS[3] && ( // Tutorials
+                    {state.activeContentTab === MUSIC_CONTENT_TABS[3] && (
                         <div className="space-y-8">
                             <section>
                                 <h3 className="text-lg font-semibold mb-4">Getting Started</h3>
@@ -918,16 +1003,15 @@ function TrackRow({ track, isPlaying, onTogglePlay, onSave, onDownload }: { trac
             </button>
             <div className="flex-1 min-w-0">
                 <h4 className="text-sm font-medium truncate">{track.title}</h4>
-                <p className="text-xs text-muted-foreground">{track.genre} • {track.duration} • {track.bpm} BPM</p>
+                <p className="text-xs text-muted-foreground">{track.genre} â€¢ {track.duration} â€¢ {track.bpm} BPM</p>
             </div>
-            {/* Waveform */}
             <div className="hidden md:flex items-center gap-[2px] h-8 flex-1 max-w-[300px]">
                 {Array.from({ length: 50 }).map((_, i) => (
                     <div
                         key={i}
                         className={cn(
-                            "w-[2px] rounded-full transition-colors",
-                            isPlaying ? "bg-primary" : "bg-muted-foreground/20"
+                            'w-[2px] rounded-full transition-colors',
+                            isPlaying ? 'bg-primary' : 'bg-muted-foreground/20'
                         )}
                         style={{ height: `${Math.sin(i * 0.3) * 12 + 16}px` }}
                     />

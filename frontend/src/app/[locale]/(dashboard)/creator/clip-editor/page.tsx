@@ -49,6 +49,10 @@ type ClipEditorState = {
     videoFile: string | null;
     trimStart: number;
     trimEnd: number;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    errorMessage: string | null;
 };
 
 type ClipEditorAction =
@@ -67,6 +71,10 @@ type ClipEditorAction =
     | { type: 'adjustClipTrim'; clipId: string; trimStart?: number; trimEnd?: number }
     | { type: 'adjustClipStart'; clipId: string; startTime: number }
     | { type: 'hydrateDraft'; draft: Partial<ClipEditorState> }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setErrorMessage'; errorMessage: string | null }
     | { type: 'resetAll' };
 
 const initialState: ClipEditorState = {
@@ -78,6 +86,10 @@ const initialState: ClipEditorState = {
     videoFile: null,
     trimStart: 0,
     trimEnd: 100,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    errorMessage: null,
 };
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
@@ -170,6 +182,14 @@ function reducer(state: ClipEditorState, action: ClipEditorAction): ClipEditorSt
                 ...action.draft,
                 clips: Array.isArray(action.draft.clips) ? normalizeClips(action.draft.clips) : state.clips,
             };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setErrorMessage':
+            return { ...state, errorMessage: action.errorMessage };
         case 'resetAll':
             return initialState;
         default:
@@ -191,15 +211,11 @@ function ClipEditorPageContent() {
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -225,7 +241,7 @@ function ClipEditorPageContent() {
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('clip-editor:draft:v1');
 
-            if (!projectId) {
+            if (!state.projectId) {
                 try {
                     if (draftRaw) {
                         hydrate(JSON.parse(draftRaw) as Partial<ClipEditorSnapshot>);
@@ -236,9 +252,9 @@ function ClipEditorPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
+            dispatch({ type: 'setProjectLoading', isProjectLoading: true });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(state.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed =
                     typeof rawContent === 'string'
@@ -252,7 +268,10 @@ function ClipEditorPageContent() {
             } catch (error) {
                 console.error('Failed to restore clip project', error);
                 if (!cancelled) {
-                    setErrorMessage('Could not load the saved clip project. Falling back to a local draft.');
+                    dispatch({
+                        type: 'setErrorMessage',
+                        errorMessage: 'Could not load the saved clip project. Falling back to a local draft.',
+                    });
                     try {
                         if (draftRaw) {
                             hydrate(JSON.parse(draftRaw) as Partial<ClipEditorSnapshot>);
@@ -263,7 +282,7 @@ function ClipEditorPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -273,7 +292,7 @@ function ClipEditorPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [state.projectId]);
 
     const totalDuration = useMemo(() => getTimelineEnd(state.clips), [state.clips]);
     const selectedClip = state.clips.find((clip) => clip.id === state.selectedClipId) ?? null;
@@ -372,7 +391,7 @@ function ClipEditorPageContent() {
         localStorage.setItem('clip-editor:draft:v1', JSON.stringify(snapshot));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
                 const payload = {
                     version: 1,
@@ -380,8 +399,8 @@ function ClipEditorPageContent() {
                     snapshot,
                 };
 
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Clip Editor Draft',
                         description: 'Clip editor draft',
                         content: payload,
@@ -392,7 +411,7 @@ function ClipEditorPageContent() {
                         description: 'Clip editor draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -401,7 +420,7 @@ function ClipEditorPageContent() {
                 console.error('Failed to persist clip project', error);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -440,7 +459,7 @@ function ClipEditorPageContent() {
 
     const handleReset = () => {
         dispatch({ type: 'resetAll' });
-        setErrorMessage(null);
+        dispatch({ type: 'setErrorMessage', errorMessage: null });
         toast.success('Clip editor reset.');
     };
 
@@ -475,7 +494,7 @@ function ClipEditorPageContent() {
                     <span className="text-xs text-muted-foreground">
                         {state.clips.length} clips - {totalDuration.toFixed(1)}s
                     </span>
-                    {isProjectLoading && <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Loading project</span>}
+                    {state.isProjectLoading && <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Loading project</span>}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-2">
@@ -488,8 +507,8 @@ function ClipEditorPageContent() {
                     <Button variant="ghost" size="sm" className="gap-2" onClick={handleReset}>
                         <Scissors className="size-4" /> Reset
                     </Button>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}>
-                        <Folder className="size-4" /> {isProjectSaving ? 'Saving...' : 'Save'}
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={state.isProjectLoading || state.isProjectSaving}>
+                        <Folder className="size-4" /> {state.isProjectSaving ? 'Saving...' : 'Save'}
                     </Button>
                     <Button size="sm" className="gap-2" onClick={handleExport}>
                         <Download className="size-4" /> Export
@@ -499,9 +518,9 @@ function ClipEditorPageContent() {
 
             <div className="flex-1 flex overflow-hidden">
                 <div className="flex-1 flex items-center justify-center bg-zinc-950/95 relative">
-                    {errorMessage && (
+                    {state.errorMessage && (
                         <div className="absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-                            {errorMessage}
+                            {state.errorMessage}
                         </div>
                     )}
 

@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
-import { useEffect, useReducer } from 'react';
+import { useEffect, useReducer, useCallback, useSyncExternalStore } from 'react';
 import {
     Plus,
     Search,
@@ -46,6 +46,17 @@ type ProjectDraft = {
     projectName: string;
     projectDesc: string;
 };
+
+function ClientDateText({ value }: { value: string | Date }) {
+    const subscribe = useCallback(() => () => {}, []);
+    const getSnapshot = useCallback(() => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? '' : date.toLocaleDateString();
+    }, [value]);
+
+    const text = useSyncExternalStore(subscribe, getSnapshot, () => '');
+    return <span suppressHydrationWarning>{text}</span>;
+}
 
 const PROJECT_DRAFT_KEY = 'projects:create-modal:draft';
 
@@ -321,7 +332,7 @@ function ProjectCard({ project }: { project: Project }) {
             </p>
 
             <div className="flex items-center justify-between text-xs text-muted-foreground/70 border-t border-border pt-3">
-                <span>{new Date(project.updatedAt).toLocaleDateString()}</span>
+                <span><ClientDateText value={project.updatedAt} /></span>
                 <span className="flex items-center gap-1">
                     View contents &rarr;
                 </span>

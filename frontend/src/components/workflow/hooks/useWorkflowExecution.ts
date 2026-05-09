@@ -591,12 +591,21 @@ export function useWorkflowExecution(
         visit(startNodeId);
       }
 
-      for (const nodeId of executionOrder) {
+      const executeNodeOrder = async (index: number): Promise<void> => {
+        if (index >= executionOrder.length) {
+          return;
+        }
+
+        const nodeId = executionOrder[index];
         const node = nodesById.get(nodeId);
         if (node && node.type !== WorkflowNodeType.TEXT && node.type !== WorkflowNodeType.MEDIA) {
           await runNode(nodeId, execution.signal);
         }
-      }
+
+        return executeNodeOrder(index + 1);
+      };
+
+      await executeNodeOrder(0);
     },
     [getNodes, getEdges, runNode, startExecution]
   );

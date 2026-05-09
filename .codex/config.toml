@@ -15,6 +15,9 @@ url = "https://api.githubcopilot.com/mcp/"
 command = "uvx"
 args = ["--from", "browser-use[cli]", "browser-use", "--mcp"]
 
+[mcp_servers.browser.tools.browser_get_state]
+approval_mode = "approve"
+
 [mcp_servers.next-devtools]
 command = "npx"
 args = ["-y", "next-devtools-mcp@latest"]

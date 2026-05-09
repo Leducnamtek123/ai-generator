@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
@@ -87,6 +87,13 @@ type DesignEditorState = {
     aiPrompt: string;
     isGenerating: boolean;
     canvasZoom: number;
+    errorMessage: string | null;
+    pastSnapshots: DesignEditorSnapshot[];
+    futureSnapshots: DesignEditorSnapshot[];
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    alignmentGuides: AlignmentGuide[];
 };
 
 type DesignEditorSnapshot = {
@@ -110,6 +117,13 @@ type DesignEditorAction =
     | { type: 'setAiPrompt'; aiPrompt: string }
     | { type: 'setGenerating'; isGenerating: boolean }
     | { type: 'setCanvasZoom'; canvasZoom: number }
+    | { type: 'setErrorMessage'; errorMessage: string | null }
+    | { type: 'setPastSnapshots'; pastSnapshots: DesignEditorSnapshot[] }
+    | { type: 'setFutureSnapshots'; futureSnapshots: DesignEditorSnapshot[] }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setAlignmentGuides'; alignmentGuides: AlignmentGuide[] }
     | { type: 'updateElementFrame'; id: string; patch: Partial<Pick<DesignElement, 'x' | 'y' | 'width' | 'height'>> }
     | { type: 'updateElementStyle'; id: string; patch: Partial<Pick<DesignElement, 'fontWeight' | 'fontStyle' | 'textDecoration' | 'textAlign'>> }
     | { type: 'restoreSnapshot'; snapshot: DesignEditorSnapshot }
@@ -235,6 +249,13 @@ const initialState: DesignEditorState = {
     aiPrompt: '',
     isGenerating: false,
     canvasZoom: 100,
+    errorMessage: null,
+    pastSnapshots: [],
+    futureSnapshots: [],
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    alignmentGuides: [],
 };
 
 function reducer(state: DesignEditorState, action: DesignEditorAction): DesignEditorState {
@@ -273,6 +294,20 @@ function reducer(state: DesignEditorState, action: DesignEditorAction): DesignEd
             return { ...state, isGenerating: action.isGenerating };
         case 'setCanvasZoom':
             return { ...state, canvasZoom: action.canvasZoom };
+        case 'setErrorMessage':
+            return { ...state, errorMessage: action.errorMessage };
+        case 'setPastSnapshots':
+            return { ...state, pastSnapshots: action.pastSnapshots };
+        case 'setFutureSnapshots':
+            return { ...state, futureSnapshots: action.futureSnapshots };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setAlignmentGuides':
+            return { ...state, alignmentGuides: action.alignmentGuides };
         case 'updateElementFrame':
             return {
                 ...state,
@@ -313,21 +348,14 @@ function DesignEditorPageContent() {
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const [errorMessage, setErrorMessage] = useState<string | null>(null);
-    const [pastSnapshots, setPastSnapshots] = useState<DesignEditorSnapshot[]>([]);
-    const [futureSnapshots, setFutureSnapshots] = useState<DesignEditorSnapshot[]>([]);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
     const canvasRef = useRef<HTMLDivElement | null>(null);
     const interactionHistoryRecordedRef = useRef(false);
-    const [interaction, setInteraction] = useState<CanvasInteraction | null>(null);
-    const [alignmentGuides, setAlignmentGuides] = useState<AlignmentGuide[]>([]);
+    const interactionRef = useRef<CanvasInteraction | null>(null);
 
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -351,7 +379,7 @@ function DesignEditorPageContent() {
         };
 
         const loadProject = async () => {
-            if (!projectId) {
+            if (!state.projectId) {
                 try {
                     const draftKey = 'design-editor:draft:v1';
                     const raw = localStorage.getItem(draftKey);
@@ -367,9 +395,9 @@ function DesignEditorPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
+            dispatch({ type: 'setProjectLoading', isProjectLoading: true });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(state.projectId);
                 const rawContent = project.content as
                     | string
                     | Record<string, unknown>
@@ -386,7 +414,10 @@ function DesignEditorPageContent() {
             } catch (error) {
                 console.error('Failed to restore design project', error);
                 if (!cancelled) {
-                    setErrorMessage('Could not load the saved design project. Falling back to a blank canvas.');
+                    dispatch({
+                        type: 'setErrorMessage',
+                        errorMessage: 'Could not load the saved design project. Falling back to a blank canvas.',
+                    });
                     try {
                         const draftKey = 'design-editor:draft:v1';
                         const raw = localStorage.getItem(draftKey);
@@ -400,7 +431,7 @@ function DesignEditorPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -410,7 +441,7 @@ function DesignEditorPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [state.projectId]);
 
     const snapshotState = (): DesignEditorSnapshot => ({
         selectedSize: state.selectedSize,
@@ -424,8 +455,8 @@ function DesignEditorPageContent() {
     });
 
     const recordHistory = () => {
-        setPastSnapshots((current) => [...current, snapshotState()]);
-        setFutureSnapshots([]);
+        dispatch({ type: 'setPastSnapshots', pastSnapshots: [...state.pastSnapshots, snapshotState()] });
+        dispatch({ type: 'setFutureSnapshots', futureSnapshots: [] });
     };
 
     const addElement = (type: 'text' | 'shape' | 'image') => {
@@ -456,6 +487,7 @@ function DesignEditorPageContent() {
     const selectedElement = state.elements.find((element) => element.id === state.selectedElementId) ?? null;
 
     useEffect(() => {
+        const interaction = interactionRef.current;
         if (!interaction) {
             return undefined;
         }
@@ -522,12 +554,12 @@ function DesignEditorPageContent() {
             };
 
             dispatch({ type: 'updateElementFrame', id: interaction.elementId, patch: nextFrame });
-            setAlignmentGuides(snapped.guides);
+            dispatch({ type: 'setAlignmentGuides', alignmentGuides: snapped.guides });
         };
 
         const handlePointerUp = () => {
-            setInteraction(null);
-            setAlignmentGuides([]);
+            interactionRef.current = null;
+            dispatch({ type: 'setAlignmentGuides', alignmentGuides: [] });
             interactionHistoryRecordedRef.current = false;
         };
 
@@ -538,7 +570,7 @@ function DesignEditorPageContent() {
             window.removeEventListener('pointermove', handlePointerMove);
             window.removeEventListener('pointerup', handlePointerUp);
         };
-    }, [interaction]);
+    }, []);
 
     const updateSelectedText = (patch: Partial<Pick<DesignElement, 'fontWeight' | 'fontStyle' | 'textDecoration' | 'textAlign'>>) => {
         if (!selectedTextElement) {
@@ -572,7 +604,7 @@ function DesignEditorPageContent() {
 
         interactionHistoryRecordedRef.current = false;
         dispatch({ type: 'selectElement', id: element.id });
-        setInteraction({
+        interactionRef.current = {
             mode,
             elementId: element.id,
             handle,
@@ -580,35 +612,40 @@ function DesignEditorPageContent() {
             startElements: state.elements.map((item) => ({ ...item })),
             canvasBounds,
             zoomScale,
-        });
+        };
     };
 
     const handleUndo = () => {
-        setPastSnapshots((currentPast) => {
-            if (!currentPast.length) {
-                toast.info('Nothing to undo.');
-                return currentPast;
-            }
+        if (!state.pastSnapshots.length) {
+            toast.info('Nothing to undo.');
+            return;
+        }
 
-            const previous = currentPast[currentPast.length - 1];
-            setFutureSnapshots((currentFuture) => [snapshotState(), ...currentFuture]);
-            dispatch({ type: 'restoreSnapshot', snapshot: previous });
-            return currentPast.slice(0, -1);
+        const previous = state.pastSnapshots[state.pastSnapshots.length - 1];
+        dispatch({
+            type: 'setFutureSnapshots',
+            futureSnapshots: [snapshotState(), ...state.futureSnapshots],
         });
+        dispatch({
+            type: 'setPastSnapshots',
+            pastSnapshots: state.pastSnapshots.slice(0, -1),
+        });
+        dispatch({ type: 'restoreSnapshot', snapshot: previous });
     };
 
     const handleRedo = () => {
-        setFutureSnapshots((currentFuture) => {
-            if (!currentFuture.length) {
-                toast.info('Nothing to redo.');
-                return currentFuture;
-            }
+        if (!state.futureSnapshots.length) {
+            toast.info('Nothing to redo.');
+            return;
+        }
 
-            const [next, ...rest] = currentFuture;
-            setPastSnapshots((currentPast) => [...currentPast, snapshotState()]);
-            dispatch({ type: 'restoreSnapshot', snapshot: next });
-            return rest;
+        const [next, ...rest] = state.futureSnapshots;
+        dispatch({
+            type: 'setPastSnapshots',
+            pastSnapshots: [...state.pastSnapshots, snapshotState()],
         });
+        dispatch({ type: 'setFutureSnapshots', futureSnapshots: rest });
+        dispatch({ type: 'restoreSnapshot', snapshot: next });
     };
 
     const handleZoom = (direction: 'in' | 'out') => {
@@ -620,14 +657,14 @@ function DesignEditorPageContent() {
     const handleAiGenerate = async () => {
         if (!state.aiPrompt.trim()) return;
         dispatch({ type: 'setGenerating', isGenerating: true });
-        setErrorMessage(null);
+        dispatch({ type: 'setErrorMessage', errorMessage: null });
 
         try {
             await startGeneration('/generations/image', { prompt: state.aiPrompt });
             toast.success('Design generation started.');
         } catch (error) {
             console.error('Failed to generate design', error);
-            setErrorMessage('AI generation failed to start.');
+            dispatch({ type: 'setErrorMessage', errorMessage: 'AI generation failed to start.' });
             toast.error('Failed to start design generation.');
         } finally {
             dispatch({ type: 'setGenerating', isGenerating: false });
@@ -636,9 +673,9 @@ function DesignEditorPageContent() {
 
     const handleReset = () => {
         dispatch({ type: 'resetAll' });
-        setPastSnapshots([]);
-        setFutureSnapshots([]);
-        setErrorMessage(null);
+        dispatch({ type: 'setPastSnapshots', pastSnapshots: [] });
+        dispatch({ type: 'setFutureSnapshots', futureSnapshots: [] });
+        dispatch({ type: 'setErrorMessage', errorMessage: null });
         toast.success('Design canvas reset.');
     };
 
@@ -656,7 +693,7 @@ function DesignEditorPageContent() {
         localStorage.setItem('design-editor:draft:v1', JSON.stringify(snapshot));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
                 const description = JSON.stringify({
                     version: 1,
@@ -664,8 +701,8 @@ function DesignEditorPageContent() {
                     snapshot,
                 });
 
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Design Editor Draft',
                         description: 'Design editor draft',
                         content: JSON.parse(description),
@@ -676,7 +713,7 @@ function DesignEditorPageContent() {
                         description: 'Design editor draft',
                         content: JSON.parse(description),
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -685,7 +722,7 @@ function DesignEditorPageContent() {
                 console.error('Failed to persist design project', error);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -860,8 +897,8 @@ function DesignEditorPageContent() {
                         <Button variant="ghost" size="icon" className="size-8" onClick={() => dispatch({ type: 'setActiveTool', activeTool: 'select' })}><MousePointer className={cn("size-4", state.activeTool === 'select' && "text-primary")} /></Button>
                         <Button variant="ghost" size="icon" className="size-8" onClick={() => dispatch({ type: 'setActiveTool', activeTool: 'move' })}><Move className={cn("size-4", state.activeTool === 'move' && "text-primary")} /></Button>
                         <div className="w-px h-6 bg-border mx-1" />
-                        <Button variant="ghost" size="icon" className="size-8" onClick={handleUndo} disabled={!pastSnapshots.length}><Undo2 className="size-4" /></Button>
-                        <Button variant="ghost" size="icon" className="size-8" onClick={handleRedo} disabled={!futureSnapshots.length}><Redo2 className="size-4" /></Button>
+                        <Button variant="ghost" size="icon" className="size-8" onClick={handleUndo} disabled={!state.pastSnapshots.length}><Undo2 className="size-4" /></Button>
+                        <Button variant="ghost" size="icon" className="size-8" onClick={handleRedo} disabled={!state.futureSnapshots.length}><Redo2 className="size-4" /></Button>
                         <div className="w-px h-6 bg-border mx-1" />
                         <Button variant="ghost" size="icon" className="size-8" onClick={() => handleZoom('in')}><ZoomIn className="size-4" /></Button>
                         <span className="text-xs text-muted-foreground px-1">{state.canvasZoom}%</span>
@@ -869,12 +906,12 @@ function DesignEditorPageContent() {
                     </div>
                     <div className="flex items-center gap-2">
                         <span className="text-xs text-muted-foreground">
-                            {isProjectLoading ? 'Loading project...' : `${currentSize?.label} (${currentSize?.size})`}
+                            {state.isProjectLoading ? 'Loading project...' : `${currentSize?.label} (${currentSize?.size})`}
                         </span>
                         <Button variant="ghost" size="sm" className="gap-2" onClick={handleReset}><RotateCcw className="size-4" /> Reset</Button>
-                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectSaving || isProjectLoading}>
+                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={state.isProjectSaving || state.isProjectLoading}>
                             <Folder className="size-4" />
-                            {isProjectSaving ? 'Saving...' : 'Save'}
+                            {state.isProjectSaving ? 'Saving...' : 'Save'}
                         </Button>
                         <Button size="sm" className="gap-2" onClick={handleExport}><Download className="size-4" /> Export</Button>
                     </div>
@@ -882,9 +919,9 @@ function DesignEditorPageContent() {
 
                 {/* Canvas */}
                 <div className="flex-1 flex items-center justify-center p-8 bg-muted/30 overflow-auto">
-                    {errorMessage && (
+                    {state.errorMessage && (
                         <div className="absolute top-4 left-1/2 z-20 -translate-x-1/2 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-2 text-sm text-destructive">
-                            {errorMessage}
+                            {state.errorMessage}
                         </div>
                     )}
                     <div
@@ -897,7 +934,7 @@ function DesignEditorPageContent() {
                             className="w-full h-full relative overflow-hidden"
                             onPointerDown={() => dispatch({ type: 'selectElement', id: null })}
                         >
-                            {alignmentGuides.map((guide) => (
+                            {state.alignmentGuides.map((guide) => (
                                 <div
                                     key={`${guide.orientation}-${guide.position}`}
                                     className="pointer-events-none absolute z-30 bg-sky-500/80"

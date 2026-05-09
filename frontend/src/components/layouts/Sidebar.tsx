@@ -47,7 +47,7 @@ import {
 import type { SidebarItem } from "./navigation-data";
 import { useSiteConfig } from "@/hooks/queries/useSiteConfig";
 
-export const stockMenuData = {
+const stockMenuData = {
   image: [
     { label: "All images", href: "/stock?category=images" },
     { label: "Vectors", href: "/stock?category=vectors" },
@@ -511,40 +511,47 @@ export function Sidebar() {
     let active = true;
 
     if (!user) {
-      setBillingSummary(null);
       return () => {
         active = false;
       };
     }
 
     const loadBillingSummary = async () => {
+      let nextSummary: {
+        planName: string | null;
+        status: BillingWalletSummary["status"] | null;
+        remainingCredits: number;
+        managementHref: string;
+      } | null = null;
+
       try {
         if (isOrgRoute && currentOrg?.slug) {
           const billing = await billingApi.get(currentOrg.slug);
           if (!active) return;
 
-          setBillingSummary({
+          nextSummary = {
             planName: billing.plan?.name ?? null,
             status: billing.wallet.status,
             remainingCredits: billing.wallet.totalCredits,
             managementHref: `/orgs/${currentOrg.slug}/billing`,
-          });
-          return;
+          };
+        } else {
+          const wallet = await billingApi.getMe();
+          if (!active) return;
+
+          nextSummary = {
+            planName: wallet.plan?.name ?? null,
+            status: wallet.status,
+            remainingCredits: wallet.totalCredits,
+            managementHref: "/settings?tab=billing",
+          };
         }
-
-        const wallet = await billingApi.getMe();
-        if (!active) return;
-
-        setBillingSummary({
-          planName: wallet.plan?.name ?? null,
-          status: wallet.status,
-          remainingCredits: wallet.totalCredits,
-          managementHref: "/settings?tab=billing",
-        });
       } catch {
-        if (active) {
-          setBillingSummary(null);
-        }
+        nextSummary = null;
+      }
+
+      if (active) {
+        setBillingSummary(nextSummary);
       }
     };
 

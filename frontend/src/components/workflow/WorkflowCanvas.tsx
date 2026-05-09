@@ -42,19 +42,18 @@ interface WorkflowCanvasProps {
 }
 
 function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanvasProps) {
-    const [isHydrated, setIsHydrated] = useState(false);
     const [hydrateError, setHydrateError] = useState<string | null>(null);
-    const [hydrateAttempt, setHydrateAttempt] = useState(0);
+    const [hydrateAttempt, bumpHydrateAttempt] = React.useReducer((value: number) => value + 1, 0);
     const [canvasRevision, setCanvasRevision] = useState(0);
     const { replace } = useRouter();
-    const { fetchWorkflow, fetchWorkflowByProject, createWorkflow } = useWorkflowStore();
+    const { fetchWorkflow, fetchWorkflowByProject, createWorkflow, workflow } = useWorkflowStore();
+    const needsHydration = Boolean(projectId || templateId || workflowId);
 
     useEffect(() => {
         let cancelled = false;
 
         const hydrate = async () => {
             setHydrateError(null);
-            setIsHydrated(false);
             useWorkflowStore.setState({
                 workflow: null,
                 nodes: [],
@@ -127,15 +126,10 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
                     const message = error instanceof Error ? error.message : 'Failed to load workflow.';
                     setHydrateError(message);
                 }
-            } finally {
-                if (!cancelled) {
-                    setIsHydrated(true);
-                }
             }
         };
 
         if (!projectId && !templateId && !workflowId) {
-            setIsHydrated(true);
             return;
         }
 
@@ -146,31 +140,25 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
         };
     }, [projectId, templateId, workflowId, fetchWorkflow, fetchWorkflowByProject, createWorkflow, replace, hydrateAttempt]);
 
-    if (!isHydrated) {
-        return (
-            <AsyncStateSurface
-                status="loading"
-                title="Loading workflow"
-                message="Preparing the editor and restoring the latest graph state."
-                compact
-            />
-        );
-    }
-
-    if (hydrateError) {
-        return (
-            <AsyncStateSurface
-                status="error"
-                title="Workflow failed to load"
-                message={hydrateError}
-                onRetry={() => setHydrateAttempt((value) => value + 1)}
-                retryLabel="Retry"
-                compact
-            />
-        );
-    }
-
-    return <WorkflowCanvasContent key={canvasRevision} projectId={projectId} onResetCanvas={() => setCanvasRevision((value) => value + 1)} />;
+    return needsHydration && !workflow && !hydrateError ? (
+        <AsyncStateSurface
+            status="loading"
+            title="Loading workflow"
+            message="Preparing the editor and restoring the latest graph state."
+            compact
+        />
+    ) : hydrateError ? (
+        <AsyncStateSurface
+            status="error"
+            title="Workflow failed to load"
+            message={hydrateError}
+            onRetry={() => bumpHydrateAttempt()}
+            retryLabel="Retry"
+            compact
+        />
+    ) : (
+        <WorkflowCanvasContent key={canvasRevision} projectId={projectId} onResetCanvas={() => setCanvasRevision((value) => value + 1)} />
+    );
 }
 
 function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: string; onResetCanvas: () => void }) {
@@ -180,12 +168,56 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
         workflow, nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges, flushWorkflowSave,
         fetchWorkflow, isSaving, executeWorkflow, isExecuting, executionError,
     } = useWorkflowStore();
-    const [pendingConnection, setPendingConnection] = React.useState<{
-        nodeId: string;
-        handleId: string;
-        handleType: 'source' | 'target';
-        sourceType: ConnectionType | null;
-    } | null>(null);
+    type WorkflowCanvasUIState = {
+        pendingConnection: {
+            nodeId: string;
+            handleId: string;
+            handleType: 'source' | 'target';
+            sourceType: ConnectionType | null;
+        } | null;
+        editingMedia: { url: string; type: 'image' | 'video' } | null;
+        isCommentsOpen: boolean;
+        isDraggingNode: boolean;
+        isProjectSaving: boolean;
+        projectSaveError: string | null;
+    };
+
+    type WorkflowCanvasUIAction =
+        | { type: 'setPendingConnection'; pendingConnection: WorkflowCanvasUIState['pendingConnection'] }
+        | { type: 'setEditingMedia'; editingMedia: WorkflowCanvasUIState['editingMedia'] }
+        | { type: 'setIsCommentsOpen'; isCommentsOpen: boolean }
+        | { type: 'setIsDraggingNode'; isDraggingNode: boolean }
+        | { type: 'setIsProjectSaving'; isProjectSaving: boolean }
+        | { type: 'setProjectSaveError'; projectSaveError: string | null };
+
+    const [uiState, dispatchUI] = React.useReducer(
+        (state: WorkflowCanvasUIState, action: WorkflowCanvasUIAction): WorkflowCanvasUIState => {
+            switch (action.type) {
+                case 'setPendingConnection':
+                    return { ...state, pendingConnection: action.pendingConnection };
+                case 'setEditingMedia':
+                    return { ...state, editingMedia: action.editingMedia };
+                case 'setIsCommentsOpen':
+                    return { ...state, isCommentsOpen: action.isCommentsOpen };
+                case 'setIsDraggingNode':
+                    return { ...state, isDraggingNode: action.isDraggingNode };
+                case 'setIsProjectSaving':
+                    return { ...state, isProjectSaving: action.isProjectSaving };
+                case 'setProjectSaveError':
+                    return { ...state, projectSaveError: action.projectSaveError };
+                default:
+                    return state;
+            }
+        },
+        {
+            pendingConnection: null,
+            editingMedia: null,
+            isCommentsOpen: false,
+            isDraggingNode: false,
+            isProjectSaving: false,
+            projectSaveError: null,
+        },
+    );
 
     useEffect(() => {
         const flushPendingWorkflow = () => {
@@ -220,14 +252,10 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
         onConnect, addNode, updateNodeData, handleDeleteNode, handlePaneClick, handleNodeClick,
         handleTextChange, handleDuplicateNode
     } = useWorkflowHandlers(nodes, setNodes, setEdges, saveToHistory, runWorkflow, () => {
-        setPendingConnection(null);
+        dispatchUI({ type: 'setPendingConnection', pendingConnection: null });
     });
 
-    const [editingMedia, setEditingMedia] = React.useState<{ url: string; type: 'image' | 'video' } | null>(null);
-    const [isCommentsOpen, setIsCommentsOpen] = React.useState(false);
-    const [isDraggingNode, setIsDraggingNode] = React.useState(false);
-    const [isProjectSaving, setIsProjectSaving] = React.useState(false);
-    const [projectSaveError, setProjectSaveError] = React.useState<string | null>(null);
+    const { pendingConnection, editingMedia, isCommentsOpen, isDraggingNode, isProjectSaving, projectSaveError } = uiState;
     const helperLines = useWorkflowUIStore((state) => state.helperLines);
     const mouseWheelMode = useWorkflowUIStore((state) => state.mouseWheelMode);
     const selectedNodeId = selectedNode?.id;
@@ -242,8 +270,8 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
         }
 
         try {
-            setIsProjectSaving(true);
-            setProjectSaveError(null);
+            dispatchUI({ type: 'setIsProjectSaving', isProjectSaving: true });
+            dispatchUI({ type: 'setProjectSaveError', projectSaveError: null });
             await projectApi.update(projectId, {
                 name: workflow.name,
                 description: 'Workflow editor snapshot',
@@ -257,10 +285,10 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
             return true;
         } catch (error) {
             console.error('Failed to persist workflow project snapshot', error);
-            setProjectSaveError('Workflow project snapshot save failed. The graph itself is still saved.');
+            dispatchUI({ type: 'setProjectSaveError', projectSaveError: 'Workflow project snapshot save failed. The graph itself is still saved.' });
             return false;
         } finally {
-            setIsProjectSaving(false);
+            dispatchUI({ type: 'setIsProjectSaving', isProjectSaving: false });
         }
     }, [edges, nodes, projectId, workflow]);
 
@@ -315,9 +343,9 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
 
         await fetchWorkflow(workflow.id);
         setSelectedNode(null);
-        setPendingConnection(null);
-        setIsCommentsOpen(false);
-        setEditingMedia(null);
+        dispatchUI({ type: 'setPendingConnection', pendingConnection: null });
+        dispatchUI({ type: 'setIsCommentsOpen', isCommentsOpen: false });
+        dispatchUI({ type: 'setEditingMedia', editingMedia: null });
         onResetCanvas();
         toast.success('Workflow restored');
     }, [fetchWorkflow, onResetCanvas, setSelectedNode, workflow?.id]);
@@ -339,8 +367,8 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                     onDelete: handleDeleteNode,
                     onChange: (id: string, data: Record<string, unknown>) => updateNodeData(id, data),
                     onSettingsChange: (id: string, settings: Record<string, unknown>) => updateNodeData(id, settings),
-                    onOpenImageEditor: (url: string) => setEditingMedia({ url, type: 'image' }),
-                    onOpenVideoEditor: (url: string) => setEditingMedia({ url, type: 'video' }),
+                    onOpenImageEditor: (url: string) => dispatchUI({ type: 'setEditingMedia', editingMedia: { url, type: 'image' } }),
+                    onOpenVideoEditor: (url: string) => dispatchUI({ type: 'setEditingMedia', editingMedia: { url, type: 'video' } }),
                     onTextChange: handleTextChange,
                     onDuplicate: () => handleDuplicateNode(node.id),
                     onSettings: () => setSelectedNode(node),
@@ -348,18 +376,21 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                         event.stopPropagation();
 
                         if (handleType === 'source') {
-                            setPendingConnection({
-                                nodeId: node.id,
-                                handleId,
-                                handleType,
-                                sourceType: inferNodeOutputType(node),
+                            dispatchUI({
+                                type: 'setPendingConnection',
+                                pendingConnection: {
+                                    nodeId: node.id,
+                                    handleId,
+                                    handleType,
+                                    sourceType: inferNodeOutputType(node),
+                                },
                             });
                             return;
                         }
 
                         if (pendingConnection && pendingConnection.handleType === 'source') {
                             if (pendingConnection.nodeId === node.id) {
-                                setPendingConnection(null);
+                                dispatchUI({ type: 'setPendingConnection', pendingConnection: null });
                                 return;
                             }
 
@@ -369,11 +400,11 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                                 target: node.id,
                                 targetHandle: handleId,
                             });
-                            setPendingConnection(null);
+                            dispatchUI({ type: 'setPendingConnection', pendingConnection: null });
                             return;
                         }
 
-                        setPendingConnection(null);
+                        dispatchUI({ type: 'setPendingConnection', pendingConnection: null });
                     },
                 }
             };
@@ -437,7 +468,7 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                     isSaving={isSaving}
                     onRun={executeWorkflow}
                     isExecuting={isExecuting}
-                    onOpenComments={() => setIsCommentsOpen(true)}
+                    onOpenComments={() => dispatchUI({ type: 'setIsCommentsOpen', isCommentsOpen: true })}
                 />
 
                 {nodes.length === 0 && <CanvasEmptyState onAddNode={addNode} />}
@@ -453,9 +484,9 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
                         onNodesChange={onNodesChange}
                         onEdgesChange={onEdgesChange}
                         onConnect={onConnect}
-                        onNodeDragStart={() => setIsDraggingNode(true)}
+                        onNodeDragStart={() => dispatchUI({ type: 'setIsDraggingNode', isDraggingNode: true })}
                         onNodeDragStop={() => {
-                            setIsDraggingNode(false);
+                            dispatchUI({ type: 'setIsDraggingNode', isDraggingNode: false });
                             void flushWorkflowSave();
                         }}
                         onPaneClick={handlePaneClick}
@@ -495,19 +526,19 @@ function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: strin
 
                 <ImageEditorModal
                     isOpen={editingMedia?.type === 'image'}
-                    onClose={() => setEditingMedia(null)}
+                    onClose={() => dispatchUI({ type: 'setEditingMedia', editingMedia: null })}
                     imageUrl={editingMedia?.type === 'image' ? editingMedia.url : ''}
                 />
 
                 <VideoEditorModal
                     isOpen={editingMedia?.type === 'video'}
-                    onClose={() => setEditingMedia(null)}
+                    onClose={() => dispatchUI({ type: 'setEditingMedia', editingMedia: null })}
                     videoUrl={editingMedia?.type === 'video' ? editingMedia.url : ''}
                 />
 
                 <CommentsPanel
                     isOpen={isCommentsOpen}
-                    onClose={() => setIsCommentsOpen(false)}
+                    onClose={() => dispatchUI({ type: 'setIsCommentsOpen', isCommentsOpen: false })}
                     onAddFirstComment={() => addNode(WorkflowNodeType.COMMENT, 'Comment')}
                 />
             </div>

@@ -1,4 +1,4 @@
-export interface SocialLinksType {
+interface SocialLinksType {
   twitter: string;
   github: string;
   linkedin: string;

@@ -82,6 +82,41 @@ type IconProjectPayload = {
     snapshot: Partial<IconSnapshot>;
 };
 
+type IconUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type IconUiAction =
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-loading'; isLoading: boolean }
+    | { type: 'set-project-saving'; isSaving: boolean }
+    | { type: 'set-project-error'; error: string | null };
+
+const initialUiState: IconUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+function uiReducer(state: IconUiState, action: IconUiAction): IconUiState {
+    switch (action.type) {
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.isLoading };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.error };
+        default:
+            return state;
+    }
+}
+
 type IconGeneratorAction =
     | { type: 'setPrompt'; prompt: string }
     | { type: 'setSelectedStyle'; selectedStyle: string }
@@ -164,17 +199,14 @@ export default function IconGeneratorPage() {
 
 function IconGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const { startGeneration, currentGeneration, error, reset } = useGenerationStore();
     const { providers: iconProviders, isLoading: isProvidersLoading } = useGenerationProviders('icon-gen');
     const [selectedProvider, setSelectedProvider] = useState('');
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = uiState.isProjectLoading || uiState.isProjectSaving;
 
     useEffect(() => {
         if (!iconProviders.length) {
@@ -188,7 +220,7 @@ function IconGeneratorPageContent() {
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        dispatchUi({ type: 'set-project-id', projectId: requestedProjectId });
 
         const applySnapshot = (snapshot: Partial<IconSnapshot>) => {
             dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? '' });
@@ -200,7 +232,7 @@ function IconGeneratorPageContent() {
             dispatch({ type: 'setCornerRadius', cornerRadius: snapshot.cornerRadius ?? initialState.cornerRadius });
             dispatch({ type: 'setResults', results: snapshot.results ?? [] });
             setSelectedProvider(snapshot.selectedProvider ?? '');
-            setProjectError(null);
+            dispatchUi({ type: 'set-project-error', error: null });
         };
 
         const loadDraft = () => {
@@ -222,7 +254,7 @@ function IconGeneratorPageContent() {
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatchUi({ type: 'set-project-loading', isLoading: true });
 
         void (async () => {
             try {
@@ -235,12 +267,12 @@ function IconGeneratorPageContent() {
             } catch (loadError) {
                 console.error('Failed to load icon project', loadError);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
+                    dispatchUi({ type: 'set-project-error', error: 'Loaded local draft because backend project load failed.' });
                     loadDraft();
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'set-project-loading', isLoading: false });
                 }
             }
         })();
@@ -276,7 +308,7 @@ function IconGeneratorPageContent() {
         reset();
         dispatch({ type: 'resetAll' });
         setSelectedProvider(iconProviders[0]?.name || '');
-        setProjectError(null);
+        dispatchUi({ type: 'set-project-error', error: null });
     };
 
     const handleSaveProject = async () => {
@@ -293,12 +325,12 @@ function IconGeneratorPageContent() {
         };
 
         localStorage.setItem('icon-generator:draft:v1', JSON.stringify(content));
-        setIsProjectSaving(true);
-        setProjectError(null);
+        dispatchUi({ type: 'set-project-saving', isSaving: true });
+        dispatchUi({ type: 'set-project-error', error: null });
 
         try {
-            if (projectId) {
-                await projectApi.update(projectId, {
+            if (uiState.projectId) {
+                await projectApi.update(uiState.projectId, {
                     name: state.prompt.trim() ? `Icon: ${state.prompt.trim().slice(0, 48)}` : 'Icon Generator Project',
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot: content } satisfies IconProjectPayload,
                 });
@@ -307,16 +339,16 @@ function IconGeneratorPageContent() {
                     name: state.prompt.trim() ? `Icon: ${state.prompt.trim().slice(0, 48)}` : 'Icon Generator Project',
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot: content } satisfies IconProjectPayload,
                 });
-                setProjectId(created.project.id);
+                dispatchUi({ type: 'set-project-id', projectId: created.project.id });
                 replace(`${window.location.pathname}?projectId=${created.project.id}`);
             }
             toast.success('Icon project saved.');
         } catch (saveError) {
             console.error('Failed to save icon project', saveError);
-            setProjectError('Saved locally, but backend project save failed.');
+            dispatchUi({ type: 'set-project-error', error: 'Saved locally, but backend project save failed.' });
             toast.error('Icon project saved locally, backend save failed.');
         } finally {
-            setIsProjectSaving(false);
+            dispatchUi({ type: 'set-project-saving', isSaving: false });
         }
     };
 
@@ -555,7 +587,7 @@ function IconGeneratorPageContent() {
                     <span className="text-sm font-medium">{state.results.length > 0 ? `${state.results.length} icons generated` : 'Generated Icons'}</span>
                     <div className="flex gap-2">
                         <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveProject} disabled={isProjectBusy}>
-                            <Folder className="size-4" /> {isProjectSaving ? 'Saving...' : 'Save Project'}
+                            <Folder className="size-4" /> {uiState.isProjectSaving ? 'Saving...' : 'Save Project'}
                         </Button>
                         {state.results.length > 0 && (
                             <Button size="sm" className="gap-2" onClick={handleExportAll}>
@@ -566,9 +598,9 @@ function IconGeneratorPageContent() {
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-8">
-                    {projectError && (
+                    {uiState.projectError && (
                         <div className="mb-6 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600">
-                            {projectError}
+                            {uiState.projectError}
                         </div>
                     )}
                     {state.error && (

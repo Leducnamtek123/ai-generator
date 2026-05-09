@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { dashboardApi } from '@/services/dashboardApi';
 
-export const DASHBOARD_KEYS = {
+const DASHBOARD_KEYS = {
   all: ['dashboard'] as const,
   stats: () => [...DASHBOARD_KEYS.all, 'stats'] as const,
 };

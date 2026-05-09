@@ -42,6 +42,10 @@ type MockupState = {
     shadow: number;
     isGenerating: boolean;
     results: string[];
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
 };
 
 type MockupSnapshot = {
@@ -70,6 +74,10 @@ type MockupAction =
     | { type: 'setGenerating'; isGenerating: boolean }
     | { type: 'setResults'; results: string[] }
     | { type: 'clearResults' }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
     | { type: 'resetAll' };
 
 const initialState: MockupState = {
@@ -81,6 +89,10 @@ const initialState: MockupState = {
     shadow: 50,
     isGenerating: false,
     results: [],
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
 };
 
 const normalizeMockupSnapshot = (value: unknown): Partial<MockupSnapshot> => {
@@ -118,6 +130,14 @@ function reducer(state: MockupState, action: MockupAction): MockupState {
             return { ...state, results: action.results };
         case 'clearResults':
             return { ...state, results: [] };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
         case 'resetAll':
             return initialState;
         default:
@@ -136,15 +156,11 @@ export default function MockupGeneratorPage() {
 function MockupGeneratorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const { mockupGenerator, currentGeneration, error, reset } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = state.isProjectLoading || state.isProjectSaving;
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -181,7 +197,7 @@ function MockupGeneratorPageContent() {
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
-        setProjectError(null);
+        dispatch({ type: 'setProjectError', projectError: null });
     };
 
     const downloadMockup = (url: string, filename: string) => {
@@ -211,10 +227,10 @@ function MockupGeneratorPageContent() {
         localStorage.setItem('mockup-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Mockup Generator Draft',
                         description: 'Mockup generator draft',
                         content: payload,
@@ -225,7 +241,7 @@ function MockupGeneratorPageContent() {
                         description: 'Mockup generator draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -234,7 +250,7 @@ function MockupGeneratorPageContent() {
                 console.error('Failed to persist mockup project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -269,7 +285,7 @@ function MockupGeneratorPageContent() {
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -288,7 +304,7 @@ function MockupGeneratorPageContent() {
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('mockup-generator:draft:v1');
 
-            if (!projectId) {
+            if (!state.projectId) {
                 try {
                     if (draftRaw) {
                         hydrate(normalizeMockupSnapshot(JSON.parse(draftRaw)));
@@ -299,10 +315,10 @@ function MockupGeneratorPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatch({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatch({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(state.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -311,7 +327,10 @@ function MockupGeneratorPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore mockup project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved mockup project. Falling back to a local draft.');
+                    dispatch({
+                        type: 'setProjectError',
+                        projectError: 'Could not load the saved mockup project. Falling back to a local draft.',
+                    });
                     try {
                         if (draftRaw) {
                             hydrate(normalizeMockupSnapshot(JSON.parse(draftRaw)));
@@ -322,7 +341,7 @@ function MockupGeneratorPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -332,7 +351,7 @@ function MockupGeneratorPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [state.projectId]);
 
     useEffect(() => {
         if (!currentGeneration || currentGeneration.type !== 'mockup') {
@@ -485,7 +504,7 @@ function MockupGeneratorPageContent() {
                     <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                         <span className="text-sm font-medium">{state.selectedDevice} • {scenes.find((scene) => scene.id === state.selectedScene)?.label}</span>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveAll} disabled={isProjectBusy}><Folder className="size-4" /> {isProjectSaving ? 'Saving...' : 'Save All'}</Button>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveAll} disabled={isProjectBusy}><Folder className="size-4" /> {state.isProjectSaving ? 'Saving...' : 'Save All'}</Button>
                             <Button size="sm" className="gap-2" onClick={handleExportAll}><Download className="size-4" /> Export All</Button>
                         </div>
                     </div>
@@ -524,8 +543,8 @@ function MockupGeneratorPageContent() {
                             </div>
                         </div>
                     )}
-                    {projectError && (
-                        <p className="mt-4 text-sm text-amber-500/90 text-center">{projectError}</p>
+                    {state.projectError && (
+                        <p className="mt-4 text-sm text-amber-500/90 text-center">{state.projectError}</p>
                     )}
                 </div>
             </div>

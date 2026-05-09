@@ -1,6 +1,6 @@
 import { api, del, get, patch, post } from '@/lib/api';
 
-export type AdminCatalogSource = {
+type AdminCatalogSource = {
   id: string;
   name: string;
   url: string;
@@ -13,7 +13,7 @@ export type AdminCatalogSource = {
   sourceLicense?: string;
 };
 
-export type AdminCatalogImportRequest = {
+type AdminCatalogImportRequest = {
   dryRun?: boolean;
   force?: boolean;
   sources?: string[];
@@ -32,7 +32,7 @@ export type AdminCatalogImportResult = {
   }>;
 };
 
-export type AdminOverview = {
+type AdminOverview = {
   users: number;
   templates: number;
   assets: number;
@@ -44,7 +44,7 @@ export type AdminOverview = {
   sources: number;
 };
 
-export type AdminRolesMatrix = {
+type AdminRolesMatrix = {
   platformRoles: Array<{
     id: number;
     name: string;
@@ -67,12 +67,12 @@ export type AdminRolesMatrix = {
   moderationActions: string[];
 };
 
-export type AdminRole = {
+type AdminRole = {
   id?: string | number | null;
   name?: string | null;
 };
 
-export type AdminStatus = {
+type AdminStatus = {
   id?: string | number | null;
   name?: string | null;
 };
@@ -87,7 +87,7 @@ export type AdminUser = {
   createdAt?: string;
 };
 
-export type AdminOrganizationMember = {
+type AdminOrganizationMember = {
   id: string;
   userId: number;
   organizationId: string;
@@ -116,7 +116,7 @@ export type AdminOrganization = {
   createdAt?: string;
 };
 
-export type AdminOrganizationDetail = AdminOrganization & {
+type AdminOrganizationDetail = AdminOrganization & {
   members: AdminOrganizationMember[];
 };
 
@@ -176,7 +176,7 @@ export type AdminTemplate = {
   };
 };
 
-export type AdminPageResponse<T> = {
+type AdminPageResponse<T> = {
   data: T[];
   total: number;
   page: number;
@@ -189,7 +189,7 @@ export type UpdateAdminUserRequest = {
   statusId?: 1 | 2;
 };
 
-export type BulkUpdateAdminUsersRequest = UpdateAdminUserRequest & {
+type BulkUpdateAdminUsersRequest = UpdateAdminUserRequest & {
   ids: number[];
 };
 
@@ -201,12 +201,12 @@ export type UpdateAdminTemplateRequest = {
   adminNote?: string;
 };
 
-export type BulkUpdateAdminTemplatesRequest = UpdateAdminTemplateRequest & {
+type BulkUpdateAdminTemplatesRequest = UpdateAdminTemplateRequest & {
   ids: string[];
   delete?: boolean;
 };
 
-export type BulkDeleteAdminAssetsRequest = {
+type BulkDeleteAdminAssetsRequest = {
   ids: string[];
 };
 
@@ -221,15 +221,15 @@ export type UpdateAdminOrganizationRequest = {
   ownerId?: number;
 };
 
-export type UpdateAdminOrganizationMemberRequest = {
+type UpdateAdminOrganizationMemberRequest = {
   role?: string;
 };
 
-export type TransferAdminOrganizationOwnerRequest = {
+type TransferAdminOrganizationOwnerRequest = {
   memberId: string;
 };
 
-export type AdminUsersQuery = {
+type AdminUsersQuery = {
   page?: number;
   limit?: number;
   q?: string;
@@ -237,7 +237,7 @@ export type AdminUsersQuery = {
   statusId?: number;
 };
 
-export type AdminTemplatesQuery = {
+type AdminTemplatesQuery = {
   page?: number;
   limit?: number;
   q?: string;
@@ -248,7 +248,7 @@ export type AdminTemplatesQuery = {
   authorId?: string;
 };
 
-export type AdminAssetsQuery = {
+type AdminAssetsQuery = {
   page?: number;
   limit?: number;
   q?: string;
@@ -257,7 +257,7 @@ export type AdminAssetsQuery = {
   projectId?: string;
 };
 
-export type AdminOrganizationsQuery = {
+type AdminOrganizationsQuery = {
   page?: number;
   limit?: number;
   q?: string;
@@ -266,7 +266,7 @@ export type AdminOrganizationsQuery = {
   ownerId?: number;
 };
 
-export type AdminAuditLogsQuery = {
+type AdminAuditLogsQuery = {
   page?: number;
   limit?: number;
   q?: string;
@@ -288,12 +288,12 @@ export type SiteConfigEntry = {
   updatedAt?: string;
 };
 
-export type SiteConfigQuery = {
+type SiteConfigQuery = {
   key?: string;
   locale?: string;
 };
 
-export type UpsertSiteConfigRequest = {
+type UpsertSiteConfigRequest = {
   locale?: string;
   value: Record<string, unknown>;
   description?: string;

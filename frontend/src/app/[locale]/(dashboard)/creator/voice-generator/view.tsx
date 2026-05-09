@@ -57,18 +57,20 @@ type Props = {
     onSaveProject: () => void;
     onPickSample: () => void;
     onUploadSample: (file: File) => Promise<void>;
-    isGenerating: boolean;
+    loading: {
+        isGenerating: boolean;
+        isGenerationsLoading: boolean;
+        isTemplatesLoading: boolean;
+        isCommunityLoading: boolean;
+        isProjectLoading: boolean;
+        isProjectSaving: boolean;
+    };
     generations: VoiceGenerationItem[];
-    isGenerationsLoading: boolean;
     templates: VoiceTemplateItem[];
-    isTemplatesLoading: boolean;
     communityListings: VoiceListingItem[];
-    isCommunityLoading: boolean;
     sampleUrl: string | null;
     sampleName: string;
     projectError: string | null;
-    isProjectLoading: boolean;
-    isProjectSaving: boolean;
 };
 
 export function VoiceGeneratorView({ 
@@ -79,20 +81,15 @@ export function VoiceGeneratorView({
     onSaveProject,
     onPickSample,
     onUploadSample,
-    isGenerating,
+    loading,
     generations,
-    isGenerationsLoading,
     templates,
-    isTemplatesLoading,
     communityListings,
-    isCommunityLoading,
     sampleUrl,
     sampleName,
     projectError,
-    isProjectLoading,
-    isProjectSaving,
 }: Props) {
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = loading.isProjectLoading || loading.isProjectSaving;
 
     return (
         <CreatorWorkspaceShell>
@@ -215,13 +212,13 @@ export function VoiceGeneratorView({
                             <Folder className="size-5" />
                             Reset
                         </Button>
-                        <Button variant="outline" onClick={onSaveProject} disabled={isProjectBusy || isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
-                            {isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
+                        <Button variant="outline" onClick={onSaveProject} disabled={isProjectBusy || loading.isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                            {loading.isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
                             Save
                         </Button>
-                        <Button onClick={onGenerate} disabled={isGenerating || isProjectBusy || !state.text.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
-                            {isGenerating ? <Loader2 className="size-5 animate-spin" /> : <Volume2 className="size-5" />}
-                            {isGenerating ? 'Generating...' : 'Generate Voice'}
+                        <Button onClick={onGenerate} disabled={loading.isGenerating || isProjectBusy || !state.text.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
+                            {loading.isGenerating ? <Loader2 className="size-5 animate-spin" /> : <Volume2 className="size-5" />}
+                            {loading.isGenerating ? 'Generating...' : 'Generate Voice'}
                         </Button>
                     </div>
                 </div>
@@ -254,7 +251,7 @@ export function VoiceGeneratorView({
                     {state.activeContentTab === CONTENT_TABS[0] && ( // Personal
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Your Generations</h2>
-                            {isGenerationsLoading ? (
+                            {loading.isGenerationsLoading ? (
                                 <LoadingGrid />
                             ) : generations.length > 0 ? (
                                 <div className="space-y-3">
@@ -271,7 +268,7 @@ export function VoiceGeneratorView({
                     {state.activeContentTab === COMMUNITY_TAB && ( // Community
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Community Voices</h2>
-                            {isCommunityLoading ? (
+                            {loading.isCommunityLoading ? (
                                 <LoadingGrid />
                             ) : communityListings.length > 0 ? (
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
@@ -288,7 +285,7 @@ export function VoiceGeneratorView({
                     {state.activeContentTab === TEMPLATES_TAB && ( // Templates
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Voice Presets</h2>
-                            {isTemplatesLoading ? (
+                            {loading.isTemplatesLoading ? (
                                 <LoadingGrid />
                             ) : templates.length > 0 ? (
                                 <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">

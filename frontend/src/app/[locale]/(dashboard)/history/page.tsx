@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useEffect, useCallback, useEffectEvent } from 'react';
+import { useEffect, useCallback, useEffectEvent, useReducer } from 'react';
 import {
     LayoutGrid, Image as ImageIcon, Music, Mic, Video, Wand2,
     Download, Trash2, Search, Loader2
@@ -16,6 +16,70 @@ import { Generation } from '@/stores/generation-store';
 import { AsyncStateSurface } from '@/components/common/AsyncStateSurface';
 
 type FilterType = 'all' | 'image' | 'video' | 'audio' | 'upscale';
+
+type HistoryState = {
+    generations: Generation[];
+    isLoading: boolean;
+    filter: FilterType;
+    search: string;
+    page: number;
+    hasMore: boolean;
+    fetchError: string | null;
+};
+
+type HistoryAction =
+    | { type: 'set-filter'; filter: FilterType }
+    | { type: 'set-search'; search: string }
+    | { type: 'set-page'; page: number }
+    | { type: 'fetch-start' }
+    | { type: 'fetch-success'; generations: Generation[]; hasMore: boolean; reset: boolean }
+    | { type: 'fetch-error'; error: string; reset: boolean }
+    | { type: 'delete-generation'; id: string };
+
+const initialState: HistoryState = {
+    generations: [],
+    isLoading: true,
+    filter: 'all',
+    search: '',
+    page: 1,
+    hasMore: true,
+    fetchError: null,
+};
+
+function reducer(state: HistoryState, action: HistoryAction): HistoryState {
+    switch (action.type) {
+        case 'set-filter':
+            return { ...state, filter: action.filter, page: 1 };
+        case 'set-search':
+            return { ...state, search: action.search };
+        case 'set-page':
+            return { ...state, page: action.page };
+        case 'fetch-start':
+            return { ...state, isLoading: true, fetchError: null };
+        case 'fetch-success':
+            return {
+                ...state,
+                generations: action.reset ? action.generations : [...state.generations, ...action.generations],
+                hasMore: action.hasMore,
+                isLoading: false,
+                fetchError: null,
+            };
+        case 'fetch-error':
+            return {
+                ...state,
+                isLoading: false,
+                fetchError: action.error,
+                generations: action.reset ? [] : state.generations,
+            };
+        case 'delete-generation':
+            return {
+                ...state,
+                generations: state.generations.filter((generation) => generation.id !== action.id),
+            };
+        default:
+            return state;
+    }
+}
 
 const filterOptions: { id: FilterType; label: string; icon: LucideIcon }[] = [
     { id: 'all', label: 'All', icon: LayoutGrid },
@@ -82,45 +146,48 @@ function groupByDate(items: Generation[]): { label: string; items: Generation[] 
 }
 
 export default function HistoryPage() {
-    const [generations, setGenerations] = useState<Generation[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
-    const [filter, setFilter] = useState<FilterType>('all');
-    const [search, setSearch] = useState('');
-    const [page, setPage] = useState(1);
-    const [hasMore, setHasMore] = useState(true);
-    const [fetchError, setFetchError] = useState<string | null>(null);
+    const [state, dispatch] = useReducer(reducer, initialState);
 
     const fetchHistory = useCallback(async (pageNum: number, reset = false) => {
-      setFetchError(null);
+      dispatch({ type: 'fetch-start' });
       try {
         const params = new URLSearchParams({
                 page: pageNum.toString(),
                 limit: '20',
             });
-            if (filter !== 'all') params.set('type', filter);
-            if (search.trim()) params.set('search', search);
+            if (state.filter !== 'all') params.set('type', state.filter);
+            if (state.search.trim()) params.set('search', state.search);
 
             const data = await apiGet<{ data: Generation[]; hasNextPage: boolean }>(
                 `/generations?${params.toString()}`
             );
 
             if (data?.data) {
-                setGenerations(prev => reset ? data.data : [...prev, ...data.data]);
-                setHasMore(data.hasNextPage ?? false);
+                dispatch({
+                    type: 'fetch-success',
+                    generations: data.data,
+                    hasMore: data.hasNextPage ?? false,
+                    reset,
+                });
         } else {
           // If API returns array directly
           const arr = Array.isArray(data) ? data : [];
-          setGenerations(prev => reset ? arr : [...prev, ...arr]);
-          setHasMore(arr.length >= 20);
+          dispatch({
+              type: 'fetch-success',
+              generations: arr,
+              hasMore: arr.length >= 20,
+              reset,
+          });
         }
       } catch (error) {
         console.error('Failed to fetch history', error);
-        setFetchError(error instanceof Error ? error.message : 'Failed to load history');
-        // Show empty state on failure
-        if (reset) setGenerations([]);
+        dispatch({
+            type: 'fetch-error',
+            error: error instanceof Error ? error.message : 'Failed to load history',
+            reset,
+        });
       }
-      setIsLoading(false);
-    }, [filter, search]);
+    }, [state.filter, state.search]);
 
     const fetchHistoryEvent = useEffectEvent((page: number, reset: boolean) => {
         void fetchHistory(page, reset);
@@ -130,12 +197,12 @@ export default function HistoryPage() {
         queueMicrotask(() => {
             fetchHistoryEvent(1, true);
         });
-    }, [filter]);
+    }, [state.filter]);
 
     const handleDelete = async (id: string) => {
         try {
             await apiDel(`/generations/${id}`);
-            setGenerations(prev => prev.filter(g => g.id !== id));
+            dispatch({ type: 'delete-generation', id });
             toast.success('Generation deleted');
         } catch {
             toast.error('Failed to delete');
@@ -147,7 +214,7 @@ export default function HistoryPage() {
         window.open(url, '_blank');
     };
 
-    const filteredGenerations = generations;
+    const filteredGenerations = state.generations;
     const grouped = groupByDate(filteredGenerations);
     const dotColors = ['bg-primary', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4'];
 
@@ -159,7 +226,7 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-4">
                         <h1 className="text-2xl font-semibold">History</h1>
                         <span className="text-sm text-muted-foreground">
-                            {generations.length} generation{generations.length !== 1 ? 's' : ''}
+                            {state.generations.length} generation{state.generations.length !== 1 ? 's' : ''}
                         </span>
                     </div>
 
@@ -167,14 +234,14 @@ export default function HistoryPage() {
                         {/* Search */}
                         <div className="relative">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                            <Input
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
+                                <Input
+                                value={state.search}
+                                onChange={(e) => dispatch({ type: 'set-search', search: e.target.value })}
                                 placeholder="Search history?"
                                 className="w-56 h-9 pl-10"
                                 onKeyDown={(e) => {
                                     if (e.key === 'Enter') {
-                                        setPage(1);
+                                        dispatch({ type: 'set-page', page: 1 });
                                         fetchHistory(1, true);
                                     }
                                 }}
@@ -186,10 +253,10 @@ export default function HistoryPage() {
                             {filterOptions.map((opt) => (
                                 <Button
                                     key={opt.id}
-                                    variant={filter === opt.id ? 'secondary' : 'ghost'}
+                                    variant={state.filter === opt.id ? 'secondary' : 'ghost'}
                                     size="sm"
                                     className="h-7 text-xs gap-1.5"
-                                    onClick={() => setFilter(opt.id)}
+                                    onClick={() => dispatch({ type: 'set-filter', filter: opt.id })}
                                 >
                                     <opt.icon className="size-3.5" />
                                     {opt.label}
@@ -200,23 +267,23 @@ export default function HistoryPage() {
                 </div>
 
                 {/* Content */}
-                {isLoading && generations.length === 0 ? (
+                {state.isLoading && state.generations.length === 0 ? (
                     <AsyncStateSurface
                         status="loading"
                         title="Loading history"
                         message="Fetching your recent generations."
                         compact
                     />
-                ) : fetchError && generations.length === 0 ? (
+                ) : state.fetchError && state.generations.length === 0 ? (
                     <AsyncStateSurface
                         status="error"
                         title="History unavailable"
-                        message={fetchError}
+                        message={state.fetchError}
                         onRetry={() => fetchHistory(1, true)}
                         retryLabel="Retry load"
                         compact
                     />
-                ) : generations.length === 0 ? (
+                ) : state.generations.length === 0 ? (
                     <AsyncStateSurface
                         status="empty"
                         title="No generations yet"
@@ -305,18 +372,18 @@ export default function HistoryPage() {
                         ))}
 
                         {/* Load More */}
-                        {hasMore && (
+                        {state.hasMore && (
                             <div className="flex justify-center pt-4">
                                 <Button
                                     variant="outline"
                                     onClick={() => {
-                                        const next = page + 1;
-                                        setPage(next);
+                                        const next = state.page + 1;
+                                        dispatch({ type: 'set-page', page: next });
                                         fetchHistory(next);
                                     }}
-                                    disabled={isLoading}
+                                    disabled={state.isLoading}
                                 >
-                                    {isLoading ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
+                                    {state.isLoading ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
                                     Load More
                                 </Button>
                             </div>

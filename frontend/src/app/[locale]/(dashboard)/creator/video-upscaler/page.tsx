@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -76,6 +76,52 @@ type VideoUpscalerProjectPayload = {
     snapshot: Partial<VideoUpscalerSnapshot>;
 };
 
+type VideoUpscalerUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    restoredResultVideo: string | null;
+};
+
+type VideoUpscalerUiAction =
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'setRestoredResultVideo'; restoredResultVideo: string | null }
+    | { type: 'reset' };
+
+const initialUiState: VideoUpscalerUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    restoredResultVideo: null,
+};
+
+function uiReducer(state: VideoUpscalerUiState, action: VideoUpscalerUiAction): VideoUpscalerUiState {
+    switch (action.type) {
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'setRestoredResultVideo':
+            return { ...state, restoredResultVideo: action.restoredResultVideo };
+        case 'reset':
+            return {
+                ...initialUiState,
+                projectId: state.projectId,
+            };
+        default:
+            return state;
+    }
+}
+
 const normalizeVideoUpscalerSnapshot = (value: unknown): Partial<VideoUpscalerSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -138,25 +184,18 @@ export default function VideoUpscalerPage() {
 
 function VideoUpscalerPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { upscaleVideo, currentGeneration, reset, isGenerating } = useGenerationStore();
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const [restoredResultVideo, setRestoredResultVideo] = useState<string | null>(null);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultVideo;
+    const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : uiState.restoredResultVideo;
     const isProcessing = isGenerating;
 
     useEffect(() => {
-        const queryProjectId = searchParamsSnapshot.get('projectId');
-        if (queryProjectId) {
-            setProjectId(queryProjectId);
-        }
-    }, [searchParams]);
+        dispatchUi({ type: 'setProjectId', projectId: searchParamsSnapshot.get('projectId') });
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         let cancelled = false;
@@ -175,11 +214,11 @@ function VideoUpscalerPageContent() {
             if ((snapshot.settings?.colorCorrection ?? initialState.colorCorrection) !== state.colorCorrection) {
                 dispatch({ type: 'toggleColorCorrection' });
             }
-            setRestoredResultVideo(snapshot.resultVideo ?? null);
+            dispatchUi({ type: 'setRestoredResultVideo', restoredResultVideo: snapshot.resultVideo ?? null });
         };
 
         const loadProject = async () => {
-            if (!projectId) {
+            if (!uiState.projectId) {
                 try {
                     const raw = localStorage.getItem('video-upscaler:draft:v1');
                     if (raw) {
@@ -191,10 +230,10 @@ function VideoUpscalerPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatchUi({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatchUi({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(uiState.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -203,7 +242,10 @@ function VideoUpscalerPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore video upscaler project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved video upscaler project. Falling back to a local draft.');
+                    dispatchUi({
+                        type: 'setProjectError',
+                        projectError: 'Could not load the saved video upscaler project. Falling back to a local draft.',
+                    });
                     try {
                         const draftKey = 'video-upscaler:draft:v1';
                         const raw = localStorage.getItem(draftKey);
@@ -216,7 +258,7 @@ function VideoUpscalerPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -226,7 +268,7 @@ function VideoUpscalerPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [uiState.projectId]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -285,10 +327,10 @@ function VideoUpscalerPageContent() {
         localStorage.setItem('video-upscaler:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Video Upscaler Draft',
                         description: 'Video upscaler draft',
                         content: payload,
@@ -299,7 +341,7 @@ function VideoUpscalerPageContent() {
                         description: 'Video upscaler draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -308,7 +350,7 @@ function VideoUpscalerPageContent() {
                 console.error('Failed to persist video upscaler project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -345,8 +387,7 @@ function VideoUpscalerPageContent() {
     const handleReset = () => {
         reset();
         dispatch({ type: 'reset' });
-        setRestoredResultVideo(null);
-        setProjectError(null);
+        dispatchUi({ type: 'reset' });
     };
 
     const selectedResolution = resolutions.find((resolution) => resolution.id === state.targetResolution);
@@ -357,7 +398,7 @@ function VideoUpscalerPageContent() {
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Video Upscaler</h2>
                     <span className="ml-auto text-xs text-muted-foreground">
-                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                        {uiState.isProjectLoading ? 'Loading project...' : uiState.projectError ?? ''}
                     </span>
                 </div>
 
@@ -478,7 +519,7 @@ function VideoUpscalerPageContent() {
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">5 Credits/min</span>
                     </div>
-                    <Button onClick={handleUpscale} disabled={isProcessing || !state.videoFile || isProjectLoading || isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleUpscale} disabled={isProcessing || !state.videoFile || uiState.isProjectLoading || uiState.isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
                         {isProcessing ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
@@ -508,7 +549,7 @@ function VideoUpscalerPageContent() {
                             </span>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}><Folder className="size-4" /> Save</Button>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={uiState.isProjectLoading || uiState.isProjectSaving}><Folder className="size-4" /> Save</Button>
                             <Button size="sm" className="gap-2" onClick={handleExport}><Download className="size-4" /> Export</Button>
                         </div>
                     </div>

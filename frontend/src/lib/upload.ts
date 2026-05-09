@@ -64,7 +64,7 @@ export function getFileUrl(path: string): string {
 /**
  * Validate file before upload.
  */
-export function validateFile(
+function validateFile(
     file: File,
     options?: {
         maxSizeMB?: number;
@@ -90,7 +90,7 @@ export function validateFile(
 /**
  * React hook-friendly: upload handler for input[type=file] onChange events.
  */
-export async function handleFileInputUpload(
+async function handleFileInputUpload(
     e: React.ChangeEvent<HTMLInputElement>,
     options?: {
         maxSizeMB?: number;

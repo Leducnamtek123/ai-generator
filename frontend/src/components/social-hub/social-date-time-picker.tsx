@@ -61,21 +61,40 @@ export function SocialDateTimePicker({
   placeholder = "Select date & time"
 }: SocialDateTimePickerProps) {
   const parsedValue = parseDateTimeLocal(value);
-  const [month, setMonth] = React.useState<Date | null>(() => parsedValue ?? new Date());
-  const [timeValue, setTimeValue] = React.useState(
-    () => (parsedValue ? format(parsedValue, "HH:mm") : "09:00")
-  );
+  const [selection, setSelection] = React.useState<{
+    month: Date | null;
+    timeValue: string;
+  }>(() => ({
+    month: parsedValue,
+    timeValue: parsedValue ? format(parsedValue, "HH:mm") : "09:00",
+  }));
+
+  React.useEffect(() => {
+    setSelection({
+      month: parsedValue,
+      timeValue: parsedValue ? format(parsedValue, "HH:mm") : "09:00",
+    });
+  }, [parsedValue]);
+
+  const { month, timeValue } = selection;
 
   const selectedDate = parsedValue ?? (month ? combineDateAndTime(month, timeValue) : null);
   const triggerLabel = parsedValue ? format(parsedValue, "MMM d, yyyy HH:mm") : placeholder;
 
   const handleSelectDate = (date: Date) => {
-    setMonth(date);
+    setSelection({ month: date, timeValue });
     onChange(toDateTimeLocalValue(combineDateAndTime(date, timeValue)));
   };
 
+  const handleMonthChange = (nextMonth: Date) => {
+    setSelection((current) => ({
+      ...current,
+      month: nextMonth,
+    }));
+  };
+
   const handleSelectTime = (nextTime: string) => {
-    setTimeValue(nextTime);
+    setSelection({ month, timeValue: nextTime });
     if (selectedDate) {
       onChange(toDateTimeLocalValue(combineDateAndTime(selectedDate, nextTime)));
     }
@@ -107,7 +126,7 @@ export function SocialDateTimePicker({
             selected={parsedValue}
             month={month ?? undefined}
             onSelect={handleSelectDate}
-            onMonthChange={setMonth}
+            onMonthChange={handleMonthChange}
           />
           <div className="grid gap-2 border-t border-border pt-3">
             <div className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
@@ -132,8 +151,7 @@ export function SocialDateTimePicker({
               variant="ghost"
               size="sm"
               onClick={() => {
-                setMonth(new Date());
-                setTimeValue("09:00");
+                setSelection({ month: null, timeValue: "09:00" });
                 onChange("");
               }}
             >

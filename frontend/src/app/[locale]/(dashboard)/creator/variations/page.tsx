@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -34,6 +34,10 @@ type VariationsState = {
     isGenerating: boolean;
     results: string[];
     selectedResult: number | null;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
 };
 
 type VariationsSnapshot = {
@@ -65,7 +69,11 @@ type VariationsAction =
     | { type: 'clearResults' }
     | { type: 'toggleSelectedResult'; index: number }
     | { type: 'resetSelection' }
-    | { type: 'resetAll' };
+    | { type: 'resetAll' }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null };
 
 const initialState: VariationsState = {
     uploadedImage: null,
@@ -77,6 +85,10 @@ const initialState: VariationsState = {
     isGenerating: false,
     results: [],
     selectedResult: null,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
 };
 
 const normalizeVariationsSnapshot = (value: unknown): Partial<VariationsSnapshot> => {
@@ -123,6 +135,14 @@ function variationsReducer(state: VariationsState, action: VariationsAction): Va
             return { ...state, selectedResult: null };
         case 'resetAll':
             return initialState;
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
         default:
             return state;
     }
@@ -139,15 +159,11 @@ export default function VariationsPage() {
 function VariationsPageContent() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [state, dispatch] = useReducer(variationsReducer, initialState);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const { imageVariations } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const isProjectBusy = isProjectLoading || isProjectSaving;
+    const isProjectBusy = state.isProjectLoading || state.isProjectSaving;
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -185,7 +201,7 @@ function VariationsPageContent() {
 
     const handleReset = () => {
         dispatch({ type: 'resetAll' });
-        setProjectError(null);
+        dispatch({ type: 'setProjectError', projectError: null });
     };
 
     const downloadVariation = (url: string, filename: string) => {
@@ -225,10 +241,10 @@ function VariationsPageContent() {
         localStorage.setItem('variations:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Variations Draft',
                         description: 'Image variations draft',
                         content: payload,
@@ -239,7 +255,7 @@ function VariationsPageContent() {
                         description: 'Image variations draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -248,7 +264,7 @@ function VariationsPageContent() {
                 console.error('Failed to persist variations project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -282,9 +298,9 @@ function VariationsPageContent() {
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
-    }, [searchParams]);
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         let cancelled = false;
@@ -305,7 +321,7 @@ function VariationsPageContent() {
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('variations:draft:v1');
 
-            if (!projectId) {
+            if (!state.projectId) {
                 try {
                     if (draftRaw) {
                         hydrate(normalizeVariationsSnapshot(JSON.parse(draftRaw)));
@@ -316,10 +332,10 @@ function VariationsPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatch({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatch({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(state.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -328,7 +344,7 @@ function VariationsPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore variations project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved variations project. Falling back to a local draft.');
+                    dispatch({ type: 'setProjectError', projectError: 'Could not load the saved variations project. Falling back to a local draft.' });
                     try {
                         if (draftRaw) {
                             hydrate(normalizeVariationsSnapshot(JSON.parse(draftRaw)));
@@ -339,7 +355,7 @@ function VariationsPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -349,7 +365,7 @@ function VariationsPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [state.projectId]);
 
     return (
         <CreatorWorkspaceShell>
@@ -433,7 +449,7 @@ function VariationsPageContent() {
                     <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                         <span className="text-sm font-medium">{state.results.length} variations</span>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveAll} disabled={isProjectBusy}><Folder className="size-4" /> {isProjectSaving ? 'Saving...' : 'Save All'}</Button>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveAll} disabled={isProjectBusy}><Folder className="size-4" /> {state.isProjectSaving ? 'Saving...' : 'Save All'}</Button>
                             <Button size="sm" className="gap-2" onClick={handleExportAll}><Download className="size-4" /> Export All</Button>
                         </div>
                     </div>
@@ -481,8 +497,8 @@ function VariationsPageContent() {
                             <div><h3 className="font-semibold">Create Image Variations</h3><p className="text-sm text-muted-foreground mt-1">Upload an image to generate multiple creative variations</p></div>
                         </div>
                     )}
-                    {projectError && (
-                        <p className="mt-4 text-sm text-amber-500/90 text-center">{projectError}</p>
+                    {state.projectError && (
+                        <p className="mt-4 text-sm text-amber-500/90 text-center">{state.projectError}</p>
                     )}
                 </div>
             </div>

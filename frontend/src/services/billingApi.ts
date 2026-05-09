@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-export type BillingScopeType = "user" | "organization";
+type BillingScopeType = "user" | "organization";
 export type BillingPlanSegment = "individual" | "team";
 
 export type BillingPlanId = "trial" | "starter" | "pro" | "team" | "enterprise";
@@ -27,7 +27,7 @@ export interface BillingPlanCard {
   ctaLabel: string;
 }
 
-export interface TopUpPackageCard {
+interface TopUpPackageCard {
   id: TopUpPackageId;
   name: string;
   summary: string;
@@ -38,7 +38,7 @@ export interface TopUpPackageCard {
   usageExamples: string[];
 }
 
-export interface CreditCostGuideItem {
+interface CreditCostGuideItem {
   group: string;
   tools: string[];
   credits: number;

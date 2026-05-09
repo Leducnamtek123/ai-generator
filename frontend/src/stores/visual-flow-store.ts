@@ -42,7 +42,7 @@ const isMissingRenderedVideoError = (error: unknown) => {
 // Types
 // ─────────────────────────────────────────────
 
-export type StudioTab = 'scenes' | 'characters' | 'pipeline' | 'export';
+type StudioTab = 'scenes' | 'characters' | 'pipeline' | 'export';
 export type PipelineStep = 'refs' | 'images' | 'videos' | 'concat' | 'narration' | null;
 
 interface VisualFlowState {

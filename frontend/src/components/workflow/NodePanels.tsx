@@ -24,7 +24,6 @@ export interface NodePanelProps {
 }
 
 // Re-export specific panels from the panels directory
-export { ConnectionInfo } from './panels/ConnectionInfo';
 export { TextNodePanel } from './panels/TextNodePanel';
 export { MediaNodePanel } from './panels/MediaNodePanel';
 export { ImageGenNodePanel } from './panels/ImageGenNodePanel';

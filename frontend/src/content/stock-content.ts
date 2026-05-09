@@ -9,13 +9,13 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
-export type StockCategory = {
+type StockCategory = {
   title: string;
   color: string;
   icon: LucideIcon;
 };
 
-export type StockCollection = {
+type StockCollection = {
   id: string;
   title: string;
   count: number;

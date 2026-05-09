@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useRouter } from '@/i18n/navigation';
 import { useParams } from 'next/navigation';
 import {
@@ -73,7 +73,7 @@ function AddSceneDialog({
 }) {
   const { addScene } = useVisualFlowStore();
   const [loading, setLoading] = useState(false);
-  const [draftReady, setDraftReady] = useState(false);
+  const draftReadyRef = useRef(false);
   const [form, setForm] = useState({
     prompt: '',
     videoPrompt: '',
@@ -85,14 +85,14 @@ function AddSceneDialog({
 
   useEffect(() => {
     if (!open) {
-      setDraftReady(false);
+      draftReadyRef.current = false;
       return;
     }
 
     try {
       const raw = window.localStorage.getItem(draftKey);
       if (!raw) {
-        setDraftReady(true);
+        draftReadyRef.current = true;
         return;
       }
 
@@ -110,12 +110,12 @@ function AddSceneDialog({
     } catch (error) {
       console.error('Failed to restore add-scene draft', error);
     } finally {
-      setDraftReady(true);
+      draftReadyRef.current = true;
     }
   }, [draftKey, open]);
 
   useEffect(() => {
-    if (!open || !draftReady) {
+    if (!open || !draftReadyRef.current) {
       return;
     }
 
@@ -131,7 +131,7 @@ function AddSceneDialog({
         selectedChars: form.selectedChars,
       }),
     );
-  }, [draftKey, draftReady, form, open]);
+  }, [draftKey, form, open]);
 
   const handleSubmit = async () => {
     if (!form.prompt.trim()) return;
@@ -319,7 +319,7 @@ export default function VisualProjectDetailPage() {
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddVideo, setShowAddVideo] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
-  const [videoDraftReady, setVideoDraftReady] = useState(false);
+  const videoDraftReadyRef = useRef(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
   const videoDraftKey = `visual-flow:create-video:${projectId}:draft`;
 
@@ -382,14 +382,14 @@ export default function VisualProjectDetailPage() {
 
   useEffect(() => {
     if (!showAddVideo) {
-      setVideoDraftReady(false);
+      videoDraftReadyRef.current = false;
       return;
     }
 
     try {
       const raw = window.localStorage.getItem(videoDraftKey);
       if (!raw) {
-        setVideoDraftReady(true);
+        videoDraftReadyRef.current = true;
         return;
       }
 
@@ -400,12 +400,12 @@ export default function VisualProjectDetailPage() {
     } catch (error) {
       console.error('Failed to restore visual-flow video draft', error);
     } finally {
-      setVideoDraftReady(true);
+      videoDraftReadyRef.current = true;
     }
   }, [showAddVideo, videoDraftKey]);
 
   useEffect(() => {
-    if (!showAddVideo || !videoDraftReady) {
+    if (!showAddVideo || !videoDraftReadyRef.current) {
       return;
     }
 
@@ -417,7 +417,7 @@ export default function VisualProjectDetailPage() {
         videoTitle,
       }),
     );
-  }, [showAddVideo, videoDraftReady, videoDraftKey, videoTitle]);
+  }, [showAddVideo, videoDraftKey, videoTitle]);
 
   const handleRefresh = () => {
     if (activeVideo) {
@@ -683,6 +683,7 @@ export default function VisualProjectDetailPage() {
         {rightPanelOpen && selectedScene && (
           <div className="w-72 shrink-0 border-l border-white/[0.06] bg-[#0a0a10]/40 overflow-hidden animate-in slide-in-from-right-4 duration-200">
             <SceneProperties
+              key={selectedScene.id}
               scene={selectedScene}
               onUpdate={(data) => updateScene(selectedScene.id, data)}
               availableCharacters={charNames}

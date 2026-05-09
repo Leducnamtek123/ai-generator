@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useEffect, useState, useMemo } from 'react';
+import { Suspense, useEffect, useMemo, useReducer } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { Button } from '@/ui/button';
@@ -25,6 +25,57 @@ type AssistantProjectPayload = {
     snapshot: AssistantSnapshot;
 };
 
+type AssistantState = {
+    prompt: string;
+    selectedTemplate: string;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type AssistantAction =
+    | { type: 'set-prompt'; prompt: string }
+    | { type: 'set-selected-template'; selectedTemplate: string }
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-loading'; isProjectLoading: boolean }
+    | { type: 'set-project-saving'; isProjectSaving: boolean }
+    | { type: 'set-project-error'; projectError: string | null }
+    | { type: 'reset' };
+
+const initialAssistantState: AssistantState = {
+    prompt: '',
+    selectedTemplate: '',
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+const assistantReducer = (state: AssistantState, action: AssistantAction): AssistantState => {
+    switch (action.type) {
+        case 'set-prompt':
+            return { ...state, prompt: action.prompt };
+        case 'set-selected-template':
+            return { ...state, selectedTemplate: action.selectedTemplate };
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.projectError };
+        case 'reset':
+            return {
+                ...initialAssistantState,
+                projectId: state.projectId,
+            };
+        default:
+            return state;
+    }
+};
+
 const normalizeSnapshot = (value: unknown): Partial<AssistantSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -44,24 +95,19 @@ export default function AssistantPage() {
 }
 
 function AssistantPageContent() {
-    const [prompt, setPrompt] = useState('');
-    const [selectedTemplate, setSelectedTemplate] = useState('');
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
+    const [state, dispatch] = useReducer(assistantReducer, initialAssistantState);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        dispatch({ type: 'set-project-id', projectId: requestedProjectId });
 
         const applySnapshot = (snapshot: Partial<AssistantSnapshot>) => {
-            setPrompt(snapshot.prompt ?? '');
-            setSelectedTemplate(snapshot.selectedTemplate ?? '');
-            setProjectError(null);
+            dispatch({ type: 'set-prompt', prompt: snapshot.prompt ?? '' });
+            dispatch({ type: 'set-selected-template', selectedTemplate: snapshot.selectedTemplate ?? '' });
+            dispatch({ type: 'set-project-error', projectError: null });
         };
 
         const loadDraft = () => {
@@ -83,7 +129,7 @@ function AssistantPageContent() {
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatch({ type: 'set-project-loading', isProjectLoading: true });
 
         void (async () => {
             try {
@@ -96,12 +142,12 @@ function AssistantPageContent() {
             } catch (error) {
                 console.error('Failed to load assistant project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
+                    dispatch({ type: 'set-project-error', projectError: 'Loaded local draft because backend project load failed.' });
                     loadDraft();
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'set-project-loading', isProjectLoading: false });
                 }
             }
         })();
@@ -113,42 +159,40 @@ function AssistantPageContent() {
 
     const handleSaveProject = async () => {
         const snapshot: AssistantSnapshot = {
-            prompt,
-            selectedTemplate,
+            prompt: state.prompt,
+            selectedTemplate: state.selectedTemplate,
         };
 
         localStorage.setItem('assistant-home:draft:v1', JSON.stringify(snapshot));
-        setIsProjectSaving(true);
-        setProjectError(null);
+        dispatch({ type: 'set-project-saving', isProjectSaving: true });
+        dispatch({ type: 'set-project-error', projectError: null });
 
         try {
-            if (projectId) {
-                await projectApi.update(projectId, {
-                    name: prompt.trim() ? `Assistant: ${prompt.trim().slice(0, 48)}` : 'Assistant Draft',
+            if (state.projectId) {
+                await projectApi.update(state.projectId, {
+                    name: state.prompt.trim() ? `Assistant: ${state.prompt.trim().slice(0, 48)}` : 'Assistant Draft',
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot } satisfies AssistantProjectPayload,
                 });
             } else {
                 const created = await projectApi.create({
-                    name: prompt.trim() ? `Assistant: ${prompt.trim().slice(0, 48)}` : 'Assistant Draft',
+                    name: state.prompt.trim() ? `Assistant: ${state.prompt.trim().slice(0, 48)}` : 'Assistant Draft',
                     content: { version: 1, savedAt: new Date().toISOString(), snapshot } satisfies AssistantProjectPayload,
                 });
-                setProjectId(created.project.id);
+                dispatch({ type: 'set-project-id', projectId: created.project.id });
                 replace(`${window.location.pathname}?projectId=${created.project.id}`);
             }
             toast.success('Assistant project saved.');
         } catch (error) {
             console.error('Failed to save assistant project', error);
-            setProjectError('Saved locally, but backend project save failed.');
+            dispatch({ type: 'set-project-error', projectError: 'Saved locally, but backend project save failed.' });
             toast.error('Assistant project saved locally, backend save failed.');
         } finally {
-            setIsProjectSaving(false);
+            dispatch({ type: 'set-project-saving', isProjectSaving: false });
         }
     };
 
     const handleReset = () => {
-        setPrompt('');
-        setSelectedTemplate('');
-        setProjectError(null);
+        dispatch({ type: 'reset' });
     };
 
     return (
@@ -160,27 +204,27 @@ function AssistantPageContent() {
                 </div>
 
                 <div className="flex items-center justify-center gap-3">
-                    <Button variant="ghost" size="sm" className="gap-2" onClick={handleReset} disabled={!prompt && !selectedTemplate}>
+                    <Button variant="ghost" size="sm" className="gap-2" onClick={handleReset} disabled={!state.prompt && !state.selectedTemplate}>
                         <RefreshCcw className="size-4" />
                         Reset
                     </Button>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveProject} disabled={isProjectLoading || isProjectSaving}>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveProject} disabled={state.isProjectLoading || state.isProjectSaving}>
                         <Folder className="size-4" />
-                        {isProjectSaving ? 'Saving...' : 'Save Project'}
+                        {state.isProjectSaving ? 'Saving...' : 'Save Project'}
                     </Button>
                 </div>
 
-                {projectError && (
+                {state.projectError && (
                     <div className="mx-auto max-w-2xl rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-600 text-left">
-                        {projectError}
+                        {state.projectError}
                     </div>
                 )}
 
                 <div className="relative group">
                     <div className="relative bg-card border border-border rounded-2xl p-4 shadow-lg transition-all focus-within:border-ring">
                         <textarea
-                            value={prompt}
-                            onChange={(event) => setPrompt(event.target.value)}
+                            value={state.prompt}
+                            onChange={(event) => dispatch({ type: 'set-prompt', prompt: event.target.value })}
                             placeholder="Describe your creation?"
                             className="w-full bg-transparent border-none outline-none text-lg text-foreground placeholder:text-muted-foreground/50 min-h-[80px] resize-none"
                         />
@@ -214,8 +258,8 @@ function AssistantPageContent() {
                                 key={template.label}
                                 type="button"
                                 onClick={() => {
-                                    setSelectedTemplate(template.label);
-                                    setPrompt(template.prompt);
+                                    dispatch({ type: 'set-selected-template', selectedTemplate: template.label });
+                                    dispatch({ type: 'set-prompt', prompt: template.prompt });
                                 }}
                                 className="h-24 rounded-xl relative overflow-hidden group cursor-pointer border border-border bg-card hover:bg-accent transition-colors text-left"
                             >

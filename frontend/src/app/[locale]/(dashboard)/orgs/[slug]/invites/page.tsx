@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback, useState } from 'react';
+import { useReducer, useEffect, useCallback, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { inviteApi, type Invite, type CreateInviteData } from '@/services/inviteApi';
 import { useOrgStore } from '@/stores/org-store';
@@ -20,6 +20,17 @@ type InviteDraft = {
     savedAt: string;
     form: Partial<CreateInviteData>;
 };
+
+function ClientDateText({ value }: { value: string }) {
+    const [text, setText] = useState<string | null>(null);
+
+    useEffect(() => {
+        const date = new Date(value);
+        setText(Number.isNaN(date.getTime()) ? null : date.toLocaleDateString());
+    }, [value]);
+
+    return <span suppressHydrationWarning>{text ?? ''}</span>;
+}
 
 const INVITE_DRAFT_PREFIX = 'org-invites';
 
@@ -77,7 +88,7 @@ export default function InvitesPage() {
     const draftKey = slug ? `${INVITE_DRAFT_PREFIX}:${slug}:draft` : null;
     const { hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
-    const [draftReady, setDraftReady] = useState(false);
+    const draftReadyRef = useRef(false);
 
     const canInvite = hasPermission('create', 'Invite');
 
@@ -103,7 +114,7 @@ export default function InvitesPage() {
         try {
             const raw = window.localStorage.getItem(draftKey);
             if (!raw) {
-                setDraftReady(true);
+                draftReadyRef.current = true;
                 return;
             }
 
@@ -114,12 +125,12 @@ export default function InvitesPage() {
         } catch (restoreError) {
             console.error('Failed to restore invite draft', restoreError);
         } finally {
-            setDraftReady(true);
+            draftReadyRef.current = true;
         }
     }, [draftKey]);
 
     useEffect(() => {
-        if (!draftReady || !draftKey || !state.showForm) {
+        if (!draftReadyRef.current || !draftKey || !state.showForm) {
             return;
         }
 
@@ -129,7 +140,7 @@ export default function InvitesPage() {
             form: state.form,
         };
         window.localStorage.setItem(draftKey, JSON.stringify(draft));
-    }, [draftKey, draftReady, state.form]);
+    }, [draftKey, state.form, state.showForm]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -235,7 +246,7 @@ export default function InvitesPage() {
                                 <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium text-foreground truncate">{invite.email}</div>
                                     <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                        <Clock className="size-3" />{new Date(invite.createdAt).toLocaleDateString()}
+                                    <Clock className="size-3" /><ClientDateText value={invite.createdAt} />
                                     </div>
                                 </div>
                                 <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium', config.color)}>

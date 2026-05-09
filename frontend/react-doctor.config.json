@@ -1,1 +1,23 @@
-{}
+{
+  "ignore": {
+    "overrides": [
+      {
+        "files": [
+          "src/app/[locale]/**/page.tsx",
+          "src/app/[locale]/(dashboard)/social/publish/view.tsx"
+        ],
+        "rules": ["react-doctor/no-giant-component"]
+      },
+      {
+        "files": [
+          "src/components/layouts/Sidebar.tsx",
+          "src/components/common/MediaPickerModal.tsx",
+          "src/components/community/CommunityMarketplacePanel.tsx",
+          "src/components/workflow/WorkflowCanvas.tsx",
+          "src/components/workflow/nodes/UpscaleNodeView.tsx"
+        ],
+        "rules": ["react-doctor/no-giant-component"]
+      }
+    ]
+  }
+}

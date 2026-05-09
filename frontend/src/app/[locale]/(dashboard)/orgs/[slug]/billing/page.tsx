@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useReducer } from "react";
 import { useParams } from "next/navigation";
 import {
   billingApi,
@@ -30,37 +30,80 @@ const currencyFormatter = new Intl.NumberFormat("en-US", {
   maximumFractionDigits: 0,
 });
 
+type BillingPageState = {
+  billing: BillingDetails | null;
+  catalog: BillingCatalogResponse | null;
+  loading: boolean;
+  error: string;
+  isPaying: string | null;
+};
+
+type BillingPageAction =
+  | { type: "load-start" }
+  | { type: "load-success"; billing: BillingDetails; catalog: BillingCatalogResponse }
+  | { type: "load-error"; error: string }
+  | { type: "pay-start"; planId: string }
+  | { type: "pay-end" };
+
+const initialState: BillingPageState = {
+  billing: null,
+  catalog: null,
+  loading: true,
+  error: "",
+  isPaying: null,
+};
+
+function reducer(state: BillingPageState, action: BillingPageAction): BillingPageState {
+  switch (action.type) {
+    case "load-start":
+      return { ...state, loading: true, error: "" };
+    case "load-success":
+      return {
+        ...state,
+        billing: action.billing,
+        catalog: action.catalog,
+        loading: false,
+        error: "",
+      };
+    case "load-error":
+      return { ...state, loading: false, error: action.error };
+    case "pay-start":
+      return { ...state, isPaying: action.planId };
+    case "pay-end":
+      return { ...state, isPaying: null };
+    default:
+      return state;
+  }
+}
+
 export default function BillingPage() {
   const params = useParams();
   const slug = params?.slug as string;
 
-  const [billing, setBilling] = useState<BillingDetails | null>(null);
-  const [catalog, setCatalog] = useState<BillingCatalogResponse | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [isPaying, setIsPaying] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(reducer, initialState);
 
   const loadBilling = useCallback(async () => {
+    dispatch({ type: "load-start" });
     try {
       const [billingData, catalogData] = await Promise.all([
         billingApi.get(slug),
         billingApi.getCatalog(),
       ]);
-      setBilling(billingData);
-      setCatalog(catalogData);
+      dispatch({ type: "load-success", billing: billingData, catalog: catalogData });
     } catch (err) {
       const message =
         err instanceof AxiosError
           ? (err.response?.data?.message?.message ??
             err.response?.data?.message)
           : null;
-      setError(
-        typeof message === "string"
-          ? message
-          : "Failed to load billing details",
-      );
+      dispatch({
+        type: "load-error",
+        error:
+          typeof message === "string"
+            ? message
+            : "Failed to load billing details",
+      });
     }
-    setLoading(false);
   }, [slug]);
 
   useEffect(() => {
@@ -72,24 +115,24 @@ export default function BillingPage() {
   const formatCurrency = (value: number) => currencyFormatter.format(value);
 
   const teamPlans =
-    catalog?.teamPlans ??
-    catalog?.plans?.filter((plan) => plan.segment === "team") ??
+    state.catalog?.teamPlans ??
+    state.catalog?.plans?.filter((plan) => plan.segment === "team") ??
     [];
 
   const purchasePlan = async (
     planId: BillingPlanId,
     provider: PaymentProvider,
   ) => {
-    if (!billing) return;
+    if (!state.billing) return;
 
     try {
-      setIsPaying(planId);
+      dispatch({ type: "pay-start", planId });
       const checkout = await paymentApi.checkout({
         purchaseType: "subscription",
         planId,
         provider,
         scopeType: "organization",
-        scopeId: billing.organization.id,
+        scopeId: state.billing.organization.id,
         returnUri: `${window.location.pathname}${window.location.search}`,
       });
 
@@ -104,19 +147,18 @@ export default function BillingPage() {
         err instanceof Error ? err.message : "Failed to start checkout";
       toast.error(message);
     } finally {
-      setIsPaying(null);
+      dispatch({ type: "pay-end" });
     }
   };
 
-  if (loading) {
-    return (
+  const billing = state.billing;
+
+  return (
+    state.loading ? (
       <div className="flex items-center justify-center py-20">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
-    );
-  }
-
-  return (
+    ) : (
     <div className="max-w-4xl mx-auto py-8 px-4 sm:px-6">
       <div className="mb-8">
         <Link
@@ -136,9 +178,9 @@ export default function BillingPage() {
         </p>
       </div>
 
-      {error && (
+      {state.error && (
         <div className="bg-destructive/10 border border-destructive/20 text-destructive rounded-xl px-4 py-3 text-sm mb-6">
-          {error}
+          {state.error}
         </div>
       )}
 
@@ -334,15 +376,15 @@ export default function BillingPage() {
                         variant={plan.featured ? "default" : "outline"}
                         className="w-full"
                         size="sm"
-                        disabled={isPaying === plan.id}
+                        disabled={state.isPaying === plan.id}
                         onClick={() => void purchasePlan(plan.id, "vnpay")}
                       >
-                        {isPaying === plan.id ? "Processing..." : "VNPAY"}
+                        {state.isPaying === plan.id ? "Processing..." : "VNPAY"}
                       </Button>
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={isPaying === plan.id}
+                        disabled={state.isPaying === plan.id}
                         onClick={() => void purchasePlan(plan.id, "momo")}
                       >
                         MoMo
@@ -350,7 +392,7 @@ export default function BillingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={isPaying === plan.id}
+                        disabled={state.isPaying === plan.id}
                         onClick={() => void purchasePlan(plan.id, "zalopay")}
                       >
                         ZaloPay
@@ -358,7 +400,7 @@ export default function BillingPage() {
                       <Button
                         variant="outline"
                         size="sm"
-                        disabled={isPaying === plan.id}
+                        disabled={state.isPaying === plan.id}
                         onClick={() => void purchasePlan(plan.id, "9pay")}
                       >
                         9Pay
@@ -372,12 +414,13 @@ export default function BillingPage() {
         </div>
       )}
 
-      {!billing && !error && (
+      {!state.billing && !state.error && (
         <div className="text-center py-16 text-muted-foreground">
           <CreditCard className="size-12 mx-auto mb-3 opacity-20" />
           <p className="text-sm">No billing information available</p>
         </div>
       )}
     </div>
+    )
   );
 }

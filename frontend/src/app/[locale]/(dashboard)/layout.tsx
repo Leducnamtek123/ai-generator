@@ -12,24 +12,32 @@ export default function DashboardLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const pathname = usePathname();
 
     return (
         <ProtectedRoute>
-            <div className="flex w-full h-screen flex-col md:flex-row bg-background overflow-hidden">
-                <MobileNav
-                    isOpen={isMobileMenuOpen}
-                    onOpenChange={setIsMobileMenuOpen}
-                />
-                <div className="hidden md:block h-full border-r border-border">
-                    <Sidebar />
-                </div>
-                <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
-                    <MainLayout onMenuClick={() => setIsMobileMenuOpen(true)}>
-                        {children}
-                    </MainLayout>
-                </main>
-            </div>
+            <DashboardLayoutShell key={pathname}>{children}</DashboardLayoutShell>
         </ProtectedRoute>
+    );
+}
+
+function DashboardLayoutShell({ children }: { children: React.ReactNode }) {
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    return (
+        <div className="flex w-full h-screen flex-col md:flex-row bg-background overflow-hidden">
+            <MobileNav
+                isOpen={isMobileMenuOpen}
+                onOpenChange={setIsMobileMenuOpen}
+            />
+            <div className="hidden md:block h-full border-r border-border">
+                <Sidebar />
+            </div>
+            <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden relative">
+                <MainLayout onMenuClick={() => setIsMobileMenuOpen(true)}>
+                    {children}
+                </MainLayout>
+            </main>
+        </div>
     );
 }

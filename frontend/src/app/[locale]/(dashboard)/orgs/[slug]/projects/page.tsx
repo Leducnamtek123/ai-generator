@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback, useState } from 'react';
+import { useReducer, useEffect, useCallback, useRef, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { projectApi, type Project, type CreateProjectData } from '@/services/projectApi';
 import { useOrgStore } from '@/stores/org-store';
@@ -33,6 +33,17 @@ type ProjectDraft = {
     savedAt: string;
     form: Partial<CreateProjectData>;
 };
+
+function ClientDateText({ value }: { value: string }) {
+    const [text, setText] = useState<string | null>(null);
+
+    useEffect(() => {
+        const date = new Date(value);
+        setText(Number.isNaN(date.getTime()) ? null : date.toLocaleDateString());
+    }, [value]);
+
+    return <span suppressHydrationWarning>{text ?? ''}</span>;
+}
 
 type Action =
     | { type: 'setProjects'; projects: Project[] }
@@ -87,7 +98,7 @@ export default function ProjectsPage() {
     const { currentOrg, hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
-    const [draftReady, setDraftReady] = useState(false);
+    const draftReadyRef = useRef(false);
     const canCreate = hasPermission('create', 'Project');
 
     const loadProjects = useCallback(async () => {
@@ -114,7 +125,7 @@ export default function ProjectsPage() {
         try {
             const raw = window.localStorage.getItem(draftKey);
             if (!raw) {
-                setDraftReady(true);
+                draftReadyRef.current = true;
                 return;
             }
 
@@ -125,12 +136,12 @@ export default function ProjectsPage() {
         } catch (restoreError) {
             console.error('Failed to restore org project draft', restoreError);
         } finally {
-            setDraftReady(true);
+            draftReadyRef.current = true;
         }
     }, [draftKey]);
 
     useEffect(() => {
-        if (!draftReady || !draftKey || !state.showForm) {
+        if (!draftReadyRef.current || !draftKey || !state.showForm) {
             return;
         }
 
@@ -140,7 +151,7 @@ export default function ProjectsPage() {
             form: state.form,
         };
         window.localStorage.setItem(draftKey, JSON.stringify(draft));
-    }, [draftKey, draftReady, state.form]);
+    }, [draftKey, state.form, state.showForm]);
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -338,7 +349,7 @@ export default function ProjectsPage() {
                                 </a>
                                 <span className="text-xs text-muted-foreground/50">•</span>
                                 <span className="text-xs text-muted-foreground">
-                                    {new Date(project.createdAt).toLocaleDateString()}
+                                    <ClientDateText value={project.createdAt} />
                                 </span>
                             </div>
                         </div>

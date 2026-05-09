@@ -84,6 +84,41 @@ type CameraChangeProjectPayload = {
     snapshot: Partial<CameraChangeSnapshot>;
 };
 
+type CameraChangeUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type CameraChangeUiAction =
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-loading'; isLoading: boolean }
+    | { type: 'set-project-saving'; isSaving: boolean }
+    | { type: 'set-project-error'; error: string | null };
+
+const initialUiState: CameraChangeUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+function uiReducer(state: CameraChangeUiState, action: CameraChangeUiAction): CameraChangeUiState {
+    switch (action.type) {
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.isLoading };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.error };
+        default:
+            return state;
+    }
+}
+
 const normalizeCameraChangeSnapshot = (value: unknown): Partial<CameraChangeSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -152,11 +187,8 @@ export default function CameraChangePage() {
 
 function CameraChangePageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { cameraChange, currentGeneration, reset, isGenerating } = useGenerationStore();
     const { replace } = useRouter();
@@ -168,7 +200,7 @@ function CameraChangePageContent() {
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatchUi({ type: 'set-project-id', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -187,7 +219,7 @@ function CameraChangePageContent() {
         };
 
         const loadProject = async () => {
-            if (!projectId) {
+            if (!uiState.projectId) {
                 try {
                     const raw = localStorage.getItem('camera-change:draft:v1');
                     if (raw) {
@@ -199,10 +231,10 @@ function CameraChangePageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatchUi({ type: 'set-project-loading', isLoading: true });
+            dispatchUi({ type: 'set-project-error', error: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(uiState.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -211,7 +243,7 @@ function CameraChangePageContent() {
             } catch (loadError) {
                 console.error('Failed to restore camera change project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved camera change project. Falling back to a local draft.');
+                    dispatchUi({ type: 'set-project-error', error: 'Could not load the saved camera change project. Falling back to a local draft.' });
                     try {
                         const draftKey = 'camera-change:draft:v1';
                         const raw = localStorage.getItem(draftKey);
@@ -224,7 +256,7 @@ function CameraChangePageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'set-project-loading', isLoading: false });
                 }
             }
         };
@@ -234,7 +266,7 @@ function CameraChangePageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [uiState.projectId]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
@@ -282,10 +314,10 @@ function CameraChangePageContent() {
         localStorage.setItem('camera-change:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'set-project-saving', isSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Camera Change Draft',
                         description: 'Camera change draft',
                         content: payload,
@@ -296,7 +328,7 @@ function CameraChangePageContent() {
                         description: 'Camera change draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'set-project-id', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -305,7 +337,7 @@ function CameraChangePageContent() {
                 console.error('Failed to persist camera change project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'set-project-saving', isSaving: false });
             }
         };
 
@@ -342,7 +374,7 @@ function CameraChangePageContent() {
         reset();
         dispatch({ type: 'reset' });
         setRestoredResultImage(null);
-        setProjectError(null);
+        dispatchUi({ type: 'set-project-error', error: null });
     };
 
     return (
@@ -354,7 +386,7 @@ function CameraChangePageContent() {
                         <Sparkles className="size-2.5" /> New
                     </div>
                     <span className="ml-2 text-xs text-muted-foreground">
-                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                        {uiState.isProjectLoading ? 'Loading project...' : uiState.projectError ?? ''}
                     </span>
                 </div>
 
@@ -485,7 +517,7 @@ function CameraChangePageContent() {
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">2 Credits</span>
                     </div>
-                    <Button onClick={handleProcess} disabled={isProcessing || !state.uploadedImage || isProjectLoading || isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleProcess} disabled={isProcessing || !state.uploadedImage || uiState.isProjectLoading || uiState.isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
                         {isProcessing ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
@@ -507,7 +539,7 @@ function CameraChangePageContent() {
                         <Button variant="ghost" size="sm" className="gap-1.5 text-xs mr-auto" onClick={handleReset}>
                             <RotateCcw className="size-4" /> Reset
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}>
+                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={uiState.isProjectLoading || uiState.isProjectSaving}>
                             <Folder className="size-4" /> Save
                         </Button>
                         <Button size="sm" className="gap-2" onClick={handleExport}>

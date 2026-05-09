@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -56,6 +56,52 @@ type ImageExtenderProjectPayload = {
     savedAt: string;
     snapshot: Partial<ImageExtenderSnapshot>;
 };
+
+type ImageExtenderUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    restoredResultImage: string | null;
+};
+
+type ImageExtenderUiAction =
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'setRestoredResultImage'; restoredResultImage: string | null }
+    | { type: 'reset' };
+
+const initialUiState: ImageExtenderUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    restoredResultImage: null,
+};
+
+function uiReducer(state: ImageExtenderUiState, action: ImageExtenderUiAction): ImageExtenderUiState {
+    switch (action.type) {
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'setRestoredResultImage':
+            return { ...state, restoredResultImage: action.restoredResultImage };
+        case 'reset':
+            return {
+                ...initialUiState,
+                projectId: state.projectId,
+            };
+        default:
+            return state;
+    }
+}
 
 const normalizeImageExtenderSnapshot = (value: unknown): Partial<ImageExtenderSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
@@ -120,27 +166,20 @@ export default function ImageExtenderPage() {
 
 function ImageExtenderPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { imageExtend, currentGeneration, reset, isGenerating } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const resultImage = currentGeneration?.status === 'completed'
         ? currentGeneration.resultUrl ?? null
-        : restoredResultImage;
+        : uiState.restoredResultImage;
     const isProcessing = isGenerating;
 
     useEffect(() => {
-        const queryProjectId = searchParamsSnapshot.get('projectId');
-        if (queryProjectId) {
-            setProjectId(queryProjectId);
-        }
-    }, [searchParams]);
+        dispatchUi({ type: 'setProjectId', projectId: searchParamsSnapshot.get('projectId') });
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         let cancelled = false;
@@ -152,13 +191,13 @@ function ImageExtenderPageContent() {
             dispatch({ type: 'setExpandAmount', expandAmount: snapshot.expandAmount ?? initialState.expandAmount });
             dispatch({ type: 'setCreativity', creativity: snapshot.creativity ?? initialState.creativity });
             dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? initialState.prompt });
-            setRestoredResultImage(snapshot.resultImage ?? null);
+            dispatchUi({ type: 'setRestoredResultImage', restoredResultImage: snapshot.resultImage ?? null });
         };
 
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('image-extender:draft:v1');
 
-            if (!projectId) {
+            if (!uiState.projectId) {
                 try {
                     if (draftRaw) {
                         hydrateFromSnapshot(normalizeImageExtenderSnapshot(JSON.parse(draftRaw)));
@@ -169,10 +208,10 @@ function ImageExtenderPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatchUi({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatchUi({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(uiState.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string'
                     ? JSON.parse(rawContent)
@@ -185,7 +224,10 @@ function ImageExtenderPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore image extender project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved image extender project. Falling back to a local draft.');
+                    dispatchUi({
+                        type: 'setProjectError',
+                        projectError: 'Could not load the saved image extender project. Falling back to a local draft.',
+                    });
                     try {
                         if (draftRaw) {
                             hydrateFromSnapshot(normalizeImageExtenderSnapshot(JSON.parse(draftRaw)));
@@ -196,7 +238,7 @@ function ImageExtenderPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -206,13 +248,13 @@ function ImageExtenderPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [uiState.projectId]);
 
     const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             reset();
-            setRestoredResultImage(null);
+            dispatchUi({ type: 'setRestoredResultImage', restoredResultImage: null });
             const uploaded = await mediaApi.uploadMedia(file);
             if (!uploaded?.url) {
                 toast.error('Failed to upload image');
@@ -257,10 +299,10 @@ function ImageExtenderPageContent() {
         localStorage.setItem('image-extender:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Image Extender Draft',
                         description: 'Image extender draft',
                         content: payload,
@@ -271,7 +313,7 @@ function ImageExtenderPageContent() {
                         description: 'Image extender draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -280,7 +322,7 @@ function ImageExtenderPageContent() {
                 console.error('Failed to persist image extender project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -322,8 +364,7 @@ function ImageExtenderPageContent() {
         dispatch({ type: 'setExpandAmount', expandAmount: 50 });
         dispatch({ type: 'setCreativity', creativity: 50 });
         dispatch({ type: 'setPrompt', prompt: '' });
-        setRestoredResultImage(null);
-        setProjectError(null);
+        dispatchUi({ type: 'reset' });
         if (fileInputRef.current) {
             fileInputRef.current.value = '';
         }
@@ -335,7 +376,7 @@ function ImageExtenderPageContent() {
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Image Extender</h2>
                     <span className="ml-auto text-xs text-muted-foreground">
-                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                        {uiState.isProjectLoading ? 'Loading project...' : uiState.projectError ?? ''}
                     </span>
                 </div>
                 <div className="flex-1 overflow-y-auto p-6  gap-y-6">
@@ -391,7 +432,7 @@ function ImageExtenderPageContent() {
                 </div>
                 <div className="p-4 border-t border-border space-y-3">
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1"><span>Cost:</span><span className="font-medium text-foreground">2 Credits</span></div>
-                    <Button onClick={handleExtend} disabled={isProcessing || !state.uploadedImage || isProjectLoading || isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleExtend} disabled={isProcessing || !state.uploadedImage || uiState.isProjectLoading || uiState.isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
                         {isProcessing ? (<><Loader2 className="size-5 animate-spin" /> Extending?</>) : (<><Maximize className="size-5" /> Extend Image</>)}
                     </Button>
                 </div>

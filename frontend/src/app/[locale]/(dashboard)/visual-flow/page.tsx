@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useReducer } from 'react';
+import React, { useEffect, useCallback, useReducer, useRef } from 'react';
 import Image from 'next/image';
 import { useRouter } from '@/i18n/navigation';
 import {
@@ -164,6 +164,7 @@ type WizardAction =
   | { type: 'setForm'; form: Partial<WizardState['form']> }
   | { type: 'setCharacters'; characters: WizardCharacter[] }
   | { type: 'setNewChar'; newChar: Partial<WizardCharacter> }
+  | { type: 'restore'; state: WizardState }
   | { type: 'reset' };
 
 const initialWizardState: WizardState = {
@@ -195,6 +196,8 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
       return { ...state, characters: action.characters };
     case 'setNewChar':
       return { ...state, newChar: { ...state.newChar, ...action.newChar } };
+    case 'restore':
+      return action.state;
     case 'reset':
       return initialWizardState;
     default:
@@ -204,40 +207,51 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialWizardState);
-  const [draftReady, setDraftReady] = useState(false);
+  const draftReadyRef = useRef(false);
 
   useEffect(() => {
     if (!open) {
-      setDraftReady(false);
+      draftReadyRef.current = false;
       return;
     }
 
     try {
       const raw = window.localStorage.getItem(WIZARD_DRAFT_KEY);
       if (!raw) {
-        setDraftReady(true);
+        draftReadyRef.current = true;
         return;
       }
 
       const parsed = JSON.parse(raw) as Partial<WizardDraft>;
       const restored = parsed.state;
       if (restored) {
-        dispatch({ type: 'reset' });
-        dispatch({ type: 'setStep', step: restored.step ?? 1 });
-        dispatch({ type: 'setLoading', loading: false });
-        dispatch({ type: 'setForm', form: restored.form ?? {} });
-        dispatch({ type: 'setCharacters', characters: restored.characters ?? [] });
-        dispatch({ type: 'setNewChar', newChar: restored.newChar ?? {} });
+        dispatch({
+          type: 'restore',
+          state: {
+            ...initialWizardState,
+            ...restored,
+            loading: false,
+            form: {
+              ...initialWizardState.form,
+              ...(restored.form ?? {}),
+            },
+            characters: restored.characters ?? [],
+            newChar: {
+              ...initialWizardState.newChar,
+              ...(restored.newChar ?? {}),
+            },
+          },
+        });
       }
     } catch (error) {
       console.error('Failed to restore VisualFlow wizard draft', error);
     } finally {
-      setDraftReady(true);
+      draftReadyRef.current = true;
     }
   }, [open]);
 
   useEffect(() => {
-    if (!open || !draftReady) {
+    if (!open || !draftReadyRef.current) {
       return;
     }
 
@@ -248,7 +262,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
     };
 
     window.localStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(draft));
-  }, [draftReady, open, state]);
+  }, [open, state]);
 
   const handleAddChar = () => {
     if (!state.newChar.name.trim()) return;
@@ -547,22 +561,66 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
 // Main Page
 // ─────────────────────────────────────────────
 
+type VisualFlowState = {
+  projects: VisualProject[];
+  loading: boolean;
+  search: string;
+  showWizard: boolean;
+  projectToDelete: VisualProject | null;
+};
+
+type VisualFlowAction =
+  | { type: 'setProjects'; projects: VisualProject[] }
+  | { type: 'setLoading'; loading: boolean }
+  | { type: 'setSearch'; search: string }
+  | { type: 'setShowWizard'; showWizard: boolean }
+  | { type: 'setProjectToDelete'; projectToDelete: VisualProject | null }
+  | { type: 'removeProject'; projectId: string }
+  | { type: 'prependProject'; project: VisualProject };
+
+const initialVisualFlowState: VisualFlowState = {
+  projects: [],
+  loading: true,
+  search: '',
+  showWizard: false,
+  projectToDelete: null,
+};
+
+function visualFlowReducer(state: VisualFlowState, action: VisualFlowAction): VisualFlowState {
+  switch (action.type) {
+    case 'setProjects':
+      return { ...state, projects: action.projects };
+    case 'setLoading':
+      return { ...state, loading: action.loading };
+    case 'setSearch':
+      return { ...state, search: action.search };
+    case 'setShowWizard':
+      return { ...state, showWizard: action.showWizard };
+    case 'setProjectToDelete':
+      return { ...state, projectToDelete: action.projectToDelete };
+    case 'removeProject':
+      return { ...state, projects: state.projects.filter((project) => project.id !== action.projectId) };
+    case 'prependProject':
+      return { ...state, projects: [action.project, ...state.projects] };
+    default:
+      return state;
+  }
+}
+
 export default function VisualFlowPage() {
   const { push } = useRouter();
-  const [projects, setProjects] = useState<VisualProject[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [showWizard, setShowWizard] = useState(false);
-  const [projectToDelete, setProjectToDelete] = useState<VisualProject | null>(null);
+  const [state, dispatch] = useReducer(visualFlowReducer, initialVisualFlowState);
+  const { projects, loading, search, showWizard, projectToDelete } = state;
 
   const loadProjects = useCallback(async () => {
     try {
       const res = await visualFlowApi.projects.list();
-      setProjects(res.data);
+      dispatch({ type: 'setProjects', projects: res.data });
     } catch (e) {
       console.error('Failed to load visual projects', e);
+    } finally {
+      dispatch({ type: 'setLoading', loading: false });
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -571,9 +629,10 @@ export default function VisualFlowPage() {
 
   const handleDelete = async () => {
     if (!projectToDelete) return;
-    await visualFlowApi.projects.delete(projectToDelete.id);
-    setProjects((p) => p.filter((proj) => proj.id !== projectToDelete.id));
-    setProjectToDelete(null);
+    const projectId = projectToDelete.id;
+    await visualFlowApi.projects.delete(projectId);
+    dispatch({ type: 'removeProject', projectId });
+    dispatch({ type: 'setProjectToDelete', projectToDelete: null });
   };
 
   const filtered = projects.filter((p) =>
@@ -603,7 +662,7 @@ export default function VisualFlowPage() {
             Build consistent, multi-scene AI videos. Reference images keep your characters and locations identical across every frame.
           </p>
           <Button
-            onClick={() => setShowWizard(true)}
+            onClick={() => dispatch({ type: 'setShowWizard', showWizard: true })}
             className="mt-5 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white border-0 rounded-full px-6"
           >
             <Plus className="size-4 mr-2" />
@@ -632,7 +691,7 @@ export default function VisualFlowPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-white/30" />
           <Input
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => dispatch({ type: 'setSearch', search: e.target.value })}
             placeholder="Search projects?"
             className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-full"
           />
@@ -652,7 +711,7 @@ export default function VisualFlowPage() {
           {/* New project ghost card */}
           <button
             type="button"
-            onClick={() => setShowWizard(true)}
+            onClick={() => dispatch({ type: 'setShowWizard', showWizard: true })}
             className="group cursor-pointer rounded-2xl border border-dashed border-white/10 bg-transparent hover:bg-white/[0.03] hover:border-violet-500/40 transition-all duration-300 flex flex-col items-center justify-center gap-3 min-h-[260px]"
           >
             <div className="size-14 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-600/20 transition-colors">
@@ -668,7 +727,7 @@ export default function VisualFlowPage() {
               key={project.id}
               project={project}
               onClick={() => push(`/visual-flow/projects/${project.id}`)}
-              onDelete={() => setProjectToDelete(project)}
+              onDelete={() => dispatch({ type: 'setProjectToDelete', projectToDelete: project })}
             />
           ))}
         </div>
@@ -690,7 +749,7 @@ export default function VisualFlowPage() {
       <ConfirmDialog
         open={!!projectToDelete}
         onOpenChange={(open) => {
-          if (!open) setProjectToDelete(null);
+          if (!open) dispatch({ type: 'setProjectToDelete', projectToDelete: null });
         }}
         title="Delete project?"
         description={
@@ -705,9 +764,9 @@ export default function VisualFlowPage() {
       {/* Create Wizard */}
       <CreateProjectWizard
         open={showWizard}
-        onClose={() => setShowWizard(false)}
+        onClose={() => dispatch({ type: 'setShowWizard', showWizard: false })}
         onCreated={(p) => {
-          setProjects((prev) => [p, ...prev]);
+          dispatch({ type: 'prependProject', project: p });
           push(`/visual-flow/projects/${p.id}`);
         }}
       />

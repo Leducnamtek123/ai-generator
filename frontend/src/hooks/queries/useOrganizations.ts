@@ -3,7 +3,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { orgApi } from '@/services/orgApi';
 
-export const ORG_KEYS = {
+const ORG_KEYS = {
   all: ['organizations'] as const,
   list: () => [...ORG_KEYS.all, 'list'] as const,
   detail: (slug: string) => [...ORG_KEYS.all, 'detail', slug] as const,
@@ -18,7 +18,7 @@ export function useOrganizations() {
   });
 }
 
-export function useOrganization(slug?: string) {
+function useOrganization(slug?: string) {
   return useQuery({
     queryKey: ORG_KEYS.detail(slug || ''),
     queryFn: () => orgApi.get(slug!),
@@ -26,7 +26,7 @@ export function useOrganization(slug?: string) {
   });
 }
 
-export function useMembership(slug?: string) {
+function useMembership(slug?: string) {
   return useQuery({
     queryKey: ORG_KEYS.membership(slug || ''),
     queryFn: () => orgApi.getMembership(slug!),

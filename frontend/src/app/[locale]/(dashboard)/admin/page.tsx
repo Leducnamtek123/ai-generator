@@ -69,6 +69,114 @@ const sections: Array<{ id: AdminSection; label: string }> = [
   { id: 'roles', label: 'Role Matrix' },
 ];
 
+type AdminState = {
+  activeSection: AdminSection;
+  userPage: number;
+  userSearch: string;
+  userRole: string;
+  userStatus: string;
+  selectedUserIds: number[];
+  templatePage: number;
+  templateSearch: string;
+  templateVisibility: string;
+  templateType: string;
+  templateListed: string;
+  templateFeatured: string;
+  selectedTemplateIds: string[];
+  bulkTemplatePrice: string;
+  bulkTemplateVisibility: string;
+  assetPage: number;
+  assetSearch: string;
+  assetType: string;
+  selectedAssetIds: string[];
+  orgPage: number;
+  orgSearch: string;
+  selectedOrgId: string | null;
+  orgName: string;
+  orgSlug: string;
+  orgUrl: string;
+  orgDescription: string;
+  orgDomain: string;
+  orgAttachByDomain: boolean;
+  orgAvatarUrl: string;
+  orgOwnerId: string;
+  auditPage: number;
+  auditSearch: string;
+  auditAction: string;
+  auditEntityType: string;
+  siteConfigKey: string;
+  siteConfigLocale: string;
+  siteConfigDraft: string;
+};
+
+type AdminStateAction =
+  | { type: 'setField'; key: keyof AdminState; value: AdminState[keyof AdminState] }
+  | {
+      type: 'setOrganizationDetail';
+      payload: Pick<
+        AdminState,
+        | 'orgName'
+        | 'orgSlug'
+        | 'orgUrl'
+        | 'orgDescription'
+        | 'orgDomain'
+        | 'orgAttachByDomain'
+        | 'orgAvatarUrl'
+        | 'orgOwnerId'
+      >;
+    };
+
+const initialAdminState: AdminState = {
+  activeSection: 'overview',
+  userPage: 1,
+  userSearch: '',
+  userRole: '',
+  userStatus: '',
+  selectedUserIds: [],
+  templatePage: 1,
+  templateSearch: '',
+  templateVisibility: '',
+  templateType: '',
+  templateListed: '',
+  templateFeatured: '',
+  selectedTemplateIds: [],
+  bulkTemplatePrice: '',
+  bulkTemplateVisibility: '',
+  assetPage: 1,
+  assetSearch: '',
+  assetType: '',
+  selectedAssetIds: [],
+  orgPage: 1,
+  orgSearch: '',
+  selectedOrgId: null,
+  orgName: '',
+  orgSlug: '',
+  orgUrl: '',
+  orgDescription: '',
+  orgDomain: '',
+  orgAttachByDomain: false,
+  orgAvatarUrl: '',
+  orgOwnerId: '',
+  auditPage: 1,
+  auditSearch: '',
+  auditAction: '',
+  auditEntityType: '',
+  siteConfigKey: 'landing',
+  siteConfigLocale: 'en',
+  siteConfigDraft: '',
+};
+
+function adminReducer(state: AdminState, action: AdminStateAction): AdminState {
+  switch (action.type) {
+    case 'setField':
+      return { ...state, [action.key]: action.value };
+    case 'setOrganizationDetail':
+      return { ...state, ...action.payload };
+    default:
+      return state;
+  }
+}
+
 const parseErrorMessage = (error: unknown, fallback: string) => {
   if (axios.isAxiosError(error)) {
     const data = error.response?.data as
@@ -101,6 +209,16 @@ const parseErrorMessage = (error: unknown, fallback: string) => {
   if (error instanceof Error) return error.message || fallback;
   return fallback;
 };
+
+function ClientDateTime({ value }: { value: string | number | Date }) {
+  const [text, setText] = React.useState('');
+
+  React.useEffect(() => {
+    setText(new Date(value).toLocaleString());
+  }, [value]);
+
+  return <div>{text}</div>;
+}
 
 const downloadCsv = (filename: string, csv: string) => {
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
@@ -177,49 +295,89 @@ export default function AdminPage() {
   const { push } = useRouter();
   const { user, isLoading } = useAuth();
   const isAdmin = canAccessAdmin(user);
+  const [state, dispatch] = React.useReducer(adminReducer, initialAdminState);
+  const {
+    activeSection,
+    userPage,
+    userSearch,
+    userRole,
+    userStatus,
+    selectedUserIds,
+    templatePage,
+    templateSearch,
+    templateVisibility,
+    templateType,
+    templateListed,
+    templateFeatured,
+    selectedTemplateIds,
+    bulkTemplatePrice,
+    bulkTemplateVisibility,
+    assetPage,
+    assetSearch,
+    assetType,
+    selectedAssetIds,
+    orgPage,
+    orgSearch,
+    selectedOrgId,
+    orgName,
+    orgSlug,
+    orgUrl,
+    orgDescription,
+    orgDomain,
+    orgAttachByDomain,
+    orgAvatarUrl,
+    orgOwnerId,
+    auditPage,
+    auditSearch,
+    auditAction,
+    auditEntityType,
+    siteConfigKey,
+    siteConfigLocale,
+    siteConfigDraft,
+  } = state;
 
-  const [activeSection, setActiveSection] = React.useState<AdminSection>('overview');
-
-  const [userPage, setUserPage] = React.useState(1);
-  const [userSearch, setUserSearch] = React.useState('');
-  const [userRole, setUserRole] = React.useState('');
-  const [userStatus, setUserStatus] = React.useState('');
-  const [selectedUserIds, setSelectedUserIds] = React.useState<number[]>([]);
-
-  const [templatePage, setTemplatePage] = React.useState(1);
-  const [templateSearch, setTemplateSearch] = React.useState('');
-  const [templateVisibility, setTemplateVisibility] = React.useState('');
-  const [templateType, setTemplateType] = React.useState('');
-  const [templateListed, setTemplateListed] = React.useState('');
-  const [templateFeatured, setTemplateFeatured] = React.useState('');
-  const [selectedTemplateIds, setSelectedTemplateIds] = React.useState<string[]>([]);
-  const [bulkTemplatePrice, setBulkTemplatePrice] = React.useState('');
-  const [bulkTemplateVisibility, setBulkTemplateVisibility] = React.useState('');
-
-  const [assetPage, setAssetPage] = React.useState(1);
-  const [assetSearch, setAssetSearch] = React.useState('');
-  const [assetType, setAssetType] = React.useState('');
-  const [selectedAssetIds, setSelectedAssetIds] = React.useState<string[]>([]);
-
-  const [orgPage, setOrgPage] = React.useState(1);
-  const [orgSearch, setOrgSearch] = React.useState('');
-  const [selectedOrgId, setSelectedOrgId] = React.useState<string | null>(null);
-  const [orgName, setOrgName] = React.useState('');
-  const [orgSlug, setOrgSlug] = React.useState('');
-  const [orgUrl, setOrgUrl] = React.useState('');
-  const [orgDescription, setOrgDescription] = React.useState('');
-  const [orgDomain, setOrgDomain] = React.useState('');
-  const [orgAttachByDomain, setOrgAttachByDomain] = React.useState(false);
-  const [orgAvatarUrl, setOrgAvatarUrl] = React.useState('');
-  const [orgOwnerId, setOrgOwnerId] = React.useState('');
-
-  const [auditPage, setAuditPage] = React.useState(1);
-  const [auditSearch, setAuditSearch] = React.useState('');
-  const [auditAction, setAuditAction] = React.useState('');
-  const [auditEntityType, setAuditEntityType] = React.useState('');
-  const [siteConfigKey, setSiteConfigKey] = React.useState('landing');
-  const [siteConfigLocale, setSiteConfigLocale] = React.useState('en');
-  const [siteConfigDraft, setSiteConfigDraft] = React.useState('');
+  type SetStateAction<T> = T | ((prev: T) => T);
+  const setField = <K extends keyof AdminState>(key: K, next: SetStateAction<AdminState[K]>) => {
+    const value = typeof next === 'function' ? (next as (prev: AdminState[K]) => AdminState[K])(state[key]) : next;
+    dispatch({ type: 'setField', key, value: value as AdminState[K] });
+  };
+  const setActiveSection = (next: SetStateAction<AdminSection>) => setField('activeSection', next);
+  const setUserPage = (next: SetStateAction<number>) => setField('userPage', next);
+  const setUserSearch = (next: SetStateAction<string>) => setField('userSearch', next);
+  const setUserRole = (next: SetStateAction<string>) => setField('userRole', next);
+  const setUserStatus = (next: SetStateAction<string>) => setField('userStatus', next);
+  const setSelectedUserIds = (next: SetStateAction<number[]>) => setField('selectedUserIds', next);
+  const setTemplatePage = (next: SetStateAction<number>) => setField('templatePage', next);
+  const setTemplateSearch = (next: SetStateAction<string>) => setField('templateSearch', next);
+  const setTemplateVisibility = (next: SetStateAction<string>) => setField('templateVisibility', next);
+  const setTemplateType = (next: SetStateAction<string>) => setField('templateType', next);
+  const setTemplateListed = (next: SetStateAction<string>) => setField('templateListed', next);
+  const setTemplateFeatured = (next: SetStateAction<string>) => setField('templateFeatured', next);
+  const setSelectedTemplateIds = (next: SetStateAction<string[]>) => setField('selectedTemplateIds', next);
+  const setBulkTemplatePrice = (next: SetStateAction<string>) => setField('bulkTemplatePrice', next);
+  const setBulkTemplateVisibility = (next: SetStateAction<string>) => setField('bulkTemplateVisibility', next);
+  const setAssetPage = (next: SetStateAction<number>) => setField('assetPage', next);
+  const setAssetSearch = (next: SetStateAction<string>) => setField('assetSearch', next);
+  const setAssetType = (next: SetStateAction<string>) => setField('assetType', next);
+  const setSelectedAssetIds = (next: SetStateAction<string[]>) => setField('selectedAssetIds', next);
+  const setOrgPage = (next: SetStateAction<number>) => setField('orgPage', next);
+  const setOrgSearch = (next: SetStateAction<string>) => setField('orgSearch', next);
+  const setSelectedOrgId = (next: SetStateAction<string | null>) => setField('selectedOrgId', next);
+  const setOrgName = (next: SetStateAction<string>) => setField('orgName', next);
+  const setOrgSlug = (next: SetStateAction<string>) => setField('orgSlug', next);
+  const setOrgUrl = (next: SetStateAction<string>) => setField('orgUrl', next);
+  const setOrgDescription = (next: SetStateAction<string>) => setField('orgDescription', next);
+  const setOrgDomain = (next: SetStateAction<string>) => setField('orgDomain', next);
+  const setOrgAttachByDomain = (next: SetStateAction<boolean>) => setField('orgAttachByDomain', next);
+  const setOrgAvatarUrl = (next: SetStateAction<string>) => setField('orgAvatarUrl', next);
+  const setOrgOwnerId = (next: SetStateAction<string>) => setField('orgOwnerId', next);
+  const setAuditPage = (next: SetStateAction<number>) => setField('auditPage', next);
+  const setAuditSearch = (next: SetStateAction<string>) => setField('auditSearch', next);
+  const setAuditAction = (next: SetStateAction<string>) => setField('auditAction', next);
+  const setAuditEntityType = (next: SetStateAction<string>) => setField('auditEntityType', next);
+  const setSiteConfigKey = (next: SetStateAction<string>) => setField('siteConfigKey', next);
+  const setSiteConfigLocale = (next: SetStateAction<string>) => setField('siteConfigLocale', next);
+  const setSiteConfigDraft = (next: SetStateAction<string>) => setField('siteConfigDraft', next);
 
   const qc = useQueryClient();
 
@@ -331,14 +489,19 @@ export default function AdminPage() {
 
   React.useEffect(() => {
     if (!organizationDetailQuery.data) return;
-    setOrgName(organizationDetailQuery.data.name ?? '');
-    setOrgSlug(organizationDetailQuery.data.slug ?? '');
-    setOrgUrl(organizationDetailQuery.data.url ?? '');
-    setOrgDescription(organizationDetailQuery.data.description ?? '');
-    setOrgDomain(organizationDetailQuery.data.domain ?? '');
-    setOrgAttachByDomain(Boolean(organizationDetailQuery.data.shouldAttachUsersByDomain));
-    setOrgAvatarUrl(organizationDetailQuery.data.avatarUrl ?? '');
-    setOrgOwnerId(String(organizationDetailQuery.data.ownerId ?? ''));
+    dispatch({
+      type: 'setOrganizationDetail',
+      payload: {
+        orgName: organizationDetailQuery.data.name ?? '',
+        orgSlug: organizationDetailQuery.data.slug ?? '',
+        orgUrl: organizationDetailQuery.data.url ?? '',
+        orgDescription: organizationDetailQuery.data.description ?? '',
+        orgDomain: organizationDetailQuery.data.domain ?? '',
+        orgAttachByDomain: Boolean(organizationDetailQuery.data.shouldAttachUsersByDomain),
+        orgAvatarUrl: organizationDetailQuery.data.avatarUrl ?? '',
+        orgOwnerId: String(organizationDetailQuery.data.ownerId ?? ''),
+      },
+    });
   }, [organizationDetailQuery.data]);
 
   const handleError = (error: unknown, fallback: string) =>
@@ -1584,7 +1747,7 @@ export default function AdminPage() {
                         </div>
                       </div>
                       <div className="text-xs text-muted-foreground">
-                        <div>{new Date(entry.createdAt).toLocaleString()}</div>
+                        <ClientDateTime value={entry.createdAt} />
                         {entry.entityId && <div>Entity ID: {entry.entityId}</div>}
                         {entry.error && <div className="text-destructive">{entry.error}</div>}
                       </div>

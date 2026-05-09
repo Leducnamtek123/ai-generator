@@ -13,7 +13,7 @@ function getBaseSiteUrl(locale: LocaleCode): string {
   return LOCALE_SITE_URLS[locale] ?? DEFAULT_SITE_URL;
 }
 
-export function getLocaleSiteUrl(locale: LocaleCode): string {
+function getLocaleSiteUrl(locale: LocaleCode): string {
   return getBaseSiteUrl(locale);
 }
 
@@ -57,7 +57,7 @@ export function getLocaleDomains() {
   return domains;
 }
 
-export function resolveLocaleUrl(locale: LocaleCode, currentUrl?: string | URL): string {
+function resolveLocaleUrl(locale: LocaleCode, currentUrl?: string | URL): string {
   const targetBase = new URL(getLocaleSiteUrl(locale));
 
   if (!currentUrl) {

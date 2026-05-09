@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useReducer, useRef } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -96,6 +96,15 @@ type VideoEditorState = {
     selectedMediaId: string | null;
     past: VideoEditorSnapshot[];
     future: VideoEditorSnapshot[];
+    mediaItems: MediaItem[];
+    isMediaPickerOpen: boolean;
+    isAudioPickerOpen: boolean;
+    mediaLoadState: 'loading' | 'ready' | 'error';
+    mediaLoadError: string | null;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
 };
 
 type VideoEditorAction =
@@ -109,6 +118,15 @@ type VideoEditorAction =
     | { type: 'setSelectedMediaId'; selectedMediaId: string | null }
     | { type: 'appendClip'; trackId: string; clip: EditorClip }
     | { type: 'hydrateSnapshot'; snapshot: VideoEditorSnapshot }
+    | { type: 'setMediaItems'; mediaItems: MediaItem[] }
+    | { type: 'setMediaPickerOpen'; isMediaPickerOpen: boolean }
+    | { type: 'setAudioPickerOpen'; isAudioPickerOpen: boolean }
+    | { type: 'setMediaLoadState'; mediaLoadState: VideoEditorState['mediaLoadState'] }
+    | { type: 'setMediaLoadError'; mediaLoadError: string | null }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
     | { type: 'undo' }
     | { type: 'redo' }
     | { type: 'reset' };
@@ -124,6 +142,15 @@ const initialState: VideoEditorState = {
     selectedMediaId: null,
     past: [],
     future: [],
+    mediaItems: [],
+    isMediaPickerOpen: false,
+    isAudioPickerOpen: false,
+    mediaLoadState: 'loading',
+    mediaLoadError: null,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
 };
 
 const snapshotState = (state: VideoEditorState): VideoEditorSnapshot => ({
@@ -137,7 +164,8 @@ const snapshotState = (state: VideoEditorState): VideoEditorSnapshot => ({
     selectedMediaId: state.selectedMediaId,
 });
 
-const restoreSnapshot = (snapshot: VideoEditorSnapshot): VideoEditorState => ({
+const restoreSnapshot = (state: VideoEditorState, snapshot: VideoEditorSnapshot): VideoEditorState => ({
+    ...state,
     ...snapshot,
     past: [],
     future: [],
@@ -182,9 +210,36 @@ function reducer(state: VideoEditorState, action: VideoEditorAction): VideoEdito
         case 'hydrateSnapshot':
             return {
                 ...action.snapshot,
+                mediaItems: state.mediaItems,
+                isMediaPickerOpen: state.isMediaPickerOpen,
+                isAudioPickerOpen: state.isAudioPickerOpen,
+                mediaLoadState: state.mediaLoadState,
+                mediaLoadError: state.mediaLoadError,
+                projectId: state.projectId,
+                isProjectLoading: state.isProjectLoading,
+                isProjectSaving: state.isProjectSaving,
+                projectError: state.projectError,
                 past: [],
                 future: [],
             };
+        case 'setMediaItems':
+            return { ...state, mediaItems: action.mediaItems };
+        case 'setMediaPickerOpen':
+            return { ...state, isMediaPickerOpen: action.isMediaPickerOpen };
+        case 'setAudioPickerOpen':
+            return { ...state, isAudioPickerOpen: action.isAudioPickerOpen };
+        case 'setMediaLoadState':
+            return { ...state, mediaLoadState: action.mediaLoadState };
+        case 'setMediaLoadError':
+            return { ...state, mediaLoadError: action.mediaLoadError };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
         case 'undo': {
             if (!state.past.length) {
                 return state;
@@ -192,7 +247,7 @@ function reducer(state: VideoEditorState, action: VideoEditorAction): VideoEdito
 
             const previous = state.past[state.past.length - 1];
             return {
-                ...restoreSnapshot(previous),
+                ...restoreSnapshot(state, previous),
                 past: state.past.slice(0, -1),
                 future: [snapshotState(state), ...state.future],
             };
@@ -204,13 +259,18 @@ function reducer(state: VideoEditorState, action: VideoEditorAction): VideoEdito
 
             const [next, ...rest] = state.future;
             return {
-                ...restoreSnapshot(next),
+                ...restoreSnapshot(state, next),
                 past: [...state.past, snapshotState(state)],
                 future: rest,
             };
         }
         case 'reset':
-            return initialState;
+            return {
+                ...initialState,
+                mediaItems: state.mediaItems,
+                mediaLoadState: state.mediaLoadState,
+                mediaLoadError: state.mediaLoadError,
+            };
         default:
             return state;
     }
@@ -261,23 +321,14 @@ export default function VideoEditorPage() {
 
 function VideoEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
-    const [mediaItems, setMediaItems] = useState<MediaItem[]>([]);
-    const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
-    const [isAudioPickerOpen, setIsAudioPickerOpen] = useState(false);
-    const [mediaLoadState, setMediaLoadState] = useState<'loading' | 'ready' | 'error'>('loading');
-    const [mediaLoadError, setMediaLoadError] = useState<string | null>(null);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
     const mediaLoadToken = useRef(0);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const { startGeneration, isGenerating, error } = useGenerationStore();
     const selectedMedia = useMemo(
-        () => mediaItems.find((item) => item.id === state.selectedMediaId) ?? null,
-        [mediaItems, state.selectedMediaId],
+        () => state.mediaItems.find((item) => item.id === state.selectedMediaId) ?? null,
+        [state.mediaItems, state.selectedMediaId],
     );
     const selectedClip = useMemo(() => {
         for (const track of state.tracks) {
@@ -295,8 +346,8 @@ function VideoEditorPageContent() {
             return null;
         }
 
-        return mediaItems.find((item) => item.id === selectedClip.mediaId) ?? null;
-    }, [mediaItems, selectedClip]);
+        return state.mediaItems.find((item) => item.id === selectedClip.mediaId) ?? null;
+    }, [state.mediaItems, selectedClip]);
     const previewMedia = selectedMedia ?? selectedClipMedia;
     const totalDuration = useMemo(() => {
         const longestTrack = state.tracks.reduce((max, track) => Math.max(max, getTrackEnd(track)), 26);
@@ -308,7 +359,7 @@ function VideoEditorPageContent() {
     useEffect(() => {
         const queryProjectId = searchParamsSnapshot.get('projectId');
         if (queryProjectId) {
-            setProjectId(queryProjectId);
+            dispatch({ type: 'setProjectId', projectId: queryProjectId });
         }
     }, [searchParams]);
 
@@ -334,7 +385,7 @@ function VideoEditorPageContent() {
         const loadProject = async () => {
             const draftRaw = localStorage.getItem('video-editor:project:v1');
 
-            if (!projectId) {
+            if (!state.projectId) {
                 try {
                     if (draftRaw) {
                         const parsed = JSON.parse(draftRaw) as Partial<VideoEditorSnapshot>;
@@ -346,10 +397,10 @@ function VideoEditorPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatch({ type: 'setProjectLoading', isProjectLoading: true });
+            dispatch({ type: 'setProjectError', projectError: null });
             try {
-                const project = await projectApi.get(projectId);
+            const project = await projectApi.get(state.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string'
                     ? (JSON.parse(rawContent) as Partial<VideoEditorProjectPayload>)
@@ -362,7 +413,7 @@ function VideoEditorPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore video project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved video project. Falling back to a local draft.');
+                    dispatch({ type: 'setProjectError', projectError: 'Could not load the saved video project. Falling back to a local draft.' });
                     try {
                         if (draftRaw) {
                             const parsed = JSON.parse(draftRaw) as Partial<VideoEditorSnapshot>;
@@ -374,7 +425,7 @@ function VideoEditorPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setProjectLoading', isProjectLoading: false });
                 }
             }
         };
@@ -384,12 +435,12 @@ function VideoEditorPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [state.projectId]);
 
     const loadMedia = useCallback(async () => {
         const token = ++mediaLoadToken.current;
-        setMediaLoadState('loading');
-        setMediaLoadError(null);
+        dispatch({ type: 'setMediaLoadState', mediaLoadState: 'loading' });
+        dispatch({ type: 'setMediaLoadError', mediaLoadError: null });
 
         try {
             const { mediaApi } = await import('@/services/mediaApi');
@@ -399,16 +450,16 @@ function VideoEditorPageContent() {
                 return;
             }
 
-            setMediaItems(library.items);
-            setMediaLoadState('ready');
+            dispatch({ type: 'setMediaItems', mediaItems: library.items });
+            dispatch({ type: 'setMediaLoadState', mediaLoadState: 'ready' });
         } catch {
             if (mediaLoadToken.current !== token) {
                 return;
             }
 
-            setMediaItems([]);
-            setMediaLoadError('Unable to load media library right now.');
-            setMediaLoadState('error');
+            dispatch({ type: 'setMediaItems', mediaItems: [] });
+            dispatch({ type: 'setMediaLoadError', mediaLoadError: 'Unable to load media library right now.' });
+            dispatch({ type: 'setMediaLoadState', mediaLoadState: 'error' });
         }
     }, []);
 
@@ -493,10 +544,10 @@ function VideoEditorPageContent() {
         localStorage.setItem('video-editor:project:v1', JSON.stringify(snapshot));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setProjectSaving', isProjectSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (state.projectId) {
+                    await projectApi.update(state.projectId, {
                         name: 'Video Editor Draft',
                         description: 'Video editor draft',
                         content: payload,
@@ -507,7 +558,7 @@ function VideoEditorPageContent() {
                         description: 'Video editor draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -516,7 +567,7 @@ function VideoEditorPageContent() {
                 console.error('Failed to persist video project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -555,9 +606,13 @@ function VideoEditorPageContent() {
     };
 
     const handleMediaSelect = (media: MediaItem) => {
-        setMediaItems((current) => {
-            const exists = current.some((item) => item.id === media.id);
-            return exists ? current : [media, ...current];
+        dispatch({
+            type: 'setMediaItems',
+            mediaItems: (() => {
+                const current = state.mediaItems;
+                const exists = current.some((item) => item.id === media.id);
+                return exists ? current : [media, ...current];
+            })(),
         });
 
         const targetTrack =
@@ -607,11 +662,11 @@ function VideoEditorPageContent() {
                 </div>
                 <div className="flex items-center gap-2">
                     <span className="text-xs text-muted-foreground hidden md:inline">
-                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                        {state.isProjectLoading ? 'Loading project...' : state.projectError ?? ''}
                     </span>
                     <Button variant="ghost" size="sm" className="gap-2" onClick={handleResetProject}>Reset</Button>
-                    <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveProject} disabled={isProjectLoading || isProjectSaving}>
-                        <Folder className="size-4" /> {isProjectSaving ? 'Saving...' : 'Save Project'}
+                    <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveProject} disabled={state.isProjectLoading || state.isProjectSaving}>
+                        <Folder className="size-4" /> {state.isProjectSaving ? 'Saving...' : 'Save Project'}
                     </Button>
                     <Button size="sm" className="gap-2" onClick={handleExportVideo}><Download className="size-4" /> Export Video</Button>
                 </div>
@@ -641,18 +696,18 @@ function VideoEditorPageContent() {
                                     variant="outline"
                                     className="w-full gap-2"
                                     onClick={() => {
-                                        if (mediaLoadState === 'error') {
+                                        if (state.mediaLoadState === 'error') {
                                             void loadMedia();
                                             return;
                                         }
 
-                                        setIsMediaPickerOpen(true);
+                                        dispatch({ type: 'setMediaPickerOpen', isMediaPickerOpen: true });
                                     }}
                                 >
                                     <Upload className="size-4" />
-                                    {mediaLoadState === 'error' ? 'Retry Media Load' : 'Import Media'}
+                                    {state.mediaLoadState === 'error' ? 'Retry Media Load' : 'Import Media'}
                                 </Button>
-                                {mediaLoadState === 'loading' ? (
+                                {state.mediaLoadState === 'loading' ? (
                                     <div className="grid grid-cols-2 gap-2">
                                         {Array.from({ length: 4 }).map((_, i) => (
                                             <div key={i} className="aspect-video rounded-lg bg-muted border border-border flex items-center justify-center animate-pulse">
@@ -660,14 +715,14 @@ function VideoEditorPageContent() {
                                             </div>
                                         ))}
                                     </div>
-                                ) : mediaLoadState === 'error' ? (
+                                ) : state.mediaLoadState === 'error' ? (
                                     <div className="rounded-xl border border-dashed border-border bg-card p-4 text-center">
-                                        <p className="text-sm font-medium">{mediaLoadError}</p>
+                                        <p className="text-sm font-medium">{state.mediaLoadError}</p>
                                         <p className="mt-1 text-xs text-muted-foreground">Check the media service and try again.</p>
                                     </div>
-                                ) : mediaItems.length > 0 ? (
+                                ) : state.mediaItems.length > 0 ? (
                                     <div className="grid grid-cols-2 gap-2">
-                                        {mediaItems.map((item) => (
+                                        {state.mediaItems.map((item) => (
                                             <button
                                                 key={item.id}
                                                 onClick={() => dispatch({ type: 'setSelectedMediaId', selectedMediaId: item.id })}
@@ -756,12 +811,12 @@ function VideoEditorPageContent() {
                                     className="mt-4 gap-2"
                                     onClick={() => {
                                         if (state.activePanel === 'audio') {
-                                            setIsAudioPickerOpen(true);
+                                            dispatch({ type: 'setAudioPickerOpen', isAudioPickerOpen: true });
                                             return;
                                         }
 
                                         dispatch({ type: 'setActivePanel', activePanel: 'media' });
-                                        setIsMediaPickerOpen(true);
+                                        dispatch({ type: 'setMediaPickerOpen', isMediaPickerOpen: true });
                                     }}
                                 >
                                     <Plus className="size-4" />
@@ -894,14 +949,14 @@ function VideoEditorPageContent() {
                 </div>
             </div>
             <MediaPickerModal
-                isOpen={isMediaPickerOpen}
-                onClose={() => setIsMediaPickerOpen(false)}
+                isOpen={state.isMediaPickerOpen}
+                onClose={() => dispatch({ type: 'setMediaPickerOpen', isMediaPickerOpen: false })}
                 onSelect={handleMediaSelect}
                 mediaType="any"
             />
             <MediaPickerModal
-                isOpen={isAudioPickerOpen}
-                onClose={() => setIsAudioPickerOpen(false)}
+                isOpen={state.isAudioPickerOpen}
+                onClose={() => dispatch({ type: 'setAudioPickerOpen', isAudioPickerOpen: false })}
                 onSelect={handleMediaSelect}
                 mediaType="audio"
             />

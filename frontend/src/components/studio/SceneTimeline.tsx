@@ -56,7 +56,7 @@ interface SceneCardProps {
   onDelete: () => Promise<void>;
 }
 
-export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDelete }: SceneCardProps) {
+function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDelete }: SceneCardProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editPrompt, setEditPrompt] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);

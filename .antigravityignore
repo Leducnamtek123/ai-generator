@@ -1,0 +1,13 @@
+# Antigravity index exclusions
+node_modules/
+.next/
+dist/
+build/
+out/
+.git/
+coverage/
+*.log
+*.lock
+public/images/
+**/*.mp4
+**/*.zip

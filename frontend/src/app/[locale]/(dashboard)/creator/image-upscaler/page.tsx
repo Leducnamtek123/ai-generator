@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useState, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useState, useRef, useMemo, useReducer } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useGenerationStore } from '@/stores/generation-store';
 import { mediaApi } from '@/services/mediaApi';
@@ -92,6 +92,92 @@ type ImageUpscalerProjectPayload = {
     snapshot: Partial<ImageUpscalerSnapshot>;
 };
 
+type ImageUpscalerLocalState = {
+    params: UpscaleParams;
+    uploadedImage: string | null;
+    previewImage: string | null;
+    restoredResultImage: string | null;
+};
+
+type ImageUpscalerLocalAction =
+    | { type: 'hydrate'; snapshot: Partial<ImageUpscalerSnapshot> }
+    | { type: 'set-params'; params: UpscaleParams }
+    | { type: 'set-uploaded-image'; uploadedImage: string | null }
+    | { type: 'set-preview-image'; previewImage: string | null }
+    | { type: 'set-restored-result-image'; restoredResultImage: string | null }
+    | { type: 'reset' };
+
+const initialLocalState: ImageUpscalerLocalState = {
+    params: initialParams,
+    uploadedImage: null,
+    previewImage: null,
+    restoredResultImage: null,
+};
+
+function localReducer(state: ImageUpscalerLocalState, action: ImageUpscalerLocalAction): ImageUpscalerLocalState {
+    switch (action.type) {
+        case 'hydrate':
+            return {
+                params: { ...initialParams, ...(action.snapshot.params ?? {}) },
+                uploadedImage: action.snapshot.uploadedImage ?? null,
+                previewImage: action.snapshot.previewImage ?? action.snapshot.uploadedImage ?? null,
+                restoredResultImage: action.snapshot.resultImage ?? null,
+            };
+        case 'set-params':
+            return { ...state, params: action.params };
+        case 'set-uploaded-image':
+            return { ...state, uploadedImage: action.uploadedImage };
+        case 'set-preview-image':
+            return { ...state, previewImage: action.previewImage };
+        case 'set-restored-result-image':
+            return { ...state, restoredResultImage: action.restoredResultImage };
+        case 'reset':
+            return initialLocalState;
+        default:
+            return state;
+    }
+}
+
+type ImageUpscalerUiState = {
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+    isMediaModalOpen: boolean;
+};
+
+type ImageUpscalerUiAction =
+    | { type: 'set-project-id'; projectId: string | null }
+    | { type: 'set-project-loading'; isLoading: boolean }
+    | { type: 'set-project-saving'; isSaving: boolean }
+    | { type: 'set-project-error'; error: string | null }
+    | { type: 'set-media-modal-open'; isOpen: boolean };
+
+const initialUiState: ImageUpscalerUiState = {
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+    isMediaModalOpen: false,
+};
+
+function uiReducer(state: ImageUpscalerUiState, action: ImageUpscalerUiAction): ImageUpscalerUiState {
+    switch (action.type) {
+        case 'set-project-id':
+            return { ...state, projectId: action.projectId };
+        case 'set-project-loading':
+            return { ...state, isProjectLoading: action.isLoading };
+        case 'set-project-saving':
+            return { ...state, isProjectSaving: action.isSaving };
+        case 'set-project-error':
+            return { ...state, projectError: action.error };
+        case 'set-media-modal-open':
+            return { ...state, isMediaModalOpen: action.isOpen };
+        default:
+            return state;
+    }
+}
+
 const normalizeImageUpscalerSnapshot = (value: unknown): Partial<ImageUpscalerSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
     const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
@@ -114,23 +200,16 @@ export default function ImageUpscalerPage() {
 
 function ImageUpscalerPageContent() {
     const { upscaleImage, isGenerating, currentGeneration, reset } = useGenerationStore();
-    const [params, setParams] = useState<UpscaleParams>(initialParams);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
-
-    const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-    const [previewImage, setPreviewImage] = useState<string | null>(null);
-    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
-    const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
+    const [localState, dispatchLocal] = useReducer(localReducer, initialLocalState);
+    const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const previewObjectUrlRef = useRef<string | null>(null);
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+    const { params, uploadedImage, previewImage } = localState;
     const localUpscaledImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
-    const resultImage = localUpscaledImage ?? restoredResultImage;
+    const resultImage = localUpscaledImage ?? localState.restoredResultImage;
 
     useEffect(() => {
         return () => {
@@ -141,24 +220,18 @@ function ImageUpscalerPageContent() {
     }, []);
 
     useEffect(() => {
-        const queryProjectId = searchParamsSnapshot.get('projectId');
-        if (queryProjectId) {
-            setProjectId(queryProjectId);
-        }
-    }, [searchParams]);
+        dispatchUi({ type: 'set-project-id', projectId: searchParamsSnapshot.get('projectId') });
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         let cancelled = false;
 
         const hydrateFromSnapshot = (snapshot: Partial<ImageUpscalerSnapshot>) => {
-            setUploadedImage(snapshot.uploadedImage ?? null);
-            setPreviewSource(snapshot.previewImage ?? snapshot.uploadedImage ?? null);
-            setParams({ ...initialParams, ...(snapshot.params ?? {}) });
-            setRestoredResultImage(snapshot.resultImage ?? null);
+            dispatchLocal({ type: 'hydrate', snapshot });
         };
 
         const loadProject = async () => {
-            if (!projectId) {
+            if (!uiState.projectId) {
                 try {
                     const raw = localStorage.getItem('image-upscaler:draft:v1');
                     if (raw) {
@@ -170,10 +243,10 @@ function ImageUpscalerPageContent() {
                 return;
             }
 
-            setIsProjectLoading(true);
-            setProjectError(null);
+            dispatchUi({ type: 'set-project-loading', isLoading: true });
+            dispatchUi({ type: 'set-project-error', error: null });
             try {
-                const project = await projectApi.get(projectId);
+                const project = await projectApi.get(uiState.projectId);
                 const rawContent = project.content as string | Record<string, unknown> | null | undefined;
                 const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
                 if (!cancelled) {
@@ -182,7 +255,7 @@ function ImageUpscalerPageContent() {
             } catch (loadError) {
                 console.error('Failed to restore image upscaler project', loadError);
                 if (!cancelled) {
-                    setProjectError('Could not load the saved image upscaler project. Falling back to a local draft.');
+                    dispatchUi({ type: 'set-project-error', error: 'Could not load the saved image upscaler project. Falling back to a local draft.' });
                     try {
                         const draftKey = 'image-upscaler:draft:v1';
                         const raw = localStorage.getItem(draftKey);
@@ -195,7 +268,7 @@ function ImageUpscalerPageContent() {
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatchUi({ type: 'set-project-loading', isLoading: false });
                 }
             }
         };
@@ -205,7 +278,7 @@ function ImageUpscalerPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [projectId]);
+    }, [uiState.projectId]);
 
     const setPreviewSource = (nextPreview: string | null) => {
         if (previewObjectUrlRef.current?.startsWith('blob:')) {
@@ -213,18 +286,18 @@ function ImageUpscalerPageContent() {
         }
 
         previewObjectUrlRef.current = nextPreview?.startsWith('blob:') ? nextPreview : null;
-        setPreviewImage(nextPreview);
+        dispatchLocal({ type: 'set-preview-image', previewImage: nextPreview });
     };
 
     const updateParam = <K extends keyof UpscaleParams>(key: K, value: UpscaleParams[K]) => {
-        setParams(prev => ({ ...prev, [key]: value }));
+        dispatchLocal({ type: 'set-params', params: { ...localState.params, [key]: value } });
     };
 
     const handleSelectImage = (media: MediaItem) => {
-        setUploadedImage(media.url);
+        dispatchLocal({ type: 'set-uploaded-image', uploadedImage: media.url });
         setPreviewSource(media.url);
         reset(); // Reset previous generation
-        setIsMediaModalOpen(false);
+        dispatchUi({ type: 'set-media-modal-open', isOpen: false });
     };
 
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -242,7 +315,7 @@ function ImageUpscalerPageContent() {
                     }
                     return;
                 }
-                setUploadedImage(uploaded.url);
+                dispatchLocal({ type: 'set-uploaded-image', uploadedImage: uploaded.url });
             })();
         }
     };
@@ -253,16 +326,16 @@ function ImageUpscalerPageContent() {
         try {
             await upscaleImage({
                 imageUrl: uploadedImage,
-                scale: Number(params.scale) || 2,
-                creativity: params.creativity,
-                hdr: params.hdr,
-                resemblance: params.resemblance,
-                model: params.model,
-                optimization: params.optimization,
-                engine: params.engine,
-                mode: params.mode,
-                prompt: params.prompt?.trim() || undefined,
-                fractality: params.fractality,
+                scale: Number(localState.params.scale) || 2,
+                creativity: localState.params.creativity,
+                hdr: localState.params.hdr,
+                resemblance: localState.params.resemblance,
+                model: localState.params.model,
+                optimization: localState.params.optimization,
+                engine: localState.params.engine,
+                mode: localState.params.mode,
+                prompt: localState.params.prompt?.trim() || undefined,
+                fractality: localState.params.fractality,
             });
         } catch (error) {
             toast.error(getUserFacingErrorMessage(error, 'Failed to upscale image'));
@@ -272,9 +345,9 @@ function ImageUpscalerPageContent() {
     const handleSave = () => {
         const snapshot: Partial<ImageUpscalerSnapshot> = {
             uploadedImage,
-            previewImage,
+            previewImage: localState.previewImage,
             resultImage,
-            params,
+            params: localState.params,
         };
         const payload: ImageUpscalerProjectPayload = {
             version: 1,
@@ -285,10 +358,10 @@ function ImageUpscalerPageContent() {
         localStorage.setItem('image-upscaler:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatchUi({ type: 'set-project-saving', isSaving: true });
             try {
-                if (projectId) {
-                    await projectApi.update(projectId, {
+                if (uiState.projectId) {
+                    await projectApi.update(uiState.projectId, {
                         name: 'Image Upscaler Draft',
                         description: 'Image upscaler draft',
                         content: payload,
@@ -299,7 +372,7 @@ function ImageUpscalerPageContent() {
                         description: 'Image upscaler draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatchUi({ type: 'set-project-id', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
@@ -308,7 +381,7 @@ function ImageUpscalerPageContent() {
                 console.error('Failed to persist image upscaler project', saveError);
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatchUi({ type: 'set-project-saving', isSaving: false });
             }
         };
 
@@ -337,11 +410,10 @@ function ImageUpscalerPageContent() {
 
     const handleReset = () => {
         reset();
-        setUploadedImage(null);
-        setParams(initialParams);
+        dispatchLocal({ type: 'reset' });
         setPreviewSource(null);
-        setRestoredResultImage(null);
-        setProjectError(null);
+        dispatchLocal({ type: 'set-restored-result-image', restoredResultImage: null });
+        dispatchUi({ type: 'set-project-error', error: null });
     };
 
     const triggerUpload = () => {
@@ -356,7 +428,7 @@ function ImageUpscalerPageContent() {
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Image Upscaler</h2>
                     <span className="text-xs text-muted-foreground">
-                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                        {uiState.isProjectLoading ? 'Loading project...' : uiState.projectError ?? ''}
                     </span>
                 </div>
 
@@ -425,7 +497,7 @@ function ImageUpscalerPageContent() {
                                     className="size-8 rounded-lg"
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        setIsMediaModalOpen(true);
+                                        dispatchUi({ type: 'set-media-modal-open', isOpen: true });
                                     }}
                                 >
                                     <Grid3X3 className="size-4" />
@@ -608,11 +680,11 @@ function ImageUpscalerPageContent() {
 
                 {/* Upscale Action - Pinned to Sidebar Bottom */}
                 <div className="p-4 border-t border-border bg-background">
-                    <Button
-                        onClick={handleUpscale}
-                        disabled={isGenerating || !uploadedImage || isProjectLoading || isProjectSaving}
-                        className="w-full h-12 font-bold rounded-xl gap-2 shadow-sm"
-                    >
+                        <Button
+                            onClick={handleUpscale}
+                            disabled={isGenerating || !uploadedImage || uiState.isProjectLoading || uiState.isProjectSaving}
+                            className="w-full h-12 font-bold rounded-xl gap-2 shadow-sm"
+                        >
                         {isGenerating ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
@@ -676,7 +748,7 @@ function ImageUpscalerPageContent() {
                         <Button variant="ghost" size="sm" className="gap-2" onClick={handleReset}>
                             Reset
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}>
+                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={uiState.isProjectLoading || uiState.isProjectSaving}>
                             <Folder className="size-4" />
                             Save
                         </Button>
@@ -719,8 +791,8 @@ function ImageUpscalerPageContent() {
             </div>
 
             <MediaPickerModal
-                isOpen={isMediaModalOpen}
-                onClose={() => setIsMediaModalOpen(false)}
+                isOpen={uiState.isMediaModalOpen}
+                onClose={() => dispatchUi({ type: 'set-media-modal-open', isOpen: false })}
                 onSelect={handleSelectImage}
                 mediaType="image"
             />

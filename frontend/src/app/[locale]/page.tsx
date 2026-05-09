@@ -30,7 +30,7 @@ import {
 } from "@/content/landing-content";
 import { useSiteConfig } from "@/hooks/queries/useSiteConfig";
 
-import { LocaleSwitcher } from "@/widgets";
+import { LocaleSwitcher } from "@/components/widgets/locale-switcher/LocaleSwitcher";
 import { Button } from "@/ui/button";
 import { useAuth } from "@/providers";
 

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useState, useEffect, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
     Sparkles,
@@ -67,6 +67,125 @@ type ImageProjectPayload = {
     snapshot: Partial<ImageSnapshot>;
 };
 
+type StudioState = {
+    activeContentTab: string;
+    selectedModel: string;
+    selectedAspectRatio: string;
+    selectedQuality: 'standard' | 'hd' | '4k';
+    selectedProvider: string;
+    prompt: string;
+    negativePrompt: string;
+    seed: string;
+    referenceImageUrl: string;
+    searchQuery: string;
+    communityListings: GalleryListing[];
+    isCommunityLoading: boolean;
+    projectId: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
+    projectError: string | null;
+};
+
+type StudioAction =
+    | { type: 'setActiveContentTab'; activeContentTab: string }
+    | { type: 'setSelectedModel'; selectedModel: string }
+    | { type: 'setSelectedAspectRatio'; selectedAspectRatio: string }
+    | { type: 'setSelectedQuality'; selectedQuality: 'standard' | 'hd' | '4k' }
+    | { type: 'setSelectedProvider'; selectedProvider: string }
+    | { type: 'setPrompt'; prompt: string }
+    | { type: 'setNegativePrompt'; negativePrompt: string }
+    | { type: 'setSeed'; seed: string }
+    | { type: 'setReferenceImageUrl'; referenceImageUrl: string }
+    | { type: 'setSearchQuery'; searchQuery: string }
+    | { type: 'setCommunityListings'; communityListings: GalleryListing[] }
+    | { type: 'setIsCommunityLoading'; isCommunityLoading: boolean }
+    | { type: 'setProjectId'; projectId: string | null }
+    | { type: 'setIsProjectLoading'; isProjectLoading: boolean }
+    | { type: 'setIsProjectSaving'; isProjectSaving: boolean }
+    | { type: 'setProjectError'; projectError: string | null }
+    | { type: 'applySnapshot'; snapshot: Partial<ImageSnapshot> }
+    | { type: 'resetForm'; selectedProvider: string };
+
+const initialStudioState: StudioState = {
+    activeContentTab: CONTENT_TABS[2],
+    selectedModel: 'flux',
+    selectedAspectRatio: '1:1',
+    selectedQuality: 'hd',
+    selectedProvider: '',
+    prompt: '',
+    negativePrompt: '',
+    seed: '',
+    referenceImageUrl: '',
+    searchQuery: '',
+    communityListings: [],
+    isCommunityLoading: false,
+    projectId: null,
+    isProjectLoading: false,
+    isProjectSaving: false,
+    projectError: null,
+};
+
+function studioReducer(state: StudioState, action: StudioAction): StudioState {
+    switch (action.type) {
+        case 'setActiveContentTab':
+            return { ...state, activeContentTab: action.activeContentTab };
+        case 'setSelectedModel':
+            return { ...state, selectedModel: action.selectedModel };
+        case 'setSelectedAspectRatio':
+            return { ...state, selectedAspectRatio: action.selectedAspectRatio };
+        case 'setSelectedQuality':
+            return { ...state, selectedQuality: action.selectedQuality };
+        case 'setSelectedProvider':
+            return { ...state, selectedProvider: action.selectedProvider };
+        case 'setPrompt':
+            return { ...state, prompt: action.prompt };
+        case 'setNegativePrompt':
+            return { ...state, negativePrompt: action.negativePrompt };
+        case 'setSeed':
+            return { ...state, seed: action.seed };
+        case 'setReferenceImageUrl':
+            return { ...state, referenceImageUrl: action.referenceImageUrl };
+        case 'setSearchQuery':
+            return { ...state, searchQuery: action.searchQuery };
+        case 'setCommunityListings':
+            return { ...state, communityListings: action.communityListings };
+        case 'setIsCommunityLoading':
+            return { ...state, isCommunityLoading: action.isCommunityLoading };
+        case 'setProjectId':
+            return { ...state, projectId: action.projectId };
+        case 'setIsProjectLoading':
+            return { ...state, isProjectLoading: action.isProjectLoading };
+        case 'setIsProjectSaving':
+            return { ...state, isProjectSaving: action.isProjectSaving };
+        case 'setProjectError':
+            return { ...state, projectError: action.projectError };
+        case 'applySnapshot':
+            return {
+                ...state,
+                activeContentTab: action.snapshot.currentTab ?? action.snapshot.activeContentTab ?? state.activeContentTab,
+                selectedModel: action.snapshot.selectedModel ?? state.selectedModel,
+                selectedAspectRatio: action.snapshot.selectedAspectRatio ?? state.selectedAspectRatio,
+                selectedQuality: action.snapshot.selectedQuality ?? state.selectedQuality,
+                selectedProvider: action.snapshot.selectedProvider ?? state.selectedProvider,
+                prompt: action.snapshot.prompt ?? state.prompt,
+                negativePrompt: action.snapshot.negativePrompt ?? state.negativePrompt,
+                seed: action.snapshot.seed ?? state.seed,
+                referenceImageUrl: action.snapshot.referenceImageUrl ?? state.referenceImageUrl,
+                searchQuery: action.snapshot.searchQuery ?? state.searchQuery,
+                projectError: null,
+            };
+        case 'resetForm':
+            return {
+                ...initialStudioState,
+                selectedProvider: action.selectedProvider,
+                communityListings: state.communityListings,
+                projectId: state.projectId,
+            };
+        default:
+            return state;
+    }
+}
+
 const IMAGE_MODELS = [
     { id: 'flux', label: 'Flux' },
     { id: 'flux-schnell', label: 'Flux Schnell' },
@@ -105,22 +224,25 @@ export default function StudioPage() {
 }
 
 function StudioPageContent() {
-    const [activeContentTab, setActiveContentTab] = useState<string>(CONTENT_TABS[2]);
-    const [selectedModel, setSelectedModel] = useState(IMAGE_MODELS[0].id);
-    const [selectedAspectRatio, setSelectedAspectRatio] = useState('1:1');
-    const [selectedQuality, setSelectedQuality] = useState<'standard' | 'hd' | '4k'>('hd');
-    const [selectedProvider, setSelectedProvider] = useState('');
-    const [prompt, setPrompt] = useState('');
-    const [negativePrompt, setNegativePrompt] = useState('');
-    const [seed, setSeed] = useState('');
-    const [referenceImageUrl, setReferenceImageUrl] = useState('');
-    const [searchQuery, setSearchQuery] = useState('');
-    const [communityListings, setCommunityListings] = useState<GalleryListing[]>([]);
-    const [isCommunityLoading, setIsCommunityLoading] = useState(false);
-    const [projectId, setProjectId] = useState<string | null>(null);
-    const [isProjectLoading, setIsProjectLoading] = useState(false);
-    const [isProjectSaving, setIsProjectSaving] = useState(false);
-    const [projectError, setProjectError] = useState<string | null>(null);
+    const [state, dispatch] = useReducer(studioReducer, initialStudioState);
+    const {
+        activeContentTab,
+        selectedModel,
+        selectedAspectRatio,
+        selectedQuality,
+        selectedProvider,
+        prompt,
+        negativePrompt,
+        seed,
+        referenceImageUrl,
+        searchQuery,
+        communityListings,
+        isCommunityLoading,
+        projectId,
+        isProjectLoading,
+        isProjectSaving,
+        projectError,
+    } = state;
 
     const { startGeneration, reset, isGenerating, currentGeneration, error, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { balance, fetchBalance } = useCreditStore();
@@ -138,23 +260,10 @@ function StudioPageContent() {
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
-        setProjectId(requestedProjectId);
+        dispatch({ type: 'setProjectId', projectId: requestedProjectId });
 
         const applySnapshot = (snapshot: Partial<ImageSnapshot>) => {
-            setActiveContentTab(snapshot.activeContentTab ?? CONTENT_TABS[2]);
-            setSelectedModel(snapshot.selectedModel ?? IMAGE_MODELS[0].id);
-            setSelectedAspectRatio(snapshot.selectedAspectRatio ?? '1:1');
-            setSelectedQuality(snapshot.selectedQuality ?? 'hd');
-            setSelectedProvider(snapshot.selectedProvider ?? '');
-            setPrompt(snapshot.prompt ?? '');
-            setNegativePrompt(snapshot.negativePrompt ?? '');
-            setSeed(snapshot.seed ?? '');
-            setReferenceImageUrl(snapshot.referenceImageUrl ?? '');
-            setSearchQuery(snapshot.searchQuery ?? '');
-            setProjectError(null);
-            if (snapshot.currentTab) {
-                setActiveContentTab(snapshot.currentTab);
-            }
+            dispatch({ type: 'applySnapshot', snapshot });
         };
 
         const loadDraft = () => {
@@ -174,7 +283,7 @@ function StudioPageContent() {
         }
 
         let cancelled = false;
-        setIsProjectLoading(true);
+        dispatch({ type: 'setIsProjectLoading', isProjectLoading: true });
 
         void (async () => {
             try {
@@ -185,12 +294,12 @@ function StudioPageContent() {
             } catch (error) {
                 console.error('Failed to load image project', error);
                 if (!cancelled) {
-                    setProjectError('Loaded local draft because backend project load failed.');
+                    dispatch({ type: 'setProjectError', projectError: 'Loaded local draft because backend project load failed.' });
                     loadDraft();
                 }
             } finally {
                 if (!cancelled) {
-                    setIsProjectLoading(false);
+                    dispatch({ type: 'setIsProjectLoading', isProjectLoading: false });
                 }
             }
         })();
@@ -198,7 +307,7 @@ function StudioPageContent() {
         return () => {
             cancelled = true;
         };
-    }, [searchParams]);
+    }, [searchParamsSnapshot]);
 
     useEffect(() => {
         if (!imageProviders.length) {
@@ -206,7 +315,7 @@ function StudioPageContent() {
         }
 
         if (!selectedProvider || !imageProviders.some((provider) => provider.name === selectedProvider)) {
-            setSelectedProvider(imageProviders[0].name);
+            dispatch({ type: 'setSelectedProvider', selectedProvider: imageProviders[0].name });
         }
     }, [imageProviders, selectedProvider]);
 
@@ -223,14 +332,14 @@ function StudioPageContent() {
             return () => window.clearTimeout(handle);
         } else if (activeContentTab === CONTENT_TABS[1]) { // Community
             const fetchCommunity = async () => {
-                setIsCommunityLoading(true);
+                dispatch({ type: 'setIsCommunityLoading', isCommunityLoading: true });
                 try {
                     const res = await import('@/lib/api').then((m) => m.get<{ data: GalleryListing[] }>(`/community-marketplace/listings?type=${TemplateTypeEnum.IMAGE_GENERATOR}&limit=20`));
-                    setCommunityListings(res.data || []);
+                    dispatch({ type: 'setCommunityListings', communityListings: res.data || [] });
                 } catch (err) {
                     console.error('Failed to fetch community listings', err);
                 } finally {
-                    setIsCommunityLoading(false);
+                    dispatch({ type: 'setIsCommunityLoading', isCommunityLoading: false });
                 }
             };
             fetchCommunity();
@@ -273,7 +382,7 @@ function StudioPageContent() {
         try {
             const uploaded = await mediaApi.uploadMedia(file);
             if (uploaded?.url) {
-                setReferenceImageUrl(uploaded.url);
+                dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: uploaded.url });
                 toast.success('Reference image uploaded.');
             } else {
                 toast.error('Failed to upload reference image.');
@@ -288,17 +397,10 @@ function StudioPageContent() {
 
     const handleResetForm = () => {
         reset();
-        setSelectedModel(IMAGE_MODELS[0].id);
-        setSelectedAspectRatio('1:1');
-        setSelectedQuality('hd');
-        setSelectedProvider(imageProviders[0]?.name || '');
-        setPrompt('');
-        setNegativePrompt('');
-        setSeed('');
-        setReferenceImageUrl('');
-        setSearchQuery('');
-        setActiveContentTab(CONTENT_TABS[2]);
-        setProjectError(null);
+        dispatch({
+            type: 'resetForm',
+            selectedProvider: imageProviders[0]?.name || '',
+        });
     };
 
     const handleSaveProject = () => {
@@ -324,7 +426,7 @@ function StudioPageContent() {
         localStorage.setItem('image-generator:draft:v1', JSON.stringify(payload));
 
         const persistProject = async () => {
-            setIsProjectSaving(true);
+            dispatch({ type: 'setIsProjectSaving', isProjectSaving: true });
             try {
                 if (projectId) {
                     await projectApi.update(projectId, {
@@ -338,18 +440,18 @@ function StudioPageContent() {
                         description: 'Image generator draft',
                         content: payload,
                     });
-                    setProjectId(created.project.id);
+                    dispatch({ type: 'setProjectId', projectId: created.project.id });
                     replace(`${window.location.pathname}?projectId=${created.project.id}`);
                 }
 
-                setProjectError(null);
+                dispatch({ type: 'setProjectError', projectError: null });
                 toast.success('Image generator draft saved to your projects.');
             } catch (error) {
                 console.error('Failed to persist image project', error);
-                setProjectError('Saved locally, but backend project save failed.');
+                dispatch({ type: 'setProjectError', projectError: 'Saved locally, but backend project save failed.' });
                 toast.error('Saved locally, but backend project save failed.');
             } finally {
-                setIsProjectSaving(false);
+                dispatch({ type: 'setIsProjectSaving', isProjectSaving: false });
             }
         };
 
@@ -388,7 +490,7 @@ function StudioPageContent() {
                 <div className="min-h-0 flex-1 overflow-y-auto p-4  gap-y-6">
                     {/* Browse Templates Button */}
                     <button 
-                        onClick={() => setActiveContentTab(CONTENT_TABS[2])}
+                        onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: CONTENT_TABS[2] })}
                         className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
                     >
                         <div className="flex items-center gap-3">
@@ -406,7 +508,7 @@ function StudioPageContent() {
                         <div className="bg-card rounded-xl border border-border px-4 py-3">
                             <select
                                 value={selectedModel}
-                                onChange={(event) => setSelectedModel(event.target.value)}
+                                onChange={(event) => dispatch({ type: 'setSelectedModel', selectedModel: event.target.value })}
                                 className="w-full bg-transparent text-sm outline-none"
                             >
                                 {IMAGE_MODELS.map((model) => (
@@ -426,7 +528,7 @@ function StudioPageContent() {
                         <div className="bg-card rounded-xl border border-border px-4 py-3">
                             <select
                                 value={selectedProvider}
-                                onChange={(event) => setSelectedProvider(event.target.value)}
+                                onChange={(event) => dispatch({ type: 'setSelectedProvider', selectedProvider: event.target.value })}
                                 className="w-full bg-transparent text-sm outline-none"
                                 disabled={isProvidersLoading}
                             >
@@ -452,7 +554,7 @@ function StudioPageContent() {
                         <div className="bg-card rounded-xl border border-border p-2 flex-1">
                             <textarea
                                 value={prompt}
-                                onChange={(e) => setPrompt(e.target.value)}
+                                    onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
                                 placeholder="Describe what you want to create?"
                                 className="w-full h-40 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
@@ -466,7 +568,7 @@ function StudioPageContent() {
                                 <div className="bg-card rounded-xl border border-border px-4 py-3">
                                     <select
                                         value={selectedAspectRatio}
-                                        onChange={(event) => setSelectedAspectRatio(event.target.value)}
+                                        onChange={(event) => dispatch({ type: 'setSelectedAspectRatio', selectedAspectRatio: event.target.value })}
                                         className="w-full bg-transparent text-sm outline-none"
                                     >
                                         <option value="1:1">1:1</option>
@@ -482,7 +584,7 @@ function StudioPageContent() {
                                 <div className="bg-card rounded-xl border border-border px-4 py-3">
                                     <select
                                         value={selectedQuality}
-                                        onChange={(event) => setSelectedQuality(event.target.value as 'standard' | 'hd' | '4k')}
+                                        onChange={(event) => dispatch({ type: 'setSelectedQuality', selectedQuality: event.target.value as 'standard' | 'hd' | '4k' })}
                                         className="w-full bg-transparent text-sm outline-none"
                                     >
                                         <option value="standard">Standard</option>
@@ -498,7 +600,7 @@ function StudioPageContent() {
                             <div className="bg-card rounded-xl border border-border p-2">
                                 <textarea
                                     value={negativePrompt}
-                                    onChange={(event) => setNegativePrompt(event.target.value)}
+                                    onChange={(event) => dispatch({ type: 'setNegativePrompt', negativePrompt: event.target.value })}
                                     placeholder="Things to avoid, e.g. blurry, text, watermark?"
                                     className="w-full h-24 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                                 />
@@ -511,7 +613,7 @@ function StudioPageContent() {
                                 <Input
                                     type="number"
                                     value={seed}
-                                    onChange={(event) => setSeed(event.target.value)}
+                                    onChange={(event) => dispatch({ type: 'setSeed', seed: event.target.value })}
                                     placeholder="Optional"
                                     className="h-10"
                                 />
@@ -522,7 +624,7 @@ function StudioPageContent() {
                                     <Input
                                         type="url"
                                         value={referenceImageUrl}
-                                        onChange={(event) => setReferenceImageUrl(event.target.value)}
+                                        onChange={(event) => dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: event.target.value })}
                                         placeholder="https://?"
                                         className="h-10"
                                     />
@@ -542,7 +644,7 @@ function StudioPageContent() {
                                                 variant="ghost"
                                                 size="sm"
                                                 className="h-8 px-3"
-                                                onClick={() => setReferenceImageUrl('')}
+                                                onClick={() => dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: '' })}
                                             >
                                                 Clear
                                             </Button>
@@ -650,7 +752,7 @@ function StudioPageContent() {
                         {CONTENT_TABS.map((tab) => (
                             <button
                                 key={tab}
-                                onClick={() => setActiveContentTab(tab)}
+                                onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: tab })}
                                 className={cn(
                                     "px-4 py-2 text-sm font-medium rounded-full transition-colors flex items-center gap-2",
                                     activeContentTab === tab
@@ -670,7 +772,7 @@ function StudioPageContent() {
                             <Input
                                 type="text"
                                 value={searchQuery}
-                                onChange={(event) => setSearchQuery(event.target.value)}
+                                onChange={(event) => dispatch({ type: 'setSearchQuery', searchQuery: event.target.value })}
                                 placeholder={
                                     activeContentTab === CONTENT_TABS[0]
                                         ? 'Search your generations'
@@ -711,7 +813,7 @@ function StudioPageContent() {
                             ) : filteredCommunityListings.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                     {filteredCommunityListings.map((listing) => (
-                                        <TemplateCard key={listing.id} template={listing} onClick={() => setPrompt(listing.title)} />
+                                        <TemplateCard key={listing.id} template={listing} onClick={() => dispatch({ type: 'setPrompt', prompt: listing.title })} />
                                     ))}
                                 </div>
                             ) : (
@@ -721,7 +823,7 @@ function StudioPageContent() {
                     )}
 
                     {activeContentTab === CONTENT_TABS[2] && ( // Templates
-                        <TemplatesTab onSelectPrompt={setPrompt} searchTerm={searchQuery} />
+                        <TemplatesTab onSelectPrompt={(value) => dispatch({ type: 'setPrompt', prompt: value })} searchTerm={searchQuery} />
                     )}
 
                     {activeContentTab === CONTENT_TABS[3] && ( // Tutorials
