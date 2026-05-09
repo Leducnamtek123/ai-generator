@@ -24,6 +24,17 @@ If you want image and video generation to use your local NVIDIA GPU:
 
 The stack is already wired to ComfyUI in `docker/.env`, and the image result URL is rewritten to `http://localhost:8188` so the browser can open the generated file directly.
 
+### 16GB GPU fit
+
+For an RTX 5070 Ti class card with 16GB VRAM, the best fit in this repo is:
+
+- `SDXL base 1.0` for the current image workflow. This is the safest local baseline and matches the workflow already checked into `docker/comfyui-workflows/`.
+- `FLUX.1-schnell` if you want a faster local ComfyUI image model with strong quality.
+- `FLUX.1-dev` in FP8 form if you want the higher-quality FLUX path and accept a heavier setup.
+- `Stable Diffusion 3.5 Medium` if you want a newer balanced model and are okay with a larger model bundle.
+
+In ComfyUI settings, use lower-precision encoders when VRAM gets tight. The official ComfyUI docs recommend `fp8` text encoder settings for lower memory use, and note that `fp32` VAE is for users with 16GB+ VRAM who want the highest quality.
+
 ## Project Structure
 
 - `frontend/`: React/Next.js frontend.
