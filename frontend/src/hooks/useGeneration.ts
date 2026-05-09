@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback } from 'react';
+import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 import {
     generateImage,
@@ -13,18 +13,7 @@ import {
     UpscaleImageParams,
     EnhancePromptParams,
 } from '@/lib/api/generations';
-
-function getGenerationErrorMessage(err: unknown, fallback: string) {
-    if (typeof err === 'object' && err !== null) {
-        const maybeError = err as {
-            response?: { data?: { message?: string } };
-            message?: string;
-        };
-        return maybeError.response?.data?.message || maybeError.message || fallback;
-    }
-
-    return fallback;
-}
+import { getUserFacingErrorMessage, isAbortError } from '@/lib/async-operation';
 
 interface UseGenerationReturn {
     isGenerating: boolean;
@@ -47,73 +36,89 @@ export function useGeneration(): UseGenerationReturn {
         setError(null);
     }, []);
 
-    const handleGenerateImage = useCallback(async (params: GenerateImageParams) => {
-        setIsGenerating(true);
-        setError(null);
-        let result: GenerationResult | null = null;
-        try {
-            result = await generateImage(params);
-            setResult(result);
-            toast.success('Image generation started!');
-        } catch (err: unknown) {
-            const msg = getGenerationErrorMessage(err, 'Failed to generate image');
-            setError(msg);
-            toast.error(msg);
-        }
-        setIsGenerating(false);
-        return result;
-    }, []);
+    const runGeneration = useCallback(
+        async <T,>(runner: () => Promise<T>, fallback: string, successMessage: string) => {
+            setIsGenerating(true);
+            setError(null);
 
-    const handleGenerateVideo = useCallback(async (params: GenerateVideoParams) => {
-        setIsGenerating(true);
-        setError(null);
-        let result: GenerationResult | null = null;
-        try {
-            result = await generateVideo(params);
-            setResult(result);
-            toast.success('Video generation started!');
-        } catch (err: unknown) {
-            const msg = getGenerationErrorMessage(err, 'Failed to generate video');
-            setError(msg);
-            toast.error(msg);
-        }
-        setIsGenerating(false);
-        return result;
-    }, []);
+            try {
+                const value = await runner();
+                toast.success(successMessage);
+                return value;
+            } catch (err: unknown) {
+                const msg = getUserFacingErrorMessage(err, fallback);
+                setError(msg);
+                if (!isAbortError(err)) {
+                    toast.error(msg);
+                }
+                return null;
+            } finally {
+                setIsGenerating(false);
+            }
+        },
+        [],
+    );
 
-    const handleUpscaleImage = useCallback(async (params: UpscaleImageParams) => {
-        setIsGenerating(true);
-        setError(null);
-        let result: GenerationResult | null = null;
-        try {
-            result = await upscaleImage(params);
-            setResult(result);
-            toast.success('Upscale started!');
-        } catch (err: unknown) {
-            const msg = getGenerationErrorMessage(err, 'Failed to upscale image');
-            setError(msg);
-            toast.error(msg);
-        }
-        setIsGenerating(false);
-        return result;
-    }, []);
+    const handleGenerateImage = useCallback(
+        async (params: GenerateImageParams) => {
+            const generated = await runGeneration(
+                () => generateImage(params),
+                'Failed to generate image',
+                'Image generation started!',
+            );
+            if (generated) {
+                setResult(generated);
+            }
+            return generated;
+        },
+        [runGeneration],
+    );
 
-    const handleEnhancePrompt = useCallback(async (params: EnhancePromptParams) => {
-        setIsGenerating(true);
-        setError(null);
-        let result: string | null = null;
-        try {
-            const res = await enhancePrompt(params);
-            toast.success('Prompt enhanced!');
-            result = res.enhancedPrompt;
-        } catch (err: unknown) {
-            const msg = getGenerationErrorMessage(err, 'Failed to enhance prompt');
-            setError(msg);
-            toast.error(msg);
-        }
-        setIsGenerating(false);
-        return result;
-    }, []);
+    const handleGenerateVideo = useCallback(
+        async (params: GenerateVideoParams) => {
+            const generated = await runGeneration(
+                () => generateVideo(params),
+                'Failed to generate video',
+                'Video generation started!',
+            );
+            if (generated) {
+                setResult(generated);
+            }
+            return generated;
+        },
+        [runGeneration],
+    );
+
+    const handleUpscaleImage = useCallback(
+        async (params: UpscaleImageParams) => {
+            const generated = await runGeneration(
+                () => upscaleImage(params),
+                'Failed to upscale image',
+                'Upscale started!',
+            );
+            if (generated) {
+                setResult(generated);
+            }
+            return generated;
+        },
+        [runGeneration],
+    );
+
+    const handleEnhancePrompt = useCallback(
+        async (params: EnhancePromptParams) => {
+            const generated = await runGeneration(
+                () => enhancePrompt(params),
+                'Failed to enhance prompt',
+                'Prompt enhanced!',
+            );
+            if (generated && typeof generated === 'object' && 'enhancedPrompt' in generated) {
+                const value = generated as { enhancedPrompt?: string };
+                return value.enhancedPrompt ?? null;
+            }
+            return null;
+        },
+        [runGeneration],
+    );
 
     return {
         isGenerating,

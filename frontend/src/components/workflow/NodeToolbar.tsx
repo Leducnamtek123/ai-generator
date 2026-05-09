@@ -24,19 +24,19 @@ export function NodeToolbar({ nodeId, onRun, onRunLocal, runDisabled, onDelete, 
         <div className="absolute -top-14 left-1/2 flex -translate-x-1/2 items-center gap-1 rounded-lg border border-border/70 bg-[#0b0e13]/95 px-1.5 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.42)] backdrop-blur-xl z-50 animate-in fade-in slide-in-from-bottom-2 duration-200">
             {onRun && (
                 <ToolbarButton onClick={onRun} tooltip="Run Workflow" disabled={runDisabled} tooltipEnabled={richTooltips}>
-                    <Play className="w-4 h-4" />
+                    <Play className="size-4" />
                 </ToolbarButton>
             )}
 
             {onRunLocal && (
                 <ToolbarButton onClick={onRunLocal} tooltip="Run Local" disabled={runDisabled} tooltipEnabled={richTooltips}>
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="size-4" />
                 </ToolbarButton>
             )}
 
             {onReference && (
                 <ToolbarButton onClick={onReference} tooltip="Reference" tooltipEnabled={richTooltips}>
-                    <ArrowUpRight className="w-4 h-4" />
+                    <ArrowUpRight className="size-4" />
                 </ToolbarButton>
             )}
 
@@ -44,24 +44,24 @@ export function NodeToolbar({ nodeId, onRun, onRunLocal, runDisabled, onDelete, 
 
             {onReplace && (
                 <ToolbarButton onClick={onReplace} tooltip="Replace" tooltipEnabled={richTooltips}>
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className="size-4" />
                 </ToolbarButton>
             )}
 
             {onSettings && (
                 <ToolbarButton onClick={onSettings} tooltip="Specs" tooltipEnabled={richTooltips}>
-                    <Settings className="w-4 h-4" />
+                    <Settings className="size-4" />
                 </ToolbarButton>
             )}
 
             <div className="w-px h-5 bg-border mx-1" />
 
             <ToolbarButton onClick={onDuplicate} tooltip="Duplicate" tooltipEnabled={richTooltips}>
-                <Copy className="w-4 h-4" />
+                <Copy className="size-4" />
             </ToolbarButton>
 
             <ToolbarButton onClick={onDelete} className="hover:text-red-400 hover:bg-red-500/10" tooltip="Delete" tooltipEnabled={richTooltips}>
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="size-4" />
             </ToolbarButton>
         </div>
     );

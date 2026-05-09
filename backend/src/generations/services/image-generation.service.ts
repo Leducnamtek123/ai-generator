@@ -24,6 +24,19 @@ export class ImageGenerationService {
     userId: string,
     projectId?: string,
   ): Promise<GenerationEntity> {
+    const requestId = dto.metadata?.requestId as string | undefined;
+    await this.baseService.assertProjectAccess(
+      projectId ?? (dto as any).metadata?.projectId,
+      userId,
+    );
+    const existingGeneration = await this.baseService.findByRequestId(
+      userId,
+      'image',
+      requestId,
+    );
+    if (existingGeneration) {
+      return existingGeneration;
+    }
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getImageProvider().name,
@@ -49,6 +62,7 @@ export class ImageGenerationService {
           projectId,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
+          requestId,
           ...(dto.metadata || {}),
         },
       });
@@ -110,6 +124,7 @@ export class ImageGenerationService {
           };
 
           await this.baseService.save(generation);
+          await this.baseService.saveAsset(generation, projectId);
           try {
             await this.baseService.captureCredits(
               userId,
@@ -117,12 +132,22 @@ export class ImageGenerationService {
               'image',
             );
           } catch (captureError: any) {
-            this.logger.error(
+            this.logger.warn(
               `Failed to capture credits for image generation ${generation.id}: ${captureError.message}`,
             );
+            generation.metadata = {
+              ...generation.metadata,
+              creditCaptureError: captureError.message,
+            };
+            await this.baseService.save(generation);
           }
-          await this.baseService.saveAsset(generation, projectId);
-          this.eventsService.emitUpdate(generation, projectId);
+          try {
+            this.eventsService.emitUpdate(generation, projectId);
+          } catch (emitError: any) {
+            this.logger.error(
+              `Failed to emit image generation update ${generation.id}: ${emitError.message}`,
+            );
+          }
           return providerResult;
         },
         preferredProvider,
@@ -155,6 +180,24 @@ export class ImageGenerationService {
     userId: string,
     projectId?: string,
   ): Promise<GenerationEntity> {
+    const requestId = (
+      dto as UpscaleImageDto & { metadata?: { requestId?: string } }
+    ).metadata?.requestId;
+    const metadataProjectId = (
+      dto as UpscaleImageDto & { metadata?: { projectId?: string } }
+    ).metadata?.projectId;
+    await this.baseService.assertProjectAccess(
+      projectId ?? metadataProjectId,
+      userId,
+    );
+    const existingGeneration = await this.baseService.findByRequestId(
+      userId,
+      'upscale',
+      requestId,
+    );
+    if (existingGeneration) {
+      return existingGeneration;
+    }
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getUpscaleProvider().name,
@@ -187,6 +230,7 @@ export class ImageGenerationService {
           prompt: dto.prompt,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
+          requestId,
         },
       });
     } catch (error) {
@@ -250,6 +294,7 @@ export class ImageGenerationService {
           };
 
           await this.baseService.save(generation);
+          await this.baseService.saveAsset(generation, projectId);
           try {
             await this.baseService.captureCredits(
               userId,
@@ -257,11 +302,15 @@ export class ImageGenerationService {
               'upscale',
             );
           } catch (captureError: any) {
-            this.logger.error(
+            this.logger.warn(
               `Failed to capture credits for upscale ${generation.id}: ${captureError.message}`,
             );
+            generation.metadata = {
+              ...generation.metadata,
+              creditCaptureError: captureError.message,
+            };
+            await this.baseService.save(generation);
           }
-          await this.baseService.saveAsset(generation, projectId);
           return providerResult;
         },
         preferredProvider,
@@ -293,6 +342,19 @@ export class ImageGenerationService {
     userId: string,
     type: string,
   ): Promise<GenerationEntity> {
+    const requestId = dto.metadata?.requestId as string | undefined;
+    await this.baseService.assertProjectAccess(
+      dto.projectId ?? dto.metadata?.projectId,
+      userId,
+    );
+    const existingGeneration = await this.baseService.findByRequestId(
+      userId,
+      type,
+      requestId,
+    );
+    if (existingGeneration) {
+      return existingGeneration;
+    }
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getImageProcessingProvider(type).name,
@@ -312,6 +374,7 @@ export class ImageGenerationService {
           provider: preferredProvider,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
+          requestId,
         },
       });
     } catch (error) {
@@ -348,6 +411,7 @@ export class ImageGenerationService {
     reservation: { transactionId: string; amount: number },
   ): Promise<void> {
     try {
+      const imageUrl = dto.imageUrl || dto.sketchUrl;
       const result = await this.providerRegistry.executeWithFallback(
         type as any,
         async (provider) => {
@@ -356,7 +420,7 @@ export class ImageGenerationService {
 
           const providerResult = await provider.processImage({
             type,
-            imageUrl: dto.imageUrl,
+            imageUrl,
             prompt: dto.prompt,
             strength: dto.strength,
             ...dto,
@@ -373,6 +437,7 @@ export class ImageGenerationService {
           };
 
           await this.baseService.save(generation);
+          await this.baseService.saveAsset(generation);
           try {
             await this.baseService.captureCredits(
               userId,
@@ -380,11 +445,15 @@ export class ImageGenerationService {
               type,
             );
           } catch (captureError: any) {
-            this.logger.error(
+            this.logger.warn(
               `Failed to capture credits for ${type} processing ${generation.id}: ${captureError.message}`,
             );
+            generation.metadata = {
+              ...generation.metadata,
+              creditCaptureError: captureError.message,
+            };
+            await this.baseService.save(generation);
           }
-          await this.baseService.saveAsset(generation);
           return providerResult;
         },
         preferredProvider,

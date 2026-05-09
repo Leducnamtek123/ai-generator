@@ -5,6 +5,7 @@ import { Repository } from 'typeorm';
 import { GenerationEntity } from '../entities/generation.entity';
 import { AssetsService } from '../../assets/assets.service';
 import { BillingCreditsClientService } from '../../billing-client/billing-credits-client.service';
+import { ProjectsService } from '../../projects/projects.service';
 
 export type CreditReservation = {
   transactionId: string;
@@ -23,14 +24,42 @@ export class GenerationBaseService {
     private readonly generationsRepository: Repository<GenerationEntity>,
     private readonly billingCreditsClient: BillingCreditsClientService,
     private readonly assetsService: AssetsService,
+    private readonly projectsService: ProjectsService,
   ) {}
 
+  async assertProjectAccess(
+    projectId: string | undefined,
+    userId: string,
+  ): Promise<void> {
+    if (!projectId) return;
+    await this.projectsService.findOne(projectId, userId);
+  }
+
   async findOne(id: string): Promise<GenerationEntity> {
-    const generation = await this.generationsRepository.findOne({ where: { id } });
+    const generation = await this.generationsRepository.findOne({
+      where: { id },
+    });
     if (!generation) {
       throw new NotFoundException(`Generation with ID ${id} not found`);
     }
     return generation;
+  }
+
+  async findByRequestId(
+    userId: string,
+    type: string,
+    requestId?: string,
+  ): Promise<GenerationEntity | null> {
+    if (!requestId) return null;
+
+    return this.generationsRepository
+      .createQueryBuilder('generation')
+      .where('generation.userId = :userId', { userId })
+      .andWhere('generation.type = :type', { type })
+      .andWhere(`generation.metadata ->> 'requestId' = :requestId`, {
+        requestId,
+      })
+      .getOne();
   }
 
   async save(generation: GenerationEntity): Promise<GenerationEntity> {
@@ -42,12 +71,27 @@ export class GenerationBaseService {
     return this.generationsRepository.save(generation);
   }
 
-  async reserveCredits(userId: string, type: string): Promise<CreditReservation> {
+  async reserveCredits(
+    userId: string,
+    type: string,
+  ): Promise<CreditReservation> {
     const costs: Record<string, number> = {
-      image: 1, video: 5, upscale: 1, music: 2, sfx: 1, voice: 1,
-      'lip-sync': 3, 'video-upscale': 5, 'bg-remove': 1, 'sketch-to-image': 1,
-      variations: 1, 'camera-change': 1, 'icon-gen': 1, 'image-extend': 1,
-      mockup: 1, 'skin-enhance': 1,
+      image: 1,
+      video: 5,
+      upscale: 1,
+      music: 2,
+      sfx: 1,
+      voice: 1,
+      'lip-sync': 3,
+      'video-upscale': 5,
+      'bg-remove': 1,
+      'sketch-to-image': 1,
+      variations: 1,
+      'camera-change': 1,
+      'icon-gen': 1,
+      'image-extend': 1,
+      mockup: 1,
+      'skin-enhance': 1,
     };
     const cost = costs[type] || 1;
     const referenceId = randomUUID();
@@ -70,11 +114,7 @@ export class GenerationBaseService {
     };
   }
 
-  async captureCredits(
-    userId: string,
-    transactionId: string,
-    type: string,
-  ) {
+  async captureCredits(userId: string, transactionId: string, type: string) {
     await this.billingCreditsClient.captureCredits(userId, transactionId, {
       generationType: type,
     });
@@ -99,11 +139,22 @@ export class GenerationBaseService {
     if (!generation.resultUrl) return;
 
     const assetTypeMap: Record<string, 'image' | 'video' | 'audio'> = {
-      image: 'image', upscale: 'image', 'bg-remove': 'image',
-      'sketch-to-image': 'image', variations: 'image', 'camera-change': 'image',
-      'icon-gen': 'image', 'image-extend': 'image', mockup: 'image', 'skin-enhance': 'image',
-      video: 'video', 'lip-sync': 'video', 'video-upscale': 'video',
-      music: 'audio', sfx: 'audio', voice: 'audio',
+      image: 'image',
+      upscale: 'image',
+      'bg-remove': 'image',
+      'sketch-to-image': 'image',
+      variations: 'image',
+      'camera-change': 'image',
+      'icon-gen': 'image',
+      'image-extend': 'image',
+      mockup: 'image',
+      'skin-enhance': 'image',
+      video: 'video',
+      'lip-sync': 'video',
+      'video-upscale': 'video',
+      music: 'audio',
+      sfx: 'audio',
+      voice: 'audio',
     };
 
     try {
@@ -116,7 +167,9 @@ export class GenerationBaseService {
       });
       this.logger.log(`Auto-saved asset for generation ${generation.id}`);
     } catch (err: any) {
-      this.logger.error(`Failed to save asset for generation ${generation.id}: ${err.message}`);
+      this.logger.error(
+        `Failed to save asset for generation ${generation.id}: ${err.message}`,
+      );
     }
   }
 

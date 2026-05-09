@@ -30,6 +30,33 @@ interface ExportPanelProps {
 
 type ExportStep = 'idle' | 'concat' | 'music' | 'narration' | 'done';
 
+const isMissingRenderedVideoError = (error: unknown) => {
+  let message = '';
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = error as {
+      response?: { data?: { message?: unknown } };
+    };
+    const responseMessage = response.response?.data?.message;
+    if (Array.isArray(responseMessage)) {
+      message = responseMessage.join(' ');
+    } else if (typeof responseMessage === 'string') {
+      message = responseMessage;
+    } else if (responseMessage !== undefined && responseMessage !== null) {
+      message = String(responseMessage);
+    }
+  } else if (error instanceof Error) {
+    message = error.message;
+  } else {
+    message = String(error);
+  }
+
+  return (
+    message.includes('No vertical videos found to concatenate') ||
+    message.includes('No horizontal videos found to concatenate') ||
+    message.includes('No videos found to concatenate')
+  );
+};
+
 // ─────────────────────────────────────────────
 // Export Panel Component
 // ─────────────────────────────────────────────
@@ -56,8 +83,29 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
       setStep('done');
       toast.success('Video exported successfully!');
     } catch (error) {
+      if (isMissingRenderedVideoError(error)) {
+        try {
+          const fallback = await visualFlowApi.pipeline.slideshow(projectId, videoId, {
+            orientation,
+            musicUrl: musicUrl || undefined,
+            musicVolume: musicVolume[0] / 100,
+            zoomEffect: true,
+          });
+          setResultUrl(fallback?.url || fallback?.outputUrl || null);
+          setStep('done');
+          toast.success('No rendered clips were ready yet, so a slideshow export was created instead.');
+          return;
+        } catch (fallbackError) {
+          console.error('Slideshow fallback failed', fallbackError);
+        }
+      }
+
       console.error('Export failed', error);
-      toast.error('Export failed');
+      toast.error(
+        isMissingRenderedVideoError(error)
+          ? 'No rendered scene videos were ready yet. Generate videos first or use the slideshow export.'
+          : 'Export failed',
+      );
       setStep('idle');
     }
   };
@@ -124,8 +172,8 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
     <div className="space-y-5">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
-          <Download className="w-4 h-4 text-emerald-400" />
+        <div className="size-8 rounded-lg bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center">
+          <Download className="size-4 text-emerald-400" />
         </div>
         <div>
           <h3 className="text-xs font-semibold text-white/70">Export & Finalize</h3>
@@ -159,7 +207,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
       {/* Music section */}
       <div className="space-y-2">
         <label className="text-[10px] text-white/30 uppercase tracking-widest font-medium flex items-center gap-1.5">
-          <Music className="w-3 h-3" /> Background Music
+          <Music className="size-3" /> Background Music
         </label>
         <Input
           value={musicUrl}
@@ -182,14 +230,14 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
             disabled={isGeneratingMusic || !musicPrompt.trim()}
             className="bg-pink-600/20 hover:bg-pink-600/30 text-pink-300 border border-pink-500/20 text-[10px] h-7"
           >
-            {isGeneratingMusic ? <Loader2 className="w-3 h-3 animate-spin" /> : <Music className="w-3 h-3" />}
+            {isGeneratingMusic ? <Loader2 className="size-3 animate-spin" /> : <Music className="size-3" />}
           </Button>
         </div>
 
         {/* Volume slider */}
         {musicUrl && (
           <div className="flex items-center gap-2">
-            <Volume2 className="w-3 h-3 text-white/20" />
+            <Volume2 className="size-3 text-white/20" />
             <Slider
               value={musicVolume}
               onValueChange={setMusicVolume}
@@ -210,11 +258,11 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
           className="w-full bg-emerald-600 hover:bg-emerald-500 text-white text-xs h-9"
         >
           {step === 'concat' ? (
-            <Loader2 className="w-4 h-4 animate-spin mr-2" />
+            <Loader2 className="size-4 animate-spin mr-2" />
           ) : step === 'done' ? (
-            <CheckCircle2 className="w-4 h-4 mr-2" />
+            <CheckCircle2 className="size-4 mr-2" />
           ) : (
-            <Film className="w-4 h-4 mr-2" />
+            <Film className="size-4 mr-2" />
           )}
           {step === 'done' ? 'Re-export Video' : 'Export Video'}
         </Button>
@@ -227,7 +275,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
             size="sm"
             className="border-white/[0.08] text-white/40 hover:bg-white/[0.04] text-[10px] h-7"
           >
-            <Settings2 className="w-3 h-3 mr-1" /> Slideshow
+            <Settings2 className="size-3 mr-1" /> Slideshow
           </Button>
           <Button
             onClick={handleNarration}
@@ -236,7 +284,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
             size="sm"
             className="border-white/[0.08] text-white/40 hover:bg-white/[0.04] text-[10px] h-7"
           >
-            <Mic2 className="w-3 h-3 mr-1" /> Narration
+            <Mic2 className="size-3 mr-1" /> Narration
           </Button>
         </div>
       </div>
@@ -245,7 +293,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
       {resultUrl && (
         <div className="rounded-lg bg-emerald-500/[0.06] border border-emerald-500/15 p-3 space-y-2">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+            <CheckCircle2 className="size-4 text-emerald-400" />
             <span className="text-xs text-emerald-300 font-medium">Export Complete</span>
           </div>
           <a
@@ -254,7 +302,7 @@ export function ExportPanel({ projectId, videoId, sceneCount }: ExportPanelProps
             rel="noopener noreferrer"
             className="flex items-center gap-2 text-[11px] text-emerald-400 hover:text-emerald-300 transition underline underline-offset-2"
           >
-            <Download className="w-3 h-3" />
+            <Download className="size-3" />
             Download Video
           </a>
         </div>

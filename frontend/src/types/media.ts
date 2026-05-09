@@ -3,7 +3,7 @@ export interface MediaItem {
     url: string;
     thumbnailUrl: string;
     name: string;
-    type: 'image' | 'video';
+    type: 'image' | 'video' | 'audio';
     mimeType: string;
     size: number;
     width?: number;

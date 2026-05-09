@@ -34,15 +34,25 @@ describe('FacebookMessengerController', () => {
     jest.clearAllMocks();
   });
 
+  it('should reject missing raw bodies', async () => {
+    await expect(
+      controller.handleWebhook('1', { foo: 'bar' }, 'sha256=bad'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('should reject missing signatures', async () => {
     await expect(
-      controller.handleWebhook('1', { foo: 'bar' }, undefined),
+      controller.handleWebhook('1', { foo: 'bar' }, undefined, {
+        rawBody: Buffer.from(JSON.stringify({ foo: 'bar' })),
+      } as never),
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
   it('should reject invalid signatures', async () => {
     await expect(
-      controller.handleWebhook('1', { foo: 'bar' }, 'sha256=bad'),
+      controller.handleWebhook('1', { foo: 'bar' }, 'sha256=bad', {
+        rawBody: Buffer.from(JSON.stringify({ foo: 'bar' })),
+      } as never),
     ).rejects.toBeInstanceOf(ForbiddenException);
   });
 

@@ -1,8 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
+import { mediaApi } from '@/services/mediaApi';
+import { projectApi } from '@/services/projectApi';
 import {
     Eraser,
     Upload,
@@ -17,6 +21,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 
 const bgOptions = [
     { id: 'transparent', label: 'Transparent', color: 'bg-[repeating-conic-gradient(#80808020_0%_25%,transparent_0%_50%)] bg-[length:16px_16px]' },
@@ -45,11 +50,54 @@ type BgRemoverState = {
     edgeRefinement: boolean;
 };
 
+type BgRemoverSnapshot = {
+    uploadedImage: string | null;
+    resultImage: string | null;
+    selectedBg: string;
+    qualityMode: BackgroundMode;
+    showOriginal: boolean;
+    edgeRefinement: boolean;
+};
+
+type BgRemoverProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<BgRemoverSnapshot>;
+};
+
+type BgRemoverLegacyDraft = Partial<BgRemoverSnapshot> & {
+    settings?: Partial<BgRemoverSnapshot>;
+    previewImage?: string | null;
+};
+
+const normalizeBgRemoverSnapshot = (value: unknown): Partial<BgRemoverSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+    const settings = (snapshot.settings && typeof snapshot.settings === 'object' ? snapshot.settings : undefined) as
+        | Record<string, unknown>
+        | undefined;
+    const stringValue = (input: unknown, fallback: string | null = null) => (typeof input === 'string' ? input : fallback);
+    const booleanValue = (input: unknown, fallback: boolean) => (typeof input === 'boolean' ? input : fallback);
+
+    return {
+        uploadedImage: stringValue(snapshot.uploadedImage, stringValue(settings?.uploadedImage)),
+        resultImage: stringValue(
+            snapshot.resultImage ?? snapshot.previewImage ?? settings?.resultImage ?? settings?.previewImage,
+            null,
+        ),
+        selectedBg: stringValue(snapshot.selectedBg, stringValue(settings?.selectedBg, initialState.selectedBg)) ?? initialState.selectedBg,
+        qualityMode: stringValue(snapshot.qualityMode, stringValue(settings?.qualityMode, initialState.qualityMode)) as BackgroundMode,
+        showOriginal: booleanValue(snapshot.showOriginal, booleanValue(settings?.showOriginal, initialState.showOriginal)),
+        edgeRefinement: booleanValue(snapshot.edgeRefinement, booleanValue(settings?.edgeRefinement, initialState.edgeRefinement)),
+    };
+};
+
 type BgRemoverAction =
     | { type: 'setUploadedImage'; uploadedImage: string | null }
     | { type: 'setSelectedBg'; selectedBg: string }
     | { type: 'setQualityMode'; qualityMode: BackgroundMode }
     | { type: 'setShowOriginal'; showOriginal: boolean }
+    | { type: 'setEdgeRefinement'; edgeRefinement: boolean }
     | { type: 'toggleOriginal' }
     | { type: 'toggleEdgeRefinement' }
     | { type: 'reset' };
@@ -72,6 +120,8 @@ function bgRemoverReducer(state: BgRemoverState, action: BgRemoverAction): BgRem
             return { ...state, qualityMode: action.qualityMode };
         case 'setShowOriginal':
             return { ...state, showOriginal: action.showOriginal };
+        case 'setEdgeRefinement':
+            return { ...state, edgeRefinement: action.edgeRefinement };
         case 'toggleOriginal':
             return { ...state, showOriginal: !state.showOriginal };
         case 'toggleEdgeRefinement':
@@ -86,53 +136,241 @@ function bgRemoverReducer(state: BgRemoverState, action: BgRemoverAction): BgRem
 export default function BgRemoverPage() {
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [state, dispatch] = useReducer(bgRemoverReducer, initialState);
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
+    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { removeBackground, currentGeneration, reset } = useGenerationStore();
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
     const isProcessing = currentGeneration?.status === 'pending' || currentGeneration?.status === 'processing';
     const resultImage = currentGeneration?.status === 'completed'
         ? currentGeneration.resultUrl || state.uploadedImage
-        : null;
+        : restoredResultImage;
     const previewImage = state.showOriginal || !resultImage ? state.uploadedImage : resultImage;
 
-    const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        const queryProjectId = searchParams.get('projectId');
+        if (queryProjectId) {
+            setProjectId(queryProjectId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrateFromSnapshot = (snapshot: Partial<BgRemoverSnapshot>) => {
+            dispatch({
+                type: 'setUploadedImage',
+                uploadedImage: snapshot.uploadedImage ?? initialState.uploadedImage,
+            });
+            dispatch({
+                type: 'setSelectedBg',
+                selectedBg: snapshot.selectedBg ?? initialState.selectedBg,
+            });
+            dispatch({
+                type: 'setQualityMode',
+                qualityMode: snapshot.qualityMode ?? initialState.qualityMode,
+            });
+            dispatch({
+                type: 'setShowOriginal',
+                showOriginal: snapshot.showOriginal ?? initialState.showOriginal,
+            });
+            dispatch({
+                type: 'setEdgeRefinement',
+                edgeRefinement: snapshot.edgeRefinement ?? initialState.edgeRefinement,
+            });
+            setRestoredResultImage(snapshot.resultImage ?? null);
+        };
+
+        const loadProject = async () => {
+            if (!projectId) {
+                try {
+                    const raw = localStorage.getItem('bg-remover:draft');
+                    if (raw) {
+                        const parsed = JSON.parse(raw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
+                        hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
+                    }
+                } catch (loadError) {
+                    console.error('Failed to restore background remover draft', loadError);
+                }
+                return;
+            }
+
+            setIsProjectLoading(true);
+            setProjectError(null);
+            try {
+                const project = await projectApi.get(projectId);
+                const rawContent = project.content as string | Record<string, unknown> | null | undefined;
+                const parsed = typeof rawContent === 'string'
+                    ? (JSON.parse(rawContent) as Partial<BgRemoverProjectPayload>)
+                    : ((rawContent && typeof rawContent === 'object' && 'snapshot' in rawContent
+                        ? (rawContent as { snapshot?: Partial<BgRemoverProjectPayload> }).snapshot
+                        : rawContent) ?? {}) as Partial<BgRemoverProjectPayload>;
+                if (!cancelled) {
+                    hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
+                }
+            } catch (loadError) {
+                console.error('Failed to restore background remover project', loadError);
+                if (!cancelled) {
+                    setProjectError('Could not load the saved background remover project. Falling back to a local draft.');
+                    try {
+                        const raw = localStorage.getItem('bg-remover:draft');
+                        if (raw) {
+                            const parsed = JSON.parse(raw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
+                            hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
+                        }
+                    } catch (fallbackError) {
+                        console.error('Failed to restore background remover fallback', fallbackError);
+                    }
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        };
+
+        void loadProject();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+
+    const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (!file) return;
 
         reset();
-        dispatch({ type: 'setUploadedImage', uploadedImage: URL.createObjectURL(file) });
+        setRestoredResultImage(null);
+        const uploaded = await mediaApi.uploadMedia(file);
+        if (!uploaded?.url) {
+            toast.error('Failed to upload image');
+            return;
+        }
+        dispatch({ type: 'setUploadedImage', uploadedImage: uploaded.url });
         dispatch({ type: 'setShowOriginal', showOriginal: false });
     };
 
     const handleRemoveBg = async () => {
         if (!state.uploadedImage) return;
 
-        await removeBackground({
-            imageUrl: state.uploadedImage,
-            mode: state.qualityMode === 'quality' ? 'person' : 'auto',
-            edgeRefinement: state.edgeRefinement ? 80 : 20,
-        });
+        try {
+            await removeBackground({
+                imageUrl: state.uploadedImage,
+                mode: state.qualityMode === 'quality' ? 'person' : 'auto',
+                edgeRefinement: state.edgeRefinement ? 80 : 20,
+            });
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Failed to remove background');
+        }
     };
 
-    const handleDrop = (event: React.DragEvent) => {
+    const handleSave = () => {
+        const snapshot: Partial<BgRemoverSnapshot> = {
+            uploadedImage: state.uploadedImage,
+            resultImage,
+            selectedBg: state.selectedBg,
+            qualityMode: state.qualityMode,
+            showOriginal: state.showOriginal,
+            edgeRefinement: state.edgeRefinement,
+        };
+        const payload: BgRemoverProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot,
+        };
+
+        localStorage.setItem('bg-remover:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Background Remover Draft',
+                        description: 'Background remover draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Background Remover Draft',
+                        description: 'Background remover draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                toast.success('Background remover saved to your projects.');
+            } catch (saveError) {
+                console.error('Failed to persist background remover project', saveError);
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExport = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            uploadedImage: state.uploadedImage,
+            resultImage,
+            settings: {
+                selectedBg: state.selectedBg,
+                qualityMode: state.qualityMode,
+                showOriginal: state.showOriginal,
+                edgeRefinement: state.edgeRefinement,
+            },
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'bg-remover-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Background remover export created.');
+    };
+
+    const handleDrop = async (event: React.DragEvent) => {
         event.preventDefault();
         const file = event.dataTransfer.files[0];
         if (!file || !file.type.startsWith('image/')) return;
 
         reset();
-        dispatch({ type: 'setUploadedImage', uploadedImage: URL.createObjectURL(file) });
+        const uploaded = await mediaApi.uploadMedia(file);
+        if (!uploaded?.url) {
+            toast.error('Failed to upload image');
+            return;
+        }
+        dispatch({ type: 'setUploadedImage', uploadedImage: uploaded.url });
         dispatch({ type: 'setShowOriginal', showOriginal: false });
     };
 
     const handleReset = () => {
         reset();
         dispatch({ type: 'reset' });
+        setRestoredResultImage(null);
+        setProjectError(null);
     };
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Background Remover</h2>
+                    <h2 className="font-semibold text-muted-foreground">Background Remover</h2>
+                    <span className="text-xs text-muted-foreground">
+                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                    </span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -148,8 +386,8 @@ export default function BgRemoverPage() {
                             </div>
                         ) : (
                             <>
-                                <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
-                                    <Upload className="w-6 h-6 text-muted-foreground group-hover:text-foreground" />
+                                <div className="size-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
+                                    <Upload className="size-6 text-muted-foreground group-hover:text-foreground" />
                                 </div>
                                 <div className="text-center">
                                     <p className="text-sm font-medium text-foreground">Upload Image</p>
@@ -162,7 +400,7 @@ export default function BgRemoverPage() {
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Processing Mode</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Processing Mode</h4>
                         <div className="space-y-2">
                             {qualityModes.map((mode) => (
                                     <button
@@ -177,10 +415,10 @@ export default function BgRemoverPage() {
                                         )}
                                     >
                                     <div className={cn(
-                                        "w-4 h-4 rounded-full border-2 flex items-center justify-center",
+                                        "size-4 rounded-full border-2 flex items-center justify-center",
                                         state.qualityMode === mode.id ? "border-primary" : "border-muted-foreground/30"
                                     )}>
-                                        {state.qualityMode === mode.id && <div className="w-2 h-2 rounded-full bg-primary" />}
+                                        {state.qualityMode === mode.id && <div className="size-2 rounded-full bg-primary" />}
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium">{mode.label}</p>
@@ -192,7 +430,7 @@ export default function BgRemoverPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Options</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Options</h4>
                         <button
                             type="button"
                             onClick={() => dispatch({ type: 'toggleEdgeRefinement' })}
@@ -204,7 +442,7 @@ export default function BgRemoverPage() {
                                 state.edgeRefinement ? "bg-primary" : "bg-muted-foreground/20"
                             )}>
                                 <div className={cn(
-                                    "w-4 h-4 rounded-full bg-white shadow-sm transition-transform",
+                                    "size-4 rounded-full bg-white shadow-sm transition-transform",
                                     state.edgeRefinement ? "translate-x-4" : "translate-x-0"
                                 )} />
                             </div>
@@ -212,7 +450,7 @@ export default function BgRemoverPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Background</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Background</h4>
                         <div className="grid grid-cols-4 gap-2">
                             {bgOptions.map((bg) => (
                                 <button
@@ -228,7 +466,7 @@ export default function BgRemoverPage() {
                                 >
                                     {state.selectedBg === bg.id && (
                                         <div className="w-full h-full flex items-center justify-center bg-gray-950/20">
-                                            <Check className="w-4 h-4 text-white drop-shadow" />
+                                            <Check className="size-4 text-white drop-shadow" />
                                         </div>
                                     )}
                                 </button>
@@ -244,17 +482,17 @@ export default function BgRemoverPage() {
                     </div>
                     <Button
                         onClick={handleRemoveBg}
-                        disabled={isProcessing || !state.uploadedImage}
+                        disabled={isProcessing || !state.uploadedImage || isProjectLoading || isProjectSaving}
                         className="w-full h-12 font-bold rounded-xl gap-2 shadow-sm"
                     >
                         {isProcessing ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 Processing...
                             </>
                         ) : (
                             <>
-                                <Eraser className="w-5 h-5" />
+                                <Eraser className="size-5" />
                                 Remove Background
                             </>
                         )}
@@ -267,21 +505,21 @@ export default function BgRemoverPage() {
                     <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0 animate-in fade-in slide-in-from-top-2">
                         <div className="flex items-center gap-2">
                     <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={() => dispatch({ type: 'toggleOriginal' })}>
-                                {state.showOriginal ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                {state.showOriginal ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
                                 {state.showOriginal ? 'Show Result' : 'Show Original'}
                             </Button>
                             <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleReset}>
-                                <RotateCcw className="w-4 h-4" />
+                                <RotateCcw className="size-4" />
                                 Reset
                             </Button>
                         </div>
                         <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="gap-2">
-                                <Folder className="w-4 h-4" />
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSave}>
+                                <Folder className="size-4" />
                                 Save
                             </Button>
-                            <Button size="sm" className="gap-2">
-                                <Download className="w-4 h-4" />
+                            <Button size="sm" className="gap-2" onClick={handleExport}>
+                                <Download className="size-4" />
                                 Export PNG
                             </Button>
                         </div>
@@ -291,8 +529,8 @@ export default function BgRemoverPage() {
                 <div className="flex-1 flex items-center justify-center p-8">
                     {!state.uploadedImage && !resultImage ? (
                         <div className="text-center space-y-4 animate-in fade-in duration-500">
-                            <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto">
-                                <Eraser className="w-8 h-8 text-muted-foreground" />
+                            <div className="size-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto">
+                                <Eraser className="size-8 text-muted-foreground" />
                             </div>
                             <div>
                                 <h3 className="text-lg font-semibold">Remove Image Background</h3>
@@ -309,8 +547,8 @@ export default function BgRemoverPage() {
                     ) : isProcessing ? (
                         <div className="flex flex-col items-center gap-6 animate-in fade-in duration-300">
                             <div className="relative">
-                                <div className="w-24 h-24 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                <Sparkles className="w-8 h-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                <div className="size-24 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                <Sparkles className="size-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <div className="text-center">
                                 <p className="font-medium">Removing background...</p>
@@ -350,6 +588,6 @@ export default function BgRemoverPage() {
                     )}
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }

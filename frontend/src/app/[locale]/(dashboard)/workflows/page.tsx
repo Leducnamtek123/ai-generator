@@ -46,11 +46,41 @@ export default function WorkflowsPage() {
     const [workflowName, setWorkflowName] = useState('');
     const [searchTerm, setSearchTerm] = useState('');
     const [workflowToDelete, setWorkflowToDelete] = useState<WorkflowType | null>(null);
+    const WORKFLOW_DRAFT_KEY = 'workflows:create-modal:draft';
 
     useEffect(() => {
         // Pre-fetch projects to ensure we have a default project ID for new workflows
         fetchProjects();
     }, [fetchProjects]);
+
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(WORKFLOW_DRAFT_KEY);
+            if (!raw) {
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as { workflowName?: unknown };
+            if (typeof parsed.workflowName === 'string') {
+                setWorkflowName(parsed.workflowName);
+            }
+        } catch (error) {
+            console.error('Failed to restore workflow draft', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!showCreateModal) {
+            return;
+        }
+
+        const draft = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            workflowName,
+        };
+        window.localStorage.setItem(WORKFLOW_DRAFT_KEY, JSON.stringify(draft));
+    }, [showCreateModal, workflowName]);
 
     useEffect(() => {
         if (activeTab === 'my') {
@@ -71,6 +101,7 @@ export default function WorkflowsPage() {
         if (newId) {
             setShowCreateModal(false);
             setWorkflowName('');
+            window.localStorage.removeItem(WORKFLOW_DRAFT_KEY);
             router.push(`/creator/workflow-editor?workflowId=${newId}`);
         }
     };
@@ -90,7 +121,7 @@ export default function WorkflowsPage() {
             {/* Hero Section */}
             <div className="px-8 py-12 border-b border-border">
                 <div className="max-w-lg">
-                    <h1 className="text-3xl font-bold text-foreground mb-2">
+                    <h1 className="text-3xl font-semibold text-foreground mb-2">
                         Workflows
                     </h1>
                     <p className="text-sm text-muted-foreground mb-6">
@@ -100,7 +131,7 @@ export default function WorkflowsPage() {
                         onClick={() => setShowCreateModal(true)}
                         className="gap-2 rounded-full px-5"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="size-4" />
                         New Workflow
                     </Button>
                 </div>
@@ -120,14 +151,14 @@ export default function WorkflowsPage() {
                                     : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <tab.icon className="w-4 h-4" />
+                            <tab.icon className="size-4" />
                             {tab.label}
                         </button>
                     ))}
                 </div>
 
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         type="text"
                         placeholder="Search workflows..."
@@ -148,7 +179,7 @@ export default function WorkflowsPage() {
                         ))
                     ) : filteredWorkflows.length === 0 ? (
                         <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
-                            <Workflow className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                            <Workflow className="size-12 mx-auto mb-4 opacity-20" />
                             <p>No workflows found.</p>
                         </div>
                     ) : (
@@ -173,7 +204,7 @@ export default function WorkflowsPage() {
                         onClick={() => setShowCreateModal(false)}
                     />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl">
-                        <h2 className="text-xl font-bold mb-4">Create New Workflow</h2>
+                        <h2 className="text-xl font-semibold mb-4">Create New Workflow</h2>
 
                         <div className="space-y-4 mb-6">
                             <div>
@@ -237,12 +268,12 @@ function WorkflowCard({
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl overflow-hidden hover:bg-accent/50 transition-all flex flex-col"
         >
             {/* Preview Section */}
-                <div className="aspect-video bg-muted/30 relative border-b border-border/50">
+            <div className="aspect-video bg-muted/30 relative border-b border-border/50">
                 {workflow.previewUrl ? (
                     <Image src={workflow.previewUrl} alt={workflow.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center text-muted-foreground/20">
-                        <Workflow className="w-12 h-12" />
+                        <Workflow className="size-12" />
                     </div>
                 )}
 
@@ -250,7 +281,7 @@ function WorkflowCard({
                 <div className="absolute top-2 right-2 flex gap-1">
                     {workflow.visibility === 'public' && (
                         <span className="px-1.5 py-0.5 rounded-md bg-gray-950/40 text-white text-[10px] backdrop-blur-sm flex items-center gap-1">
-                            <Globe className="w-3 h-3" /> Public
+                            <Globe className="size-3" /> Public
                         </span>
                     )}
                 </div>
@@ -268,7 +299,7 @@ function WorkflowCard({
                                 onClick={(e) => e.stopPropagation()}
                                 className="text-muted-foreground/50 hover:text-foreground transition-colors p-1 -mr-2 -mt-1 rounded-md hover:bg-white/5"
                             >
-                                <MoreHorizontal className="w-4 h-4" />
+                                <MoreHorizontal className="size-4" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
@@ -290,7 +321,7 @@ function WorkflowCard({
 
                 <div className="mt-auto pt-3 flex items-center justify-between text-[10px] text-muted-foreground/60 border-t border-border/50">
                     <span className="flex items-center gap-1">
-                        <Clock className="w-3 h-3" />
+                        <Clock className="size-3" />
                         {new Date(workflow.updatedAt).toLocaleDateString()}
                     </span>
                     <span className="flex items-center gap-1">

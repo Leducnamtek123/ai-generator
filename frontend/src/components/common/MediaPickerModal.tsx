@@ -4,7 +4,7 @@ import React, { useReducer, useCallback, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import {
     Search, Heart, Clock, Upload, Download, Folder,
-    Camera, Video as VideoIcon, Filter, Check
+    Camera, Video as VideoIcon, Filter, Check, Music2, Image as ImageIcon
 } from 'lucide-react';
 import { mediaApi } from '@/services/mediaApi';
 import { MediaItem, MediaFolder } from '@/types/media';
@@ -18,12 +18,13 @@ interface MediaPickerModalProps {
     isOpen: boolean;
     onClose: () => void;
     onSelect: (media: MediaItem) => void;
-    mediaType?: 'any' | 'image' | 'video';
+    mediaType?: 'any' | 'image' | 'video' | 'audio';
 }
 
 type MediaPickerState = {
     search: string;
     activeFolder: string;
+    typeFilter: 'all' | 'image' | 'video' | 'audio';
     items: MediaItem[];
     folders: MediaFolder[];
     loading: boolean;
@@ -36,6 +37,7 @@ type MediaPickerState = {
 type MediaPickerAction =
     | { type: 'setSearch'; search: string }
     | { type: 'setActiveFolder'; activeFolder: string }
+    | { type: 'setTypeFilter'; typeFilter: MediaPickerState['typeFilter'] }
     | { type: 'setItems'; items: MediaItem[] }
     | { type: 'setFolders'; folders: MediaFolder[] }
     | { type: 'setLoading'; loading: boolean }
@@ -48,6 +50,7 @@ type MediaPickerAction =
 const initialState: MediaPickerState = {
     search: '',
     activeFolder: 'uploads',
+    typeFilter: 'all',
     items: [],
     folders: [],
     loading: false,
@@ -63,6 +66,8 @@ function reducer(state: MediaPickerState, action: MediaPickerAction): MediaPicke
             return { ...state, search: action.search };
         case 'setActiveFolder':
             return { ...state, activeFolder: action.activeFolder };
+        case 'setTypeFilter':
+            return { ...state, typeFilter: action.typeFilter };
         case 'setItems':
             return { ...state, items: action.items };
         case 'setFolders':
@@ -114,9 +119,11 @@ export function MediaPickerModal({
     }, [isOpen, loadMedia, state.activeFolder]);
 
     // Filter items by type and search
+    const effectiveTypeFilter = mediaType === 'any' ? state.typeFilter : mediaType;
+
     const filteredItems = state.items.filter(item => {
         // Type filter
-        if (mediaType !== 'any' && item.type !== mediaType) {
+        if (effectiveTypeFilter !== 'all' && item.type !== effectiveTypeFilter) {
             return false;
         }
         // Search filter
@@ -139,6 +146,10 @@ export function MediaPickerModal({
         }
         if (mediaType === 'video' && !file.type.startsWith('video/')) {
             toast.error('Please select a video file');
+            return;
+        }
+        if (mediaType === 'audio' && !file.type.startsWith('audio/')) {
+            toast.error('Please select an audio file');
             return;
         }
 
@@ -212,7 +223,7 @@ export function MediaPickerModal({
                     <div className="w-48 border-r border-border p-4 space-y-1">
                         {/* Workspace Selector */}
                         <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-accent text-sm mb-4">
-                            <div className="w-6 h-6 rounded bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">P</div>
+                            <div className="size-6 rounded bg-primary flex items-center justify-center text-xs font-bold text-primary-foreground">P</div>
                             <span>Personal</span>
                         </button>
 
@@ -233,7 +244,7 @@ export function MediaPickerModal({
                                             : "text-muted-foreground hover:text-foreground hover:bg-accent"
                                     )}
                                 >
-                                    <Icon className="w-4 h-4" />
+                                    <Icon className="size-4" />
                                     <span>{folder.name}</span>
                                 </button>
                             );
@@ -241,7 +252,7 @@ export function MediaPickerModal({
 
                         <div className="pt-4 border-t border-border mt-4">
                             <button className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-colors">
-                                <Search className="w-4 h-4" />
+                                <Search className="size-4" />
                                 <span>Find inspiration</span>
                             </button>
                         </div>
@@ -250,34 +261,66 @@ export function MediaPickerModal({
                     {/* Main Content */}
                     <div className="flex-1 flex flex-col">
                         {/* Search Bar */}
-                        <div className="p-4 border-b border-border flex items-center gap-4">
-                            <div className="flex-1">
-                                <span className="text-sm font-medium capitalize">{state.activeFolder}</span>
-                                <span className="text-xs text-muted-foreground ml-2">February 2026</span>
+                        <div className="p-4 border-b border-border space-y-3">
+                            <div className="flex items-center gap-4">
+                                <div className="flex-1">
+                                    <span className="text-sm font-medium capitalize">{state.activeFolder}</span>
+                                    <span className="text-xs text-muted-foreground ml-2">February 2026</span>
+                                </div>
+                                <div className="relative">
+                                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                                    <Input
+                                        value={state.search}
+                                        onChange={(e) => dispatch({ type: 'setSearch', search: e.target.value })}
+                                        placeholder="Search..."
+                                        className="w-48 pl-9 pr-3 py-1 h-auto"
+                                    />
+                                </div>
+                                <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
+                                    <Filter className="size-4" />
+                                </button>
                             </div>
-                            <div className="relative">
-                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                <Input
-                                    value={state.search}
-                                    onChange={(e) => dispatch({ type: 'setSearch', search: e.target.value })}
-                                    placeholder="Search..."
-                                    className="w-48 pl-9 pr-3 py-1 h-auto"
-                                />
-                            </div>
-                            <button className="p-2 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors">
-                                <Filter className="w-4 h-4" />
-                            </button>
+
+                            {mediaType === 'any' && (
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        { id: 'all', label: 'All', icon: Folder },
+                                        { id: 'image', label: 'Images', icon: ImageIcon },
+                                        { id: 'video', label: 'Videos', icon: VideoIcon },
+                                        { id: 'audio', label: 'Audio', icon: Music2 },
+                                    ].map((filter) => {
+                                        const Icon = filter.icon;
+                                        const active = effectiveTypeFilter === filter.id;
+                                        return (
+                                            <button
+                                                key={filter.id}
+                                                type="button"
+                                                onClick={() => dispatch({ type: 'setTypeFilter', typeFilter: filter.id as MediaPickerState['typeFilter'] })}
+                                                className={cn(
+                                                    'inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+                                                    active
+                                                        ? 'bg-accent border-primary/20 text-foreground'
+                                                        : 'bg-background border-border text-muted-foreground hover:text-foreground hover:bg-accent',
+                                                )}
+                                            >
+                                                <Icon className="h-3.5 w-3.5" />
+                                                {filter.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
                         {/* Media Grid */}
                         <div className="flex-1 overflow-y-auto p-4">
                             {state.loading ? (
                                 <div className="flex items-center justify-center h-full">
-                                    <div className="w-8 h-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
+                                    <div className="size-8 border-2 border-muted border-t-primary rounded-full animate-spin" />
                                 </div>
                             ) : filteredItems.length === 0 ? (
                                 <div className="flex flex-col items-center justify-center h-full text-center">
-                                    <Upload className="w-12 h-12 text-muted-foreground/30 mb-4" />
+                                    <Upload className="size-12 text-muted-foreground/30 mb-4" />
                                     <p className="text-sm text-muted-foreground">No media found</p>
                                     <p className="text-xs text-muted-foreground/60 mt-1">Upload some files to get started</p>
                                 </div>
@@ -294,26 +337,44 @@ export function MediaPickerModal({
                                                     : "border-transparent hover:border-border"
                                             )}
                                         >
-                                            <Image
-                                                src={item.thumbnailUrl}
-                                                alt={item.name}
-                                                fill
-                                                className="object-cover"
-                                                sizes="(max-width: 1024px) 25vw, 12vw"
-                                            />
+                                            {item.type === 'audio' ? (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-card">
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+                                                        <Music2 className="h-6 w-6" />
+                                                    </div>
+                                                    <div className="px-2 text-center">
+                                                        <p className="text-[10px] font-medium line-clamp-2">{item.name}</p>
+                                                        <p className="mt-1 text-[9px] text-muted-foreground uppercase tracking-[0.12em]">Audio</p>
+                                                    </div>
+                                                </div>
+                                            ) : (
+                                                <Image
+                                                    src={item.thumbnailUrl}
+                                                    alt={item.name}
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="(max-width: 1024px) 25vw, 12vw"
+                                                />
+                                            )}
 
                                             {/* Video indicator */}
                                             {item.type === 'video' && (
                                                 <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white flex items-center gap-1">
-                                                    <VideoIcon className="w-3 h-3" />
+                                                    <VideoIcon className="size-3" />
                                                     {item.duration}s
+                                                </div>
+                                            )}
+                                            {item.type === 'audio' && (
+                                                <div className="absolute bottom-2 left-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white flex items-center gap-1">
+                                                    <Music2 className="size-3" />
+                                                    Audio
                                                 </div>
                                             )}
 
                                             {/* Selection indicator */}
                                             {state.selectedItem?.id === item.id && (
-                                                <div className="absolute top-2 right-2 w-6 h-6 bg-primary rounded-full flex items-center justify-center">
-                                                    <Check className="w-4 h-4 text-primary-foreground" />
+                                                <div className="absolute top-2 right-2 size-6 bg-primary rounded-full flex items-center justify-center">
+                                                    <Check className="size-4 text-primary-foreground" />
                                                 </div>
                                             )}
 
@@ -342,7 +403,7 @@ export function MediaPickerModal({
                         >
                             {state.isUploading ? (
                                 <>
-                                    <div className="w-16 h-16 rounded-full border-4 border-muted flex items-center justify-center relative">
+                                    <div className="size-16 rounded-full border-4 border-muted flex items-center justify-center relative">
                                         <div
                                             className="absolute inset-0 rounded-full border-4 border-primary border-t-transparent animate-spin"
                                         />
@@ -352,7 +413,7 @@ export function MediaPickerModal({
                                 </>
                             ) : (
                                 <>
-                                    <Upload className="w-8 h-8 text-muted-foreground/50" />
+                                    <Upload className="size-8 text-muted-foreground/50" />
                                     <div className="text-center">
                                         <p className="text-sm text-muted-foreground">Drop an image or upload your</p>
                                         <p className="text-sm text-muted-foreground">own media</p>
@@ -368,15 +429,15 @@ export function MediaPickerModal({
                             onClick={() => fileInputRef.current?.click()}
                             className="w-full gap-2"
                             >
-                                <Upload className="w-4 h-4" />
+                                <Upload className="size-4" />
                                 Upload media
                             </Button>
                             <Button variant="secondary" className="w-full gap-2">
-                                <Camera className="w-4 h-4" />
+                                <Camera className="size-4" />
                                 Take photo
                             </Button>
                             <Button variant="secondary" className="w-full gap-2">
-                                <VideoIcon className="w-4 h-4" />
+                                <VideoIcon className="size-4" />
                                 Record video
                             </Button>
                         </div>
@@ -385,7 +446,15 @@ export function MediaPickerModal({
                         <input
                             ref={fileInputRef}
                             type="file"
-                            accept={mediaType === 'video' ? 'video/*' : mediaType === 'image' ? 'image/*' : 'image/*,video/*'}
+                            accept={
+                                mediaType === 'video'
+                                    ? 'video/*'
+                                    : mediaType === 'image'
+                                        ? 'image/*'
+                                        : mediaType === 'audio'
+                                            ? 'audio/*'
+                                            : 'image/*,video/*'
+                            }
                             onChange={e => handleFileUpload(e.target.files)}
                             className="hidden"
                         />

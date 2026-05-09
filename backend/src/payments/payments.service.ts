@@ -6,7 +6,7 @@ import {
 } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { ConfigService } from "@nestjs/config";
-import { Repository } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import * as crypto from "crypto";
 import axios from "axios";
 import { AllConfigType } from "../config/config.type";
@@ -22,6 +22,8 @@ import {
   BillingPlanType,
   BillingPlanSegment,
 } from "../billing/config/billing-catalog";
+import { BillingAccountEntity } from "../billing-accounts/infrastructure/persistence/relational/entities/billing-account.entity";
+import { CreditTransactionEntity } from "../credits/infrastructure/persistence/relational/entities/credit-transaction.entity";
 import {
   PaymentOrderEntity,
   PaymentOrderStatus,
@@ -38,6 +40,7 @@ export class PaymentsService {
     @InjectRepository(PaymentOrderEntity)
     private readonly paymentOrderRepository: Repository<PaymentOrderEntity>,
     private readonly creditsService: CreditsService,
+    private readonly dataSource: DataSource,
     private readonly configService: ConfigService<AllConfigType>,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -591,89 +594,241 @@ export class PaymentsService {
     status: PaymentOrderStatus,
     payload: Record<string, string>,
   ) {
-    if (order.status === "paid") return order;
+    const result = await this.dataSource.transaction(async (manager) => {
+      const orderRepository = manager.getRepository(PaymentOrderEntity);
+      const lockedOrder = await orderRepository
+        .createQueryBuilder("paymentOrder")
+        .setLock("pessimistic_write")
+        .where("paymentOrder.id = :id", { id: order.id })
+        .getOne();
 
-    order.status = status;
-    order.callbackPayload = payload;
-    if (status === "paid") {
-      order.paidAt = new Date();
-      order.providerTxnRef =
-        payload.vnp_TransactionNo ||
-        payload.transId ||
-        payload.zp_trans_id ||
-        null;
-      const metadata = {
-        paymentProvider: order.provider,
-        orderCode: order.orderCode,
-        amountVnd: order.amountVnd,
-        providerTxnRef: order.providerTxnRef,
-        raw: payload,
-      };
-
-      if (order.purchaseType === "subscription") {
-        const renewalAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-        await this.creditsService.grantSubscriptionCredits({
-          userId: order.userId,
-          scopeType: order.scopeType || "user",
-          scopeId: order.scopeId || order.userId,
-          planId: (order.planId || "starter") as BillingPlanType,
-          credits: order.credits,
-          renewalAt,
-          referenceType: "payment_order",
-          referenceId: order.orderCode,
-          metadata: {
-            ...metadata,
-            purchaseType: "subscription",
-            renewalAt,
-          },
-        });
-      } else {
-        await this.creditsService.addTopUpCredits({
-          userId: order.userId,
-          scopeType: order.scopeType || "user",
-          scopeId: order.scopeId || order.userId,
-          amount: order.credits,
-          referenceType: "payment_order",
-          referenceId: order.orderCode,
-          metadata: {
-            ...metadata,
-            purchaseType: "topup",
-          },
-        });
+      if (!lockedOrder) {
+        throw new NotFoundException("Order not found");
       }
 
+      if (lockedOrder.status === status && status !== "pending") {
+        return { order: lockedOrder, updated: false };
+      }
+
+      lockedOrder.status = status;
+      lockedOrder.callbackPayload = payload;
+
+      if (status === "paid") {
+        lockedOrder.paidAt = lockedOrder.paidAt || new Date();
+        lockedOrder.providerTxnRef =
+          lockedOrder.providerTxnRef ||
+          payload.vnp_TransactionNo ||
+          payload.transId ||
+          payload.zp_trans_id ||
+          null;
+
+        const paymentContext = this.buildPaymentContext(lockedOrder, payload);
+        await this.applyPaidOrderTransaction(manager, lockedOrder, paymentContext);
+      }
+
+      return {
+        order: await orderRepository.save(lockedOrder),
+        updated: true,
+      };
+    });
+
+    const savedOrder = result.order;
+    if (!result.updated) {
+      return savedOrder;
+    }
+
+    if (status === "paid") {
       try {
         await this.notificationsService.notifyUser({
-          userId: Number(order.userId),
+          userId: Number(savedOrder.userId),
           category: NotificationCategory.PAYMENT,
           type: NotificationType.SUCCESS,
           title: "Payment completed",
-          message: `${order.provider.toUpperCase()} payment ${order.orderCode} was completed and your credits were updated.`,
-          emailSubject: `Payment completed for ${order.orderCode}`,
+          message: `${savedOrder.provider.toUpperCase()} payment ${savedOrder.orderCode} was completed and your credits were updated.`,
+          emailSubject: `Payment completed for ${savedOrder.orderCode}`,
         });
       } catch (error) {
         this.logger.warn(
-          `Payment notification failed for ${order.orderCode}: ${this.describeError(error)}`,
+          `Payment notification failed for ${savedOrder.orderCode}: ${this.describeError(error)}`,
         );
       }
     } else if (status === "failed") {
       try {
         await this.notificationsService.notifyUser({
-          userId: Number(order.userId),
+          userId: Number(savedOrder.userId),
           category: NotificationCategory.PAYMENT,
           type: NotificationType.ERROR,
           title: "Payment failed",
-          message: `${order.provider.toUpperCase()} payment ${order.orderCode} did not complete. No credits were added.`,
-          emailSubject: `Payment failed for ${order.orderCode}`,
+          message: `${savedOrder.provider.toUpperCase()} payment ${savedOrder.orderCode} did not complete. No credits were added.`,
+          emailSubject: `Payment failed for ${savedOrder.orderCode}`,
         });
       } catch (error) {
         this.logger.warn(
-          `Payment notification failed for ${order.orderCode}: ${this.describeError(error)}`,
+          `Payment notification failed for ${savedOrder.orderCode}: ${this.describeError(error)}`,
         );
       }
     }
 
-    return this.paymentOrderRepository.save(order);
+    return savedOrder;
+  }
+
+  private buildPaymentContext(
+    order: PaymentOrderEntity,
+    payload: Record<string, string>,
+  ) {
+    const scopeType = order.scopeType || "user";
+    const scopeId = order.scopeId || order.userId;
+    return {
+      scopeType,
+      scopeId,
+      providerTxnRef:
+        order.providerTxnRef ||
+        payload.vnp_TransactionNo ||
+        payload.transId ||
+        payload.zp_trans_id ||
+        null,
+      renewalAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+      metadata: {
+        paymentProvider: order.provider,
+        orderCode: order.orderCode,
+        amountVnd: order.amountVnd,
+        providerTxnRef:
+          order.providerTxnRef ||
+          payload.vnp_TransactionNo ||
+          payload.transId ||
+          payload.zp_trans_id ||
+          null,
+        raw: payload,
+      },
+    };
+  }
+
+  private async applyPaidOrderTransaction(
+    manager: any,
+    order: PaymentOrderEntity,
+    context: ReturnType<typeof this.buildPaymentContext>,
+  ) {
+    const billingAccountRepository = manager.getRepository(BillingAccountEntity);
+    const creditTransactionRepository = manager.getRepository(
+      CreditTransactionEntity,
+    );
+    const billingAccount = await this.getOrCreateBillingAccount(
+      billingAccountRepository,
+      context.scopeType,
+      context.scopeId,
+    );
+
+    if (order.purchaseType === "subscription") {
+      billingAccount.currentPlanId = (order.planId || "starter") as BillingPlanType;
+      billingAccount.status =
+        billingAccount.currentPlanId === "trial" ? "trialing" : "active";
+      billingAccount.includedCreditsGranted = order.credits;
+      billingAccount.includedCreditsRemaining = order.credits;
+      billingAccount.currentPeriodStart = new Date();
+      billingAccount.currentPeriodEnd = context.renewalAt;
+      billingAccount.renewalAt = context.renewalAt;
+      billingAccount.metadata = {
+        ...(billingAccount.metadata || {}),
+        ...context.metadata,
+        lastGrantType: "subscription",
+        purchaseType: "subscription",
+        renewalAt: context.renewalAt,
+      };
+    } else {
+      billingAccount.topUpCreditsPurchased += order.credits;
+      billingAccount.topUpCreditsBalance += order.credits;
+      billingAccount.metadata = {
+        ...(billingAccount.metadata || {}),
+        ...context.metadata,
+        lastGrantType: "topup",
+        purchaseType: "topup",
+      };
+    }
+
+    await billingAccountRepository.save(billingAccount);
+
+    await creditTransactionRepository.save(
+      creditTransactionRepository.create({
+        userId: order.userId,
+        scopeType: context.scopeType,
+        scopeId: context.scopeId,
+        amount: order.credits,
+        type: order.purchaseType === "subscription" ? "grant" : "topup",
+        status: "posted",
+        referenceType: "payment_order",
+        referenceId: order.orderCode,
+        metadata: {
+          ...context.metadata,
+          purchaseType: order.purchaseType,
+          scopeType: context.scopeType,
+          scopeId: context.scopeId,
+          renewalAt:
+            order.purchaseType === "subscription" ? context.renewalAt : null,
+        },
+      }),
+    );
+  }
+
+  private async getOrCreateBillingAccount(
+    billingAccountRepository: Repository<BillingAccountEntity>,
+    scopeType: string,
+    scopeId: string,
+  ) {
+    let billingAccount = await billingAccountRepository
+      .createQueryBuilder("billingAccount")
+      .setLock("pessimistic_write")
+      .where("billingAccount.scopeType = :scopeType", { scopeType })
+      .andWhere("billingAccount.scopeId = :scopeId", { scopeId })
+      .getOne();
+
+    if (billingAccount) {
+      return billingAccount;
+    }
+
+    billingAccount = billingAccountRepository.create({
+      scopeType: scopeType as any,
+      scopeId,
+      status: "free",
+      currentPlanId: null,
+      includedCreditsGranted: 0,
+      includedCreditsRemaining: 0,
+      topUpCreditsPurchased: 0,
+      topUpCreditsBalance: 0,
+      currentPeriodStart: null,
+      currentPeriodEnd: null,
+      renewalAt: null,
+      metadata: null,
+    });
+
+    try {
+      return await billingAccountRepository.save(billingAccount);
+    } catch (error) {
+      if (!this.isUniqueConstraintViolation(error)) {
+        throw error;
+      }
+
+      const existingBillingAccount = await billingAccountRepository
+        .createQueryBuilder("billingAccount")
+        .setLock("pessimistic_write")
+        .where("billingAccount.scopeType = :scopeType", { scopeType })
+        .andWhere("billingAccount.scopeId = :scopeId", { scopeId })
+        .getOne();
+
+      if (!existingBillingAccount) {
+        throw error;
+      }
+
+      return existingBillingAccount;
+    }
+  }
+
+  private isUniqueConstraintViolation(error: unknown) {
+    return (
+      typeof error === "object" &&
+      error !== null &&
+      "code" in error &&
+      (error as { code?: string }).code === "23505"
+    );
   }
 
   private describeError(error: unknown) {
@@ -934,12 +1089,49 @@ export class PaymentsService {
         ? metadata.returnUri.trim()
         : defaultReturnPath;
 
-    const url = new URL(returnUri, frontendDomain);
+    const url = new URL(
+      this.normalizeReturnUri(returnUri, frontendDomain, defaultReturnPath),
+      frontendDomain,
+    );
     url.searchParams.set("paymentProvider", provider);
     url.searchParams.set("paymentOrder", order.orderCode);
     url.searchParams.set("paymentStatus", status);
     url.searchParams.set("paymentVerified", String(verified));
     return url.toString();
+  }
+
+  private normalizeReturnUri(
+    returnUri: string,
+    frontendDomain: string,
+    defaultReturnPath: string,
+  ) {
+    const trimmed = returnUri.trim();
+    if (!trimmed || trimmed.startsWith("//")) {
+      return defaultReturnPath;
+    }
+
+    try {
+      const parsed = new URL(trimmed);
+
+      if (
+        parsed.protocol === "javascript:" ||
+        parsed.protocol === "data:" ||
+        parsed.protocol === "vbscript:"
+      ) {
+        return defaultReturnPath;
+      }
+
+      if (parsed.protocol === "http:" || parsed.protocol === "https:") {
+        const frontendOrigin = new URL(frontendDomain).origin;
+        return parsed.origin === frontendOrigin
+          ? parsed.toString()
+          : defaultReturnPath;
+      }
+
+      return parsed.toString();
+    } catch {
+      return trimmed;
+    }
   }
 
   private createVnpaySignature(data: Record<string, string>, secret: string) {

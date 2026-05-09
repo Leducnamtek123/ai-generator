@@ -2,8 +2,11 @@
 
 import Image from 'next/image';
 import { useReducer, useRef, useState, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
+import { mediaApi } from '@/services/mediaApi';
 import {
     ChevronDown,
     Upload,
@@ -23,8 +26,11 @@ import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 import { CONTENT_TABS } from '@/components/layouts/navigation-data';
 import { TemplateTypeEnum } from '@/lib/api/templates';
+import { useGenerationProviders } from '@/hooks/useGenerationProviders';
+import { projectApi } from '@/services/projectApi';
 
 const COMMUNITY_TAB = CONTENT_TABS[1];
 const TEMPLATES_TAB = CONTENT_TABS[2];
@@ -100,7 +106,30 @@ type VideoPageAction =
     | { type: 'setEndImage'; endImage: string | null }
     | { type: 'toggleEnhancePrompt' }
     | { type: 'setMotionIntensity'; motionIntensity: number }
-    | { type: 'resetImages' };
+    | { type: 'resetImages' }
+    | { type: 'resetAll' };
+
+type VideoSnapshot = {
+    activeContentTab: string;
+    selectedModel: string;
+    showModelPicker: boolean;
+    prompt: string;
+    promptMode: 'Text' | 'Visual';
+    duration: string;
+    aspectRatio: string;
+    startImage: string | null;
+    endImage: string | null;
+    enhancePrompt: boolean;
+    motionIntensity: number;
+    selectedProvider: string;
+    resultVideo: string | null;
+};
+
+type VideoProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<VideoSnapshot>;
+};
 
 const initialState: VideoPageState = {
     activeContentTab: TUTORIALS_TAB,
@@ -114,6 +143,27 @@ const initialState: VideoPageState = {
     endImage: null,
     enhancePrompt: false,
     motionIntensity: 50,
+};
+
+const normalizeVideoSnapshot = (value: unknown): Partial<VideoSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+
+    return {
+        activeContentTab: typeof snapshot.activeContentTab === 'string' ? snapshot.activeContentTab : initialState.activeContentTab,
+        selectedModel: typeof snapshot.selectedModel === 'string' ? snapshot.selectedModel : initialState.selectedModel,
+        showModelPicker: typeof snapshot.showModelPicker === 'boolean' ? snapshot.showModelPicker : initialState.showModelPicker,
+        prompt: typeof snapshot.prompt === 'string' ? snapshot.prompt : '',
+        promptMode: snapshot.promptMode === 'Visual' ? 'Visual' : 'Text',
+        duration: typeof snapshot.duration === 'string' ? snapshot.duration : initialState.duration,
+        aspectRatio: typeof snapshot.aspectRatio === 'string' ? snapshot.aspectRatio : initialState.aspectRatio,
+        startImage: typeof snapshot.startImage === 'string' ? snapshot.startImage : null,
+        endImage: typeof snapshot.endImage === 'string' ? snapshot.endImage : null,
+        enhancePrompt: typeof snapshot.enhancePrompt === 'boolean' ? snapshot.enhancePrompt : initialState.enhancePrompt,
+        motionIntensity: typeof snapshot.motionIntensity === 'number' ? snapshot.motionIntensity : initialState.motionIntensity,
+        selectedProvider: typeof snapshot.selectedProvider === 'string' ? snapshot.selectedProvider : '',
+        resultVideo: typeof snapshot.resultVideo === 'string' ? snapshot.resultVideo : null,
+    };
 };
 
 function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState {
@@ -142,21 +192,106 @@ function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState
             return { ...state, motionIntensity: action.motionIntensity };
         case 'resetImages':
             return { ...state, startImage: null, endImage: null };
+        case 'resetAll':
+            return initialState;
         default:
             return state;
     }
 }
 
 export default function VideoPage() {
-    const { generateVideo, isGenerating, currentGeneration, reset, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
+    const { startGeneration, isGenerating, currentGeneration, reset, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
     const [state, dispatch] = useReducer(reducer, initialState);
     const [communityListings, setCommunityListings] = useState<any[]>([]);
     const [isCommunityLoading, setIsCommunityLoading] = useState(false);
+    const [selectedProvider, setSelectedProvider] = useState('');
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
     
     const startImageRef = useRef<HTMLInputElement>(null);
     const endImageRef = useRef<HTMLInputElement>(null);
     const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
+    const { providers: videoProviders, isLoading: isProvidersLoading } = useGenerationProviders('video-generation');
+
+    useEffect(() => {
+        if (!videoProviders.length) {
+            return;
+        }
+
+        if (!selectedProvider || !videoProviders.some((provider) => provider.name === selectedProvider)) {
+            setSelectedProvider(videoProviders[0].name);
+        }
+    }, [selectedProvider, videoProviders]);
+
+    useEffect(() => {
+        const requestedProjectId = searchParams.get('projectId');
+        setProjectId(requestedProjectId);
+
+        const applySnapshot = (snapshot: Partial<VideoSnapshot>) => {
+            dispatch({ type: 'setActiveContentTab', activeContentTab: snapshot.activeContentTab ?? initialState.activeContentTab });
+            dispatch({ type: 'setSelectedModel', selectedModel: snapshot.selectedModel ?? initialState.selectedModel });
+            dispatch({ type: 'setShowModelPicker', showModelPicker: snapshot.showModelPicker ?? initialState.showModelPicker });
+            dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? '' });
+            dispatch({ type: 'setPromptMode', promptMode: snapshot.promptMode ?? initialState.promptMode });
+            dispatch({ type: 'setDuration', duration: snapshot.duration ?? initialState.duration });
+            dispatch({ type: 'setAspectRatio', aspectRatio: snapshot.aspectRatio ?? initialState.aspectRatio });
+            dispatch({ type: 'setStartImage', startImage: snapshot.startImage ?? null });
+            dispatch({ type: 'setEndImage', endImage: snapshot.endImage ?? null });
+            if (snapshot.enhancePrompt !== undefined && snapshot.enhancePrompt !== state.enhancePrompt) {
+                dispatch({ type: 'toggleEnhancePrompt' });
+            }
+            dispatch({ type: 'setMotionIntensity', motionIntensity: snapshot.motionIntensity ?? initialState.motionIntensity });
+            setSelectedProvider(snapshot.selectedProvider ?? '');
+            setProjectError(null);
+        };
+
+        const loadDraft = () => {
+            const draftRaw = localStorage.getItem('video-generator:draft');
+            if (!draftRaw) return;
+
+            try {
+                applySnapshot(normalizeVideoSnapshot(JSON.parse(draftRaw)));
+            } catch (error) {
+                console.error('Failed to load video draft', error);
+            }
+        };
+
+        if (!requestedProjectId) {
+            loadDraft();
+            return;
+        }
+
+        let cancelled = false;
+        setIsProjectLoading(true);
+
+        void (async () => {
+            try {
+                const project = await projectApi.get(requestedProjectId);
+                if (cancelled) return;
+
+                applySnapshot(normalizeVideoSnapshot(project.content));
+            } catch (error) {
+                console.error('Failed to load video project', error);
+                if (!cancelled) {
+                    setProjectError('Loaded local draft because backend project load failed.');
+                    loadDraft();
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        })();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [searchParams]);
 
     useEffect(() => {
         if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
@@ -180,36 +315,136 @@ export default function VideoPage() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     const handleGenerate = async () => {
-        if (!state.prompt.trim()) return;
+        if (!state.prompt.trim() || isProjectLoading || isProjectSaving) return;
         reset();
-        await generateVideo({
-            prompt: state.prompt,
-            model: state.selectedModel !== 'auto' ? state.selectedModel : undefined,
-            duration: state.duration,
-            aspectRatio: state.aspectRatio,
-            startImageUrl: state.startImage || undefined,
-            endImageUrl: state.endImage || undefined,
-        });
+
+        try {
+            await startGeneration('/generations/video', {
+                prompt: state.prompt,
+                model: state.selectedModel !== 'auto' ? state.selectedModel : undefined,
+                duration: state.duration,
+                aspectRatio: state.aspectRatio,
+                startImageUrl: state.startImage || undefined,
+                endImageUrl: state.endImage || undefined,
+                provider: selectedProvider || undefined,
+            });
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Failed to generate video');
+        }
     };
 
-    const handleImageUpload = (type: 'start' | 'end') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleReset = () => {
+        reset();
+        dispatch({ type: 'resetAll' });
+        setSelectedProvider(videoProviders[0]?.name || '');
+        setProjectError(null);
+    };
+
+    const handleSave = () => {
+        const payload: VideoProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot: {
+                activeContentTab: state.activeContentTab,
+                selectedModel: state.selectedModel,
+                showModelPicker: state.showModelPicker,
+                prompt: state.prompt,
+                promptMode: state.promptMode,
+                duration: state.duration,
+                aspectRatio: state.aspectRatio,
+                startImage: state.startImage,
+                endImage: state.endImage,
+                enhancePrompt: state.enhancePrompt,
+                motionIntensity: state.motionIntensity,
+                selectedProvider,
+                resultVideo,
+            },
+        };
+
+        localStorage.setItem('video-generator:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Video Generator Draft',
+                        description: 'Video generator draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Video Generator Draft',
+                        description: 'Video generator draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                setProjectError(null);
+                toast.success('Video generator draft saved to your projects.');
+            } catch (error) {
+                console.error('Failed to persist video project', error);
+                setProjectError('Saved locally, but backend project save failed.');
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExport = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            prompt: state.prompt,
+            promptMode: state.promptMode,
+            selectedModel: state.selectedModel,
+            duration: state.duration,
+            aspectRatio: state.aspectRatio,
+            startImage: state.startImage,
+            endImage: state.endImage,
+            enhancePrompt: state.enhancePrompt,
+            motionIntensity: state.motionIntensity,
+            provider: selectedProvider,
+            resultVideo,
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'video-generator-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Video generator export created.');
+    };
+
+    const handleImageUpload = (type: 'start' | 'end') => async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             reset();
-            const url = URL.createObjectURL(file);
-            if (type === 'start') dispatch({ type: 'setStartImage', startImage: url });
-            else dispatch({ type: 'setEndImage', endImage: url });
+            const uploaded = await mediaApi.uploadMedia(file);
+            if (!uploaded?.url) {
+                toast.error('Failed to upload image');
+                return;
+            }
+            if (type === 'start') dispatch({ type: 'setStartImage', startImage: uploaded.url });
+            else dispatch({ type: 'setEndImage', endImage: uploaded.url });
         }
     };
 
     const currentModel = models.find(m => m.id === state.selectedModel);
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             {/* Left Control Panel */}
             <div className="w-[300px] border-r border-border flex flex-col shrink-0">
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Video Generator</h2>
+                    <h2 className="font-semibold text-muted-foreground">Video Generator</h2>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-4 space-y-6">
@@ -218,26 +453,26 @@ export default function VideoPage() {
                         onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: TEMPLATES_TAB })}
                         className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
                     >
-                        <Grid3X3 className="w-5 h-5" />
+                        <Grid3X3 className="size-5" />
                         <span>Browse templates</span>
                     </button>
 
                     {/* Model Selection */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Model</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Model</h4>
                         <div className="relative">
                             <button
                                 onClick={() => dispatch({ type: 'setShowModelPicker', showModelPicker: !state.showModelPicker })}
                                 className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors"
                             >
                                 <div className="flex items-center gap-3">
-                                    <Sparkles className="w-5 h-5 text-muted-foreground" />
+                                    <Sparkles className="size-5 text-muted-foreground" />
                                     <div className="text-left">
                                         <p className="text-sm font-medium">{currentModel?.label}</p>
                                         <p className="text-[10px] text-muted-foreground">{currentModel?.description}</p>
                                     </div>
                                 </div>
-                                <ChevronDown className={cn("w-4 h-4 text-muted-foreground transition-transform", state.showModelPicker && "rotate-180")} />
+                                <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", state.showModelPicker && "rotate-180")} />
                             </button>
                             {state.showModelPicker && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
@@ -261,9 +496,34 @@ export default function VideoPage() {
                         </div>
                     </div>
 
+                    <div className="space-y-3">
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Provider</h4>
+                        <div className="bg-card rounded-xl border border-border px-4 py-3">
+                            <select
+                                value={selectedProvider}
+                                onChange={(event) => setSelectedProvider(event.target.value)}
+                                className="w-full bg-transparent text-sm outline-none"
+                                disabled={isProvidersLoading}
+                            >
+                                {videoProviders.length > 0 ? (
+                                    videoProviders.map((provider) => (
+                                        <option key={provider.name} value={provider.name}>
+                                            {provider.name}
+                                        </option>
+                                    ))
+                                ) : (
+                                    <option value="">Use backend default</option>
+                                )}
+                            </select>
+                        </div>
+                        <p className="text-[10px] leading-4 text-muted-foreground">
+                            Pick a live video provider before starting the generation.
+                        </p>
+                    </div>
+
                     {/* References */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">References</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">References</h4>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col items-center gap-2">
                         <button
@@ -274,7 +534,7 @@ export default function VideoPage() {
                             {state.startImage ? (
                                 <Image src={state.startImage} alt="Start" fill className="object-cover" sizes="(max-width: 768px) 100vw, 300px" />
                             ) : (
-                                <Upload className="w-6 h-6 text-muted-foreground/50" />
+                                <Upload className="size-6 text-muted-foreground/50" />
                             )}
                         </button>
                                 <span className="text-[10px] text-muted-foreground">Start image</span>
@@ -289,7 +549,7 @@ export default function VideoPage() {
                             {state.endImage ? (
                                 <Image src={state.endImage} alt="End" fill className="object-cover" sizes="(max-width: 768px) 100vw, 300px" />
                             ) : (
-                                <Upload className="w-6 h-6 text-muted-foreground/50" />
+                                <Upload className="size-6 text-muted-foreground/50" />
                             )}
                         </button>
                                 <span className="text-[10px] text-muted-foreground">End image</span>
@@ -301,7 +561,7 @@ export default function VideoPage() {
                     {/* Prompt */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Prompt</h4>
+                            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Prompt</h4>
                             <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
                                 <button onClick={() => dispatch({ type: 'setPromptMode', promptMode: 'Text' })} className={cn("px-3 py-1 text-xs rounded-md transition-colors", state.promptMode === 'Text' ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>Text</button>
                                 <button onClick={() => dispatch({ type: 'setPromptMode', promptMode: 'Visual' })} className={cn("px-3 py-1 text-xs rounded-md transition-colors", state.promptMode === 'Visual' ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>Visual</button>
@@ -317,7 +577,7 @@ export default function VideoPage() {
 
                     {/* Settings Row */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Settings</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Settings</h4>
                         <div className="grid grid-cols-2 gap-2">
                             {/* Duration */}
                             <div className="space-y-2">
@@ -352,11 +612,11 @@ export default function VideoPage() {
                     {/* Enhance Toggle */}
                     <button onClick={() => dispatch({ type: 'toggleEnhancePrompt' })} className="w-full flex items-center justify-between px-4 py-3 bg-card rounded-xl border border-border">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="w-4 h-4 text-muted-foreground" />
+                            <Sparkles className="size-4 text-muted-foreground" />
                             <span className="text-xs font-medium">Enhance Prompt</span>
                         </div>
                         <div className={cn("w-9 h-5 rounded-full transition-colors flex items-center px-0.5", state.enhancePrompt ? "bg-primary" : "bg-muted-foreground/20")}>
-                            <div className={cn("w-4 h-4 rounded-full bg-white shadow-sm transition-transform", state.enhancePrompt ? "translate-x-4" : "translate-x-0")} />
+                            <div className={cn("size-4 rounded-full bg-white shadow-sm transition-transform", state.enhancePrompt ? "translate-x-4" : "translate-x-0")} />
                         </div>
                     </button>
 
@@ -366,27 +626,39 @@ export default function VideoPage() {
                             {currentGeneration.error}
                         </div>
                     )}
+                    {projectError && (
+                        <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-xl text-xs text-destructive">
+                            {projectError}
+                        </div>
+                    )}
                 </div>
 
                 {/* Generate Button */}
                 <div className="p-4 border-t border-border space-y-3">
+                    <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleReset}>
+                        Reset form
+                    </Button>
+                    <Button variant="outline" size="sm" className="w-full gap-2" onClick={handleSave}>
+                        {isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
+                        Save project
+                    </Button>
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">{parseInt(state.duration) <= 5 ? '5' : '10'} Credits</span>
                     </div>
                     <Button
                         onClick={handleGenerate}
-                        disabled={isGenerating || !state.prompt.trim()}
+                        disabled={isGenerating || isProjectLoading || isProjectSaving || !state.prompt.trim()}
                         className="w-full h-12 font-bold rounded-xl gap-2"
                     >
                         {isGenerating ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 {currentGeneration?.status === 'processing' ? 'Rendering...' : 'Starting...'}
                             </>
                         ) : (
                             <>
-                                <Sparkles className="w-5 h-5" />
+                                <Sparkles className="size-5" />
                                 Generate Video
                             </>
                         )}
@@ -400,17 +672,17 @@ export default function VideoPage() {
                 {resultVideo && (
                     <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0 animate-in fade-in">
                         <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Clock className="w-3.5 h-3.5" />
+                            <Clock className="size-3.5" />
                             <span>Just now</span>
                             <span>•</span>
                             <span>{currentModel?.label}</span>
                         </div>
                         <div className="flex items-center gap-2">
                             <Button variant="secondary" size="sm" className="gap-2" onClick={() => reset()}>
-                                <Repeat className="w-4 h-4" /> New
+                                <Repeat className="size-4" /> New
                             </Button>
-                            <Button variant="outline" size="sm" className="gap-2"><Folder className="w-4 h-4" /> Save</Button>
-                            <Button size="sm" className="gap-2"><Download className="w-4 h-4" /> Export</Button>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSave}><Folder className="size-4" /> Save</Button>
+                            <Button size="sm" className="gap-2" onClick={handleExport}><Download className="size-4" /> Export</Button>
                         </div>
                     </div>
                 )}
@@ -421,8 +693,8 @@ export default function VideoPage() {
                     {isGenerating ? (
                         <div className="flex flex-col items-center justify-center h-full gap-6">
                             <div className="relative">
-                                <div className="w-24 h-24 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                <Video className="w-10 h-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                <div className="size-24 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                <Video className="size-10 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <div className="text-center">
                                 <p className="font-semibold text-lg">Generating your video</p>
@@ -459,8 +731,8 @@ export default function VideoPage() {
                                                     : "text-muted-foreground hover:text-foreground"
                                             )}
                                         >
-                                            {tab === COMMUNITY_TAB && <Globe className="w-4 h-4" />}
-                                            {tab === TEMPLATES_TAB && <LayoutGrid className="w-4 h-4" />}
+                                            {tab === COMMUNITY_TAB && <Globe className="size-4" />}
+                                            {tab === TEMPLATES_TAB && <LayoutGrid className="size-4" />}
                                             {tab}
                                         </button>
                                     ))}
@@ -535,8 +807,8 @@ export default function VideoPage() {
                                                             <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
                                                             <div className="absolute inset-0 bg-gray-950/40" />
                                                             <div className="absolute bottom-6 left-6">
-                                                                <div className="w-12 h-12 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-foreground/30 transition-colors">
-                                                                    <Play className="w-6 h-6 text-white fill-white" />
+                                                                <div className="size-12 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-foreground/30 transition-colors">
+                                                                    <Play className="size-6 text-white fill-white" />
                                                                 </div>
                                                             </div>
                                                             <div className="absolute bottom-6 left-20">
@@ -554,7 +826,7 @@ export default function VideoPage() {
                                                 <h3 className="text-lg font-semibold">More tutorials</h3>
                                                 <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
                                                     Featured
-                                                    <ChevronDown className="w-4 h-4" />
+                                                    <ChevronDown className="size-4" />
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-4 gap-4">
@@ -563,8 +835,8 @@ export default function VideoPage() {
                                                         <div className="aspect-video rounded-xl overflow-hidden relative bg-muted">
                                                             <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
                                                             <div className="absolute inset-0 bg-gray-950/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                <div className="w-10 h-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center">
-                                                                    <Play className="w-5 h-5 text-white fill-white" />
+                                                                <div className="size-10 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center">
+                                                                    <Play className="size-5 text-white fill-white" />
                                                                 </div>
                                                             </div>
                                                             <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-gray-950/60 rounded text-[10px] text-white">
@@ -585,7 +857,7 @@ export default function VideoPage() {
                     )}
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }
 
@@ -602,8 +874,8 @@ function LoadingGrid() {
 function EmptyState({ message }: { message: string }) {
     return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Video className="w-8 h-8 text-muted-foreground/30" />
+            <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Video className="size-8 text-muted-foreground/30" />
             </div>
             <p className="text-muted-foreground">{message}</p>
         </div>
@@ -616,16 +888,16 @@ function VideoCard({ generation }: { generation: any }) {
             <div className="aspect-video rounded-xl overflow-hidden relative bg-muted border border-border group-hover:border-primary/20 transition-all">
                 {generation.resultUrl ? (
                     <>
-                        <Image src={generation.resultUrl} alt={generation.prompt} fill className="object-cover transition-transform group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 25vw" />
+                        <Image src={generation.resultUrl} alt={generation.prompt} fill className="object-cover transition-transform group-hover:scale-105" sizes="(max-width: 1024px) 100vw, 25vw" unoptimized />
                         <div className="absolute inset-0 bg-gray-950/20 group-hover:bg-gray-950/40 transition-colors flex items-center justify-center">
-                            <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100 duration-300">
-                                <Play className="w-5 h-5 text-white fill-white ml-0.5" />
+                            <div className="size-10 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity scale-90 group-hover:scale-100 duration-300">
+                                <Play className="size-5 text-white fill-white ml-0.5" />
                             </div>
                         </div>
                     </>
                 ) : (
                     <div className="absolute inset-0 flex items-center justify-center">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                        <Loader2 className="size-6 animate-spin text-muted-foreground" />
                     </div>
                 )}
             </div>

@@ -90,7 +90,7 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
         </div>
         <div className="flex items-center gap-2">
           <button onClick={togglePlay} className="text-white/80 hover:text-white transition">
-            {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+            {isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
           </button>
           <span className="text-[10px] text-white/50 font-mono">
             {formatTime(progress)} / {formatTime(duration)}
@@ -100,7 +100,7 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
             onClick={() => videoRef.current?.requestFullscreen?.()}
             className="text-white/40 hover:text-white transition"
           >
-            <Maximize2 className="w-3.5 h-3.5" />
+            <Maximize2 className="size-3.5" />
           </button>
         </div>
       </div>
@@ -110,8 +110,8 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
           onClick={togglePlay}
           className="absolute inset-0 flex items-center justify-center bg-black/20"
         >
-          <div className="w-12 h-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20 hover:bg-black/70 transition">
-            <Play className="w-5 h-5 text-white ml-0.5" />
+          <div className="size-12 rounded-full bg-black/50 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20 hover:bg-black/70 transition">
+            <Play className="size-5 text-white ml-0.5" />
           </div>
         </button>
       )}
@@ -183,11 +183,11 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
             <VideoPlayer src={previewVideo} poster={previewImage} />
           ) : previewImage ? (
             <div className="relative aspect-[9/16] max-h-[250px] rounded-lg overflow-hidden bg-black">
-              <Image src={previewImage} alt="Preview" fill className="object-contain" sizes="300px" />
+              <Image src={previewImage} alt="Preview" fill className="object-contain" sizes="300px" unoptimized />
             </div>
           ) : (
             <div className="aspect-video rounded-lg bg-white/[0.02] border border-white/[0.06] flex items-center justify-center">
-              <ImageIcon className="w-8 h-8 text-white/[0.06]" />
+              <ImageIcon className="size-8 text-white/[0.06]" />
             </div>
           )}
 
@@ -198,10 +198,10 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                 <span className="text-[9px] text-white/20 font-mono">9:16 Vertical</span>
                 <div className="relative aspect-[9/16] rounded-md overflow-hidden bg-white/[0.02] border border-white/[0.04]">
                   {scene.verticalImageUrl ? (
-                    <Image src={scene.verticalImageUrl} alt="V" fill className="object-cover" sizes="150px" />
+                    <Image src={scene.verticalImageUrl} alt="V" fill className="object-cover" sizes="150px" unoptimized />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="w-4 h-4 text-white/[0.06]" />
+                      <ImageIcon className="size-4 text-white/[0.06]" />
                     </div>
                   )}
                 </div>
@@ -210,10 +210,10 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                 <span className="text-[9px] text-white/20 font-mono">16:9 Horizontal</span>
                 <div className="relative aspect-video rounded-md overflow-hidden bg-white/[0.02] border border-white/[0.04]">
                   {scene.horizontalImageUrl ? (
-                    <Image src={scene.horizontalImageUrl} alt="H" fill className="object-cover" sizes="150px" />
+                    <Image src={scene.horizontalImageUrl} alt="H" fill className="object-cover" sizes="150px" unoptimized />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="w-4 h-4 text-white/[0.06]" />
+                      <ImageIcon className="size-4 text-white/[0.06]" />
                     </div>
                   )}
                 </div>
@@ -229,7 +229,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                 onClick={() => editingField === 'prompt' ? savePrompt() : setEditingField('prompt')}
                 className="text-white/20 hover:text-white/50 transition"
               >
-                <Edit3 className="w-3 h-3" />
+                <Edit3 className="size-3" />
               </button>
             </div>
             {editingField === 'prompt' ? (
@@ -259,7 +259,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                 onClick={() => editingField === 'videoPrompt' ? saveVideoPrompt() : setEditingField('videoPrompt')}
                 className="text-white/20 hover:text-white/50 transition"
               >
-                <Edit3 className="w-3 h-3" />
+                <Edit3 className="size-3" />
               </button>
             </div>
             {editingField === 'videoPrompt' ? (
@@ -287,7 +287,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {/* Characters */}
           <div>
             <label className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Users className="w-3 h-3" /> Characters in Scene
+              <Users className="size-3" /> Characters in Scene
             </label>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {availableCharacters.map((name) => {

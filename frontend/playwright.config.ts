@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test';
 
 export default defineConfig({
-    testDir: './tests/e2e',
+    testDir: './tests',
     fullyParallel: true,
     forbidOnly: !!process.env.CI,
     retries: process.env.CI ? 2 : 0,
@@ -18,7 +18,7 @@ export default defineConfig({
         },
     ],
     webServer: {
-        command: 'npm run dev',
+        command: 'docker exec ai-generator-api node /app/dist/database/seeds/relational/run-seed.js && npm run dev',
         url: 'http://localhost:3000',
         reuseExistingServer: !process.env.CI,
     },

@@ -5,10 +5,14 @@ import { ReactFlow, Background, Controls, useReactFlow, ReactFlowProvider, Backg
 import { useTheme } from 'next-themes';
 import { useRouter } from 'next/navigation';
 import '@xyflow/react/dist/style.css';
+import { Download, RotateCcw, Save } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { get as apiGet } from '@/lib/api';
+import { projectApi } from '@/services/projectApi';
 import type { Template } from '@/lib/api/templates';
+import { AsyncStateSurface } from '@/components/common/AsyncStateSurface';
+import { toast } from 'sonner';
 
 // Components
 import { PropertiesPanel } from './PropertiesPanel';
@@ -40,6 +44,7 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
     const [isHydrated, setIsHydrated] = useState(false);
     const [hydrateError, setHydrateError] = useState<string | null>(null);
     const [hydrateAttempt, setHydrateAttempt] = useState(0);
+    const [canvasRevision, setCanvasRevision] = useState(0);
     const router = useRouter();
     const { fetchWorkflow, fetchWorkflowByProject, createWorkflow } = useWorkflowStore();
 
@@ -138,44 +143,37 @@ function WorkflowCanvasShell({ projectId, templateId, workflowId }: WorkflowCanv
 
     if (!isHydrated) {
         return (
-            <div className="flex h-full w-full items-center justify-center bg-background text-muted-foreground">
-                Loading workflow...
-            </div>
+            <AsyncStateSurface
+                status="loading"
+                title="Loading workflow"
+                message="Preparing the editor and restoring the latest graph state."
+                compact
+            />
         );
     }
 
     if (hydrateError) {
         return (
-            <div className="flex h-full w-full items-center justify-center bg-background px-6 text-foreground">
-                <div className="max-w-lg rounded-2xl border border-border bg-card p-6 shadow-2xl">
-                    <p className="text-lg font-semibold">Workflow failed to load</p>
-                    <p className="mt-2 text-sm text-muted-foreground">{hydrateError}</p>
-                    <div className="mt-5 flex gap-3">
-                        <Button onClick={() => setHydrateAttempt((value) => value + 1)}>Retry</Button>
-                        <Button
-                            variant="outline"
-                            onClick={() => {
-                                setHydrateError(null);
-                                setHydrateAttempt((value) => value + 1);
-                            }}
-                        >
-                            Reload
-                        </Button>
-                    </div>
-                </div>
-            </div>
+            <AsyncStateSurface
+                status="error"
+                title="Workflow failed to load"
+                message={hydrateError}
+                onRetry={() => setHydrateAttempt((value) => value + 1)}
+                retryLabel="Retry"
+                compact
+            />
         );
     }
 
-    return <WorkflowCanvasContent />;
+    return <WorkflowCanvasContent key={canvasRevision} projectId={projectId} onResetCanvas={() => setCanvasRevision((value) => value + 1)} />;
 }
 
-function WorkflowCanvasContent() {
+function WorkflowCanvasContent({ projectId, onResetCanvas }: { projectId?: string; onResetCanvas: () => void }) {
     const { resolvedTheme } = useTheme();
     const { zoomIn, zoomOut, fitView } = useReactFlow();
     const {
-        nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges, flushWorkflowSave,
-        isSaving, executeWorkflow, isExecuting,
+        workflow, nodes, edges, onNodesChange, onEdgesChange, setNodes, setEdges, flushWorkflowSave,
+        fetchWorkflow, isSaving, executeWorkflow, isExecuting, executionError,
     } = useWorkflowStore();
     const [pendingConnection, setPendingConnection] = React.useState<{
         nodeId: string;
@@ -230,6 +228,8 @@ function WorkflowCanvasContent() {
     const [editingMedia, setEditingMedia] = React.useState<{ url: string; type: 'image' | 'video' } | null>(null);
     const [isCommentsOpen, setIsCommentsOpen] = React.useState(false);
     const [isDraggingNode, setIsDraggingNode] = React.useState(false);
+    const [isProjectSaving, setIsProjectSaving] = React.useState(false);
+    const [projectSaveError, setProjectSaveError] = React.useState<string | null>(null);
     const helperLines = useWorkflowUIStore((state) => state.helperLines);
     const mouseWheelMode = useWorkflowUIStore((state) => state.mouseWheelMode);
     const selectedNodeId = selectedNode?.id;
@@ -238,59 +238,145 @@ function WorkflowCanvasContent() {
         return nodes.find((node) => node.id === selectedNodeId) ?? null;
     }, [nodes, selectedNodeId]);
 
+    const persistProjectSnapshot = React.useCallback(async () => {
+        if (!projectId || !workflow) {
+            return true;
+        }
+
+        try {
+            setIsProjectSaving(true);
+            setProjectSaveError(null);
+            await projectApi.update(projectId, {
+                name: workflow.name,
+                description: 'Workflow editor snapshot',
+                content: {
+                    version: 1,
+                    savedAt: new Date().toISOString(),
+                    workflowId: workflow.id,
+                    graph: buildWorkflowBody(nodes, edges),
+                },
+            });
+            return true;
+        } catch (error) {
+            console.error('Failed to persist workflow project snapshot', error);
+            setProjectSaveError('Workflow project snapshot save failed. The graph itself is still saved.');
+            return false;
+        } finally {
+            setIsProjectSaving(false);
+        }
+    }, [edges, nodes, projectId, workflow]);
+
+    useEffect(() => {
+        if (!projectId || !workflow) return;
+
+        const timeout = window.setTimeout(() => {
+            void persistProjectSnapshot();
+        }, 2000);
+
+        return () => window.clearTimeout(timeout);
+    }, [edges, nodes, persistProjectSnapshot, projectId, workflow]);
+
+    const handleSave = React.useCallback(async () => {
+        await flushWorkflowSave();
+        if (projectId && workflow) {
+            const persisted = await persistProjectSnapshot();
+            if (!persisted) {
+                toast.error('Workflow saved, but project snapshot persistence failed.');
+                return;
+            }
+        }
+
+        toast.success('Workflow saved');
+    }, [flushWorkflowSave, persistProjectSnapshot, projectId, workflow]);
+
+    const handleExport = React.useCallback(() => {
+        const payload = buildWorkflowBody(nodes, edges);
+        const exportPayload = {
+            workflowId: workflow?.id ?? null,
+            name: workflow?.name ?? 'Untitled Studio',
+            exportedAt: new Date().toISOString(),
+            graph: payload,
+        };
+        const blob = new Blob([JSON.stringify(exportPayload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const anchor = document.createElement('a');
+        anchor.href = url;
+        anchor.download = `${workflow?.name?.replace(/[^a-z0-9]+/gi, '-').toLowerCase() || 'workflow'}-export.json`;
+        document.body.appendChild(anchor);
+        anchor.click();
+        anchor.remove();
+        URL.revokeObjectURL(url);
+        toast.success('Workflow exported');
+    }, [nodes, edges, workflow?.id, workflow?.name]);
+
+    const handleReset = React.useCallback(async () => {
+        if (!workflow?.id) {
+            toast.error('No workflow to reset');
+            return;
+        }
+
+        await fetchWorkflow(workflow.id);
+        setSelectedNode(null);
+        setPendingConnection(null);
+        setIsCommentsOpen(false);
+        setEditingMedia(null);
+        onResetCanvas();
+        toast.success('Workflow restored');
+    }, [fetchWorkflow, onResetCanvas, setSelectedNode, workflow?.id]);
+
     const nodesWithHandlers = useMemo(() => {
         return nodes.map(node => {
             const connectionSnapshot = buildNodeConnectionSnapshot(node, nodes, edges);
 
             return {
                 ...node,
-                    data: {
-                        ...node.data,
-                        ...connectionSnapshot,
-                        onRun: (id?: string) => runWorkflow(id || node.id),
-                        onMediaChange: (id: string, url: string, name: string, thumbnail?: string) => {
-                            updateNodeData(id, { mediaUrl: url, mediaName: name, mediaThumbnail: thumbnail });
-                            void flushWorkflowSave();
-                        },
-                        onDelete: handleDeleteNode,
-                        onChange: (id: string, data: Record<string, unknown>) => updateNodeData(id, data),
-                        onSettingsChange: (id: string, settings: Record<string, unknown>) => updateNodeData(id, settings),
-                        onOpenImageEditor: (url: string) => setEditingMedia({ url, type: 'image' }),
-                        onOpenVideoEditor: (url: string) => setEditingMedia({ url, type: 'video' }),
-                        onTextChange: handleTextChange,
-                        onDuplicate: () => handleDuplicateNode(node.id),
-                        onSettings: () => setSelectedNode(node),
-                        onHandleClick: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => {
-                            event.stopPropagation();
+                data: {
+                    ...node.data,
+                    ...connectionSnapshot,
+                    onRun: (id?: string) => runWorkflow(id || node.id),
+                    onMediaChange: (id: string, url: string, name: string, thumbnail?: string) => {
+                        updateNodeData(id, { mediaUrl: url, mediaName: name, mediaThumbnail: thumbnail });
+                        void flushWorkflowSave();
+                    },
+                    onDelete: handleDeleteNode,
+                    onChange: (id: string, data: Record<string, unknown>) => updateNodeData(id, data),
+                    onSettingsChange: (id: string, settings: Record<string, unknown>) => updateNodeData(id, settings),
+                    onOpenImageEditor: (url: string) => setEditingMedia({ url, type: 'image' }),
+                    onOpenVideoEditor: (url: string) => setEditingMedia({ url, type: 'video' }),
+                    onTextChange: handleTextChange,
+                    onDuplicate: () => handleDuplicateNode(node.id),
+                    onSettings: () => setSelectedNode(node),
+                    onHandleClick: (event: React.MouseEvent, handleId: string, handleType: 'source' | 'target') => {
+                        event.stopPropagation();
 
-                            if (handleType === 'source') {
-                                setPendingConnection({
-                                    nodeId: node.id,
-                                    handleId,
-                                    handleType,
-                                    sourceType: inferNodeOutputType(node),
-                                });
-                                return;
-                            }
+                        if (handleType === 'source') {
+                            setPendingConnection({
+                                nodeId: node.id,
+                                handleId,
+                                handleType,
+                                sourceType: inferNodeOutputType(node),
+                            });
+                            return;
+                        }
 
-                            if (pendingConnection && pendingConnection.handleType === 'source') {
-                                if (pendingConnection.nodeId === node.id) {
-                                    setPendingConnection(null);
-                                    return;
-                                }
-
-                                onConnect({
-                                    source: pendingConnection.nodeId,
-                                    sourceHandle: pendingConnection.handleId,
-                                    target: node.id,
-                                    targetHandle: handleId,
-                                });
+                        if (pendingConnection && pendingConnection.handleType === 'source') {
+                            if (pendingConnection.nodeId === node.id) {
                                 setPendingConnection(null);
                                 return;
                             }
 
+                            onConnect({
+                                source: pendingConnection.nodeId,
+                                sourceHandle: pendingConnection.handleId,
+                                target: node.id,
+                                targetHandle: handleId,
+                            });
                             setPendingConnection(null);
-                        },
+                            return;
+                        }
+
+                        setPendingConnection(null);
+                    },
                 }
             };
         });
@@ -299,6 +385,46 @@ function WorkflowCanvasContent() {
     return (
         <div className="flex h-full w-full flex-col bg-background text-foreground">
             <div className="flex-1 relative overflow-hidden">
+                <div className="absolute right-5 top-5 z-40 flex items-center gap-2">
+                    {executionError && (
+                        <div className="hidden max-w-[360px] rounded-full border border-red-500/30 bg-red-500/10 px-3 py-2 text-xs text-red-200 shadow-lg backdrop-blur md:block">
+                            {executionError}
+                        </div>
+                    )}
+                    {projectSaveError && (
+                        <div className="hidden max-w-[360px] rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-200 shadow-lg backdrop-blur md:block">
+                            {projectSaveError}
+                        </div>
+                    )}
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleReset}
+                        className="h-10 rounded-full border-border/70 bg-background/90 px-4"
+                    >
+                        <RotateCcw className="mr-2 h-4 w-4" />
+                        Reset
+                    </Button>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={handleSave}
+                        disabled={isSaving || isProjectSaving}
+                        className="h-10 rounded-full border-border/70 bg-background/90 px-4"
+                    >
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSaving || isProjectSaving ? 'Saving...' : 'Save'}
+                    </Button>
+                    <Button
+                        size="sm"
+                        onClick={handleExport}
+                        className="h-10 rounded-full bg-primary px-4 text-primary-foreground hover:bg-primary/90"
+                    >
+                        <Download className="mr-2 h-4 w-4" />
+                        Export
+                    </Button>
+                </div>
+
                 <FloatingToolbar
                     onAddNode={addNode}
                     onToolChange={setActiveTool}
@@ -374,7 +500,7 @@ function WorkflowCanvasContent() {
                     onClose={() => setEditingMedia(null)}
                     imageUrl={editingMedia?.type === 'image' ? editingMedia.url : ''}
                 />
-                
+
                 <VideoEditorModal
                     isOpen={editingMedia?.type === 'video'}
                     onClose={() => setEditingMedia(null)}

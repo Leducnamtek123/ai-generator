@@ -137,10 +137,10 @@ export function UpscaleNodeView({
                         {isProcessing && (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/60 backdrop-blur-md z-10 transition-all">
                                 <div className="relative">
-                                    <div className="w-16 h-16 border-4 border-yellow-500/20 rounded-full" />
-                                    <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-yellow-500 rounded-full animate-spin" />
+                                    <div className="size-16 border-4 border-yellow-500/20 rounded-full" />
+                                    <div className="absolute inset-0 size-16 border-4 border-transparent border-t-yellow-500 rounded-full animate-spin" />
                                     <div className="absolute inset-0 flex items-center justify-center text-yellow-500">
-                                        <Crown className="w-6 h-6 animate-pulse" />
+                                        <Crown className="size-6 animate-pulse" />
                                     </div>
                                 </div>
                                 <span className="mt-4 text-[10px] text-yellow-400 font-bold uppercase tracking-widest animate-pulse">
@@ -167,24 +167,24 @@ export function UpscaleNodeView({
                                         onClick={() => data.onOpenImageEditor?.(data.previewUrl)}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
                                     >
-                                        <Wand2 className="w-5 h-5" />
+                                        <Wand2 className="size-5" />
                                     </button>
                                     <button
                                         onClick={onDownload}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
                                     >
-                                        <Download className="w-5 h-5" />
+                                        <Download className="size-5" />
                                     </button>
                                     <button
                                         onClick={() => onSetFullscreen(true)}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
                                     >
-                                        <Maximize2 className="w-5 h-5" />
+                                        <Maximize2 className="size-5" />
                                     </button>
                                 </div>
 
                                 <div className="absolute top-3 left-3 px-2 py-1 bg-yellow-500/20 border border-yellow-500/30 rounded text-[10px] text-yellow-500 font-medium flex items-center gap-1">
-                                    <Crown className="w-3 h-3" />
+                                    <Crown className="size-3" />
                                     {scale}x Upscaled
                                 </div>
 
@@ -220,7 +220,7 @@ export function UpscaleNodeView({
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-1.5">
                                         <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Model</p>
-                                        <Info className="w-3 h-3 text-muted-foreground/50" />
+                                        <Info className="size-3 text-muted-foreground/50" />
                                     </div>
                                     <div className="relative">
                                         <select
@@ -234,7 +234,7 @@ export function UpscaleNodeView({
                                                 </option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-white/40 pointer-events-none" />
                                     </div>
                                 </div>
 
@@ -252,7 +252,7 @@ export function UpscaleNodeView({
                                                 </option>
                                             ))}
                                         </select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-white/40 pointer-events-none" />
                                     </div>
                                 </div>
                             </>
@@ -272,7 +272,7 @@ export function UpscaleNodeView({
                                         </option>
                                     ))}
                                 </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/40 pointer-events-none" />
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-white/40 pointer-events-none" />
                             </div>
                         </div>
 
@@ -282,7 +282,7 @@ export function UpscaleNodeView({
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1.5">
                                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Sharpness</p>
-                                            <Info className="w-3 h-3 text-muted-foreground/50" />
+                                            <Info className="size-3 text-muted-foreground/50" />
                                         </div>
                                         <span className="text-[10px] font-mono text-muted-foreground">{sharpness}%</span>
                                     </div>
@@ -300,7 +300,7 @@ export function UpscaleNodeView({
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1.5">
                                             <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Grain</p>
-                                            <Info className="w-3 h-3 text-muted-foreground/50" />
+                                            <Info className="size-3 text-muted-foreground/50" />
                                         </div>
                                         <span className="text-[10px] font-mono text-muted-foreground">{grain}%</span>
                                     </div>
@@ -327,12 +327,12 @@ export function UpscaleNodeView({
                             >
                                 {data.status === NodeStatus.PROCESSING ? (
                                     <>
-                                        <Loader2 className="w-4 h-4 animate-spin" />
+                                        <Loader2 className="size-4 animate-spin" />
                                         Upscaling...
                                     </>
                                 ) : (
                                     <>
-                                        <Crown className="w-4 h-4 fill-current" />
+                                        <Crown className="size-4 fill-current" />
                                         Upscale
                                     </>
                                 )}
@@ -395,8 +395,8 @@ const SCALE_FACTORS = [
 
 function FreepikPlaceholder() {
     return (
-        <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-blue-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/30 border border-white/20 rotate-3 animate-in fade-in zoom-in duration-500">
-            <svg viewBox="0 0 24 24" className="w-10 h-10 text-white fill-current -rotate-3">
+        <div className="size-20 bg-gradient-to-br from-blue-600 to-blue-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/30 border border-white/20 rotate-3 animate-in fade-in zoom-in duration-500">
+            <svg viewBox="0 0 24 24" className="size-10 text-white fill-current -rotate-3">
                 <path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.5-6.2 4.5 2.3-7.3-6.1-4.5h7.6z" />
             </svg>
         </div>

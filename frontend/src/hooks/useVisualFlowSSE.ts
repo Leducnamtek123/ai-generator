@@ -28,6 +28,7 @@ interface UseVisualFlowSSEOptions {
   projectId: string | null;
   enabled?: boolean;
   onEvent?: (event: VFEvent) => void;
+  onReconnect?: () => void | Promise<void>;
   onCharacterUpdate?: (payload: { characterId: string; refStatus: string; referenceImageUrl?: string }) => void;
   onSceneUpdate?: (payload: { sceneId: string; [key: string]: any }) => void;
   onPipelineStatus?: (payload: Record<string, any>) => void;
@@ -50,6 +51,7 @@ export function useVisualFlowSSE({
   projectId,
   enabled = true,
   onEvent,
+  onReconnect,
   onCharacterUpdate,
   onSceneUpdate,
   onPipelineStatus,
@@ -57,6 +59,7 @@ export function useVisualFlowSSE({
 }: UseVisualFlowSSEOptions) {
   const eventSourceRef = useRef<EventSource | null>(null);
   const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const hasConnectedOnceRef = useRef(false);
   const [isConnected, setIsConnected] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
@@ -71,12 +74,17 @@ export function useVisualFlowSSE({
       eventSourceRef.current.close();
     }
 
+    // Proxy rewrites /api/* to the backend /api/v1/* namespace.
     const url = `/api/visual-flow/projects/${projectId}/events`;
     const es = new EventSource(url);
     eventSourceRef.current = es;
 
     es.onopen = () => {
       setIsConnected(true);
+      if (hasConnectedOnceRef.current) {
+        void onReconnect?.();
+      }
+      hasConnectedOnceRef.current = true;
       setRetryCount(0);
     };
 
@@ -156,6 +164,7 @@ export function useVisualFlowSSE({
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+      hasConnectedOnceRef.current = false;
       setIsConnected(false);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

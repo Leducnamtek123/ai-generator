@@ -3,19 +3,21 @@
 import Image from 'next/image';
 import { useState, useEffect, useCallback } from 'react';
 import {
-    FolderPlus, Film, LayoutGrid, Image as ImageIcon, Music, Mic, Video, Wand2,
-    Download, Trash2, MoreHorizontal, Search, Loader2, Clock, Filter
+    LayoutGrid, Image as ImageIcon, Music, Mic, Video, Wand2,
+    Download, Trash2, Search, Loader2
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
 import { get as apiGet, del as apiDel } from '@/lib/api';
 import { toast } from 'sonner';
 import { Generation } from '@/stores/generation-store';
+import { AsyncStateSurface } from '@/components/common/AsyncStateSurface';
 
 type FilterType = 'all' | 'image' | 'video' | 'audio' | 'upscale';
 
-const filterOptions: { id: FilterType; label: string; icon: any }[] = [
+const filterOptions: { id: FilterType; label: string; icon: LucideIcon }[] = [
     { id: 'all', label: 'All', icon: LayoutGrid },
     { id: 'image', label: 'Images', icon: ImageIcon },
     { id: 'video', label: 'Videos', icon: Video },
@@ -86,8 +88,10 @@ export default function HistoryPage() {
     const [search, setSearch] = useState('');
     const [page, setPage] = useState(1);
     const [hasMore, setHasMore] = useState(true);
+    const [fetchError, setFetchError] = useState<string | null>(null);
 
     const fetchHistory = useCallback(async (pageNum: number, reset = false) => {
+      setFetchError(null);
       try {
         const params = new URLSearchParams({
                 page: pageNum.toString(),
@@ -111,6 +115,7 @@ export default function HistoryPage() {
         }
       } catch (error) {
         console.error('Failed to fetch history', error);
+        setFetchError(error instanceof Error ? error.message : 'Failed to load history');
         // Show empty state on failure
         if (reset) setGenerations([]);
       }
@@ -155,7 +160,7 @@ export default function HistoryPage() {
                     <div className="flex items-center gap-3">
                         {/* Search */}
                         <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                             <Input
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
@@ -180,7 +185,7 @@ export default function HistoryPage() {
                                     className="h-7 text-xs gap-1.5"
                                     onClick={() => setFilter(opt.id)}
                                 >
-                                    <opt.icon className="w-3.5 h-3.5" />
+                                    <opt.icon className="size-3.5" />
                                     {opt.label}
                                 </Button>
                             ))}
@@ -190,21 +195,34 @@ export default function HistoryPage() {
 
                 {/* Content */}
                 {isLoading && generations.length === 0 ? (
-                    <div className="flex items-center justify-center py-20">
-                        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                    </div>
+                    <AsyncStateSurface
+                        status="loading"
+                        title="Loading history"
+                        message="Fetching your recent generations."
+                        compact
+                    />
+                ) : fetchError && generations.length === 0 ? (
+                    <AsyncStateSurface
+                        status="error"
+                        title="History unavailable"
+                        message={fetchError}
+                        onRetry={() => fetchHistory(1, true)}
+                        retryLabel="Retry load"
+                        compact
+                    />
                 ) : generations.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-center">
-                        <Clock className="w-12 h-12 text-muted-foreground/20 mb-4" />
-                        <p className="text-muted-foreground">No generations yet</p>
-                        <p className="text-xs text-muted-foreground/60 mt-1">Your creation history will appear here</p>
-                    </div>
+                    <AsyncStateSurface
+                        status="empty"
+                        title="No generations yet"
+                        message="Your creation history will appear here."
+                        compact
+                    />
                 ) : (
                     <div className="space-y-10">
                         {grouped.map((group, gi) => (
                             <section key={group.label}>
                                 <div className="flex items-center gap-2 mb-4 border-b border-border pb-2">
-                                    <div className={cn("w-2 h-2 rounded-full", dotColors[gi % dotColors.length])} />
+                                    <div className={cn("size-2 rounded-full", dotColors[gi % dotColors.length])} />
                                     <span className="text-sm font-medium text-muted-foreground">{group.label}</span>
                                     <span className="text-xs text-muted-foreground/50">({group.items.length})</span>
                                 </div>
@@ -220,9 +238,16 @@ export default function HistoryPage() {
                                                 {/* Thumbnail */}
                                                 <div className="relative w-32 h-full rounded-lg bg-muted flex items-center justify-center overflow-hidden">
                                                     {gen.resultUrl ? (
-                                                        <Image src={gen.resultUrl} alt="" fill className="object-cover" sizes="128px" />
+                                                        <Image
+                                                            src={gen.resultUrl}
+                                                            alt=""
+                                                            fill
+                                                            className="object-cover"
+                                                            sizes="128px"
+                                                            unoptimized
+                                                        />
                                                     ) : (
-                                                        <TypeIcon className="w-6 h-6 text-muted-foreground/30" />
+                                                        <TypeIcon className="size-6 text-muted-foreground/30" />
                                                     )}
                                                 </div>
 
@@ -254,7 +279,7 @@ export default function HistoryPage() {
                                                             className="h-8 w-8"
                                                             onClick={(e) => { e.stopPropagation(); handleDownload(gen.resultUrl); }}
                                                         >
-                                                            <Download className="w-4 h-4" />
+                                                            <Download className="size-4" />
                                                         </Button>
                                                     )}
                                                     <Button
@@ -263,7 +288,7 @@ export default function HistoryPage() {
                                                         className="h-8 w-8 text-destructive hover:text-destructive"
                                                         onClick={(e) => { e.stopPropagation(); handleDelete(gen.id); }}
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 className="size-4" />
                                                     </Button>
                                                 </div>
                                             </div>
@@ -285,7 +310,7 @@ export default function HistoryPage() {
                                     }}
                                     disabled={isLoading}
                                 >
-                                    {isLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                                    {isLoading ? <Loader2 className="size-4 mr-2 animate-spin" /> : null}
                                     Load More
                                 </Button>
                             </div>

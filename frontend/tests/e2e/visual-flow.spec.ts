@@ -27,21 +27,21 @@ test.describe('VisualFlow Studio E2E', () => {
 
     await expect(page).toHaveURL(/\/visual-flow\/projects\//);
     await expect(page.getByRole('heading', { name: projectName })).toBeVisible();
-
-    await page.getByLabel('New Video').click();
+    await page.getByRole('button', { name: 'New Video' }).click();
     await page.getByPlaceholder('Episode title...').fill(videoTitle);
     await page.getByRole('button', { name: 'Create' }).click();
 
     await expect(page.getByRole('button', { name: videoTitle, exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Add Scene' }).click();
+    await page.getByText('Add your first scene').click();
     const sceneDialog = page.getByRole('dialog');
     await sceneDialog.getByPlaceholder('Describe the frame: "Luna stands on the candy planet surface, sunrise, wide shot"').fill(
       'A bright hero shot with soft lighting and a clean background.',
     );
     await sceneDialog.getByRole('button', { name: 'Add Scene' }).click();
 
-    await expect(page.getByText('SCENE 1')).toBeVisible();
-    await expect(page.getByText('ROOT')).toBeVisible();
+    await expect(page.locator('main').getByText('01', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Export & Finalize' })).toBeVisible();
+    await expect(page.getByText('1 scenes ready')).toBeVisible();
   });
 });

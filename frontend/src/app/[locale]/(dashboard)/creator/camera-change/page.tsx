@@ -1,8 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
+import { mediaApi } from '@/services/mediaApi';
+import { projectApi } from '@/services/projectApi';
 import {
     Camera,
     Upload,
@@ -26,6 +30,7 @@ import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 
 const cameraAngles = [
     { id: 'front', label: 'Front View', icon: Target },
@@ -62,6 +67,38 @@ type CameraChangeState = {
     dof: number;
 };
 
+type CameraChangeSnapshot = {
+    uploadedImage: string | null;
+    resultImage: string | null;
+    selectedAngle: string;
+    focalLength: string;
+    rotation: number;
+    tilt: number;
+    zoom: number;
+    dof: number;
+};
+
+type CameraChangeProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<CameraChangeSnapshot>;
+};
+
+const normalizeCameraChangeSnapshot = (value: unknown): Partial<CameraChangeSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+    return {
+        uploadedImage: typeof snapshot.uploadedImage === 'string' ? snapshot.uploadedImage : null,
+        resultImage: typeof snapshot.resultImage === 'string' ? snapshot.resultImage : null,
+        selectedAngle: typeof snapshot.selectedAngle === 'string' ? snapshot.selectedAngle : initialState.selectedAngle,
+        focalLength: typeof snapshot.focalLength === 'string' ? snapshot.focalLength : initialState.focalLength,
+        rotation: typeof snapshot.rotation === 'number' ? snapshot.rotation : initialState.rotation,
+        tilt: typeof snapshot.tilt === 'number' ? snapshot.tilt : initialState.tilt,
+        zoom: typeof snapshot.zoom === 'number' ? snapshot.zoom : initialState.zoom,
+        dof: typeof snapshot.dof === 'number' ? snapshot.dof : initialState.dof,
+    };
+};
+
 type CameraChangeAction =
     | { type: 'setUploadedImage'; uploadedImage: string | null }
     | { type: 'setSelectedAngle'; selectedAngle: string }
@@ -69,7 +106,8 @@ type CameraChangeAction =
     | { type: 'setRotation'; rotation: number }
     | { type: 'setTilt'; tilt: number }
     | { type: 'setZoom'; zoom: number }
-    | { type: 'setDof'; dof: number };
+    | { type: 'setDof'; dof: number }
+    | { type: 'reset' };
 
 const initialState: CameraChangeState = {
     uploadedImage: null,
@@ -97,6 +135,8 @@ function reducer(state: CameraChangeState, action: CameraChangeAction): CameraCh
             return { ...state, zoom: action.zoom };
         case 'setDof':
             return { ...state, dof: action.dof };
+        case 'reset':
+            return initialState;
         default:
             return state;
     }
@@ -105,36 +145,207 @@ function reducer(state: CameraChangeState, action: CameraChangeAction): CameraCh
 export default function CameraChangePage() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
+    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { cameraChange, currentGeneration, reset, isGenerating } = useGenerationStore();
-    const resultImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const resultImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
     const isProcessing = isGenerating;
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        const queryProjectId = searchParams.get('projectId');
+        if (queryProjectId) {
+            setProjectId(queryProjectId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrateFromSnapshot = (snapshot: Partial<CameraChangeSnapshot>) => {
+            dispatch({ type: 'setUploadedImage', uploadedImage: snapshot.uploadedImage ?? null });
+            dispatch({ type: 'setSelectedAngle', selectedAngle: snapshot.selectedAngle ?? initialState.selectedAngle });
+            dispatch({ type: 'setFocalLength', focalLength: snapshot.focalLength ?? initialState.focalLength });
+            dispatch({ type: 'setRotation', rotation: snapshot.rotation ?? initialState.rotation });
+            dispatch({ type: 'setTilt', tilt: snapshot.tilt ?? initialState.tilt });
+            dispatch({ type: 'setZoom', zoom: snapshot.zoom ?? initialState.zoom });
+            dispatch({ type: 'setDof', dof: snapshot.dof ?? initialState.dof });
+            setRestoredResultImage(snapshot.resultImage ?? null);
+        };
+
+        const loadProject = async () => {
+            if (!projectId) {
+                try {
+                    const raw = localStorage.getItem('camera-change:draft');
+                    if (raw) {
+                        hydrateFromSnapshot(normalizeCameraChangeSnapshot(JSON.parse(raw)));
+                    }
+                } catch (loadError) {
+                    console.error('Failed to restore camera change draft', loadError);
+                }
+                return;
+            }
+
+            setIsProjectLoading(true);
+            setProjectError(null);
+            try {
+                const project = await projectApi.get(projectId);
+                const rawContent = project.content as string | Record<string, unknown> | null | undefined;
+                const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+                if (!cancelled) {
+                    hydrateFromSnapshot(normalizeCameraChangeSnapshot(parsed));
+                }
+            } catch (loadError) {
+                console.error('Failed to restore camera change project', loadError);
+                if (!cancelled) {
+                    setProjectError('Could not load the saved camera change project. Falling back to a local draft.');
+                    try {
+                        const raw = localStorage.getItem('camera-change:draft');
+                        if (raw) {
+                            hydrateFromSnapshot(normalizeCameraChangeSnapshot(JSON.parse(raw)));
+                        }
+                    } catch (fallbackError) {
+                        console.error('Failed to restore camera change fallback', fallbackError);
+                    }
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        };
+
+        void loadProject();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
             reset();
-            dispatch({ type: 'setUploadedImage', uploadedImage: URL.createObjectURL(file) });
+            const uploaded = await mediaApi.uploadMedia(file);
+            if (!uploaded?.url) {
+                toast.error('Failed to upload image');
+                return;
+            }
+            dispatch({ type: 'setUploadedImage', uploadedImage: uploaded.url });
         }
     };
 
     const handleProcess = async () => {
         if (!state.uploadedImage) return;
-        await cameraChange({
-            imageUrl: state.uploadedImage,
-            movement: state.selectedAngle,
-            angle: state.rotation,
-            prompt: `Camera angle: ${state.selectedAngle}, focal length: ${state.focalLength}, tilt: ${state.tilt}°, zoom: ${state.zoom}%`,
-        });
+        try {
+            await cameraChange({
+                imageUrl: state.uploadedImage,
+                movement: state.selectedAngle,
+                angle: state.rotation,
+                prompt: `Camera angle: ${state.selectedAngle}, focal length: ${state.focalLength}, tilt: ${state.tilt}°, zoom: ${state.zoom}%`,
+            });
+        } catch (error) {
+            toast.error(error instanceof Error ? error.message : 'Failed to change camera perspective');
+        }
+    };
+
+    const handleSave = () => {
+        const payload: CameraChangeProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot: {
+                uploadedImage: state.uploadedImage,
+                resultImage,
+                selectedAngle: state.selectedAngle,
+                focalLength: state.focalLength,
+                rotation: state.rotation,
+                tilt: state.tilt,
+                zoom: state.zoom,
+                dof: state.dof,
+            },
+        };
+
+        localStorage.setItem('camera-change:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Camera Change Draft',
+                        description: 'Camera change draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Camera Change Draft',
+                        description: 'Camera change draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                toast.success('Camera change saved to your projects.');
+            } catch (saveError) {
+                console.error('Failed to persist camera change project', saveError);
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExport = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            uploadedImage: state.uploadedImage,
+            resultImage,
+            settings: {
+                selectedAngle: state.selectedAngle,
+                focalLength: state.focalLength,
+                rotation: state.rotation,
+                tilt: state.tilt,
+                zoom: state.zoom,
+                dof: state.dof,
+            },
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'camera-change-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Camera change export created.');
+    };
+
+    const handleReset = () => {
+        reset();
+        dispatch({ type: 'reset' });
+        setRestoredResultImage(null);
+        setProjectError(null);
     };
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Camera Change</h2>
+                    <h2 className="font-semibold text-muted-foreground">Camera Change</h2>
                     <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[10px] font-bold">
-                        <Sparkles className="w-2.5 h-2.5" /> New
+                        <Sparkles className="size-2.5" /> New
                     </div>
+                    <span className="ml-2 text-xs text-muted-foreground">
+                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                    </span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
@@ -150,8 +361,8 @@ export default function CameraChangePage() {
                             </div>
                         ) : (
                             <>
-                                <div className="w-14 h-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
-                                    <Upload className="w-6 h-6 text-muted-foreground" />
+                                <div className="size-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
+                                    <Upload className="size-6 text-muted-foreground" />
                                 </div>
                                 <div className="text-center">
                                     <p className="text-sm font-medium">Upload Image</p>
@@ -163,7 +374,7 @@ export default function CameraChangePage() {
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Camera Angle</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Camera Angle</h4>
                         <div className="grid grid-cols-3 gap-1.5">
                             {cameraAngles.map((angle) => (
                                 <button
@@ -176,7 +387,7 @@ export default function CameraChangePage() {
                                             : 'bg-card border-border text-muted-foreground hover:border-border/80',
                                     )}
                                 >
-                                    <angle.icon className="w-4 h-4" />
+                                    <angle.icon className="size-4" />
                                     <span className="text-[9px] font-medium truncate w-full text-center">{angle.label}</span>
                                 </button>
                             ))}
@@ -184,7 +395,7 @@ export default function CameraChangePage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Focal Length</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Focal Length</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {focalLengths.map((fl) => (
                                 <button
@@ -207,7 +418,7 @@ export default function CameraChangePage() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Rotation</Label>
-                                <span className="text-[11px] font-mono text-foreground">{state.rotation}°</span>
+                                <span className="text-[11px] font-mono text-foreground">{state.rotation}Â°</span>
                             </div>
                             <Slider
                                 min={-180}
@@ -220,7 +431,7 @@ export default function CameraChangePage() {
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
                                 <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Tilt</Label>
-                                <span className="text-[11px] font-mono text-foreground">{state.tilt}°</span>
+                                <span className="text-[11px] font-mono text-foreground">{state.tilt}Â°</span>
                             </div>
                             <Slider
                                 min={-90}
@@ -264,15 +475,15 @@ export default function CameraChangePage() {
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">2 Credits</span>
                     </div>
-                    <Button onClick={handleProcess} disabled={isProcessing || !state.uploadedImage} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleProcess} disabled={isProcessing || !state.uploadedImage || isProjectLoading || isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
                         {isProcessing ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 Processing...
                             </>
                         ) : (
                             <>
-                                <Camera className="w-5 h-5" />
+                                <Camera className="size-5" />
                                 Change Camera
                             </>
                         )}
@@ -283,14 +494,14 @@ export default function CameraChangePage() {
             <div className="flex-1 flex flex-col min-w-0">
                 {resultImage && (
                     <div className="h-14 px-6 border-b border-border flex items-center justify-end gap-2 shrink-0">
-                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs mr-auto" onClick={() => reset()}>
-                            <RotateCcw className="w-4 h-4" /> Reset
+                        <Button variant="ghost" size="sm" className="gap-1.5 text-xs mr-auto" onClick={handleReset}>
+                            <RotateCcw className="size-4" /> Reset
                         </Button>
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Folder className="w-4 h-4" /> Save
+                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}>
+                            <Folder className="size-4" /> Save
                         </Button>
-                        <Button size="sm" className="gap-2">
-                            <Download className="w-4 h-4" /> Export
+                        <Button size="sm" className="gap-2" onClick={handleExport}>
+                            <Download className="size-4" /> Export
                         </Button>
                     </div>
                 )}
@@ -305,8 +516,8 @@ export default function CameraChangePage() {
                             </div>
                         ) : (
                             <div className="text-center space-y-4">
-                                <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto">
-                                    <Camera className="w-8 h-8 text-muted-foreground" />
+                                <div className="size-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto">
+                                    <Camera className="size-8 text-muted-foreground" />
                                 </div>
                                 <div>
                                     <h3 className="font-semibold">Change Camera Perspective</h3>
@@ -322,8 +533,8 @@ export default function CameraChangePage() {
                             {isProcessing ? (
                                 <div className="w-full max-w-md aspect-[4/3] rounded-xl border border-border bg-card flex flex-col items-center justify-center gap-4">
                                     <div className="relative">
-                                        <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                        <Camera className="w-6 h-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                        <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                        <Camera className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                     </div>
                                     <p className="text-sm text-muted-foreground animate-pulse">Changing perspective...</p>
                                 </div>
@@ -333,7 +544,7 @@ export default function CameraChangePage() {
                                 </div>
                             ) : (
                                 <div className="w-full max-w-md aspect-[4/3] rounded-xl border border-dashed border-border bg-card flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                                    <Target className="w-8 h-8 opacity-30" />
+                                    <Target className="size-8 opacity-30" />
                                     <p className="text-sm">Select angle and click &quot;Change Camera&quot;</p>
                                 </div>
                             )}
@@ -341,6 +552,9 @@ export default function CameraChangePage() {
                     </div>
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }
+
+
+

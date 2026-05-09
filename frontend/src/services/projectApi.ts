@@ -3,9 +3,10 @@ import { api } from "@/lib/api";
 export interface Project {
   id: string;
   name: string;
-  slug: string;
-  url: string;
-  description: string;
+  slug?: string;
+  url?: string;
+  description?: string;
+  content?: unknown;
   ownerId?: number;
   organizationId?: string;
   createdAt: string;
@@ -14,8 +15,9 @@ export interface Project {
 
 export interface CreateProjectData {
   name: string;
-  url: string;
-  description: string;
+  url?: string;
+  description?: string;
+  content?: unknown;
   organizationId?: string;
 }
 
@@ -23,6 +25,7 @@ export interface UpdateProjectData {
   name?: string;
   url?: string;
   description?: string;
+  content?: unknown;
 }
 
 // Matches: Controller path 'projects', version '1'

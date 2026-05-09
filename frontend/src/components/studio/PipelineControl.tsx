@@ -88,7 +88,7 @@ function StepCard({ label, icon, done, total, color, gradientFrom, gradientTo, i
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
           <div className={cn(
-            'w-8 h-8 rounded-lg flex items-center justify-center',
+            'size-8 rounded-lg flex items-center justify-center',
             `bg-gradient-to-br ${gradientFrom} ${gradientTo}`
           )}>
             {icon}
@@ -129,11 +129,11 @@ function StepCard({ label, icon, done, total, color, gradientFrom, gradientTo, i
         )}
       >
         {isRunning ? (
-          <Loader2 className="w-3 h-3 animate-spin mr-1.5" />
+          <Loader2 className="size-3 animate-spin mr-1.5" />
         ) : isComplete ? (
-          <CheckCircle2 className="w-3 h-3 mr-1.5" />
+          <CheckCircle2 className="size-3 mr-1.5" />
         ) : (
-          <Zap className="w-3 h-3 mr-1.5" />
+          <Zap className="size-3 mr-1.5" />
         )}
         {isRunning ? 'Running...' : isComplete ? 'Regenerate' : 'Generate'}
       </Button>
@@ -179,14 +179,14 @@ export function PipelineControl({
       {/* Header */}
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50 flex items-center gap-2">
-          <Zap className="w-3.5 h-3.5 text-amber-400" />
+          <Zap className="size-3.5 text-amber-400" />
           Generation Pipeline
         </h3>
         <button
           onClick={onRefresh}
           className="p-1.5 hover:bg-white/[0.06] rounded-lg transition text-white/20 hover:text-white/50"
         >
-          <RefreshCw className="w-3.5 h-3.5" />
+          <RefreshCw className="size-3.5" />
         </button>
       </div>
 
@@ -194,7 +194,7 @@ export function PipelineControl({
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <StepCard
           label="Reference Images"
-          icon={<ImageIcon className="w-4 h-4 text-violet-300" />}
+          icon={<ImageIcon className="size-4 text-violet-300" />}
           done={status.characters.completed}
           total={status.characters.total}
           color="#8b5cf6"
@@ -207,7 +207,7 @@ export function PipelineControl({
 
         <StepCard
           label="Scene Images"
-          icon={<Sparkles className="w-4 h-4 text-blue-300" />}
+          icon={<Sparkles className="size-4 text-blue-300" />}
           done={status.scenes.verticalImages.completed}
           total={status.scenes.total}
           color="#3b82f6"
@@ -220,7 +220,7 @@ export function PipelineControl({
 
         <StepCard
           label="Video Clips"
-          icon={<Play className="w-4 h-4 text-pink-300" />}
+          icon={<Play className="size-4 text-pink-300" />}
           done={status.scenes.verticalVideos.completed}
           total={status.scenes.total}
           color="#ec4899"
@@ -237,7 +237,7 @@ export function PipelineControl({
         status.scenes.verticalImages.failed > 0 ||
         status.scenes.verticalVideos.failed > 0) && (
         <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.06] border border-red-500/10 text-red-400/60 text-[11px]">
-          <XCircle className="w-3.5 h-3.5 shrink-0" />
+          <XCircle className="size-3.5 shrink-0" />
           <span>
             Some generations failed —{' '}
             {status.characters.failed > 0 && `${status.characters.failed} refs, `}

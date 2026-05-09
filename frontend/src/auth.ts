@@ -2,6 +2,7 @@ import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
 import axios from "axios";
+import type { JWT } from "next-auth/jwt";
 
 const API_URL = (
   process.env.INTERNAL_API_URL ||
@@ -47,6 +48,12 @@ async function refreshAccessToken(refreshToken: string) {
   } catch {
     return null;
   }
+}
+
+function clearAuthTokenState(token: JWT) {
+  token.accessToken = undefined;
+  token.refreshToken = undefined;
+  token.tokenExpires = undefined;
 }
 
 export const { handlers, auth } = NextAuth({
@@ -113,11 +120,9 @@ export const { handlers, auth } = NextAuth({
           token.error = undefined;
           return token;
         } catch (error) {
-          if (axios.isAxiosError(error)) {
-            console.error("Google login failed", error.response?.data);
-          } else {
-            console.error("Google login error", error);
-          }
+          clearAuthTokenState(token);
+          token.userId = undefined;
+          token.role = null;
           token.error = "GoogleLoginFailed";
         }
       }
@@ -160,12 +165,14 @@ export const { handlers, auth } = NextAuth({
       // Token is missing or expired, attempt refresh.
       const refreshToken = token.refreshToken as string | undefined;
       if (!refreshToken) {
+        clearAuthTokenState(token);
         token.error = "RefreshTokenMissing";
         return token;
       }
 
       const refreshed = await refreshAccessToken(refreshToken);
       if (!refreshed) {
+        clearAuthTokenState(token);
         token.error = "RefreshTokenExpired";
         return token;
       }
@@ -177,21 +184,21 @@ export const { handlers, auth } = NextAuth({
       return token;
     },
     async session({ session, token }) {
-      console.debug(
-        "[Auth] Mapping token to session. Token has accessToken:",
-        !!token.accessToken
-      );
-      session.accessToken = token.accessToken as string;
+      const hasAuthError = Boolean(token.error);
+      session.accessToken = hasAuthError ? undefined : (token.accessToken as string);
       if (session.user) {
-        session.user.id = token.userId as string;
-        session.user.role = normalizeRole(token.role);
+        if (!hasAuthError) {
+          session.user.id = token.userId as string;
+          session.user.role = normalizeRole(token.role);
+        }
         // Keep token accessible in both locations for legacy consumers.
-        session.user.accessToken = token.accessToken as string;
+        session.user.accessToken = hasAuthError ? undefined : (token.accessToken as string);
       }
       // Pass error to client so it can force re-login.
       if (token.error) {
-        console.warn("[Auth] Session carries error:", token.error);
         (session as { error?: string }).error = token.error as string;
+      } else {
+        (session as { error?: string }).error = undefined;
       }
       return session;
     },

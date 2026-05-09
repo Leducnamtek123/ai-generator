@@ -97,7 +97,9 @@ export class VisualFlowController {
   // ─────────────────────────────────────────────
 
   @Post('projects')
-  @ApiOperation({ summary: 'Create a new visual story project with characters' })
+  @ApiOperation({
+    summary: 'Create a new visual story project with characters',
+  })
   @ApiResponse({ status: 201, description: 'Project created' })
   createProject(@Body() dto: CreateVisualProjectDto, @Request() req: any) {
     return this.visualFlowService.createProject(dto, req.user.id);
@@ -117,7 +119,9 @@ export class VisualFlowController {
   }
 
   @Get('projects/:id')
-  @ApiOperation({ summary: 'Get project details with characters, videos, and scenes' })
+  @ApiOperation({
+    summary: 'Get project details with characters, videos, and scenes',
+  })
   findOneProject(@Param('id') id: string, @Request() req: any) {
     return this.visualFlowService.findOneProject(id, req.user.id);
   }
@@ -167,7 +171,11 @@ export class VisualFlowController {
     @Param('charId') charId: string,
     @Request() req: any,
   ) {
-    return this.visualFlowService.deleteCharacter(projectId, charId, req.user.id);
+    return this.visualFlowService.deleteCharacter(
+      projectId,
+      charId,
+      req.user.id,
+    );
   }
 
   // ─────────────────────────────────────────────
@@ -208,24 +216,31 @@ export class VisualFlowController {
 
   @Get('projects/:id/videos/:videoId/scenes')
   @ApiOperation({ summary: 'Get all scenes in a video (ordered)' })
-  getScenes(@Param('videoId') videoId: string) {
-    return this.visualFlowService.getScenes(videoId);
+  getScenes(
+    @Param('id') projectId: string,
+    @Param('videoId') videoId: string,
+    @Request() req: any,
+  ) {
+    return this.visualFlowService.getScenes(videoId, req.user.id, projectId);
   }
 
   @Patch('scenes/:sceneId')
-  @ApiOperation({ summary: 'Update scene prompt, videoPrompt, or characterNames' })
+  @ApiOperation({
+    summary: 'Update scene prompt, videoPrompt, or characterNames',
+  })
   updateScene(
     @Param('sceneId') sceneId: string,
     @Body() dto: UpdateVisualSceneDto,
+    @Request() req: any,
   ) {
-    return this.visualFlowService.updateScene(sceneId, dto);
+    return this.visualFlowService.updateScene(sceneId, dto, req.user.id);
   }
 
   @Delete('scenes/:sceneId')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: 'Remove a scene' })
-  deleteScene(@Param('sceneId') sceneId: string) {
-    return this.visualFlowService.deleteScene(sceneId);
+  deleteScene(@Param('sceneId') sceneId: string, @Request() req: any) {
+    return this.visualFlowService.deleteScene(sceneId, req.user.id);
   }
 
   // ─────────────────────────────────────────────
@@ -253,8 +268,7 @@ export class VisualFlowController {
   @Post('projects/:id/videos/:videoId/gen-images')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({
-    summary:
-      'Generate scene still images for all pending scenes in a video',
+    summary: 'Generate scene still images for all pending scenes in a video',
   })
   generateSceneImages(
     @Param('id') projectId: string,
@@ -291,9 +305,10 @@ export class VisualFlowController {
     );
   }
 
-
   @Post('projects/:id/videos/:videoId/suggest-scenes')
-  @ApiOperation({ summary: 'AI Assistant: Suggest scenes based on project story' })
+  @ApiOperation({
+    summary: 'AI Assistant: Suggest scenes based on project story',
+  })
   async suggestScenes(
     @Param('id') projectId: string,
     @Param('videoId') videoId: string,
@@ -309,7 +324,6 @@ export class VisualFlowController {
   }
 
   @Get('projects/:id/videos/:videoId/status')
-
   @ApiOperation({ summary: 'Get pipeline status dashboard for a video' })
   getPipelineStatus(
     @Param('id') projectId: string,
@@ -362,14 +376,17 @@ export class VisualFlowController {
   }
 
   @Post('projects/:id/apply-material')
-  @ApiOperation({ summary: 'Apply a material style to scene prompts in a project' })
+  @ApiOperation({
+    summary: 'Apply a material style to scene prompts in a project',
+  })
   async applyMaterial(
     @Param('id') projectId: string,
     @Body() dto: ApplyMaterialDto,
     @Request() req: any,
   ) {
     const mat = this.materialsService.getMaterial(dto.materialId);
-    if (!mat) throw new NotFoundException(`Material '${dto.materialId}' not found`);
+    if (!mat)
+      throw new NotFoundException(`Material '${dto.materialId}' not found`);
     // Delegate to service to update scene prompts with material prefix
     return this.visualFlowService.applyMaterialToScenes(
       projectId,
@@ -399,7 +416,8 @@ export class VisualFlowController {
   @Throttle({ default: { limit: 3, ttl: 60000 } })
   @ApiOperation({ summary: 'Concatenate multiple videos into one' })
   mergeVideos(@Body() dto: MergeVideosDto) {
-    const outputPath = dto.videoUrls[0]?.replace(/\.mp4$/, '_merged.mp4') || '/tmp/merged.mp4';
+    const outputPath =
+      dto.videoUrls[0]?.replace(/\.mp4$/, '_merged.mp4') || '/tmp/merged.mp4';
     return this.postProcessService.mergeVideos(dto.videoUrls, outputPath);
   }
 
@@ -431,7 +449,10 @@ export class VisualFlowController {
 
   @Post('projects/:id/videos/:videoId/concat')
   @Throttle({ default: { limit: 2, ttl: 60000 } })
-  @ApiOperation({ summary: 'Concatenate all scene videos into final video with optional music' })
+  @ApiOperation({
+    summary:
+      'Concatenate all scene videos into final video with optional music',
+  })
   async concatSceneVideos(
     @Param('id') projectId: string,
     @Param('videoId') videoId: string,
@@ -455,7 +476,9 @@ export class VisualFlowController {
 
   @Post('projects/:id/videos/:videoId/review')
   @Throttle({ default: { limit: 2, ttl: 60000 } })
-  @ApiOperation({ summary: 'Review video quality via Claude Vision frame analysis' })
+  @ApiOperation({
+    summary: 'Review video quality via Claude Vision frame analysis',
+  })
   async reviewVideo(
     @Param('id') projectId: string,
     @Param('videoId') videoId: string,
@@ -476,7 +499,9 @@ export class VisualFlowController {
 
   @Post('music/generate')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Generate music via Suno (custom lyrics or description mode)' })
+  @ApiOperation({
+    summary: 'Generate music via Suno (custom lyrics or description mode)',
+  })
   async generateMusic(@Body() dto: GenerateMusicDto) {
     const taskId = await this.musicService.generate({
       prompt: dto.prompt,
@@ -571,9 +596,15 @@ export class VisualFlowController {
 
   @Post('post-process/image-to-video')
   @Throttle({ default: { limit: 5, ttl: 60000 } })
-  @ApiOperation({ summary: 'Convert a single image into a video clip with Ken Burns zoom effect' })
+  @ApiOperation({
+    summary:
+      'Convert a single image into a video clip with Ken Burns zoom effect',
+  })
   imageToVideo(@Body() dto: ImageToVideoDto) {
-    const outputPath = dto.imagePath.replace(/\.(png|jpg|jpeg|webp)$/i, '_video.mp4');
+    const outputPath = dto.imagePath.replace(
+      /\.(png|jpg|jpeg|webp)$/i,
+      '_video.mp4',
+    );
     return this.postProcessService.imageToVideo(dto.imagePath, outputPath, {
       duration: dto.duration,
       width: dto.width,
@@ -584,9 +615,14 @@ export class VisualFlowController {
 
   @Post('post-process/images-slideshow')
   @Throttle({ default: { limit: 3, ttl: 60000 } })
-  @ApiOperation({ summary: 'Create a slideshow video from multiple images with crossfade transitions' })
+  @ApiOperation({
+    summary:
+      'Create a slideshow video from multiple images with crossfade transitions',
+  })
   async imagesToSlideshow(@Body() dto: ImagesToSlideshowDto) {
-    const outputPath = dto.imagePaths[0]?.replace(/\.(png|jpg|jpeg|webp)$/i, '_slideshow.mp4') || 'slideshow.mp4';
+    const outputPath =
+      dto.imagePaths[0]?.replace(/\.(png|jpg|jpeg|webp)$/i, '_slideshow.mp4') ||
+      'slideshow.mp4';
     const result = await this.postProcessService.imagesToSlideshow(
       dto.imagePaths,
       outputPath,
@@ -602,9 +638,14 @@ export class VisualFlowController {
     // Optionally add music
     if (dto.musicUrl && result.path) {
       const musicOutput = result.path.replace('.mp4', '_music.mp4');
-      await this.postProcessService.addMusic(result.path, dto.musicUrl, musicOutput, {
-        musicVolume: dto.musicVolume ?? 0.3,
-      });
+      await this.postProcessService.addMusic(
+        result.path,
+        dto.musicUrl,
+        musicOutput,
+        {
+          musicVolume: dto.musicVolume ?? 0.3,
+        },
+      );
       return { ...result, path: musicOutput, hasMusicOverlay: true };
     }
 
@@ -614,8 +655,10 @@ export class VisualFlowController {
   @Post('projects/:id/videos/:videoId/slideshow')
   @Throttle({ default: { limit: 2, ttl: 60000 } })
   @ApiOperation({
-    summary: 'Create a slideshow video from project scene images (Ken Burns + crossfade)',
-    description: 'Pulls scene images from the project, creates a slideshow with Ken Burns zoom and crossfade transitions. ' +
+    summary:
+      'Create a slideshow video from project scene images (Ken Burns + crossfade)',
+    description:
+      'Pulls scene images from the project, creates a slideshow with Ken Burns zoom and crossfade transitions. ' +
       'This is a quick alternative to AI video generation — no credits needed, just ffmpeg.',
   })
   async slideshowFromScenes(
@@ -661,7 +704,8 @@ export class VisualFlowController {
   @Throttle({ default: { limit: 2, ttl: 60000 } })
   @ApiOperation({
     summary: 'Generate narration audio for all scenes with narrator_text',
-    description: 'Batch TTS: generates audio for each scene that has narratorText. Optionally overlays onto scene videos.',
+    description:
+      'Batch TTS: generates audio for each scene that has narratorText. Optionally overlays onto scene videos.',
   })
   async generateVideoNarration(
     @Param('id') projectId: string,
@@ -720,7 +764,9 @@ export class VisualFlowController {
   }
 
   @Get('projects/:id/videos/:videoId/scenes/:sceneId/chain')
-  @ApiOperation({ summary: 'Get chain info for a scene (parent, children, type)' })
+  @ApiOperation({
+    summary: 'Get chain info for a scene (parent, children, type)',
+  })
   async getSceneChainInfo(
     @Param('id') projectId: string,
     @Param('sceneId') sceneId: string,
@@ -748,7 +794,10 @@ export class VisualFlowController {
   // ─────────────────────────────────────────────
 
   @Get('projects/:id/videos/:videoId/stale-scenes')
-  @ApiOperation({ summary: 'Find scenes with stale downstream assets (image done but video pending)' })
+  @ApiOperation({
+    summary:
+      'Find scenes with stale downstream assets (image done but video pending)',
+  })
   async findStaleScenes(
     @Param('id') projectId: string,
     @Param('videoId') videoId: string,
@@ -764,8 +813,10 @@ export class VisualFlowController {
 
   @Post('projects/:id/videos/:videoId/enrich-prompts')
   @ApiOperation({
-    summary: 'Enrich scene prompts with Veo 3 audio labels, negative prompts, and voice context',
-    description: 'Batch-processes all scenes to add proper audio instructions, ' +
+    summary:
+      'Enrich scene prompts with Veo 3 audio labels, negative prompts, and voice context',
+    description:
+      'Batch-processes all scenes to add proper audio instructions, ' +
       'character voice descriptions for dialogue, and negative prompts. ' +
       'Does not modify DB — returns enriched prompts for preview/use.',
   })
@@ -793,7 +844,9 @@ export class VisualFlowController {
   // ─────────────────────────────────────────────
 
   @Post('tts/templates')
-  @ApiOperation({ summary: 'Create a voice template (generates reference audio)' })
+  @ApiOperation({
+    summary: 'Create a voice template (generates reference audio)',
+  })
   async createVoiceTemplate(
     @Body() dto: CreateVoiceTemplateDto,
     @Request() req: any,
@@ -854,7 +907,8 @@ export class VisualFlowController {
   @ApiOperation({ summary: 'Delete voice template' })
   async deleteVoiceTemplate(@Param('templateId') id: string) {
     const result = await this.voiceTemplateRepo.delete(id);
-    if (!result.affected) throw new NotFoundException(`Template ${id} not found`);
+    if (!result.affected)
+      throw new NotFoundException(`Template ${id} not found`);
     return { success: true };
   }
 
@@ -865,7 +919,8 @@ export class VisualFlowController {
   @Delete('projects/:id/videos/:videoId/scenes/cleanup')
   @ApiOperation({
     summary: 'Delete all scenes of a given chain type and re-compact order',
-    description: 'Bulk-remove all CONTINUATION or INSERT scenes, then re-index displayOrder (0, 1, 2, ...).',
+    description:
+      'Bulk-remove all CONTINUATION or INSERT scenes, then re-index displayOrder (0, 1, 2, ...).',
   })
   async cleanupScenes(
     @Param('id') projectId: string,
@@ -884,9 +939,10 @@ export class VisualFlowController {
   @Post('prompt-builder/reference')
   @ApiOperation({
     summary: 'Build an optimized reference image prompt for a character/entity',
-    description: 'Combines entity type composition guidelines + material styling to create a high-quality reference image prompt.',
+    description:
+      'Combines entity type composition guidelines + material styling to create a high-quality reference image prompt.',
   })
-  async buildReferencePrompt(@Body() dto: BuildReferencePromptDto) {
+  buildReferencePrompt(@Body() dto: BuildReferencePromptDto) {
     const material = dto.materialId
       ? this.materialsService.getMaterial(dto.materialId)
       : undefined;

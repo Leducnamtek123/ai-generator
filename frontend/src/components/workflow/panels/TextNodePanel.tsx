@@ -11,7 +11,7 @@ export function TextNodePanel({ nodeData, onChange }: NodePanelProps) {
         <div className="space-y-4">
             <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                    <Type className="w-4 h-4 text-green-400 shrink-0 mt-0.5" />
+                    <Type className="size-4 text-green-400 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs text-green-300 font-medium">Text Prompt</p>
                         <p className="text-[10px] text-green-300/60 mt-1">

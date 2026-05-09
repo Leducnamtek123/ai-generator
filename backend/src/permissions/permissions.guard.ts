@@ -9,9 +9,35 @@ import {
   CHECK_PERMISSIONS_KEY,
   RequiredPermission,
 } from './permissions.decorator';
-import { defineAbilityFor, OrgAction } from './permissions';
+import { defineAbilityFor } from './permissions';
 import { MemberRepository } from '../members/infrastructure/persistence/member.repository';
 import { OrganizationRepository } from '../organizations/infrastructure/persistence/organization.repository';
+import { RoleEnum } from '../roles/roles.enum';
+
+function normalizePlatformRole(
+  role: unknown,
+): 'OWNER' | 'ADMIN' | 'MEMBER' | 'BILLING' | 'VIEWER' {
+  if (typeof role === 'string') {
+    const lower = role.toLowerCase();
+    if (lower === 'admin' || lower === 'administrator') return 'ADMIN';
+    if (lower === 'owner') return 'OWNER';
+    if (lower === 'billing') return 'BILLING';
+    if (lower === 'viewer') return 'VIEWER';
+  }
+
+  if (role && typeof role === 'object') {
+    const maybeName = (role as { name?: unknown }).name;
+    if (typeof maybeName === 'string') {
+      return normalizePlatformRole(maybeName);
+    }
+
+    const maybeId = (role as { id?: unknown }).id;
+    if (String(maybeId) === String(RoleEnum.admin)) return 'ADMIN';
+    if (String(maybeId) === String(RoleEnum.user)) return 'MEMBER';
+  }
+
+  return 'MEMBER';
+}
 
 @Injectable()
 export class PermissionsGuard implements CanActivate {
@@ -42,7 +68,7 @@ export class PermissionsGuard implements CanActivate {
       // No org context, check basic permissions
       const ability = defineAbilityFor({
         id: user.id,
-        role: 'MEMBER',
+        role: normalizePlatformRole(user.role),
       });
       return requiredPermissions.every((perm) =>
         ability.can(perm.action, perm.subject as any),

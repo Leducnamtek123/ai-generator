@@ -9,8 +9,7 @@ import { VisualVideoEntity } from './entities/visual-video.entity';
 import { VisualSceneEntity } from './entities/visual-scene.entity';
 import { VoiceTemplateEntity } from './entities/voice-template.entity';
 import { GenerationsModule } from '../generations/generations.module';
-import { BullModule } from '@nestjs/bullmq';
-import { VISUAL_FLOW_QUEUE } from '../queues/queues.constants';
+import { QueuesModule } from '../queues/queues.module';
 
 // FlowKit ported services
 import { MaterialsService } from './services/materials.service';
@@ -34,9 +33,9 @@ import { VisualFlowProcessor } from './visual-flow.processor';
       VisualSceneEntity,
       VoiceTemplateEntity,
     ]),
-    BullModule.registerQueue({ name: VISUAL_FLOW_QUEUE }),
     GenerationsModule,
     ConfigModule,
+    QueuesModule,
   ],
   controllers: [VisualFlowController, VisualFlowSseController],
   providers: [

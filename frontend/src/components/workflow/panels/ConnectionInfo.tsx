@@ -16,7 +16,7 @@ export function ConnectionInfo({ accepts, outputs }: { accepts: string[], output
                         ))}
                     </div>
                 </div>
-                <ArrowRight className="w-4 h-4 text-muted-foreground/50" />
+                <ArrowRight className="size-4 text-muted-foreground/50" />
                 <div className="flex-1">
                     <p className="text-muted-foreground text-[10px] mb-1">Outputs</p>
                     <span className="px-1.5 py-0.5 bg-blue-500/10 text-blue-400 rounded text-[10px]">{outputs}</span>

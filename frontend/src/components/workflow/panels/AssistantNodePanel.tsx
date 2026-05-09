@@ -14,7 +14,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
         <div className="space-y-4">
             <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                    <Sparkles className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                    <Sparkles className="size-4 text-emerald-400 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs text-emerald-300 font-medium">AI Prompt Enhancer</p>
                         <p className="text-[10px] text-emerald-300/60 mt-1">Transforms simple prompts into detailed, optimized descriptions.</p>
@@ -105,7 +105,7 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
                     disabled={isGenerating}
                     className="w-full h-11 bg-gradient-to-r from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-emerald-500/20"
                 >
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />}
+                    {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <Wand2 className="size-4" />}
                     {isGenerating ? 'Enhancing...' : 'Enhance Prompt'}
                 </Button>
             </div>

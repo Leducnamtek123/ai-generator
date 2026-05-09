@@ -21,10 +21,10 @@ export function CreditBadge({ className, showIcon = true }: CreditBadgeProps) {
             )}
         >
             {showIcon && (
-                <Coins className="w-4 h-4 text-credits" />
+                <Coins className="size-4 text-credits" />
             )}
             {isLoading ? (
-                <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />
+                <Loader2 className="size-3 animate-spin text-muted-foreground" />
             ) : (
                 <span className="text-sm font-semibold text-credits">
                     {formatCredits(balance)}

@@ -60,7 +60,7 @@ export function StickerNode({ id, data, selected }: StickerNodeProps) {
             <div
                 className={cn(
                     "relative flex items-center justify-center transition-transform cursor-pointer",
-                    data.isPreview ? "w-12 h-12" : "w-24 h-24 hover:scale-110",
+                    data.isPreview ? "size-12" : "size-24 hover:scale-110",
                     selected && "drop-shadow-[0_0_15px_#2563EB80]"
                 )}
                 onClick={() => !data.isPreview && setShowPicker(!showPicker)}
@@ -71,7 +71,7 @@ export function StickerNode({ id, data, selected }: StickerNodeProps) {
                 )}>
                     {(() => {
                         const StickerIcon = STICKERS.find((s) => s.id === sticker)?.icon ?? Smile;
-                        return <StickerIcon className={cn("text-current", data.isPreview ? "w-10 h-10" : "w-16 h-16")} />;
+                        return <StickerIcon className={cn("text-current", data.isPreview ? "size-10" : "size-16")} />;
                     })()}
                 </div>
 
@@ -84,9 +84,9 @@ export function StickerNode({ id, data, selected }: StickerNodeProps) {
                                     e.stopPropagation();
                                     handleSelect(s.id);
                                 }}
-                                className="w-8 h-8 flex items-center justify-center text-xl hover:bg-accent rounded-lg transition-colors"
+                                className="size-8 flex items-center justify-center text-xl hover:bg-accent rounded-lg transition-colors"
                             >
-                                <s.icon className="w-4 h-4" />
+                                <s.icon className="size-4" />
                             </button>
                         ))}
                     </div>

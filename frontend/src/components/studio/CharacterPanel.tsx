@@ -111,9 +111,9 @@ export function CharacterPanel({
                   className="text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
                 >
                   {isGenerating ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    <Loader2 className="size-3.5 animate-spin" />
                   ) : (
-                    <Sparkles className="w-3.5 h-3.5" />
+                    <Sparkles className="size-3.5" />
                   )}
                 </Button>
               </TooltipTrigger>
@@ -128,7 +128,7 @@ export function CharacterPanel({
                 onClick={() => setShowForm(!showForm)}
                 className="text-white/40 hover:text-white hover:bg-white/10"
               >
-                {showForm ? <X className="w-3.5 h-3.5" /> : <Plus className="w-3.5 h-3.5" />}
+                {showForm ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{showForm ? 'Cancel' : 'Add Entity'}</TooltipContent>
@@ -160,7 +160,7 @@ export function CharacterPanel({
                       : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/15'
                   )}
                 >
-                  <Icon className="w-3 h-3" />
+                  <Icon className="size-3" />
                   {type.replace('_', ' ')}
                 </button>
               );
@@ -179,7 +179,7 @@ export function CharacterPanel({
             size="sm"
             className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs h-7"
           >
-            {adding ? <Loader2 className="w-3 h-3 animate-spin mr-1" /> : <Plus className="w-3 h-3 mr-1" />}
+            {adding ? <Loader2 className="size-3 animate-spin mr-1" /> : <Plus className="size-3 mr-1" />}
             Add
           </Button>
         </div>
@@ -197,7 +197,7 @@ export function CharacterPanel({
               className="group flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.04] transition-colors"
             >
               {/* Avatar */}
-              <div className="relative w-9 h-9 shrink-0">
+              <div className="relative size-9 shrink-0">
                 {char.referenceImageUrl ? (
                   <Image
                     src={char.referenceImageUrl}
@@ -205,18 +205,19 @@ export function CharacterPanel({
                     fill
                     className="object-cover rounded-lg"
                     sizes="36px"
+                    unoptimized
                   />
                 ) : (
                   <div className={cn(
-                    'w-9 h-9 rounded-lg flex items-center justify-center ring-1',
+                    'size-9 rounded-lg flex items-center justify-center ring-1',
                     statusStyle.bg, statusStyle.ring
                   )}>
-                    <Icon className="w-4 h-4 text-white/40" />
+                    <Icon className="size-4 text-white/40" />
                   </div>
                 )}
                 {/* Status indicator */}
                 <div className={cn(
-                  'absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#0a0a0f]',
+                  'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[#0a0a0f]',
                   char.refStatus === 'COMPLETED' ? 'bg-emerald-400' :
                   char.refStatus === 'PROCESSING' ? 'bg-blue-400 animate-pulse' :
                   char.refStatus === 'FAILED' ? 'bg-red-400' : 'bg-amber-400'
@@ -234,7 +235,7 @@ export function CharacterPanel({
                 onClick={() => onDelete(char.id)}
                 className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded transition-all"
               >
-                <Trash2 className="w-3 h-3 text-red-400/60" />
+                <Trash2 className="size-3 text-red-400/60" />
               </button>
             </div>
           );
@@ -245,7 +246,7 @@ export function CharacterPanel({
             onClick={() => setShowForm(true)}
             className="w-full flex flex-col items-center justify-center py-8 text-white/15 hover:text-white/30 transition-colors"
           >
-            <Plus className="w-6 h-6 mb-1" />
+            <Plus className="size-6 mb-1" />
             <span className="text-[10px]">Add your first entity</span>
           </button>
         )}

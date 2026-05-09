@@ -1,5 +1,5 @@
-import LandingPage from '../page';
+import PricingShowcasePage from "@/components/billing/PricingShowcasePage";
 
 export default function PricingRoutePage() {
-  return <LandingPage initialSectionId="pricing" />;
+  return <PricingShowcasePage />;
 }

@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { WorkflowEntity } from '../entities/workflow.entity';
 import { WorkflowRepository } from '../../workflow.repository';
 import { Workflow } from '../../../../domain/workflow';
+import { DeepPartial } from '../../../../../utils/types/deep-partial.type';
 import { WorkflowMapper } from '../mappers/workflow.mapper';
 import { NullableType } from '../../../../../utils/types/nullable.type';
 
@@ -77,8 +78,8 @@ export class WorkflowsRelationalRepository implements WorkflowRepository {
   async update(
     id: string,
     userId: string | number,
-    payload: Partial<Workflow>,
-  ): Promise<Workflow> {
+    payload: DeepPartial<Workflow>,
+  ): Promise<Workflow | null> {
     const entity = await this.workflowsRepository.findOne({
       relations: ['project'],
       where: {
@@ -98,7 +99,7 @@ export class WorkflowsRelationalRepository implements WorkflowRepository {
         WorkflowMapper.toPersistence({
           ...WorkflowMapper.toDomain(entity),
           ...payload,
-        }),
+        } as Workflow),
       ),
     );
 

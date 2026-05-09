@@ -18,12 +18,14 @@ import { FileType } from '../files/domain/file';
 import { Role } from '../roles/domain/role';
 import { Status } from '../statuses/domain/status';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { SessionService } from '../session/session.service';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly usersRepository: UserRepository,
     private readonly filesService: FilesService,
+    private readonly sessionService: SessionService,
   ) {}
 
   async create(createUserDto: CreateUserDto): Promise<User> {
@@ -283,6 +285,7 @@ export class UsersService {
   }
 
   async remove(id: User['id']): Promise<void> {
+    await this.sessionService.deleteByUserId({ userId: id });
     await this.usersRepository.remove(id);
   }
 }

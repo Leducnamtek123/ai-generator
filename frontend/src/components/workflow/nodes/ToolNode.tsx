@@ -58,7 +58,7 @@ export function ToolNode({ id, data, selected }: ToolNodeProps) {
                     <div className="p-3 border-b border-border/60">
                         <div className="flex items-center gap-2">
                             <div className="rounded-md bg-fuchsia-500/15 p-2 text-fuchsia-300">
-                                <Wand2 className="w-4 h-4" />
+                                <Wand2 className="size-4" />
                             </div>
                             <div className="min-w-0">
                                 <p className="text-sm font-medium text-foreground">Tool: {toolLabel}</p>
@@ -79,14 +79,14 @@ export function ToolNode({ id, data, selected }: ToolNodeProps) {
                         <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs text-foreground min-h-[56px]">
                             {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                                 <div className="flex items-center gap-2 text-fuchsia-400">
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <Loader2 className="size-4 animate-spin" />
                                     <span>{data.status === NodeStatus.QUEUED ? 'Queued...' : 'Processing...'}</span>
                                 </div>
                             ) : data.resultText ? (
                                 <p className="whitespace-pre-wrap">{data.resultText}</p>
                             ) : data.resultUrl ? (
                                 <div className="flex items-center gap-2 text-sm">
-                                    <ArrowRightLeft className="w-4 h-4 text-fuchsia-400" />
+                                    <ArrowRightLeft className="size-4 text-fuchsia-400" />
                                     <span className="truncate">{data.resultUrl}</span>
                                 </div>
                             ) : (

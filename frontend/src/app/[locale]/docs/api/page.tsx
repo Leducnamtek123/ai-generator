@@ -293,7 +293,7 @@ export default function ApiDocsPage() {
                                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-violet-500/20 bg-violet-500/10 text-violet-400">
                                         <Terminal className="h-5 w-5" />
                                     </div>
-                                    <h2 className="text-2xl font-bold">Connect via MCP</h2>
+                                    <h2 className="text-2xl font-semibold">Connect via MCP</h2>
                                 </div>
                                 <p className="text-sm leading-7 text-muted-foreground">
                                     MCP lets Claude Desktop and other agents talk to the platform directly using your
@@ -341,7 +341,7 @@ export default function ApiDocsPage() {
                                     <div className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
                                         <Server className="h-5 w-5" />
                                     </div>
-                                    <h2 className="text-2xl font-bold">Authentication</h2>
+                                    <h2 className="text-2xl font-semibold">Authentication</h2>
                                 </div>
                                 <p className="text-sm leading-7 text-muted-foreground">
                                     Use the `X-API-KEY` header for programmatic access. Generate the key in the
@@ -380,7 +380,7 @@ export default function ApiDocsPage() {
                         <section id="endpoints" className="space-y-4 rounded-[2rem] border border-border bg-card p-6">
                             <div className="flex flex-col gap-4 border-b border-border pb-4 sm:flex-row sm:items-end sm:justify-between">
                                 <div>
-                                    <h2 className="text-2xl font-bold">Endpoint catalog</h2>
+                                    <h2 className="text-2xl font-semibold">Endpoint catalog</h2>
                                     <p className="mt-1 text-sm text-muted-foreground">
                                         Search across methods, paths, summaries, and source files. No manual loading is
                                         required.
@@ -418,7 +418,7 @@ export default function ApiDocsPage() {
                                         >
                                             <summary className="flex cursor-pointer list-none items-start justify-between gap-4">
                                                 <div>
-                                                    <h3 className="text-base font-bold">{group.tag}</h3>
+                                                    <h3 className="text-base font-semibold">{group.tag}</h3>
                                                     <p className="mt-1 text-sm text-muted-foreground">
                                                         {group.items.length} documented operation
                                                         {group.items.length > 1 ? 's' : ''}.
@@ -468,7 +468,7 @@ export default function ApiDocsPage() {
                         <section id="support" className="rounded-[2rem] border border-border bg-card p-6">
                             <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                                 <div>
-                                    <h2 className="text-xl font-bold">Need help?</h2>
+                                    <h2 className="text-xl font-semibold">Need help?</h2>
                                     <p className="mt-1 text-sm text-muted-foreground">
                                         Contact developer support or jump to community resources from here.
                                     </p>

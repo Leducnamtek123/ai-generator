@@ -114,7 +114,7 @@ const StockHoverContent = () => (
     <div className="grid grid-cols-4 gap-6">
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          <ImageIcon className="w-4 h-4" />
+          <ImageIcon className="size-4" />
           IMAGE
         </div>
         {stockMenuData.image.map((tool) => (
@@ -129,7 +129,7 @@ const StockHoverContent = () => (
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          <Video className="w-4 h-4" />
+          <Video className="size-4" />
           VIDEO
         </div>
         {stockMenuData.video.map((tool) => (
@@ -144,7 +144,7 @@ const StockHoverContent = () => (
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          <Mic className="w-4 h-4" />
+          <Mic className="size-4" />
           AUDIO
         </div>
         {stockMenuData.audio.map((tool) => (
@@ -159,7 +159,7 @@ const StockHoverContent = () => (
       </div>
       <div className="space-y-2">
         <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
-          <LayoutGrid className="w-4 h-4" />
+          <LayoutGrid className="size-4" />
           DESIGN
         </div>
         {stockMenuData.design.map((tool) => (
@@ -178,14 +178,14 @@ const StockHoverContent = () => (
         href="/stock?view=collections"
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <LayoutGrid className="w-4 h-4" />
+        <LayoutGrid className="size-4" />
         My Collections
       </Link>
       <Link
         href="/stock?view=downloads"
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
-        <Clock className="w-4 h-4" />
+        <Clock className="size-4" />
         Downloads
       </Link>
     </div>
@@ -220,7 +220,7 @@ const SidebarNavItem = ({
           isCollapsed && "justify-center w-full",
         )}
       >
-        <item.icon className="w-5 h-5 shrink-0" />
+        <item.icon className="size-5 shrink-0" />
         {!isCollapsed && <span>{item.label}</span>}
       </div>
       {!isCollapsed && (
@@ -241,12 +241,12 @@ const SidebarNavItem = ({
         <div className="absolute top-1 right-1 flex items-center gap-1">
           {badge !== undefined && badge > 0 && (
             <div
-              className="w-2 h-2 rounded-full bg-primary"
+              className="size-2 rounded-full bg-primary"
               aria-label={`${badge} unread notifications`}
             />
           )}
           {item.isNew && (
-            <div className="w-1.5 h-1.5 bg-primary rounded-full" />
+            <div className="size-1.5 bg-primary rounded-full" />
           )}
         </div>
       )}
@@ -322,7 +322,7 @@ const AllToolsMenuItem = ({
             isCollapsed && "justify-center w-full",
           )}
         >
-          <Grid3X3 className="w-5 h-5 shrink-0" />
+          <Grid3X3 className="size-5 shrink-0" />
           {!isCollapsed && <span>All tools</span>}
         </div>
       </button>
@@ -334,9 +334,9 @@ const AllToolsMenuItem = ({
     >
       <div className="p-6">
         <div className="flex items-center justify-between mb-6">
-          <h3 className="text-xl font-bold">All tools</h3>
+          <h3 className="text-xl font-semibold">All tools</h3>
           <div className="relative">
-            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+            <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
               placeholder="Search tools..."
@@ -349,7 +349,7 @@ const AllToolsMenuItem = ({
           {TOOL_CATEGORIES.map((cat) => (
             <div key={cat.id} className="space-y-4">
               <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
-                <cat.icon className="w-3.5 h-3.5" />
+                <cat.icon className="size-3.5" />
                 {cat.label}
               </div>
               <div className="space-y-1">
@@ -389,7 +389,7 @@ const AllToolsMenuItem = ({
                       >
                         <Pin
                           className={cn(
-                            "w-3.5 h-3.5",
+                            "size-3.5",
                             pinnedIds.includes(tool.id || "") && "fill-current",
                           )}
                         />
@@ -571,7 +571,7 @@ export function Sidebar() {
           {!isCollapsed ? (
             <div className="flex items-center w-full gap-2 group">
               <div className="flex items-center gap-2 flex-1">
-                <div className="w-9 h-9 rounded-lg overflow-hidden flex items-center justify-center p-0.5 bg-sidebar-accent border border-sidebar-border group-hover:border-sidebar-accent-foreground/20 transition-colors">
+                <div className="size-9 rounded-lg overflow-hidden flex items-center justify-center p-0.5 bg-sidebar-accent border border-sidebar-border group-hover:border-sidebar-accent-foreground/20 transition-colors">
                   <Image
                     src="/logo.svg"
                     alt="Logo"
@@ -595,12 +595,12 @@ export function Sidebar() {
                 className="h-8 w-8 text-sidebar-foreground/50 hover:text-sidebar-foreground shrink-0"
                 onClick={() => setManualCollapsed(true)}
               >
-                <PanelLeft className="w-4 h-4" />
+                <PanelLeft className="size-4" />
               </Button>
             </div>
           ) : isTablet ? (
-            <div className="w-10 h-10 flex items-center justify-center">
-              <div className="w-7 h-7 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-sidebar-accent border border-sidebar-border">
+            <div className="size-10 flex items-center justify-center">
+              <div className="size-7 rounded-lg overflow-hidden flex items-center justify-center p-1 bg-sidebar-accent border border-sidebar-border">
                 <Image
                   src="/logo.svg"
                   alt="Logo"
@@ -612,7 +612,7 @@ export function Sidebar() {
             </div>
           ) : (
             <button
-              className="w-10 h-10 rounded-lg flex items-center justify-center hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
+              className="size-10 rounded-lg flex items-center justify-center hover:bg-sidebar-accent transition-colors text-sidebar-foreground/50 hover:text-sidebar-foreground"
               onClick={() => setManualCollapsed(false)}
             >
               <Image
@@ -620,7 +620,7 @@ export function Sidebar() {
                 alt="Logo"
                 width={24}
                 height={24}
-                className="w-6 h-6 object-contain"
+                className="size-6 object-contain"
               />
             </button>
           )}
@@ -735,7 +735,7 @@ export function Sidebar() {
               {isOrgRoute && billingSummary ? (
                 <div className="flex items-center justify-between gap-3 rounded-lg bg-pricing/10 border border-pricing/20 px-3 py-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <Wallet className="w-4 h-4 text-pricing shrink-0" />
+                    <Wallet className="size-4 text-pricing shrink-0" />
                     <div className="min-w-0">
                       <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-pricing/70">
                         Org credits
@@ -759,7 +759,7 @@ export function Sidebar() {
             <div className="rounded-xl bg-pricing/10 p-4 border border-pricing/20 space-y-2">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-0.5">
-                  <h4 className="text-sm font-bold text-pricing">
+                  <h4 className="text-sm font-semibold text-pricing">
                     {billingSummary?.planName ??
                       (hasCreditsOnly
                         ? "No active subscription"
@@ -794,7 +794,7 @@ export function Sidebar() {
                       size="icon"
                       className="h-10 w-10 text-pricing bg-pricing/10 rounded-xl hover:bg-pricing/20"
                     >
-                      <Sparkles className="w-5 h-5" />
+                      <Sparkles className="size-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">

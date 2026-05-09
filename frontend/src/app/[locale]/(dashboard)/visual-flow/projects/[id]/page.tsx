@@ -73,6 +73,7 @@ function AddSceneDialog({
 }) {
   const { addScene } = useVisualFlowStore();
   const [loading, setLoading] = useState(false);
+  const [draftReady, setDraftReady] = useState(false);
   const [form, setForm] = useState({
     prompt: '',
     videoPrompt: '',
@@ -80,6 +81,57 @@ function AddSceneDialog({
     parentSceneId: '',
     selectedChars: [] as string[],
   });
+  const draftKey = `visual-flow:add-scene:${projectId}:${videoId}:draft`;
+
+  useEffect(() => {
+    if (!open) {
+      setDraftReady(false);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(draftKey);
+      if (!raw) {
+        setDraftReady(true);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<typeof form>;
+      setForm((current) => ({
+        ...current,
+        prompt: typeof parsed.prompt === 'string' ? parsed.prompt : current.prompt,
+        videoPrompt: typeof parsed.videoPrompt === 'string' ? parsed.videoPrompt : current.videoPrompt,
+        chainType: parsed.chainType === 'CONTINUATION' ? 'CONTINUATION' : 'ROOT',
+        parentSceneId: typeof parsed.parentSceneId === 'string' ? parsed.parentSceneId : current.parentSceneId,
+        selectedChars: Array.isArray(parsed.selectedChars)
+          ? parsed.selectedChars.filter((value): value is string => typeof value === 'string')
+          : current.selectedChars,
+      }));
+    } catch (error) {
+      console.error('Failed to restore add-scene draft', error);
+    } finally {
+      setDraftReady(true);
+    }
+  }, [draftKey, open]);
+
+  useEffect(() => {
+    if (!open || !draftReady) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      draftKey,
+      JSON.stringify({
+        version: 1,
+        savedAt: new Date().toISOString(),
+        prompt: form.prompt,
+        videoPrompt: form.videoPrompt,
+        chainType: form.chainType,
+        parentSceneId: form.parentSceneId,
+        selectedChars: form.selectedChars,
+      }),
+    );
+  }, [draftKey, draftReady, form, open]);
 
   const handleSubmit = async () => {
     if (!form.prompt.trim()) return;
@@ -93,6 +145,7 @@ function AddSceneDialog({
       characterNames: form.selectedChars,
       displayOrder: scenes.length,
     });
+    window.localStorage.removeItem(draftKey);
     setForm({ prompt: '', videoPrompt: '', chainType: 'ROOT', parentSceneId: '', selectedChars: [] });
     onClose();
     setLoading(false);
@@ -112,7 +165,7 @@ function AddSceneDialog({
       <DialogContent className="max-w-lg bg-[#111118] border-white/[0.08] text-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base">
-            <Layers className="w-5 h-5 text-violet-400" />
+            <Layers className="size-5 text-violet-400" />
             Add Scene
           </DialogTitle>
         </DialogHeader>
@@ -209,7 +262,7 @@ function AddSceneDialog({
             disabled={loading || !form.prompt.trim()}
             className="bg-violet-600 hover:bg-violet-500 text-white"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+            {loading ? <Loader2 className="size-4 animate-spin mr-2" /> : <Plus className="size-4 mr-2" />}
             Add Scene
           </Button>
         </DialogFooter>
@@ -263,12 +316,19 @@ export default function VisualProjectDetailPage() {
   const [showAddScene, setShowAddScene] = useState(false);
   const [showAddVideo, setShowAddVideo] = useState(false);
   const [videoTitle, setVideoTitle] = useState('');
+  const [videoDraftReady, setVideoDraftReady] = useState(false);
   const [rightPanelOpen, setRightPanelOpen] = useState(true);
+  const videoDraftKey = `visual-flow:create-video:${projectId}:draft`;
 
   // ── SSE Real-time Updates ─────────────────
   const { isConnected: sseConnected } = useVisualFlowSSE({
     projectId: projectId ?? null,
     enabled: !!projectId && isInitialized,
+    onReconnect: () => {
+      if (projectId && activeVideo) {
+        void loadProject(projectId);
+      }
+    },
     onCharacterUpdate: (payload) => {
       // Refresh characters when a ref status changes
       if (projectId) loadProject(projectId);
@@ -312,9 +372,49 @@ export default function VisualProjectDetailPage() {
   const handleCreateVideo = async () => {
     if (!videoTitle.trim()) return;
     await createVideo(projectId, videoTitle);
+    window.localStorage.removeItem(videoDraftKey);
     setShowAddVideo(false);
     setVideoTitle('');
   };
+
+  useEffect(() => {
+    if (!showAddVideo) {
+      setVideoDraftReady(false);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(videoDraftKey);
+      if (!raw) {
+        setVideoDraftReady(true);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as { videoTitle?: unknown };
+      if (typeof parsed.videoTitle === 'string') {
+        setVideoTitle(parsed.videoTitle);
+      }
+    } catch (error) {
+      console.error('Failed to restore visual-flow video draft', error);
+    } finally {
+      setVideoDraftReady(true);
+    }
+  }, [showAddVideo, videoDraftKey]);
+
+  useEffect(() => {
+    if (!showAddVideo || !videoDraftReady) {
+      return;
+    }
+
+    window.localStorage.setItem(
+      videoDraftKey,
+      JSON.stringify({
+        version: 1,
+        savedAt: new Date().toISOString(),
+        videoTitle,
+      }),
+    );
+  }, [showAddVideo, videoDraftReady, videoDraftKey, videoTitle]);
 
   const handleRefresh = () => {
     if (activeVideo) {
@@ -329,7 +429,7 @@ export default function VisualProjectDetailPage() {
     return (
       <div className="h-full flex items-center justify-center">
         <div className="flex flex-col items-center gap-3">
-          <Loader2 className="w-8 h-8 text-violet-400 animate-spin" />
+          <Loader2 className="size-8 text-violet-400 animate-spin" />
           <p className="text-xs text-white/20">Loading studio...</p>
         </div>
       </div>
@@ -352,7 +452,7 @@ export default function VisualProjectDetailPage() {
           onClick={() => router.back()}
           className="p-1.5 hover:bg-white/[0.06] rounded-lg transition text-white/40 hover:text-white/70"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" />
         </button>
 
         <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -372,7 +472,7 @@ export default function VisualProjectDetailPage() {
                   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
                   : "bg-red-500/10 border-red-500/20 text-red-400"
               )}>
-                <Activity className={cn("w-3 h-3", sseConnected && "animate-pulse")} />
+                <Activity className={cn("size-3", sseConnected && "animate-pulse")} />
                 {sseConnected ? 'Live' : 'Offline'}
               </div>
             </TooltipTrigger>
@@ -391,7 +491,7 @@ export default function VisualProjectDetailPage() {
                 onClick={() => setRightPanelOpen(!rightPanelOpen)}
                 className="text-white/30 hover:text-white/60"
               >
-                {rightPanelOpen ? <PanelRightClose className="w-4 h-4" /> : <PanelRightOpen className="w-4 h-4" />}
+                {rightPanelOpen ? <PanelRightClose className="size-4" /> : <PanelRightOpen className="size-4" />}
               </Button>
             </TooltipTrigger>
             <TooltipContent>{rightPanelOpen ? 'Close panel' : 'Open panel'}</TooltipContent>
@@ -407,7 +507,7 @@ export default function VisualProjectDetailPage() {
                 variant="outline"
                 className="border-violet-500/30 bg-violet-500/5 hover:bg-violet-500/10 text-violet-300 text-xs h-7 rounded-lg mr-1"
               >
-                {isLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin mr-1" /> : <Sparkles className="w-3.5 h-3.5 mr-1" />}
+                {isLoading ? <Loader2 className="size-3.5 animate-spin mr-1" /> : <Sparkles className="size-3.5 mr-1" />}
                 AI Suggest
               </Button>
             </TooltipTrigger>
@@ -420,7 +520,7 @@ export default function VisualProjectDetailPage() {
             size="sm"
             className="bg-violet-600 hover:bg-violet-500 text-white text-xs h-7 rounded-lg"
           >
-            <Plus className="w-3.5 h-3.5 mr-1" />
+            <Plus className="size-3.5 mr-1" />
             Scene
           </Button>
 
@@ -455,7 +555,7 @@ export default function VisualProjectDetailPage() {
                     onClick={() => setShowAddVideo(true)}
                     className="p-1 hover:bg-white/10 rounded-md transition text-white/30 hover:text-white/60"
                   >
-                    <Plus className="w-3.5 h-3.5" />
+                    <Plus className="size-3.5" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>New Video</TooltipContent>
@@ -473,9 +573,9 @@ export default function VisualProjectDetailPage() {
                       : 'hover:bg-white/[0.04] text-white/35 border border-transparent'
                   )}
                 >
-                  <Clapperboard className="w-3.5 h-3.5 shrink-0" />
+                  <Clapperboard className="size-3.5 shrink-0" />
                   <span className="truncate flex-1">{v.title}</span>
-                  {activeVideo?.id === v.id && <ChevronRight className="w-3 h-3 text-violet-400" />}
+                  {activeVideo?.id === v.id && <ChevronRight className="size-3 text-violet-400" />}
                 </button>
               ))}
               {videos.length === 0 && (
@@ -483,7 +583,7 @@ export default function VisualProjectDetailPage() {
                   onClick={() => setShowAddVideo(true)}
                   className="w-full flex flex-col items-center py-6 text-white/15 hover:text-white/30 transition"
                 >
-                  <Film className="w-5 h-5 mb-1" />
+                  <Film className="size-5 mb-1" />
                   <span className="text-[10px]">Create first video</span>
                 </button>
               )}
@@ -495,8 +595,8 @@ export default function VisualProjectDetailPage() {
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
           {!activeVideo ? (
             <div className="flex-1 flex flex-col items-center justify-center gap-4 text-white/15">
-              <div className="w-16 h-16 rounded-2xl bg-white/[0.02] flex items-center justify-center border border-white/[0.04]">
-                <Film className="w-8 h-8" />
+              <div className="size-16 rounded-2xl bg-white/[0.02] flex items-center justify-center border border-white/[0.04]">
+                <Film className="size-8" />
               </div>
               <div className="text-center">
                 <p className="text-sm text-white/25">Create a video to start</p>
@@ -508,7 +608,7 @@ export default function VisualProjectDetailPage() {
                 size="sm"
                 className="border-white/[0.08] text-white/40 hover:bg-white/[0.04] text-xs"
               >
-                <Plus className="w-3.5 h-3.5 mr-1.5" /> New Video
+                <Plus className="size-3.5 mr-1.5" /> New Video
               </Button>
             </div>
           ) : (
@@ -529,7 +629,7 @@ export default function VisualProjectDetailPage() {
                 <div>
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50 flex items-center gap-2">
-                      <Layers className="w-3.5 h-3.5" />
+                      <Layers className="size-3.5" />
                       Scenes ({scenes.length})
                     </h3>
                     {scenes.length > 0 && (
@@ -543,7 +643,7 @@ export default function VisualProjectDetailPage() {
                               disabled={!!runningStep || scenes.length === 0}
                               className="text-white/25 hover:text-white/50"
                             >
-                              <Download className="w-3.5 h-3.5" />
+                              <Download className="size-3.5" />
                             </Button>
                           </TooltipTrigger>
                           <TooltipContent>Export / Concat Videos</TooltipContent>
@@ -602,7 +702,7 @@ export default function VisualProjectDetailPage() {
         <DialogContent className="max-w-sm bg-[#111118] border-white/[0.08] text-white">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Film className="w-5 h-5 text-pink-400" />
+              <Film className="size-5 text-pink-400" />
               New Video / Episode
             </DialogTitle>
           </DialogHeader>

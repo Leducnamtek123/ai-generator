@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger } from '@nestjs/common';
 import { GenerationBaseService } from './generation-base.service';
 import { ProviderRegistry } from '../../providers/provider.registry';
 import { GenerateVideoDto } from '../dto/generate.dto';
@@ -19,7 +19,24 @@ export class VideoGenerationService {
     return provider?.trim() || fallback || undefined;
   }
 
-  async generateVideo(dto: GenerateVideoDto, userId: string, projectId?: string): Promise<GenerationEntity> {
+  async generateVideo(
+    dto: GenerateVideoDto,
+    userId: string,
+    projectId?: string,
+  ): Promise<GenerationEntity> {
+    const requestId = dto.metadata?.requestId as string | undefined;
+    await this.baseService.assertProjectAccess(
+      projectId ?? dto.metadata?.projectId,
+      userId,
+    );
+    const existingGeneration = await this.baseService.findByRequestId(
+      userId,
+      'video',
+      requestId,
+    );
+    if (existingGeneration) {
+      return existingGeneration;
+    }
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
       this.providerRegistry.getVideoProvider().name,
@@ -43,11 +60,16 @@ export class VideoGenerationService {
           projectId,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
+          requestId,
           ...(dto.metadata || {}),
         },
       });
     } catch (error) {
-      await this.baseService.releaseCredits(userId, reservation.transactionId, 'video');
+      await this.baseService.releaseCredits(
+        userId,
+        reservation.transactionId,
+        'video',
+      );
       throw error;
     }
 
@@ -58,8 +80,11 @@ export class VideoGenerationService {
       userId,
       reservation,
       projectId,
-    )
-      .catch((error) => this.logger.error(`Video generation ${generation.id} failed: ${error.message}`));
+    ).catch((error) =>
+      this.logger.error(
+        `Video generation ${generation.id} failed: ${error.message}`,
+      ),
+    );
 
     return generation;
   }
@@ -88,7 +113,8 @@ export class VideoGenerationService {
           });
 
           generation.status = providerResult.status || 'completed';
-          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          if (providerResult.resultUrl)
+            generation.resultUrl = providerResult.resultUrl;
           generation.metadata = {
             ...generation.metadata,
             ...(providerResult.metadata || {}),
@@ -96,19 +122,19 @@ export class VideoGenerationService {
           };
 
           await this.baseService.save(generation);
+          await this.baseService.saveAsset(generation, projectId);
+          await this.baseService.captureCredits(
+            userId,
+            reservation.transactionId,
+            'video',
+          );
           try {
-            await this.baseService.captureCredits(
-              userId,
-              reservation.transactionId,
-              'video',
-            );
-          } catch (captureError: any) {
+            this.eventsService.emitUpdate(generation, projectId);
+          } catch (emitError: any) {
             this.logger.error(
-              `Failed to capture credits for video generation ${generation.id}: ${captureError.message}`,
+              `Failed to emit video generation update ${generation.id}: ${emitError.message}`,
             );
           }
-          await this.baseService.saveAsset(generation, projectId);
-          this.eventsService.emitUpdate(generation, projectId);
           return providerResult;
         },
         preferredProvider,
@@ -136,9 +162,41 @@ export class VideoGenerationService {
     }
   }
 
-  async processVideo(dto: Record<string, any>, userId: string, type: 'lip-sync' | 'video-upscale'): Promise<GenerationEntity> {
-    const preferredProvider = this.getPreferredProvider(dto.provider, 'replicate');
-    const provider = this.providerRegistry.getProvider(preferredProvider || 'replicate');
+  async processVideo(
+    dto: Record<string, any>,
+    userId: string,
+    type: 'lip-sync' | 'video-upscale',
+  ): Promise<GenerationEntity> {
+    const requestId = dto.metadata?.requestId as string | undefined;
+    await this.baseService.assertProjectAccess(
+      dto.projectId ?? dto.metadata?.projectId,
+      userId,
+    );
+    const existingGeneration = await this.baseService.findByRequestId(
+      userId,
+      type,
+      requestId,
+    );
+    if (existingGeneration) {
+      return existingGeneration;
+    }
+    if (
+      type === 'lip-sync' &&
+      this.providerRegistry.getProvidersForCapability('lip-sync').length === 0
+    ) {
+      throw new BadRequestException(
+        'Lip-sync generation is not supported by any configured provider',
+      );
+    }
+
+    const preferredProvider = this.getPreferredProvider(
+      dto.provider,
+      this.providerRegistry.getProvidersForCapability('video-upscale')[0]
+        ?.name || 'replicate',
+    );
+    const provider = this.providerRegistry.getProvider(
+      preferredProvider || 'replicate',
+    );
     const reservation = await this.baseService.reserveCredits(userId, type);
 
     let generation: GenerationEntity;
@@ -154,15 +212,30 @@ export class VideoGenerationService {
           provider: provider.name,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
+          requestId,
         },
       });
     } catch (error) {
-      await this.baseService.releaseCredits(userId, reservation.transactionId, type);
+      await this.baseService.releaseCredits(
+        userId,
+        reservation.transactionId,
+        type,
+      );
       throw error;
     }
 
-    this.executeVideoProcessing(generation, dto, provider, type, userId, reservation)
-      .catch((error) => this.logger.error(`${type} processing ${generation.id} failed: ${error.message}`));
+    this.executeVideoProcessing(
+      generation,
+      dto,
+      provider,
+      type,
+      userId,
+      reservation,
+    ).catch((error) =>
+      this.logger.error(
+        `${type} processing ${generation.id} failed: ${error.message}`,
+      ),
+    );
 
     return generation;
   }
@@ -179,30 +252,30 @@ export class VideoGenerationService {
       generation.status = 'processing';
       await this.baseService.save(generation);
 
-      const result = await provider.processImage({
-        type,
-        imageUrl: dto.videoUrl || dto.imageUrl,
-        prompt: dto.prompt,
-        ...dto,
-      });
+      const result = await this.providerRegistry.executeWithFallback(
+        'video-upscale',
+        async (selectedProvider) =>
+          selectedProvider.processImage({
+            type,
+            imageUrl: dto.videoUrl || dto.imageUrl,
+            prompt: dto.prompt,
+            ...dto,
+          }),
+        provider.name,
+      );
 
       generation.status = result.status || 'completed';
       if (result.resultUrl) generation.resultUrl = result.resultUrl;
-      if (result.metadata) generation.metadata = { ...generation.metadata, ...result.metadata };
+      if (result.metadata)
+        generation.metadata = { ...generation.metadata, ...result.metadata };
 
       await this.baseService.save(generation);
-      try {
-        await this.baseService.captureCredits(
-          userId,
-          reservation.transactionId,
-          type,
-        );
-      } catch (captureError: any) {
-        this.logger.error(
-          `Failed to capture credits for ${type} processing ${generation.id}: ${captureError.message}`,
-        );
-      }
       await this.baseService.saveAsset(generation);
+      await this.baseService.captureCredits(
+        userId,
+        reservation.transactionId,
+        type,
+      );
     } catch (error: any) {
       generation.status = 'failed';
       generation.error = error.message;

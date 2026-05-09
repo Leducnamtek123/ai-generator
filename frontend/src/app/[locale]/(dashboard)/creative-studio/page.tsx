@@ -66,6 +66,14 @@ type StudioAction =
     | { type: 'resetCreateModal' }
     | { type: 'resetRenameModal' };
 
+type StudioDraft = {
+    version: number;
+    savedAt: string;
+    workflowName: string;
+};
+
+const STUDIO_DRAFT_KEY = 'creative-studio:create-modal:draft';
+
 const initialState: StudioState = {
     activeTab: 'my',
     showCreateModal: false,
@@ -111,10 +119,40 @@ export default function CreativeStudioPage() {
         fetchWorkflows();
     }, [fetchWorkflows]);
 
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(STUDIO_DRAFT_KEY);
+            if (!raw) {
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as Partial<StudioDraft>;
+            if (typeof parsed.workflowName === 'string') {
+                dispatch({ type: 'setWorkflowName', workflowName: parsed.workflowName });
+            }
+        } catch (error) {
+            console.error('Failed to restore creative studio draft', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!state.showCreateModal) {
+            return;
+        }
+
+        const draft: StudioDraft = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            workflowName: state.workflowName,
+        };
+        window.localStorage.setItem(STUDIO_DRAFT_KEY, JSON.stringify(draft));
+    }, [state.workflowName]);
+
     const handleCreateWorkflow = async () => {
         if (!state.workflowName.trim()) return;
         const newId = await createWorkflow({ name: state.workflowName });
         if (newId) {
+            window.localStorage.removeItem(STUDIO_DRAFT_KEY);
             dispatch({ type: 'resetCreateModal' });
             router.push(`/creator/workflow-editor?workflowId=${newId}`);
         }
@@ -181,17 +219,17 @@ export default function CreativeStudioPage() {
         <div className="min-h-screen bg-background text-foreground p-6">
             <div className="relative w-full h-48 bg-card rounded-3xl border border-border overflow-hidden mb-8 flex items-center">
                 <div className="relative z-10 p-10 flex flex-col justify-center h-full max-w-xl">
-                    <h1 className="text-2xl font-bold mb-2">Start from scratch</h1>
+                    <h1 className="text-2xl font-semibold mb-2">Start from scratch</h1>
                     <p className="text-muted-foreground mb-6 text-sm">Create a new studio and start collaborating</p>
                     <Button onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: true })} className="rounded-full px-6 py-2 w-fit font-medium flex items-center gap-2">
-                        <Plus className="w-4 h-4" />
+                        <Plus className="size-4" />
                         New studio
                     </Button>
                 </div>
 
                 <div className="absolute right-0 top-0 bottom-0 w-1/2 flex items-center justify-end pr-12">
                     <div className="text-right">
-                        <h2 className="text-4xl font-bold text-muted-foreground/30 tracking-tighter">Creative Studio</h2>
+                        <h2 className="text-4xl font-semibold text-muted-foreground/30 tracking-tighter">Creative Studio</h2>
                         <p className="text-muted-foreground/50 text-sm tracking-widest uppercase mt-1">Infinite creativity</p>
                     </div>
                 </div>
@@ -208,14 +246,14 @@ export default function CreativeStudioPage() {
                                 state.activeTab === tab.id ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground',
                             )}
                         >
-                            <tab.icon className="w-4 h-4" />
+                            <tab.icon className="size-4" />
                             {tab.label}
                         </button>
                     ))}
                 </div>
 
                 <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input placeholder="Search spaces..." className="rounded-full pl-10 h-10 text-sm" />
                 </div>
             </div>
@@ -233,8 +271,8 @@ export default function CreativeStudioPage() {
                         onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: true })}
                         className="aspect-[4/3] rounded-xl border border-dashed border-border bg-transparent hover:bg-accent/50 cursor-pointer flex flex-col items-center justify-center gap-3 group transition-colors"
                     >
-                        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent transition-colors">
-                            <Plus className="w-5 h-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <div className="size-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent transition-colors">
+                            <Plus className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
                         </div>
                         <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Create new studio</span>
                     </div>
@@ -250,22 +288,22 @@ export default function CreativeStudioPage() {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <button className="p-1.5 bg-background/60 backdrop-blur rounded-lg text-foreground hover:bg-background/80">
-                                        <MoreHorizontal className="w-4 h-4" />
+                                        <MoreHorizontal className="size-4" />
                                     </button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end" className="w-48">
                                     <DropdownMenuItem onClick={(e) => handleRenameInit(e, workflow)} className="cursor-pointer">
-                                        <Edit className="w-4 h-4 mr-2" /> Rename
+                                        <Edit className="size-4 mr-2" /> Rename
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={(e) => handleDuplicate(e, workflow.id)} className="cursor-pointer">
-                                        <Copy className="w-4 h-4 mr-2" /> Duplicate
+                                        <Copy className="size-4 mr-2" /> Duplicate
                                     </DropdownMenuItem>
                                     <DropdownMenuItem onClick={(e) => handleUploadInit(e, workflow.id)} className="cursor-pointer">
-                                        <ImageIcon className="w-4 h-4 mr-2" /> Upload image
+                                        <ImageIcon className="size-4 mr-2" /> Upload image
                                     </DropdownMenuItem>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={(e) => { e.stopPropagation(); setWorkflowToDelete(workflow); }} className="text-destructive cursor-pointer">
-                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                        <Trash2 className="size-4 mr-2" /> Delete
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
@@ -283,7 +321,7 @@ export default function CreativeStudioPage() {
                         onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: false })}
                     />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl animate-in zoom-in-95">
-                        <h2 className="text-xl font-bold mb-4">Create New Studio</h2>
+                        <h2 className="text-xl font-semibold mb-4">Create New Studio</h2>
                         <div className="mb-6">
                             <label htmlFor="studioName" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
                                 Studio Name

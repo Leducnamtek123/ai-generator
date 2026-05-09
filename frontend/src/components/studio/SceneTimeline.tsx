@@ -33,7 +33,7 @@ function StatusBadge({ status, label }: { status: SceneStatus; label: string }) 
       'bg-white/[0.06] text-white/25'
     )}>
       <span className={cn(
-        'w-1.5 h-1.5 rounded-full',
+        'size-1.5 rounded-full',
         status === 'COMPLETED' ? 'bg-emerald-400' :
         status === 'PROCESSING' ? 'bg-blue-400 animate-pulse' :
         status === 'FAILED' ? 'bg-red-400' : 'bg-white/20'
@@ -92,13 +92,13 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
       {scene.chainType === 'CONTINUATION' && (
         <div className="absolute -top-4 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center">
           <div className="w-px h-3 bg-gradient-to-b from-transparent to-violet-500/50" />
-          <Link2 className="w-3 h-3 text-violet-400/60" />
+          <Link2 className="size-3 text-violet-400/60" />
         </div>
       )}
 
       {/* Drag handle + index */}
       <div className="absolute top-2 left-2 flex items-center gap-1 z-10">
-        <GripVertical className="w-3 h-3 text-white/10 group-hover:text-white/25 transition" />
+        <GripVertical className="size-3 text-white/10 group-hover:text-white/25 transition" />
         <span className="text-[10px] font-bold text-white/20 font-mono">
           {String(index + 1).padStart(2, '0')}
         </span>
@@ -134,15 +134,15 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
             {/* Video play indicator */}
             {hasVideo && (
               <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="w-8 h-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20">
-                  <Play className="w-3.5 h-3.5 text-white ml-0.5" />
+                <div className="size-8 rounded-full bg-black/60 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20">
+                  <Play className="size-3.5 text-white ml-0.5" />
                 </div>
               </div>
             )}
           </>
         ) : (
           <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-white/[0.06]" />
+            <ImageIcon className="size-8 text-white/[0.06]" />
           </div>
         )}
       </div>
@@ -203,14 +203,14 @@ export function SceneCard({ scene, index, isSelected, onSelect, onUpdate, onDele
             onClick={() => { setIsEditing(true); setEditPrompt(scene.prompt); }}
             className="p-1 hover:bg-white/10 rounded text-white/25 hover:text-white/60 transition"
           >
-            <Edit3 className="w-3 h-3" />
+            <Edit3 className="size-3" />
           </button>
           <button
             onClick={handleDelete}
             disabled={isDeleting}
             className="p-1 hover:bg-red-500/10 rounded text-white/25 hover:text-red-400 transition"
           >
-            <Trash2 className="w-3 h-3" />
+            <Trash2 className="size-3" />
           </button>
         </div>
       </div>
@@ -247,8 +247,8 @@ export function SceneTimeline({
         onClick={onAddScene}
         className="flex flex-col items-center justify-center h-64 rounded-2xl border-2 border-dashed border-white/[0.06] hover:border-violet-500/20 hover:bg-violet-500/[0.02] cursor-pointer transition-all group"
       >
-        <div className="w-14 h-14 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-3 group-hover:bg-violet-500/10 transition">
-          <Film className="w-7 h-7 text-white/10 group-hover:text-violet-400 transition" />
+        <div className="size-14 rounded-2xl bg-white/[0.03] flex items-center justify-center mb-3 group-hover:bg-violet-500/10 transition">
+          <Film className="size-7 text-white/10 group-hover:text-violet-400 transition" />
         </div>
         <p className="text-sm text-white/20 group-hover:text-white/40 transition">Add your first scene</p>
         <p className="text-[10px] text-white/10 mt-1">Describe each frame of your visual story</p>
@@ -275,8 +275,8 @@ export function SceneTimeline({
         onClick={onAddScene}
         className="rounded-xl border-2 border-dashed border-white/[0.06] hover:border-violet-500/20 hover:bg-violet-500/[0.02] flex flex-col items-center justify-center gap-2 min-h-[200px] transition-all group cursor-pointer"
       >
-        <div className="w-10 h-10 rounded-xl bg-white/[0.02] group-hover:bg-violet-500/10 flex items-center justify-center transition">
-          <Plus className="w-5 h-5 text-white/10 group-hover:text-violet-400 transition" />
+        <div className="size-10 rounded-xl bg-white/[0.02] group-hover:bg-violet-500/10 flex items-center justify-center transition">
+          <Plus className="size-5 text-white/10 group-hover:text-violet-400 transition" />
         </div>
         <span className="text-[10px] text-white/15 group-hover:text-white/35 transition">Add Scene</span>
       </button>

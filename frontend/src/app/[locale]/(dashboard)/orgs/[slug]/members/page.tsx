@@ -119,7 +119,7 @@ export default function MembersPage() {
     if (state.loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -128,13 +128,13 @@ export default function MembersPage() {
         <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
             <div className="mb-8">
                 <Link href="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="size-4" />
                     Back
                 </Link>
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            <Users className="w-6 h-6 text-primary" />
+                        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+                            <Users className="size-6 text-primary" />
                             Members
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -162,7 +162,7 @@ export default function MembersPage() {
 
                         return (
                             <div key={member.id} className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
+                                <div className="size-10 rounded-full bg-gradient-to-br from-violet-400 to-indigo-500 flex items-center justify-center text-white text-sm font-bold shrink-0">
                                     {displayName.charAt(0).toUpperCase()}
                                 </div>
                                 <div className="flex-1 min-w-0">
@@ -190,12 +190,12 @@ export default function MembersPage() {
                                             onClick={() => dispatch({ type: 'setEditingId', editingId: null })}
                                             className="text-xs text-muted-foreground hover:text-foreground ml-1 inline-flex items-center"
                                         >
-                                            <X className="w-3 h-3" />
+                                            <X className="size-3" />
                                         </button>
                                     </div>
                                 ) : (
                                     <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium', config.color)}>
-                                        <RoleIcon className="w-3.5 h-3.5" />
+                                        <RoleIcon className="size-3.5" />
                                         {config.label}
                                     </div>
                                 )}
@@ -208,7 +208,7 @@ export default function MembersPage() {
                                             onClick={() => dispatch({ type: 'setMenuId', menuId: state.menuId === member.id ? null : member.id })}
                                             className="opacity-0 group-hover:opacity-100 transition-opacity"
                                         >
-                                            <MoreVertical className="w-4 h-4" />
+                                            <MoreVertical className="size-4" />
                                         </Button>
                                         {state.menuId === member.id && (
                                             <>
@@ -226,7 +226,7 @@ export default function MembersPage() {
                                                         }}
                                                         className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                                     >
-                                                        <UserCog className="w-4 h-4" />
+                                                        <UserCog className="size-4" />
                                                         Change Role
                                                     </button>
                                                     <button
@@ -236,7 +236,7 @@ export default function MembersPage() {
                                                         }}
                                                         className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
                                                     >
-                                                        <Trash2 className="w-4 h-4" />
+                                                        <Trash2 className="size-4" />
                                                         Remove
                                                     </button>
                                                 </div>
@@ -250,7 +250,7 @@ export default function MembersPage() {
 
                     {state.members.length === 0 && (
                         <div className="text-center py-12 text-muted-foreground">
-                            <Users className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                            <Users className="size-10 mx-auto mb-3 opacity-30" />
                             <p className="text-sm">No members found</p>
                         </div>
                     )}

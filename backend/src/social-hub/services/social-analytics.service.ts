@@ -11,6 +11,85 @@ import { SocialProviderRegistry } from '../providers/social-provider.registry';
 import { SocialHubGateway } from '../gateways/social-hub.gateway';
 import { decrypt } from '../utils/encryption.helper';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
+import { AnalyticsData } from '../providers/social.provider.interface';
+
+type DashboardPostStat = {
+  id: number;
+  content: string;
+  platform?: string;
+  publishedAt: Date | null;
+  likes: number;
+  comments: number;
+  shares: number;
+  views: number;
+};
+
+type DashboardStatsResponse = {
+  recentPosts: DashboardPostStat[];
+  chartData: Array<{
+    name: string;
+    engagement: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
+  platformBreakdown: Record<
+    string,
+    { posts: number; likes: number; comments: number; shares: number }
+  >;
+  totals: {
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+    totalPosts: number;
+  };
+};
+
+type ChannelAnalyticsResponse = {
+  account: {
+    id: number;
+    platform: string;
+    name: string | null;
+    picture: string | null;
+  };
+  platformAnalytics: AnalyticsData[];
+  postMetrics: Array<{
+    postId: number;
+    content: string;
+    publishedAt: Date | null;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+  }>;
+  totals: {
+    totalPosts: number;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+  };
+};
+
+type PostAnalyticsResponse = {
+  post: {
+    id: number;
+    content: string;
+    platform?: string;
+    publishedAt: Date | null;
+    externalUrl: string | null;
+  };
+  metricsHistory: Array<{
+    createdAt: Date;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
+  }>;
+  latestMetric: SocialPostMetricEntity | null;
+  liveAnalytics: AnalyticsData[];
+};
 
 @Injectable()
 export class SocialAnalyticsService {
@@ -96,7 +175,10 @@ export class SocialAnalyticsService {
    * Get aggregated analytics for a user's dashboard.
    * Phase 1 improvement: Real chart data from DB instead of mock.
    */
-  async getDashboardStats(user: AuthenticatedUser, days: number = 7) {
+  async getDashboardStats(
+    user: AuthenticatedUser,
+    days: number = 7,
+  ): Promise<DashboardStatsResponse> {
     try {
       const userId = Number(user.id);
       const windowStart = new Date();
@@ -172,7 +254,7 @@ export class SocialAnalyticsService {
     accountId: number,
     days: number = 30,
     userId?: AuthenticatedUser['id'],
-  ) {
+  ): Promise<ChannelAnalyticsResponse> {
     const account = await this.accountRepository.findOne({
       where: userId
         ? { id: accountId, user: { id: Number(userId) } }
@@ -185,7 +267,7 @@ export class SocialAnalyticsService {
 
     // Try to get platform-level analytics
     const provider = this.providerRegistry.getProvider(account.platform);
-    let platformAnalytics: any[] = [];
+    let platformAnalytics: AnalyticsData[] = [];
 
     if (provider.getAnalytics) {
       try {
@@ -255,7 +337,10 @@ export class SocialAnalyticsService {
    * Get analytics for a specific post.
    * New endpoint inspired by Postiz's postAnalytics.
    */
-  async getPostAnalytics(postId: number, userId?: AuthenticatedUser['id']) {
+  async getPostAnalytics(
+    postId: number,
+    userId?: AuthenticatedUser['id'],
+  ): Promise<PostAnalyticsResponse> {
     const post = await this.postRepository.findOne({
       where: userId
         ? { id: postId, user: { id: Number(userId) } }
@@ -274,7 +359,7 @@ export class SocialAnalyticsService {
     });
 
     // Try to get live analytics from the platform
-    let liveAnalytics: any[] = [];
+    let liveAnalytics: AnalyticsData[] = [];
     if (post.socialAccount && post.externalPostId) {
       const provider = this.providerRegistry.getProvider(
         post.socialAccount.platform,
@@ -391,7 +476,7 @@ export class SocialAnalyticsService {
   /**
    * Build per-platform breakdown from stats.
    */
-  private buildPlatformBreakdown(stats: any[]) {
+  private buildPlatformBreakdown(stats: DashboardPostStat[]) {
     const breakdown: Record<
       string,
       { posts: number; likes: number; comments: number; shares: number }

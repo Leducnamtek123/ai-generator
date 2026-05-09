@@ -1,46 +1,52 @@
 "use client";
 
 import { useEffect, useState } from "react";
+
 import {
-  Settings,
-  CreditCard,
-  User,
-  Layers,
-  Languages,
-  Moon,
+  ChevronRight,
   Code,
+  CreditCard,
+  Languages,
+  Layers,
   LifeBuoy,
   LogOut,
-  ChevronRight,
+  Moon,
+  Settings,
+  User
 } from "lucide-react";
+import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
-import { useLocale } from "next-intl";
-import { useRouter, usePathname } from "@/i18n/navigation";
+
 import { LOCALES, type LocaleCode } from "@/constants/i18n";
-import { useOrgStore } from "@/stores/org-store";
 import { env } from "@/env";
+
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { cn } from "@/lib/utils";
+
+import { useOrgStore } from "@/stores/org-store";
+
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-  DropdownMenuSub,
-  DropdownMenuSubTrigger,
-  DropdownMenuSubContent,
   DropdownMenuPortal,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
+  DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
 import { Button } from "@/ui/button";
 import { useAuth } from "@/providers";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { billingApi } from "@/services/billingApi";
 
 export function UserMenu() {
   const { user, logout } = useAuth();
   const { setTheme, theme: currentTheme, resolvedTheme } = useTheme();
   const locale = useLocale();
+  const t = useTranslations("UserMenu");
   const router = useRouter();
   const pathname = usePathname();
   const currentOrg = useOrgStore((state) => state.currentOrg);
@@ -51,30 +57,22 @@ export function UserMenu() {
 
   useEffect(() => {
     let active = true;
-    void (
-      hasWorkspaceContext ? billingApi.get(currentOrgSlug) : billingApi.getMe()
-    )
+    void (hasWorkspaceContext ? billingApi.get(currentOrgSlug) : billingApi.getMe())
       .then((summary) => {
         if (active) {
           if ("wallet" in summary) {
             setBillingLabel(
               hasWorkspaceContext
                 ? summary.plan?.name ||
-                    (summary.wallet.totalCredits > 0
-                      ? "Credits only"
-                      : "Workspace")
+                    (summary.wallet.totalCredits > 0 ? "Credits only" : "Workspace")
                 : summary.plan?.name ||
-                    (summary.wallet.totalCredits > 0
-                      ? "Credits only"
-                      : "Personal"),
+                    (summary.wallet.totalCredits > 0 ? "Credits only" : "Personal")
             );
           } else {
             setBillingLabel(
               hasWorkspaceContext
-                ? summary.plan?.name ||
-                    (summary.totalCredits > 0 ? "Credits only" : "Workspace")
-                : summary.plan?.name ||
-                    (summary.totalCredits > 0 ? "Credits only" : "Personal"),
+                ? summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Workspace")
+                : summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Personal")
             );
           }
         }
@@ -96,21 +94,17 @@ export function UserMenu() {
   const billingHref = hasWorkspaceContext
     ? `/orgs/${currentOrgSlug}/billing`
     : "/settings?tab=billing";
-  const billingButtonLabel = hasWorkspaceContext
-    ? "Workspace billing"
-    : "Personal billing";
+  const billingButtonLabel = hasWorkspaceContext ? t("billing.workspace") : t("billing.personal");
   const secondaryActionLabel = hasWorkspaceContext
-    ? "Personal plan"
-    : "Create your workspace";
-  const secondaryActionHref = hasWorkspaceContext
-    ? "/settings?tab=billing"
-    : "/orgs/new";
+    ? t("secondaryAction.workspace")
+    : t("secondaryAction.personal");
+  const secondaryActionHref = hasWorkspaceContext ? "/settings?tab=billing" : "/orgs/new";
 
   const openHelpCenter = () => {
     window.open(
       `${env.NEXT_PUBLIC_GITHUB_URL.replace(/\/$/, "")}/issues`,
       "_blank",
-      "noopener,noreferrer",
+      "noopener,noreferrer"
     );
   };
 
@@ -120,9 +114,9 @@ export function UserMenu() {
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <button className="flex items-center outline-none">
-          <Avatar className="w-8 h-8 rounded-full ring-border hover:ring-2 transition-all cursor-pointer border border-border">
+          <Avatar className="h-8 w-8 cursor-pointer rounded-full border border-border ring-border transition-all hover:ring-2">
             <AvatarImage src={user.avatar} />
-            <AvatarFallback className="bg-primary text-primary-foreground text-[10px] uppercase font-bold">
+            <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground uppercase">
               {user.username.substring(0, 1)}
             </AvatarFallback>
           </Avatar>
@@ -132,32 +126,28 @@ export function UserMenu() {
         <DropdownMenuContent align="end" sideOffset={8} className="w-72 p-2">
           {/* User Info Section */}
           <div className="flex items-center gap-3 p-3">
-            <Avatar className="w-10 h-10 rounded-lg">
+            <Avatar className="h-10 w-10 rounded-lg">
               <AvatarImage src={user.avatar} />
-              <AvatarFallback className="bg-primary text-primary-foreground text-xs uppercase font-bold">
+              <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground uppercase">
                 {user.username.substring(0, 1)}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col min-w-0">
-              <span className="text-sm font-semibold truncate">
-                {user.username}
-              </span>
-              <span className="text-[11px] text-muted-foreground truncate">
-                {user.email}
-              </span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-semibold">{user.username}</span>
+              <span className="truncate text-[11px] text-muted-foreground">{user.email}</span>
             </div>
           </div>
 
-          <div className="px-2 py-3 space-y-2">
+          <div className="space-y-2 px-2 py-3">
             <Button
-              className="w-full text-xs font-semibold h-9 rounded-lg bg-pricing hover:bg-pricing/90 text-pricing-foreground"
+              className="h-9 w-full rounded-lg bg-pricing text-xs font-semibold text-pricing-foreground hover:bg-pricing/90"
               onClick={() => goTo(billingHref)}
             >
               {billingButtonLabel}
             </Button>
             <Button
               variant="secondary"
-              className="w-full text-xs font-semibold h-9 rounded-lg"
+              className="h-9 w-full rounded-lg text-xs font-semibold"
               onClick={() => goTo(secondaryActionHref)}
             >
               {secondaryActionLabel}
@@ -168,7 +158,7 @@ export function UserMenu() {
 
           <DropdownMenuGroup className="py-1">
             <DropdownMenuItem
-              className="flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5"
               onClick={() => {
                 if (hasWorkspaceContext) {
                   goTo(`/orgs/${currentOrgSlug}/billing`);
@@ -178,40 +168,36 @@ export function UserMenu() {
               }}
             >
               <div className="flex items-center gap-3">
-                <CreditCard className="w-4 h-4" />
-                <span className="text-sm font-medium">
-                  {hasWorkspaceContext
-                    ? "Workspace billing"
-                    : "Personal billing"}
-                </span>
+                <CreditCard className="h-4 w-4" />
+                <span className="text-sm font-medium">{billingButtonLabel}</span>
               </div>
-              <span className="px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground bg-muted rounded border border-border uppercase">
+              <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground uppercase">
                 {billingLabel}
               </span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/settings")}
             >
-              <Settings className="w-4 h-4" />
-              <span className="text-sm font-medium">Settings</span>
+              <Settings className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.settings")}</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/settings?tab=profile")}
             >
-              <User className="w-4 h-4" />
-              <span className="text-sm font-medium">Creator profile</span>
+              <User className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.profile")}</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/stock?view=collections")}
             >
-              <Layers className="w-4 h-4" />
-              <span className="text-sm font-medium">My collections</span>
+              <Layers className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.collections")}</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
 
@@ -219,56 +205,53 @@ export function UserMenu() {
 
           <DropdownMenuGroup className="py-1">
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg cursor-pointer outline-none">
+              <DropdownMenuSubTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 outline-none">
                 <div className="flex items-center gap-3">
-                  <Languages className="w-4 h-4" />
-                  <span className="text-sm font-medium">Language</span>
+                  <Languages className="h-4 w-4" />
+                  <span className="text-sm font-medium">{t("items.language")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground">
-                    {locale in LOCALES
-                      ? LOCALES[locale as LocaleCode].label
-                      : locale}
+                    {locale in LOCALES ? LOCALES[locale as LocaleCode].label : locale}
                   </span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
                 </div>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
                 <DropdownMenuSubContent className="min-w-[120px]">
-                  {(
-                    Object.entries(LOCALES) as [
-                      LocaleCode,
-                      (typeof LOCALES)[LocaleCode],
-                    ][]
-                  ).map(([code, info]) => (
-                    <DropdownMenuItem
-                      key={code}
-                      className={cn(
-                        "px-3 py-2 text-sm cursor-pointer",
-                        locale === code &&
-                          "bg-accent text-accent-foreground font-medium",
-                      )}
-                      onClick={() => router.replace(pathname, { locale: code })}
-                    >
-                      <Languages className="mr-2 h-4 w-4" />
-                      {info.label}
-                    </DropdownMenuItem>
-                  ))}
+                  {(Object.entries(LOCALES) as [LocaleCode, (typeof LOCALES)[LocaleCode]][]).map(
+                    ([code, info]) => (
+                      <DropdownMenuItem
+                        key={code}
+                        className={cn(
+                          "cursor-pointer px-3 py-2 text-sm",
+                          locale === code && "bg-accent font-medium text-accent-foreground"
+                        )}
+                        onClick={() => {
+                          router.replace(pathname, { locale: code });
+                          router.refresh();
+                        }}
+                      >
+                        <Languages className="mr-2 h-4 w-4" />
+                        {info.label}
+                      </DropdownMenuItem>
+                    )
+                  )}
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>
             </DropdownMenuSub>
 
             <DropdownMenuSub>
-              <DropdownMenuSubTrigger className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg cursor-pointer outline-none">
+              <DropdownMenuSubTrigger className="flex w-full cursor-pointer items-center justify-between rounded-lg px-3 py-2.5 outline-none">
                 <div className="flex items-center gap-3">
-                  <Moon className="w-4 h-4" />
-                  <span className="text-sm font-medium">Theme</span>
+                  <Moon className="h-4 w-4" />
+                  <span className="text-sm font-medium">{t("items.theme")}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs text-muted-foreground capitalize">
                     {resolvedTheme ?? currentTheme}
                   </span>
-                  <ChevronRight className="w-3 h-3 text-muted-foreground" />
+                  <ChevronRight className="h-3 w-3 text-muted-foreground" />
                 </div>
               </DropdownMenuSubTrigger>
               <DropdownMenuPortal>
@@ -276,9 +259,8 @@ export function UserMenu() {
                   <DropdownMenuItem
                     onClick={() => setTheme("dark")}
                     className={cn(
-                      "px-3 py-2 text-sm cursor-pointer",
-                      currentTheme === "dark" &&
-                        "bg-accent text-accent-foreground font-medium",
+                      "cursor-pointer px-3 py-2 text-sm",
+                      currentTheme === "dark" && "bg-accent font-medium text-accent-foreground"
                     )}
                   >
                     Dark
@@ -286,9 +268,8 @@ export function UserMenu() {
                   <DropdownMenuItem
                     onClick={() => setTheme("light")}
                     className={cn(
-                      "px-3 py-2 text-sm cursor-pointer",
-                      currentTheme === "light" &&
-                        "bg-accent text-accent-foreground font-medium",
+                      "cursor-pointer px-3 py-2 text-sm",
+                      currentTheme === "light" && "bg-accent font-medium text-accent-foreground"
                     )}
                   >
                     Light
@@ -296,9 +277,8 @@ export function UserMenu() {
                   <DropdownMenuItem
                     onClick={() => setTheme("system")}
                     className={cn(
-                      "px-3 py-2 text-sm cursor-pointer",
-                      currentTheme === "system" &&
-                        "bg-accent text-accent-foreground font-medium",
+                      "cursor-pointer px-3 py-2 text-sm",
+                      currentTheme === "system" && "bg-accent font-medium text-accent-foreground"
                     )}
                   >
                     System
@@ -308,27 +288,27 @@ export function UserMenu() {
             </DropdownMenuSub>
 
             <DropdownMenuItem
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => goTo("/settings?tab=api")}
             >
-              <Code className="w-4 h-4" />
-              <span className="text-sm font-medium">Developer & MCP</span>
+              <Code className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.developer")}</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={() => window.open("/docs/api", "_blank")}
             >
-              <LifeBuoy className="w-4 h-4" />
-              <span className="text-sm font-medium">Docs API</span>
+              <LifeBuoy className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.docs")}</span>
             </DropdownMenuItem>
 
             <DropdownMenuItem
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg cursor-pointer"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5"
               onClick={openHelpCenter}
             >
-              <LifeBuoy className="w-4 h-4" />
-              <span className="text-sm font-medium">Help center</span>
+              <LifeBuoy className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.help")}</span>
             </DropdownMenuItem>
           </DropdownMenuGroup>
 
@@ -337,10 +317,10 @@ export function UserMenu() {
           <div className="py-1">
             <DropdownMenuItem
               onClick={() => logout()}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-destructive/10 cursor-pointer text-destructive"
+              className="flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-destructive hover:bg-destructive/10"
             >
-              <LogOut className="w-4 h-4" />
-              <span className="text-sm font-medium">Log out</span>
+              <LogOut className="h-4 w-4" />
+              <span className="text-sm font-medium">{t("items.logout")}</span>
             </DropdownMenuItem>
           </div>
         </DropdownMenuContent>

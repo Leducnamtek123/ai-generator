@@ -52,7 +52,7 @@ export function TemplateCard({ template, className }: TemplateCardProps) {
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-muted to-muted/50">
-                        <Sparkles className="w-8 h-8 text-muted-foreground/30" />
+                        <Sparkles className="size-8 text-muted-foreground/30" />
                     </div>
                 )}
 
@@ -72,7 +72,7 @@ export function TemplateCard({ template, className }: TemplateCardProps) {
                         onClick={handleUseTemplate}
                         className="h-8 px-4 rounded-full gap-1.5 text-xs font-semibold shadow-lg"
                     >
-                        <Play className="w-3 h-3 fill-current" />
+                        <Play className="size-3 fill-current" />
                         Use
                     </Button>
                 </div>

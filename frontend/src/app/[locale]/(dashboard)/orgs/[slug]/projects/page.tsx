@@ -1,6 +1,7 @@
 'use client';
 
 import { useReducer, useEffect, useCallback, useState } from 'react';
+import { useParams } from 'next/navigation';
 import { projectApi, type Project, type CreateProjectData } from '@/services/projectApi';
 import { useOrgStore } from '@/stores/org-store';
 import {
@@ -25,6 +26,12 @@ type State = {
     error: string;
     menuId: string | null;
     form: CreateProjectData;
+};
+
+type ProjectDraft = {
+    version: number;
+    savedAt: string;
+    form: Partial<CreateProjectData>;
 };
 
 type Action =
@@ -74,9 +81,13 @@ function reducer(state: State, action: Action): State {
 }
 
 export default function ProjectsPage() {
+    const params = useParams();
+    const slug = params?.slug as string;
+    const draftKey = slug ? `org-projects:${slug}:draft` : null;
     const { currentOrg, hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
     const [projectToDelete, setProjectToDelete] = useState<Project | null>(null);
+    const [draftReady, setDraftReady] = useState(false);
     const canCreate = hasPermission('create', 'Project');
 
     const loadProjects = useCallback(async () => {
@@ -95,6 +106,42 @@ export default function ProjectsPage() {
         });
     }, [loadProjects]);
 
+    useEffect(() => {
+        if (!draftKey) {
+            return;
+        }
+
+        try {
+            const raw = window.localStorage.getItem(draftKey);
+            if (!raw) {
+                setDraftReady(true);
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as Partial<ProjectDraft>;
+            if (parsed.form) {
+                dispatch({ type: 'updateForm', form: parsed.form });
+            }
+        } catch (restoreError) {
+            console.error('Failed to restore org project draft', restoreError);
+        } finally {
+            setDraftReady(true);
+        }
+    }, [draftKey]);
+
+    useEffect(() => {
+        if (!draftReady || !draftKey || !state.showForm) {
+            return;
+        }
+
+        const draft: ProjectDraft = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            form: state.form,
+        };
+        window.localStorage.setItem(draftKey, JSON.stringify(draft));
+    }, [draftKey, draftReady, state.form]);
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!state.form.name || !state.form.url || !state.form.description) return;
@@ -103,10 +150,18 @@ export default function ProjectsPage() {
         dispatch({ type: 'setError', error: '' });
         try {
             const { project } = await projectApi.create({
-                ...state.form,
                 organizationId: currentOrg?.id,
+                name: state.form.name,
+                description: state.form.description,
+                content: {
+                    sourceUrl: state.form.url,
+                    source: 'organization-projects-page',
+                },
             });
             dispatch({ type: 'setProjects', projects: [project, ...state.projects] });
+            if (draftKey) {
+                window.localStorage.removeItem(draftKey);
+            }
             dispatch({ type: 'resetForm' });
             dispatch({ type: 'setShowForm', showForm: false });
         } catch (err: unknown) {
@@ -134,7 +189,7 @@ export default function ProjectsPage() {
     if (state.loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -146,13 +201,13 @@ export default function ProjectsPage() {
                     href="/dashboard"
                     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="size-4" />
                     Back
                 </Link>
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            <FolderKanban className="w-6 h-6 text-primary" />
+                        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+                            <FolderKanban className="size-6 text-primary" />
                             Projects
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">
@@ -161,7 +216,7 @@ export default function ProjectsPage() {
                     </div>
                     {canCreate && (
                         <Button onClick={() => dispatch({ type: 'toggleShowForm' })}>
-                            <Plus className="w-4 h-4" />
+                            <Plus className="size-4" />
                             New Project
                         </Button>
                     )}
@@ -209,7 +264,7 @@ export default function ProjectsPage() {
                                 Cancel
                             </Button>
                             <Button type="submit" disabled={state.submitting}>
-                                {state.submitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                                {state.submitting && <Loader2 className="size-4 animate-spin" />}
                                 Create
                             </Button>
                         </div>
@@ -226,8 +281,8 @@ export default function ProjectsPage() {
                         <div className="h-24 bg-gradient-to-br from-violet-500/20 via-indigo-500/15 to-cyan-500/10 relative">
                             <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(139,92,246,0.15),transparent_60%)]" />
                             <div className="absolute bottom-3 left-4">
-                                <div className="w-10 h-10 rounded-xl bg-background/90 backdrop-blur-sm border border-border flex items-center justify-center shadow-sm">
-                                    <FolderKanban className="w-5 h-5 text-primary" />
+                                <div className="size-10 rounded-xl bg-background/90 backdrop-blur-sm border border-border flex items-center justify-center shadow-sm">
+                                    <FolderKanban className="size-5 text-primary" />
                                 </div>
                             </div>
                             <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -238,7 +293,7 @@ export default function ProjectsPage() {
                                         className="bg-background/50 backdrop-blur-sm"
                                         onClick={() => dispatch({ type: 'setMenuId', menuId: state.menuId === project.id ? null : project.id })}
                                     >
-                                        <MoreVertical className="w-4 h-4" />
+                                        <MoreVertical className="size-4" />
                                     </Button>
                                     {state.menuId === project.id && (
                                         <>
@@ -257,7 +312,7 @@ export default function ProjectsPage() {
                                                     }}
                                                     className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-sm text-destructive hover:bg-destructive/10 transition-all"
                                                 >
-                                                    <Trash2 className="w-4 h-4" />
+                                                    <Trash2 className="size-4" />
                                                     Delete
                                                 </button>
                                             </div>
@@ -272,14 +327,14 @@ export default function ProjectsPage() {
                             <p className="text-xs text-muted-foreground line-clamp-2">{project.description}</p>
                             <div className="flex items-center gap-2 pt-2">
                                 <a
-                                    href={project.url}
+                                    href={`/creator/design-editor?projectId=${project.id}`}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     className="inline-flex items-center gap-1 text-xs text-primary hover:underline"
                                 >
-                                    <Globe className="w-3 h-3" />
-                                    Visit
-                                    <ExternalLink className="w-2.5 h-2.5" />
+                                    <Globe className="size-3" />
+                                    Open editor
+                                    <ExternalLink className="size-2.5" />
                                 </a>
                                 <span className="text-xs text-muted-foreground/50">•</span>
                                 <span className="text-xs text-muted-foreground">
@@ -292,12 +347,12 @@ export default function ProjectsPage() {
 
                 {state.projects.length === 0 && !state.showForm && (
                     <div className="col-span-full text-center py-16 text-muted-foreground">
-                        <FolderKanban className="w-12 h-12 mx-auto mb-3 opacity-20" />
+                        <FolderKanban className="size-12 mx-auto mb-3 opacity-20" />
                         <p className="text-sm font-medium">No projects yet</p>
                         <p className="text-xs text-muted-foreground mt-1">Create your first project to get started</p>
                         {canCreate && (
                             <Button variant="outline" size="sm" className="mt-4" onClick={() => dispatch({ type: 'setShowForm', showForm: true })}>
-                                <Plus className="w-4 h-4" />
+                                <Plus className="size-4" />
                                 Create Project
                             </Button>
                         )}

@@ -45,7 +45,7 @@ api.interceptors.response.use(
   }
 );
 
-type Cfg = AxiosRequestConfig & { signal?: AbortSignal };
+export type Cfg = AxiosRequestConfig & { signal?: AbortSignal };
 
 export const get = async <T>(url: string, config?: Cfg) => (await api.get<T>(url, config)).data;
 

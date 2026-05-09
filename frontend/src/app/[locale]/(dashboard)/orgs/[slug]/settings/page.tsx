@@ -143,7 +143,7 @@ export default function OrgSettingsPage() {
     if (state.loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -155,10 +155,10 @@ export default function OrgSettingsPage() {
                     href={"/dashboard" as string}
                     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="size-4" />
                     Back
                 </Link>
-                <h1 className="text-2xl font-bold text-foreground">Organization Settings</h1>
+                <h1 className="text-2xl font-semibold text-foreground">Organization Settings</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Manage your organization&apos;s configuration and details
                 </p>
@@ -178,7 +178,7 @@ export default function OrgSettingsPage() {
             <div className="space-y-6">
                 <div className="bg-card border border-border rounded-xl p-6 space-y-5">
                     <h2 className="text-base font-semibold flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-primary" />
+                        <Building2 className="size-4 text-primary" />
                         General Information
                     </h2>
                     <div className="space-y-2">
@@ -193,7 +193,7 @@ export default function OrgSettingsPage() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label htmlFor={urlId} className="text-sm font-medium flex items-center gap-1.5"><Link2 className="w-3.5 h-3.5" />URL</label>
+                        <label htmlFor={urlId} className="text-sm font-medium flex items-center gap-1.5"><Link2 className="size-3.5" />URL</label>
                         <input
                             id={urlId}
                             type="url"
@@ -204,7 +204,7 @@ export default function OrgSettingsPage() {
                         />
                     </div>
                     <div className="space-y-2">
-                        <label htmlFor={descriptionId} className="text-sm font-medium flex items-center gap-1.5"><FileText className="w-3.5 h-3.5" />Description</label>
+                        <label htmlFor={descriptionId} className="text-sm font-medium flex items-center gap-1.5"><FileText className="size-3.5" />Description</label>
                         <textarea
                             id={descriptionId}
                             value={state.form.description || ''}
@@ -215,14 +215,14 @@ export default function OrgSettingsPage() {
                         />
                     </div>
                     <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg text-xs text-muted-foreground">
-                        <Shield className="w-3.5 h-3.5 shrink-0" />
+                        <Shield className="size-3.5 shrink-0" />
                         Slug: <code className="font-mono bg-background px-1.5 py-0.5 rounded">{state.org?.slug}</code>
                     </div>
                 </div>
 
                 <div className="bg-card border border-border rounded-xl p-6 space-y-5">
                     <h2 className="text-base font-semibold flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-primary" />
+                        <Globe className="size-4 text-primary" />
                         Domain & Access
                     </h2>
                     <div className="space-y-2">
@@ -256,7 +256,7 @@ export default function OrgSettingsPage() {
                 {canUpdate && (
                     <div className="flex justify-end">
                         <Button onClick={handleSave} disabled={state.saving}>
-                            {state.saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                            {state.saving ? <Loader2 className="size-4 animate-spin" /> : <Save className="size-4" />}
                             Save Changes
                         </Button>
                     </div>
@@ -265,18 +265,18 @@ export default function OrgSettingsPage() {
                 {canDelete && (
                     <div className="bg-destructive/5 border border-destructive/20 rounded-xl p-6 space-y-4">
                         <h2 className="text-base font-semibold text-destructive flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4" />
+                            <AlertTriangle className="size-4" />
                             Danger Zone
                         </h2>
                         <p className="text-sm text-muted-foreground">Deleting this organization will permanently remove all projects, members, and data.</p>
                         {!state.showDeleteConfirm ? (
                             <Button variant="destructive" onClick={() => dispatch({ type: 'setShowDeleteConfirm', showDeleteConfirm: true })}>
-                                <Trash2 className="w-4 h-4" />Delete Organization
+                                <Trash2 className="size-4" />Delete Organization
                             </Button>
                         ) : (
                             <div className="flex items-center gap-3">
                                 <Button variant="destructive" onClick={handleDelete} disabled={state.deleting}>
-                                    {state.deleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
+                                    {state.deleting ? <Loader2 className="size-4 animate-spin" /> : <Trash2 className="size-4" />}
                                     Confirm Delete
                                 </Button>
                                 <Button variant="outline" onClick={() => dispatch({ type: 'setShowDeleteConfirm', showDeleteConfirm: false })}>Cancel</Button>

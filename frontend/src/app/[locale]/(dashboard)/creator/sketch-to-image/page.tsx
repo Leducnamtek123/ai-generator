@@ -1,8 +1,12 @@
 'use client';
 
 import Image from 'next/image';
-import { useReducer, useRef, useEffect, useCallback } from 'react';
+import { useReducer, useRef, useEffect, useCallback, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
+import { mediaApi } from '@/services/mediaApi';
+import { projectApi } from '@/services/projectApi';
 import {
     PenTool,
     Sparkles,
@@ -16,6 +20,7 @@ import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 
 const brushColors = [
     '#000000', '#FFFFFF', '#EF4444', '#F97316', '#EAB308',
@@ -52,7 +57,8 @@ type Action =
     | { type: 'setPrompt'; prompt: string }
     | { type: 'setSelectedStyle'; selectedStyle: string }
     | { type: 'setStrength'; strength: number }
-    | { type: 'setCanvasInitialized'; canvasInitialized: boolean };
+    | { type: 'setCanvasInitialized'; canvasInitialized: boolean }
+    | { type: 'reset' };
 
 const initialState: State = {
     isDrawing: false,
@@ -63,6 +69,33 @@ const initialState: State = {
     selectedStyle: 'realistic',
     strength: 75,
     canvasInitialized: false,
+};
+
+type SketchSnapshot = {
+    prompt: string;
+    selectedStyle: string;
+    strength: number;
+    canvas: string | null;
+    resultImage: string | null;
+};
+
+type SketchProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<SketchSnapshot>;
+};
+
+const normalizeSketchSnapshot = (value: unknown): Partial<SketchSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+
+    return {
+        prompt: typeof snapshot.prompt === 'string' ? snapshot.prompt : initialState.prompt,
+        selectedStyle: typeof snapshot.selectedStyle === 'string' ? snapshot.selectedStyle : initialState.selectedStyle,
+        strength: typeof snapshot.strength === 'number' ? snapshot.strength : initialState.strength,
+        canvas: typeof snapshot.canvas === 'string' ? snapshot.canvas : null,
+        resultImage: typeof snapshot.resultImage === 'string' ? snapshot.resultImage : null,
+    };
 };
 
 function reducer(state: State, action: Action): State {
@@ -83,6 +116,8 @@ function reducer(state: State, action: Action): State {
             return { ...state, strength: action.strength };
         case 'setCanvasInitialized':
             return { ...state, canvasInitialized: action.canvasInitialized };
+        case 'reset':
+            return initialState;
         default:
             return state;
     }
@@ -91,8 +126,17 @@ function reducer(state: State, action: Action): State {
 export default function SketchToImagePage() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
+    const [restoredCanvasDataUrl, setRestoredCanvasDataUrl] = useState<string | null>(null);
+    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const { sketchToImage, isGenerating, currentGeneration } = useGenerationStore();
-    const completedImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
+    const completedImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultImage;
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const isProjectBusy = isProjectLoading || isProjectSaving;
 
     const initCanvas = useCallback(() => {
         const canvas = canvasRef.current;
@@ -113,6 +157,95 @@ export default function SketchToImagePage() {
     useEffect(() => {
         initCanvas();
     }, [initCanvas]);
+
+    const hydrateCanvas = useCallback((dataUrl: string | null) => {
+        const canvas = canvasRef.current;
+        if (!canvas || !dataUrl) return;
+
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        const image = new window.Image();
+        image.onload = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+        };
+        image.src = dataUrl;
+    }, []);
+
+    useEffect(() => {
+        const queryProjectId = searchParams.get('projectId');
+        if (queryProjectId) {
+            setProjectId(queryProjectId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrateFromSnapshot = (snapshot: Partial<SketchSnapshot>) => {
+            dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? initialState.prompt });
+            dispatch({ type: 'setSelectedStyle', selectedStyle: snapshot.selectedStyle ?? initialState.selectedStyle });
+            dispatch({ type: 'setStrength', strength: snapshot.strength ?? initialState.strength });
+            setRestoredCanvasDataUrl(snapshot.canvas ?? null);
+            setRestoredResultImage(snapshot.resultImage ?? null);
+        };
+
+        const loadProject = async () => {
+            if (!projectId) {
+                try {
+                    const raw = localStorage.getItem('sketch-to-image:draft');
+                    if (raw) {
+                        hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(raw)));
+                    }
+                } catch (loadError) {
+                    console.error('Failed to restore sketch draft', loadError);
+                }
+                return;
+            }
+
+            setIsProjectLoading(true);
+            setProjectError(null);
+            try {
+                const project = await projectApi.get(projectId);
+                const rawContent = project.content as string | Record<string, unknown> | null | undefined;
+                const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+                if (!cancelled) {
+                    hydrateFromSnapshot(normalizeSketchSnapshot(parsed));
+                }
+            } catch (loadError) {
+                console.error('Failed to restore sketch project', loadError);
+                if (!cancelled) {
+                    setProjectError('Could not load the saved sketch project. Falling back to a local draft.');
+                    try {
+                        const raw = localStorage.getItem('sketch-to-image:draft');
+                        if (raw) {
+                            hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(raw)));
+                        }
+                    } catch (fallbackError) {
+                        console.error('Failed to restore sketch fallback', fallbackError);
+                    }
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        };
+
+        void loadProject();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+
+    useEffect(() => {
+        if (!state.canvasInitialized) return;
+        hydrateCanvas(restoredCanvasDataUrl);
+    }, [state.canvasInitialized, restoredCanvasDataUrl, hydrateCanvas]);
 
     const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
         const canvas = canvasRef.current;
@@ -163,29 +296,146 @@ export default function SketchToImagePage() {
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
 
+    const getCanvasDataUrl = () => {
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
+        return canvas.toDataURL('image/png');
+    };
+
+    const canvasToFile = useCallback(async (canvas: HTMLCanvasElement) => {
+        const blob = await new Promise<Blob | null>((resolve) => {
+            canvas.toBlob((nextBlob) => resolve(nextBlob), 'image/png');
+        });
+
+        if (!blob) {
+            throw new Error('Failed to capture sketch image');
+        }
+
+        return new File([blob], `sketch-${Date.now()}.png`, { type: 'image/png' });
+    }, []);
+
     const handleGenerate = async () => {
         if (!state.prompt.trim()) return;
-        const canvas = canvasRef.current;
-        const sketchUrl = canvas ? canvas.toDataURL('image/png') : '';
 
-        await sketchToImage({
+        try {
+            const canvas = canvasRef.current;
+            if (!canvas) return;
+
+            const sketchFile = await canvasToFile(canvas);
+            const uploadedSketch = await mediaApi.uploadMedia(sketchFile);
+
+            if (!uploadedSketch?.url) {
+                throw new Error('Failed to upload sketch to storage');
+            }
+
+            await sketchToImage({
+                prompt: state.prompt,
+                sketchUrl: uploadedSketch.url,
+                style: state.selectedStyle,
+                fidelity: state.strength,
+            });
+        } catch (error: any) {
+            toast.error(error?.message || 'Failed to start sketch generation');
+        }
+    };
+
+    const handleSave = () => {
+        const payload: SketchProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot: {
+                prompt: state.prompt,
+                selectedStyle: state.selectedStyle,
+                strength: state.strength,
+                canvas: getCanvasDataUrl(),
+                resultImage: completedImage,
+            },
+        };
+
+        localStorage.setItem('sketch-to-image:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Sketch To Image Draft',
+                        description: 'Sketch to image draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Sketch To Image Draft',
+                        description: 'Sketch to image draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                toast.success('Sketch saved to your projects.');
+            } catch (saveError) {
+                console.error('Failed to persist sketch project', saveError);
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExport = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
             prompt: state.prompt,
-            sketchUrl,
-            style: state.selectedStyle,
-            fidelity: state.strength,
-        });
+            selectedStyle: state.selectedStyle,
+            strength: state.strength,
+            canvas: getCanvasDataUrl(),
+            resultImage: completedImage,
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'sketch-to-image-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Sketch export created.');
+    };
+
+    const handleReset = () => {
+        clearCanvas();
+        dispatch({ type: 'reset' });
+        dispatch({ type: 'setCanvasInitialized', canvasInitialized: false });
+        setRestoredCanvasDataUrl(null);
+        setProjectError(null);
     };
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
-                <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Sketch to Image</h2>
+                <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
+                    <div className="flex items-center gap-3">
+                        <h2 className="font-semibold text-muted-foreground">Sketch to Image</h2>
+                        {(isProjectLoading || isProjectSaving || projectError) && (
+                            <span className={cn(
+                                'text-[10px] px-2 py-1 rounded-full border',
+                                projectError
+                                    ? 'border-amber-500/30 text-amber-500'
+                                    : 'border-muted-foreground/20 text-muted-foreground',
+                            )}>
+                                {isProjectLoading ? 'Loading project' : isProjectSaving ? 'Saving project' : 'Draft restored'}
+                            </span>
+                        )}
+                    </div>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Drawing Tools</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Drawing Tools</h4>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => dispatch({ type: 'setTool', tool: 'pen' })}
@@ -194,7 +444,7 @@ export default function SketchToImagePage() {
                                     state.tool === 'pen' ? 'bg-accent border-primary/20 text-foreground' : 'bg-card border-border text-muted-foreground',
                                 )}
                             >
-                                <PenTool className="w-4 h-4" />
+                                <PenTool className="size-4" />
                                 Pen
                             </button>
                             <button
@@ -204,7 +454,7 @@ export default function SketchToImagePage() {
                                     state.tool === 'eraser' ? 'bg-accent border-primary/20 text-foreground' : 'bg-card border-border text-muted-foreground',
                                 )}
                             >
-                                <Eraser className="w-4 h-4" />
+                                <Eraser className="size-4" />
                                 Eraser
                             </button>
                             <button
@@ -212,7 +462,15 @@ export default function SketchToImagePage() {
                                 className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-border bg-card text-muted-foreground text-xs font-medium hover:border-destructive/30 hover:text-destructive transition-all"
                                 title="Clear Canvas"
                             >
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="size-4" />
+                            </button>
+                            <button
+                                onClick={handleReset}
+                                disabled={isProjectBusy}
+                                className="flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl border border-border bg-card text-muted-foreground text-xs font-medium hover:border-border/80 transition-all disabled:opacity-60"
+                                title="Reset All"
+                            >
+                                Reset
                             </button>
                         </div>
                     </div>
@@ -233,7 +491,7 @@ export default function SketchToImagePage() {
                                     key={color}
                                     onClick={() => dispatch({ type: 'setBrushColor', brushColor: color })}
                                     className={cn(
-                                        'w-8 h-8 rounded-lg border-2 transition-all',
+                                        'size-8 rounded-lg border-2 transition-all',
                                         state.brushColor === color ? 'border-primary scale-110 ring-2 ring-primary/20' : 'border-border hover:scale-105',
                                     )}
                                     style={{ backgroundColor: color }}
@@ -243,7 +501,7 @@ export default function SketchToImagePage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Output Style</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Output Style</h4>
                         <div className="grid grid-cols-2 gap-2">
                             {styles.map((style) => (
                                 <button
@@ -271,7 +529,7 @@ export default function SketchToImagePage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Prompt</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Prompt</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
@@ -288,15 +546,15 @@ export default function SketchToImagePage() {
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">2 Credits</span>
                     </div>
-                    <Button onClick={handleGenerate} disabled={isGenerating || !state.prompt.trim()} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleGenerate} disabled={isGenerating || isProjectBusy || !state.prompt.trim()} className="w-full h-12 font-bold rounded-xl gap-2">
                         {isGenerating ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 Generating...
                             </>
                         ) : (
                             <>
-                                <Sparkles className="w-5 h-5" />
+                                <Sparkles className="size-5" />
                                 Transform Sketch
                             </>
                         )}
@@ -312,13 +570,13 @@ export default function SketchToImagePage() {
                         <span>Style: {styles.find((style) => style.id === state.selectedStyle)?.label}</span>
                     </div>
                     {completedImage && (
-                        <div className="flex items-center gap-2">
-                            <Button variant="outline" size="sm" className="gap-2">
-                                <Folder className="w-4 h-4" />
-                                Save
+                    <div className="flex items-center gap-2">
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectBusy}>
+                                <Folder className="size-4" />
+                                {isProjectSaving ? 'Saving...' : 'Save'}
                             </Button>
-                            <Button size="sm" className="gap-2">
-                                <Download className="w-4 h-4" />
+                            <Button size="sm" className="gap-2" onClick={handleExport}>
+                                <Download className="size-4" />
                                 Export
                             </Button>
                         </div>
@@ -347,8 +605,8 @@ export default function SketchToImagePage() {
                             {isGenerating ? (
                                 <div className="w-full max-w-[768px] aspect-[3/2] rounded-xl border border-border bg-card flex flex-col items-center justify-center gap-4">
                                     <div className="relative">
-                                        <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                        <Sparkles className="w-6 h-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                        <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                        <Sparkles className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                                     </div>
                                     <p className="text-sm text-muted-foreground animate-pulse">Transforming sketch...</p>
                                 </div>
@@ -358,14 +616,17 @@ export default function SketchToImagePage() {
                                 </div>
                             ) : (
                                 <div className="w-full max-w-[768px] aspect-[3/2] rounded-xl border border-dashed border-border bg-card flex flex-col items-center justify-center gap-3 text-muted-foreground">
-                                    <Sparkles className="w-8 h-8 opacity-30" />
+                                    <Sparkles className="size-8 opacity-30" />
                                     <p className="text-sm">Draw a sketch and click &quot;Transform Sketch&quot;</p>
                                 </div>
+                            )}
+                            {projectError && (
+                                <p className="text-xs text-amber-500/90 max-w-[768px] text-center">{projectError}</p>
                             )}
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }

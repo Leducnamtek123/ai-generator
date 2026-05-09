@@ -42,6 +42,9 @@ export class WorkflowEntity extends EntityRelationalHelper implements Workflow {
   @Column({ nullable: true })
   previewUrl?: string;
 
+  @Column({ type: 'jsonb', nullable: true })
+  lastExecution?: Record<string, unknown> | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

@@ -2,16 +2,13 @@
 
 ## Current Behavior
 
-The backend already has some baseline controls such as validation pipes,
-throttling, Swagger auth, and an exception filter. However, the production
-runtime is still uneven across entrypoints:
+The backend now has a shared production baseline across entrypoints:
 
-- request logging is not consistently structured,
-- reverse proxy trust is implicit instead of explicit,
-- CORS normalization lives in bootstrap code instead of a reusable security
-  helper,
-- some public surface areas still need ownership and exposure review,
-- production observability is not documented as a first-class contract.
+- request logging is structured and correlated by request ID,
+- reverse proxy trust is explicit in deployed bootstraps,
+- CORS normalization lives in a reusable security helper,
+- queue health and dead-letter recovery are available to operators,
+- production observability is documented as a first-class contract.
 
 ## Target Behavior
 
@@ -22,6 +19,7 @@ All backend entrypoints should share a single hardening baseline:
 - structured request logs with status, duration, and user context,
 - explicit reverse-proxy handling,
 - secure defaults for validation and error handling,
+- queue observability, dead-letter recovery, and retry-safe job handling,
 - a documented path for remaining auth, ownership, and IDOR hardening work.
 
 ## Affected Users

@@ -1,10 +1,16 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { 
     BarChart3, 
+    CalendarDays,
+    CheckCircle2,
+    Clock3,
+    Inbox,
+    AlertTriangle,
     Users, 
     MessageSquare, 
     Share2, 
@@ -24,10 +30,45 @@ import {
     Tooltip, 
     ResponsiveContainer
 } from 'recharts';
-import { socialHubApi, type SocialAnalytics } from '@/services/socialHubApi';
+import { socialHubApi, type SocialAnalytics, type SocialChannel, type SocialInteraction, type SocialPost } from '@/services/socialHubApi';
+
+const SOCIAL_REFERENCES = [
+    {
+        name: 'Sprout Social',
+        summary: 'Best overall workflow model for structure and governance.',
+    },
+    {
+        name: 'Meta Business Suite',
+        summary: 'Native Facebook baseline for inbox and publishing.',
+    },
+    {
+        name: 'Hootsuite',
+        summary: 'Multichannel inbox, automation, and listening reference.',
+    },
+    {
+        name: 'Buffer',
+        summary: 'Simple scheduling and community workflow reference.',
+    },
+    {
+        name: 'Later',
+        summary: 'Calendar, approvals, and content operations reference.',
+    },
+] as const;
+
+const SOCIAL_PIPELINE = [
+    { label: 'Source content', detail: 'Bring in assets, URLs, and reusable media.' },
+    { label: 'Draft', detail: 'Shape copy with AI assistance and channel variants.' },
+    { label: 'Review / approval', detail: 'Route content through workspace approval gates.' },
+    { label: 'Publish', detail: 'Post now or schedule across connected pages.' },
+    { label: 'Monitor / reply', detail: 'Track mentions, comments, and inbox interactions.' },
+    { label: 'Analytics / optimize', detail: 'Measure performance and improve the next draft.' },
+] as const;
 
 export default function SocialDashboardPage() {
     const [stats, setStats] = React.useState<SocialAnalytics | null>(null);
+    const [channels, setChannels] = React.useState<SocialChannel[]>([]);
+    const [posts, setPosts] = React.useState<SocialPost[]>([]);
+    const [inboxItems, setInboxItems] = React.useState<SocialInteraction[]>([]);
     const [isLoading, setIsLoading] = React.useState(true);
     const [daysRange, setDaysRange] = React.useState<7 | 30>(7);
     const platformMeta = {
@@ -42,8 +83,16 @@ export default function SocialDashboardPage() {
         const fetchStats = async () => {
             setIsLoading(true);
             try {
-                const data = await socialHubApi.getAnalytics(daysRange);
-                setStats(data);
+                const [analytics, channelData, postData, inboxData] = await Promise.all([
+                    socialHubApi.getAnalytics(daysRange),
+                    socialHubApi.getChannels(),
+                    socialHubApi.getPosts(),
+                    socialHubApi.getInbox(),
+                ]);
+                setStats(analytics);
+                setChannels(channelData);
+                setPosts(postData);
+                setInboxItems(inboxData);
             } catch (err) {
                 console.error('Failed to fetch analytics', err);
             }
@@ -66,6 +115,35 @@ export default function SocialDashboardPage() {
     const totalPosts =
         stats.totals.totalPosts ??
         Object.values(platformBreakdown).reduce((sum, item) => sum + (item.posts || 0), 0);
+    const now = new Date();
+    const connectedAccounts = channels.length;
+    const connectedFacebookPages = channels.filter((account) => account.platform === 'facebook').length;
+    const accountsNeedingReauth = channels.filter((account) => account.needsReauth).length;
+    const scheduledPosts = posts.filter((post) => post.status === 'scheduled');
+    const draftPosts = posts.filter((post) => post.status === 'draft');
+    const publishedPosts = posts.filter((post) => post.status === 'published');
+    const failedPosts = posts.filter((post) => post.status === 'failed');
+    const openInboxItems = inboxItems.filter((item) => {
+        const status = (item.status || '').toLowerCase();
+        return status !== 'handled' && status !== 'done' && status !== 'closed';
+    });
+    const inboundNeedsAttention = openInboxItems.filter((item) => item.canReply !== false).length;
+    const nextScheduledPost = scheduledPosts
+        .map((post) => ({
+            ...post,
+            scheduledTime: post.scheduledAt ? new Date(post.scheduledAt).getTime() : Number.POSITIVE_INFINITY,
+        }))
+        .filter((post) => post.scheduledTime >= now.getTime())
+        .sort((a, b) => a.scheduledTime - b.scheduledTime)[0] ?? null;
+    const nextScheduledDate = nextScheduledPost?.scheduledAt ? new Date(nextScheduledPost.scheduledAt) : null;
+    const nextScheduledLabel = nextScheduledDate
+        ? nextScheduledDate.toLocaleString([], {
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        })
+        : null;
     const audienceDistribution = Object.entries(platformBreakdown)
         .map(([platform, value]) => {
             const meta = platformMeta[platform as keyof typeof platformMeta];
@@ -82,8 +160,175 @@ export default function SocialDashboardPage() {
     return (
         <div className="p-8 max-w-7xl mx-auto space-y-8">
             <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-bold tracking-tight">Social Dashboard</h1>
+                <h1 className="text-4xl font-semibold tracking-tight">Social Dashboard</h1>
                 <p className="text-muted-foreground">Monitor your performance across all connected social channels.</p>
+                <div className="pt-2">
+                    <Button asChild variant="outline" size="sm" className="w-fit">
+                        <Link href="/social">Open Social Hub overview</Link>
+                    </Button>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+                <GlassCard variant="morphism" className="border border-white/10 p-6">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Operating snapshot</p>
+                            <h2 className="mt-2 text-2xl font-semibold">What needs attention now</h2>
+                            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+                                This dashboard is organized the way a real social team works: connected accounts, publishing queue, inbox load, and the next scheduled action.
+                            </p>
+                        </div>
+                        <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                            {connectedFacebookPages} Facebook page{connectedFacebookPages === 1 ? '' : 's'}
+                        </div>
+                    </div>
+
+                    <div className="mt-6 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-sm text-muted-foreground">Connected accounts</span>
+                                <Share2 className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="mt-3 text-2xl font-bold">{connectedAccounts}</div>
+                            <p className="mt-1 text-xs text-muted-foreground">All channels in this workspace</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-sm text-muted-foreground">Scheduled posts</span>
+                                <CalendarDays className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="mt-3 text-2xl font-bold">{scheduledPosts.length}</div>
+                            <p className="mt-1 text-xs text-muted-foreground">{draftPosts.length} drafts waiting to move</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-sm text-muted-foreground">Open inbox threads</span>
+                                <Inbox className="h-4 w-4 text-primary" />
+                            </div>
+                            <div className="mt-3 text-2xl font-bold">{openInboxItems.length}</div>
+                            <p className="mt-1 text-xs text-muted-foreground">{inboundNeedsAttention} ready to reply</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                            <div className="flex items-center justify-between gap-4">
+                                <span className="text-sm text-muted-foreground">Needs review</span>
+                                <AlertTriangle className="h-4 w-4 text-amber-400" />
+                            </div>
+                            <div className="mt-3 text-2xl font-bold">{accountsNeedingReauth}</div>
+                            <p className="mt-1 text-xs text-muted-foreground">Reconnect before publishing</p>
+                        </div>
+                    </div>
+                </GlassCard>
+
+                <GlassCard variant="morphism" className="border border-white/10 p-6">
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Next action</p>
+                            <h2 className="mt-2 text-2xl font-semibold">Publishing queue</h2>
+                            <p className="mt-2 text-sm text-muted-foreground">
+                                Keep the next post, the inbox, and connected pages aligned so the team knows what to do first.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="mt-6 space-y-3">
+                        {nextScheduledPost ? (
+                            <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <div className="flex items-center gap-2">
+                                        <Clock3 className="h-4 w-4 text-primary" />
+                                        <span className="font-semibold">Next scheduled post</span>
+                                    </div>
+                                    <span className="text-xs text-muted-foreground">{nextScheduledLabel}</span>
+                                </div>
+                                <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">
+                                    {nextScheduledPost.content || 'Scheduled content'}
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="rounded-xl border border-dashed border-white/10 p-4 text-sm text-muted-foreground">
+                                No scheduled post yet. Use Publish to queue content for review or future delivery.
+                            </div>
+                        )}
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                            <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="text-sm text-muted-foreground">Published</span>
+                                    <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+                                </div>
+                                <div className="mt-3 text-2xl font-bold">{publishedPosts.length}</div>
+                                <p className="mt-1 text-xs text-muted-foreground">Ready for analytics review</p>
+                            </div>
+                            <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="text-sm text-muted-foreground">Failed</span>
+                                    <AlertTriangle className="h-4 w-4 text-rose-400" />
+                                </div>
+                                <div className="mt-3 text-2xl font-bold">{failedPosts.length}</div>
+                                <p className="mt-1 text-xs text-muted-foreground">Check auth, media, or API errors</p>
+                            </div>
+                        </div>
+                    </div>
+                </GlassCard>
+            </div>
+
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                <GlassCard variant="morphism" className="border border-white/10 p-6">
+                    <div className="flex items-start justify-between gap-4 mb-6">
+                        <div>
+                            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Facebook-first baseline</p>
+                            <h2 className="text-2xl font-semibold mt-2">Reference products to learn from</h2>
+                            <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+                                Facebook Page workflows are the canonical starting point. Other channels should extend the same workspace model, not replace it.
+                            </p>
+                        </div>
+                        <div className="rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                            Page-first
+                        </div>
+                    </div>
+                    <div className="grid gap-3">
+                        {SOCIAL_REFERENCES.map((reference) => (
+                            <div key={reference.name} className="rounded-xl border border-white/10 bg-background/40 p-4">
+                                <div className="flex items-center justify-between gap-3">
+                                    <span className="font-semibold">{reference.name}</span>
+                                    <span className="text-xs text-muted-foreground">Reference</span>
+                                </div>
+                                <p className="mt-2 text-sm text-muted-foreground">{reference.summary}</p>
+                            </div>
+                        ))}
+                    </div>
+                </GlassCard>
+
+                <GlassCard variant="morphism" className="border border-white/10 p-6">
+                    <div className="flex items-start justify-between gap-4 mb-6">
+                        <div>
+                            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Product pipeline</p>
+                            <h2 className="text-2xl font-semibold mt-2">From content source to optimization</h2>
+                            <p className="text-sm text-muted-foreground mt-2 max-w-xl">
+                                Social Hub is a workflow system. Publishing is one stage in a larger loop that includes review, monitoring, and analytics.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="space-y-3">
+                        {SOCIAL_PIPELINE.map((step, index) => (
+                            <motion.div
+                                key={step.label}
+                                initial={{ opacity: 0, x: 12 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className="rounded-xl border border-white/10 bg-background/40 p-4"
+                            >
+                                <div className="flex items-center gap-3">
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
+                                        {index + 1}
+                                    </div>
+                                    <span className="font-semibold">{step.label}</span>
+                                </div>
+                                <p className="mt-2 text-sm text-muted-foreground pl-11">{step.detail}</p>
+                            </motion.div>
+                        ))}
+                    </div>
+                </GlassCard>
             </div>
 
             {/* Stats Grid */}
@@ -98,16 +343,16 @@ export default function SocialDashboardPage() {
                         <GlassCard variant="morphism" className="border border-white/10 p-6 flex flex-col gap-4">
                             <div className="flex items-center justify-between">
                                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                                    <stat.icon className="w-5 h-5" />
+                                    <stat.icon className="size-5" />
                                 </div>
                                 <div className={`flex items-center text-xs font-bold ${stat.type === 'up' ? 'text-green-500' : 'text-red-500'}`}>
                                     {stat.change}
-                                    {stat.type === 'up' ? <ArrowUpRight className="w-3 h-3 ml-1" /> : <ArrowDownRight className="w-3 h-3 ml-1" />}
+                                    {stat.type === 'up' ? <ArrowUpRight className="size-3 ml-1" /> : <ArrowDownRight className="size-3 ml-1" />}
                                 </div>
                             </div>
                             <div>
                                 <p className="text-sm text-muted-foreground font-medium">{stat.label}</p>
-                                <h3 className="text-2xl font-bold mt-1 text-white">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</h3>
+                                <h3 className="text-2xl font-semibold mt-1 text-white">{typeof stat.value === 'number' ? stat.value.toLocaleString() : stat.value}</h3>
                             </div>
                         </GlassCard>
                     </motion.div>
@@ -118,7 +363,7 @@ export default function SocialDashboardPage() {
                 {/* Main Engagement Chart */}
                 <GlassCard variant="morphism" className="lg:col-span-8 h-[400px] border border-white/10 flex flex-col">
                     <div className="flex items-center justify-between p-6">
-                        <h3 className="font-bold text-lg">Engagement Overview</h3>
+                        <h3 className="font-semibold text-lg">Engagement Overview</h3>
                         <div className="flex gap-2">
                             <Button 
                                 variant="outline" 
@@ -190,14 +435,14 @@ export default function SocialDashboardPage() {
 
                 {/* Platform Distribution */}
                 <GlassCard variant="morphism" className="lg:col-span-4 h-[400px] border border-white/10">
-                    <h3 className="font-bold text-lg mb-8">Audience Distribution</h3>
+                    <h3 className="font-semibold text-lg mb-8">Audience Distribution</h3>
                     {audienceDistribution.length > 0 ? (
                         <div className="space-y-6">
                             {audienceDistribution.map((item) => (
                                 <div key={item.platform} className="space-y-2">
                                     <div className="flex items-center justify-between text-sm">
                                         <div className="flex items-center gap-2">
-                                            <item.icon className="w-4 h-4" style={{ color: item.color }} />
+                                            <item.icon className="size-4" style={{ color: item.color }} />
                                             <span className="font-medium">{item.label}</span>
                                         </div>
                                         <span className="font-bold">{item.share}%</span>

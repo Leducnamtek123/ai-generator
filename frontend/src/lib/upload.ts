@@ -1,13 +1,13 @@
 import { post } from '@/lib/api';
+import {
+  getFileUrl as resolveFileUrl,
+  resolveStoredFile,
+  type ResolvedStoredFile,
+  type StoredFileResponse,
+} from '@/lib/file-storage';
 import { toast } from 'sonner';
 
-export interface UploadedFile {
-    id: string;
-    path: string;
-    url: string;
-}
-
-const DEFAULT_API_URL = 'http://localhost:8000/api/v1';
+export type UploadedFile = ResolvedStoredFile;
 
 /**
  * Upload a file to MinIO via the backend S3 endpoint.
@@ -17,7 +17,7 @@ export async function uploadFile(file: File): Promise<UploadedFile> {
     const formData = new FormData();
     formData.append('file', file);
 
-    const response = await post<{ file: { id: string; path: string } }>(
+    const response = await post<StoredFileResponse>(
         '/files/upload',
         formData,
         {
@@ -25,11 +25,7 @@ export async function uploadFile(file: File): Promise<UploadedFile> {
         },
     );
 
-    return {
-        id: response.file.id,
-        path: response.file.path,
-        url: getFileUrl(response.file.path),
-    };
+    return resolveStoredFile(response.file);
 }
 
 /**
@@ -61,35 +57,7 @@ export async function uploadFileWithToast(
  *  - Or through the backend proxy at /api/v1/files/:path
  */
 export function getFileUrl(path: string): string {
-    if (!path) return '';
-
-    const baseUrl = (process.env.NEXT_PUBLIC_API_URL || DEFAULT_API_URL).replace(/\/$/, '');
-    const origin = baseUrl.replace(/\/api\/v1$/, '');
-
-    if (/^https?:\/\//i.test(path)) {
-        try {
-            const url = new URL(path);
-            if (url.hostname === 'localhost' || url.hostname === '127.0.0.1') {
-                return `${origin}${url.pathname}${url.search}${url.hash}`;
-            }
-        } catch {
-            // Fall through and return the original path below.
-        }
-
-        return path;
-    }
-
-    const normalizedPath = path.replace(/^\/+/, '');
-
-    if (normalizedPath.startsWith('api/')) {
-        return `${origin}/${normalizedPath}`;
-    }
-
-    if (normalizedPath.startsWith('files/')) {
-        return `${baseUrl}/${normalizedPath}`;
-    }
-
-    return `${baseUrl}/files/${normalizedPath}`;
+    return resolveFileUrl(path);
 }
 
 /**

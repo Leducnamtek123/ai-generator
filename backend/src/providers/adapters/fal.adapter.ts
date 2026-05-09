@@ -9,6 +9,7 @@ import {
   VideoOptions,
   ProviderCapability,
   ImageProcessingOptions,
+  UpscaleOptions,
 } from '../provider.interface';
 
 /**
@@ -275,6 +276,27 @@ export class FalAdapter extends BaseProvider {
       this.logger.error(`Fal.ai ${type} failed: ${error.message}`);
       throw error;
     }
+  }
+
+  async upscaleImage(
+    imageUrl: string,
+    options?: UpscaleOptions,
+  ): Promise<GenerationResult> {
+    return this.processImage({
+      imageUrl,
+      type: 'upscale',
+      prompt: options?.prompt,
+      scale: options?.scale,
+      mode: options?.mode,
+      enhanceMode: options?.enhanceMode,
+      model: options?.model,
+      optimization: options?.optimization,
+      creativity: options?.creativity,
+      hdr: options?.hdr,
+      resemblance: options?.resemblance,
+      fractality: options?.fractality,
+      engine: options?.engine,
+    });
   }
 
   // ==================== Helpers ====================

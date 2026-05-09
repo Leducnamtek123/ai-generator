@@ -23,21 +23,21 @@ export function CommentsPanel({ isOpen, onClose, onAddFirstComment }: CommentsPa
             {/* Header */}
             <div className="h-14 px-4 flex items-center justify-between border-b border-white/5 bg-[#0F1014]">
                 <div className="flex items-center gap-2">
-                    <MessageSquare className="w-4 h-4 text-white/60" />
+                    <MessageSquare className="size-4 text-white/60" />
                     <h2 className="text-sm font-semibold text-white">Comments</h2>
                 </div>
                 <button
                     onClick={onClose}
                     className="p-1 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="size-4" />
                 </button>
             </div>
 
             {/* Search */}
             <div className="p-4 border-b border-white/5">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-white/20" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-white/20" />
                     <Input
                         placeholder="Search comments..."
                         value={searchQuery}
@@ -68,8 +68,8 @@ export function CommentsPanel({ isOpen, onClose, onAddFirstComment }: CommentsPa
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto bg-[#151619]/50 flex flex-col items-center justify-center p-8 text-center">
-                <div className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                    <MessageSquare className="w-6 h-6 text-white/20" />
+                <div className="size-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
+                    <MessageSquare className="size-6 text-white/20" />
                 </div>
                 <h3 className="text-sm font-medium text-white/80">No comments yet</h3>
                 <p className="text-xs text-white/40 mt-1 max-w-[200px]">

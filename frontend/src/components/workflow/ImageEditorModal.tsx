@@ -57,7 +57,7 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
                         {isProcessing && (
                             <div className="absolute inset-0 bg-gray-950/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
                                 <div className="flex flex-col items-center gap-3">
-                                    <Wand2 className="w-8 h-8 text-blue-500 animate-pulse" />
+                                    <Wand2 className="size-8 text-blue-500 animate-pulse" />
                                     <span className="text-sm text-white font-medium">Generating details...</span>
                                 </div>
                             </div>
@@ -82,7 +82,7 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
                                     disabled={!prompt.trim() || isProcessing}
                                     className="absolute right-2 top-1/2 -translate-y-1/2 h-9 w-9 bg-blue-600 hover:bg-blue-500 rounded-lg"
                                 >
-                                    <Send className="w-4 h-4" />
+                                    <Send className="size-4" />
                                 </Button>
                             </div>
 
@@ -116,7 +116,7 @@ function ToolButton({ icon: Icon, label, active, onClick }: { icon: any, label?:
                 active ? "bg-blue-500/10 text-blue-400" : "hover:bg-white/5 text-white/60 hover:text-white"
             )}
         >
-            <Icon className="w-3.5 h-3.5" />
+            <Icon className="size-3.5" />
             {label && <span>{label}</span>}
         </button>
     );

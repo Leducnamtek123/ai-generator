@@ -1,0 +1,228 @@
+{
+  "Settings": {
+    "title": "Cài đặt",
+    "tabs": {
+      "profile": "Hồ sơ",
+      "account": "Tài khoản",
+      "billing": "Thanh toán",
+      "notifications": "Thông báo",
+      "apiKeys": "Khoá API"
+    },
+    "toasts": {
+      "paymentPaid": "Thanh toán {provider} đã hoàn tất",
+      "paymentPending": "Thanh toán {provider} đang chờ xử lý",
+      "paymentFailed": "Thanh toán {provider} thất bại",
+      "paymentCompleted": "Thanh toán {provider} đã xong",
+      "socialConnectedPlatform": "Đã kết nối {platform} thành công",
+      "socialConnected": "Đã kết nối kênh mạng xã hội thành công",
+      "socialConnectPlatformFailed": "Không thể kết nối {platform}",
+      "socialConnectFailed": "Không thể kết nối kênh mạng xã hội"
+    },
+    "profile": {
+      "title": "Hồ sơ",
+      "description": "Quản lý thông tin hồ sơ công khai của bạn.",
+      "photoLabel": "Ảnh hồ sơ",
+      "photoHint": "Dùng avatar Google nếu có, hoặc tải ảnh mới lên MinIO.",
+      "firstNameLabel": "Tên",
+      "firstNamePlaceholder": "Nguyễn",
+      "lastNameLabel": "Họ",
+      "lastNamePlaceholder": "An",
+      "emailLabel": "Email",
+      "emailPlaceholder": "john@example.com",
+      "save": "Lưu thay đổi",
+      "toasts": {
+        "updated": "Đã cập nhật hồ sơ",
+        "updateFailed": "Không thể cập nhật hồ sơ",
+        "avatarUpdated": "Đã cập nhật avatar",
+        "avatarUpdateFailed": "Không thể cập nhật avatar"
+      }
+    },
+    "account": {
+      "title": "Tài khoản",
+      "description": "Quản lý bảo mật tài khoản của bạn.",
+      "changePassword": "Đổi mật khẩu",
+      "currentPassword": "Mật khẩu hiện tại",
+      "newPassword": "Mật khẩu mới",
+      "confirmPassword": "Xác nhận mật khẩu mới",
+      "updatingPassword": "Đang cập nhật...",
+      "updatePassword": "Cập nhật mật khẩu",
+      "connectedAccounts": "Tài khoản mạng xã hội đã kết nối",
+      "refresh": "Làm mới",
+      "loading": "Đang tải...",
+      "disconnect": "Ngắt kết nối",
+      "connect": "Kết nối",
+      "webhookConfigurationTitle": "Cấu hình webhook (cho Messenger/Feed)",
+      "webhookUrl": "Webhook URL",
+      "copy": "Sao chép",
+      "copiedUrl": "Đã sao chép URL",
+      "verifyToken": "Verify Token",
+      "copiedToken": "Đã sao chép token",
+      "dangerZone": "Vùng nguy hiểm",
+      "dangerZoneDescription": "Sau khi xoá, tài khoản của bạn không thể khôi phục.",
+      "signOut": "Đăng xuất phiên này",
+      "deleteAccount": "Xoá tài khoản",
+      "deleteConfirmTitle": "Xoá tài khoản vĩnh viễn?",
+      "deleteConfirmDescription": "Hành động này không thể hoàn tác. Tài khoản và dữ liệu liên quan sẽ bị xoá.",
+      "deleteConfirmAction": "Xoá tài khoản",
+      "facebookDialog": {
+        "title": "Kết nối Facebook Page",
+        "description": "Nhập Meta App ID và App Secret để bắt đầu quá trình kết nối.",
+        "appId": "Facebook App ID",
+        "appIdPlaceholder": "123456789012345",
+        "appSecret": "Facebook App Secret",
+        "appSecretPlaceholder": "••••••••••••••••••••",
+        "cancel": "Huỷ",
+        "connect": "Kết nối & Xác thực"
+      },
+      "toasts": {
+        "loadConnectedAccountsFailed": "Không thể tải các tài khoản đã kết nối",
+        "passwordFieldsRequired": "Vui lòng điền đầy đủ các trường mật khẩu.",
+        "passwordMismatch": "Mật khẩu mới và xác nhận không khớp.",
+        "passwordUpdated": "Đã cập nhật mật khẩu.",
+        "passwordUpdateFailed": "Không thể cập nhật mật khẩu",
+        "providerConnectionFailed": "Không thể khởi tạo kết nối nhà cung cấp.",
+        "facebookAppIdRequired": "Vui lòng nhập Facebook App ID",
+        "facebookAppSecretRequired": "Vui lòng nhập Facebook App Secret",
+        "disconnecting": "Đang ngắt kết nối...",
+        "disconnected": "Đã ngắt kết nối",
+        "disconnectFailed": "Không thể ngắt kết nối",
+        "accountDeleted": "Đã xoá tài khoản",
+        "deleteAccountFailed": "Không thể xoá tài khoản"
+      }
+    },
+    "billing": {
+      "title": "Gói và thanh toán",
+      "description": "Chọn và kích hoạt gói ngay trong phần cài đặt.",
+      "subscriptionLabel": "Gói thuê bao",
+      "noActiveSubscription": "Chưa có gói đang hoạt động",
+      "freeStatus": "miễn phí",
+      "topUpOnly": "Chỉ có credit nạp thêm - hãy mua gói để kích hoạt quyền lợi thuê bao",
+      "noSubscriptionNoCredits": "Chưa có gói và cũng chưa có credit",
+      "refreshing": "Đang làm mới...",
+      "refresh": "Làm mới",
+      "spendableCredits": "Credit có thể dùng",
+      "includedCredits": "bao gồm",
+      "topUp": "nạp thêm",
+      "compareScope": "So sánh theo phạm vi thanh toán",
+      "noPlanData": "Dữ liệu giá tạm thời chưa có cho nhóm này.",
+      "featured": "Nổi bật",
+      "plan": "gói",
+      "active": "Đang hoạt động",
+      "creditsIncluded": "credit đi kèm",
+      "approximateUsage": "Ước tính sử dụng",
+      "freeTrial": "Dùng thử miễn phí khi đăng ký",
+      "processing": "Đang xử lý...",
+      "workspacePlansNote": "Gói workspace cũng có ở đây. Chuyển sang tab Workspace khi bạn cần credit dùng chung hoặc seat tổ chức thay vì gói cá nhân.",
+      "topUpCreditsTitle": "Credit nạp thêm tuỳ chọn",
+      "credits": "credit",
+      "buyTopUp": "Mua credit",
+      "creditCostGuide": {
+        "title": "Hướng dẫn chi phí credit",
+        "description": "Đây là quy ước tham khảo để biết credit được tiêu cho các công cụ như thế nào."
+      },
+      "creditUnit": "{count, plural, one {credit} other {credit}}",
+      "topUpNoticeTitle": "Credit nạp thêm không làm thay đổi gói thuê bao.",
+      "topUpNoticeDescription": "Nếu bạn muốn sidebar và thẻ gói không còn hiển thị Free, hãy chọn một trong các gói thuê bao ở trên.",
+      "noRenewalScheduled": "Chưa có lịch gia hạn",
+      "segment": {
+        "individual": {
+          "label": "Cá nhân",
+          "title": "Thanh toán cá nhân",
+          "description": "Một chủ sở hữu, một ví, một hạn mức hàng tháng rõ ràng."
+        },
+        "team": {
+          "label": "Workspace",
+          "title": "Thanh toán nhóm",
+          "description": "Credit dùng chung, seat đi kèm, và quyền kiểm soát workspace."
+        }
+      },
+      "toasts": {
+        "loadFailed": "Không thể tải tóm tắt thanh toán",
+        "paymentUrlMissing": "Không thể tạo URL thanh toán",
+        "checkoutFailed": "Không thể khởi tạo thanh toán"
+      }
+    },
+    "notifications": {
+      "title": "Thông báo",
+      "description": "Kiểm soát nhóm sự kiện nào sẽ vào email, inbox và khung cảnh báo admin.",
+      "refresh": "Làm mới",
+      "openInbox": "Mở inbox",
+      "unread": "Chưa đọc",
+      "unreadDescription": "Tin nhắn đang chờ trong inbox của ứng dụng.",
+      "channels": "Kênh",
+      "channelsDescription": "Các nhóm Payment, Workflow, Social, Moderation và System.",
+      "adminAlerts": "Cảnh báo admin",
+      "adminAlertsDescription": "Thiết lập theo từng nhóm cho các thông báo moderation dành cho admin cũng được lưu ở đây.",
+      "restoreDefaults": "Khôi phục mặc định",
+      "table": {
+        "type": "Loại",
+        "email": "Email",
+        "inApp": "Trong app",
+        "adminAlerts": "Cảnh báo admin"
+      },
+      "actions": {
+        "sendEmail": "Gửi email",
+        "showInInbox": "Hiển thị trong inbox",
+        "adminAlert": "Cảnh báo admin"
+      },
+      "markAllRead": "Đánh dấu tất cả đã đọc",
+      "savePreferences": "Lưu tuỳ chọn",
+      "categories": {
+        "payment": {
+          "label": "Thanh toán",
+          "description": "Kết quả thanh toán, hoàn tiền và thay đổi số dư credit."
+        },
+        "workflow": {
+          "label": "Workflow",
+          "description": "Hoàn tất thực thi, cập nhật hàng đợi và lỗi generation."
+        },
+        "social": {
+          "label": "Mạng xã hội",
+          "description": "Kết nối tài khoản, ngắt kết nối và hoạt động đăng bài."
+        },
+        "moderation": {
+          "label": "Kiểm duyệt",
+          "description": "Xem xét template, duyệt và các hành động moderation của admin."
+        },
+        "system": {
+          "label": "Hệ thống",
+          "description": "Thông báo toàn hệ thống và các cảnh báo vận hành."
+        }
+      },
+      "toasts": {
+        "loadFailed": "Không thể tải cài đặt thông báo",
+        "markAllReadSuccess": "Đã đánh dấu tất cả thông báo là đã đọc",
+        "markAllReadFailed": "Không thể đánh dấu đã đọc",
+        "saveSuccess": "Đã lưu tuỳ chọn thông báo",
+        "saveFailed": "Không thể lưu tuỳ chọn thông báo"
+      }
+    },
+    "apiKeys": {
+      "title": "Cài đặt Nhà phát triển & MCP",
+      "description": "Quản lý API key để kết nối với AI agent bên ngoài qua Model Context Protocol (MCP).",
+      "newKeyName": "Tên key mới",
+      "newKeyNamePlaceholder": "ví dụ: Claude Desktop",
+      "generate": "Tạo key mới",
+      "yourKeys": "API key của bạn",
+      "noKeys": "Chưa tìm thấy API key nào.",
+      "untitledKey": "Key chưa đặt tên",
+      "revoke": "Thu hồi",
+      "storedSecurely": "Được lưu an toàn",
+      "created": "Đã tạo",
+      "lastUsed": "Sử dụng gần nhất",
+      "never": "Chưa từng",
+      "mcpTitle": "Thông tin kết nối MCP",
+      "mcpDescription": "Để kết nối AI agent của bạn (như Claude Desktop) với nền tảng này, hãy dùng cấu hình sau trong",
+      "copyConfig": "Sao chép cấu hình",
+      "viewDocs": "Xem tài liệu đầy đủ →",
+      "toasts": {
+        "nameRequired": "Vui lòng nhập tên cho key",
+        "generateSuccess": "Đã tạo API Key thành công",
+        "generateFailed": "Không thể tạo API Key",
+        "revokeSuccess": "Đã thu hồi API Key",
+        "revokeFailed": "Không thể thu hồi API Key",
+        "copied": "Đã sao chép vào clipboard"
+      }
+    }
+  }
+}

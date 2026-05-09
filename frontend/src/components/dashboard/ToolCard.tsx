@@ -20,7 +20,7 @@ export function ToolCard({ icon: Icon, label, href, description, isNew, color = 
             )}
 
             <div className={cn("p-3 rounded-xl bg-muted w-fit mb-4 transition-colors group-hover:bg-accent", color)}>
-                <Icon className="w-6 h-6" />
+                <Icon className="size-6" />
             </div>
 
             <h3 className="font-semibold mb-1 group-hover:text-primary transition-colors">{label}</h3>
@@ -28,7 +28,7 @@ export function ToolCard({ icon: Icon, label, href, description, isNew, color = 
 
             <div className="mt-auto flex items-center text-xs font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                 <span>Try now</span>
-                <ArrowRight className="w-3 h-3 ml-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                <ArrowRight className="size-3 ml-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
             </div>
         </Link>
     );

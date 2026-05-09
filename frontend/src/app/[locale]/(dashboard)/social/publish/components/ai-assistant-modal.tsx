@@ -90,18 +90,18 @@ export function AiAssistantModal({
           >
             <div className="p-6 border-b border-white/10 flex items-center justify-between bg-primary/5">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
-                  <Wand2 className="w-5 h-5 text-primary" />
+                <div className="size-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                  <Wand2 className="size-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-lg">AI Creative Assistant</h3>
+                  <h3 className="font-semibold text-lg">AI Creative Assistant</h3>
                   <p className="text-xs text-muted-foreground">
                     Draft social copy using backend AI APIs.
                   </p>
                 </div>
               </div>
               <Button variant="ghost" size="icon" onClick={onClose} type="button">
-                <X className="w-5 h-5" />
+                <X className="size-5" />
               </Button>
             </div>
 
@@ -136,7 +136,7 @@ export function AiAssistantModal({
                           : 'bg-white/5 border-white/10 hover:bg-white/10',
                       )}
                     >
-                      <tone.icon className="w-4 h-4" />
+                      <tone.icon className="size-4" />
                       {tone.label}
                     </button>
                   ))}
@@ -151,12 +151,12 @@ export function AiAssistantModal({
               >
                 {isGenerating ? (
                   <>
-                    <Loader2 className="w-5 h-5 mr-3 animate-spin" />
+                    <Loader2 className="size-5 mr-3 animate-spin" />
                     AI is writing...
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-5 h-5 mr-3" />
+                    <Sparkles className="size-5 mr-3" />
                     Generate Suggestions
                   </>
                 )}
@@ -185,8 +185,8 @@ export function AiAssistantModal({
                         >
                           <p className="text-sm leading-relaxed pr-8">{result}</p>
                           <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <div className="w-6 h-6 rounded-full bg-primary flex items-center justify-center">
-                              <Check className="w-3.5 h-3.5 text-primary-foreground" />
+                            <div className="size-6 rounded-full bg-primary flex items-center justify-center">
+                              <Check className="size-3.5 text-primary-foreground" />
                             </div>
                           </div>
                         </button>

@@ -29,12 +29,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: session, status } = useSession();
     const router = useRouter();
+    const hasAuthError = Boolean((session as any)?.error);
     const hasAccessToken = Boolean(
         (session as any)?.accessToken || (session as any)?.user?.accessToken
     );
 
     const user = useMemo(() => {
-        if (!session?.user || !hasAccessToken) return null;
+        if (!session?.user || !hasAccessToken || hasAuthError) return null;
         const u = session.user as any;
         return {
             id: u.id || "",
@@ -45,7 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             lastName: u.lastName,
             role: u.role ?? null,
         };
-    }, [session, hasAccessToken]);
+    }, [session, hasAccessToken, hasAuthError]);
 
     const login = (userData: User) => {
         // With NextAuth, login is handled by signIn() in the pages

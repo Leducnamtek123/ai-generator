@@ -12,18 +12,17 @@ export function useVideoPlayer(isOpen: boolean) {
     useEffect(() => {
         if (isOpen && videoRef.current) {
             videoRef.current.currentTime = 0;
-            setIsPlaying(false);
+            videoRef.current.pause();
         }
     }, [isOpen]);
 
     const togglePlay = () => {
         if (!videoRef.current) return;
-        if (isPlaying) {
-            videoRef.current.pause();
+        if (videoRef.current.paused) {
+            void videoRef.current.play();
         } else {
-            videoRef.current.play();
+            videoRef.current.pause();
         }
-        setIsPlaying(!isPlaying);
     };
 
     const handleTimeUpdate = () => {
@@ -34,6 +33,8 @@ export function useVideoPlayer(isOpen: boolean) {
         if (videoRef.current) setDuration(videoRef.current.duration);
     };
 
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
     const toggleMute = () => setIsMuted(!isMuted);
 
     const formatTime = (time: number) => {
@@ -52,6 +53,8 @@ export function useVideoPlayer(isOpen: boolean) {
         toggleMute,
         handleTimeUpdate,
         handleLoadedMetadata,
+        handlePlay,
+        handlePause,
         formatTime,
     };
 }

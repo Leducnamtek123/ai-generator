@@ -33,7 +33,7 @@ export class ProjectEntity extends EntityRelationalHelper implements Project {
   content: any;
 
   @Column({ name: 'organization_id', nullable: true })
-  organizationId: string;
+  organizationId: string | null;
 
   @Column({ name: 'owner_member_id', nullable: true })
   ownerMemberId: string;

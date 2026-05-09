@@ -1,47 +1,51 @@
-'use client';
+"use client";
 
-import React from 'react';
-import { GlassCard } from '@/components/ui/glass-card';
-import { Button } from '@/components/ui/button';
+import React from "react";
+import Link from "next/link";
+
+import { CalendarClock, ChevronLeft, ChevronRight, Filter, Plus, Trash2, X } from "lucide-react";
+import { motion } from "framer-motion";
+import { toast } from "sonner";
+
+import { cn } from "@/lib/utils";
+
+import { SocialDateTimePicker } from "@/components/social-hub/social-date-time-picker";
+import { Button } from "@/components/ui/button";
+import { GlassCard } from "@/components/ui/glass-card";
 import {
-  ChevronLeft,
-  ChevronRight,
-  Plus,
-  Filter,
-  Trash2,
-  CalendarClock,
-  X,
-} from 'lucide-react';
-import { motion } from 'framer-motion';
-import { cn } from '@/lib/utils';
-import { toast } from 'sonner';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from "@/components/ui/select";
 import {
   socialHubApi,
   type SocialChannel,
   type SocialPost,
-  type SocialPostStatus,
-} from '@/services/socialHubApi';
+  type SocialPostStatus
+} from "@/services/socialHubApi";
 
-const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
-  'January',
-  'February',
-  'March',
-  'April',
-  'May',
-  'June',
-  'July',
-  'August',
-  'September',
-  'October',
-  'November',
-  'December',
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December"
 ];
 
-type StatusFilter = 'all' | SocialPostStatus;
+type StatusFilter = "all" | SocialPostStatus;
 
 type CalendarState = {
-  view: 'month' | 'week' | 'day';
+  view: "month" | "week" | "day";
   currentDate: Date;
   baseNow: Date;
   posts: SocialPost[];
@@ -55,61 +59,69 @@ type CalendarState = {
   isSaving: boolean;
 };
 
+type ComposerDraft = {
+  version: number;
+  savedAt: string;
+  form: Pick<CalendarState, "content" | "selectedAccountId" | "scheduledAt" | "isComposerOpen">;
+};
+
+const COMPOSER_DRAFT_KEY = "social-calendar:composer:draft";
+
 type CalendarAction =
-  | { type: 'setView'; view: 'month' | 'week' | 'day' }
-  | { type: 'setCurrentDate'; currentDate: Date }
-  | { type: 'setPosts'; posts: SocialPost[] }
-  | { type: 'setChannels'; channels: SocialChannel[] }
-  | { type: 'setStatusFilter'; statusFilter: StatusFilter }
-  | { type: 'setLoading'; isLoading: boolean }
-  | { type: 'setComposerOpen'; isComposerOpen: boolean }
-  | { type: 'setContent'; content: string }
-  | { type: 'setSelectedAccountId'; selectedAccountId: number | null }
-  | { type: 'setScheduledAt'; scheduledAt: string }
-  | { type: 'setSaving'; isSaving: boolean }
-  | { type: 'resetComposer' };
+  | { type: "setView"; view: "month" | "week" | "day" }
+  | { type: "setCurrentDate"; currentDate: Date }
+  | { type: "setPosts"; posts: SocialPost[] }
+  | { type: "setChannels"; channels: SocialChannel[] }
+  | { type: "setStatusFilter"; statusFilter: StatusFilter }
+  | { type: "setLoading"; isLoading: boolean }
+  | { type: "setComposerOpen"; isComposerOpen: boolean }
+  | { type: "setContent"; content: string }
+  | { type: "setSelectedAccountId"; selectedAccountId: number | null }
+  | { type: "setScheduledAt"; scheduledAt: string }
+  | { type: "setSaving"; isSaving: boolean }
+  | { type: "resetComposer" };
 
 const initialState: CalendarState = {
-  view: 'month',
+  view: "month",
   currentDate: new Date(),
   baseNow: new Date(),
   posts: [],
   channels: [],
-  statusFilter: 'all',
+  statusFilter: "all",
   isLoading: true,
   isComposerOpen: false,
-  content: '',
+  content: "",
   selectedAccountId: null,
-  scheduledAt: '',
-  isSaving: false,
+  scheduledAt: "",
+  isSaving: false
 };
 
 function reducer(state: CalendarState, action: CalendarAction): CalendarState {
   switch (action.type) {
-    case 'setView':
+    case "setView":
       return { ...state, view: action.view };
-    case 'setCurrentDate':
+    case "setCurrentDate":
       return { ...state, currentDate: action.currentDate };
-    case 'setPosts':
+    case "setPosts":
       return { ...state, posts: action.posts };
-    case 'setChannels':
+    case "setChannels":
       return { ...state, channels: action.channels };
-    case 'setStatusFilter':
+    case "setStatusFilter":
       return { ...state, statusFilter: action.statusFilter };
-    case 'setLoading':
+    case "setLoading":
       return { ...state, isLoading: action.isLoading };
-    case 'setComposerOpen':
+    case "setComposerOpen":
       return { ...state, isComposerOpen: action.isComposerOpen };
-    case 'setContent':
+    case "setContent":
       return { ...state, content: action.content };
-    case 'setSelectedAccountId':
+    case "setSelectedAccountId":
       return { ...state, selectedAccountId: action.selectedAccountId };
-    case 'setScheduledAt':
+    case "setScheduledAt":
       return { ...state, scheduledAt: action.scheduledAt };
-    case 'setSaving':
+    case "setSaving":
       return { ...state, isSaving: action.isSaving };
-    case 'resetComposer':
-      return { ...state, isComposerOpen: false, content: '', scheduledAt: '' };
+    case "resetComposer":
+      return { ...state, isComposerOpen: false, content: "", scheduledAt: "" };
     default:
       return state;
   }
@@ -124,39 +136,121 @@ function getMondayBasedOffset(date: Date) {
   return (day + 6) % 7;
 }
 
+function startOfWeek(date: Date) {
+  const value = new Date(date);
+  value.setHours(0, 0, 0, 0);
+  value.setDate(value.getDate() - getMondayBasedOffset(value));
+  return value;
+}
+
+function toDayKey(date: Date) {
+  return date.toISOString().slice(0, 10);
+}
+
+function formatRangeLabel(start: Date, end: Date) {
+  const startMonth = MONTHS[start.getMonth()].slice(0, 3);
+  const endMonth = MONTHS[end.getMonth()].slice(0, 3);
+  if (start.getMonth() === end.getMonth()) {
+    return `${startMonth} ${start.getDate()} - ${end.getDate()}`;
+  }
+  return `${startMonth} ${start.getDate()} - ${endMonth} ${end.getDate()}`;
+}
+
 function toDatetimeLocal(date: Date) {
-  return new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-    .toISOString()
-    .slice(0, 16);
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 }
 
 export default function CalendarPage() {
   const [state, dispatch] = React.useReducer(reducer, initialState);
+  const [draftReady, setDraftReady] = React.useState(false);
 
   const monthName = MONTHS[state.currentDate.getMonth()];
   const year = state.currentDate.getFullYear();
+  const weekStart = React.useMemo(() => startOfWeek(state.currentDate), [state.currentDate]);
+  const weekDays = React.useMemo(
+    () =>
+      Array.from({ length: 7 }, (_, i) => {
+        const value = new Date(weekStart);
+        value.setDate(weekStart.getDate() + i);
+        return value;
+      }),
+    [weekStart]
+  );
+  const selectedDayKey = toDayKey(state.currentDate);
 
   const fetchData = React.useCallback(async () => {
     try {
       const [postData, channelData] = await Promise.all([
         socialHubApi.getPosts(),
-        socialHubApi.getChannels(),
+        socialHubApi.getChannels()
       ]);
-      dispatch({ type: 'setPosts', posts: postData });
-      dispatch({ type: 'setChannels', channels: channelData });
+      dispatch({ type: "setPosts", posts: postData });
+      dispatch({ type: "setChannels", channels: channelData });
       if (!state.selectedAccountId && channelData.length > 0) {
-        dispatch({ type: 'setSelectedAccountId', selectedAccountId: channelData[0].id });
+        dispatch({ type: "setSelectedAccountId", selectedAccountId: channelData[0].id });
       }
     } catch (error) {
-      console.error('Failed to fetch social calendar data', error);
-      toast.error('Failed to load social calendar data.');
+      console.error("Failed to fetch social calendar data", error);
+      toast.error("Failed to load social calendar data.");
     }
-    dispatch({ type: 'setLoading', isLoading: false });
+    dispatch({ type: "setLoading", isLoading: false });
   }, [state.selectedAccountId]);
 
   React.useEffect(() => {
-    queueMicrotask(() => { void fetchData(); });
+    queueMicrotask(() => {
+      void fetchData();
+    });
   }, [fetchData]);
+
+  React.useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem(COMPOSER_DRAFT_KEY);
+      if (!raw) {
+        setDraftReady(true);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<ComposerDraft>;
+      const restored = parsed.form;
+      if (restored) {
+        if (typeof restored.content === "string") {
+          dispatch({ type: "setContent", content: restored.content });
+        }
+        if (typeof restored.selectedAccountId === "number") {
+          dispatch({ type: "setSelectedAccountId", selectedAccountId: restored.selectedAccountId });
+        }
+        if (typeof restored.scheduledAt === "string") {
+          dispatch({ type: "setScheduledAt", scheduledAt: restored.scheduledAt });
+        }
+        dispatch({
+          type: "setComposerOpen",
+          isComposerOpen: Boolean(restored.isComposerOpen),
+        });
+      }
+    } catch (error) {
+      console.error("Failed to restore calendar composer draft", error);
+    } finally {
+      setDraftReady(true);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    if (!draftReady) {
+      return;
+    }
+
+    const draft: ComposerDraft = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      form: {
+        content: state.content,
+        selectedAccountId: state.selectedAccountId,
+        scheduledAt: state.scheduledAt,
+        isComposerOpen: state.isComposerOpen,
+      },
+    };
+    window.localStorage.setItem(COMPOSER_DRAFT_KEY, JSON.stringify(draft));
+  }, [draftReady, state.content, state.isComposerOpen, state.scheduledAt, state.selectedAccountId]);
 
   const base = startOfMonth(state.currentDate);
   const offset = getMondayBasedOffset(base);
@@ -169,7 +263,7 @@ export default function CalendarPage() {
   });
 
   const filteredPosts = state.posts.filter((post) =>
-    state.statusFilter === 'all' ? true : post.status === state.statusFilter,
+    state.statusFilter === "all" ? true : post.status === state.statusFilter
   );
 
   const postsByDay = React.useMemo(() => {
@@ -186,48 +280,79 @@ export default function CalendarPage() {
     }
     return map;
   }, [filteredPosts]);
+  const currentDayPosts = React.useMemo(() => {
+    const key = selectedDayKey;
+    return postsByDay.get(key) ?? [];
+  }, [postsByDay, selectedDayKey]);
+  const scheduledPosts = state.posts.filter((post) => post.status === "scheduled");
+  const publishedPosts = state.posts.filter((post) => post.status === "published");
+  const draftPosts = state.posts.filter((post) => post.status === "draft");
+  const failedPosts = state.posts.filter((post) => post.status === "failed");
+  const nextScheduledPost = scheduledPosts
+    .filter((post) => post.scheduledAt)
+    .map((post) => ({ ...post, scheduledTime: new Date(post.scheduledAt as string).getTime() }))
+    .filter((post) => !Number.isNaN(post.scheduledTime) && post.scheduledTime >= Date.now())
+    .sort((a, b) => a.scheduledTime - b.scheduledTime)[0] ?? null;
+  const nextScheduledLabel = nextScheduledPost?.scheduledAt
+    ? new Date(nextScheduledPost.scheduledAt).toLocaleString([], {
+        month: "short",
+        day: "numeric",
+        hour: "numeric",
+        minute: "2-digit"
+      })
+    : null;
+  const activeChannels = state.channels.length;
+
+  const visibleMonthLabel =
+    state.view === "month"
+      ? `${monthName} ${year}`
+      : state.view === "week"
+        ? formatRangeLabel(weekDays[0], weekDays[6])
+        : `${MONTHS[state.currentDate.getMonth()]} ${state.currentDate.getDate()}, ${year}`;
 
   const openComposer = (seedDate?: Date) => {
     const targetDate = seedDate ?? new Date(state.baseNow.getTime() + 60 * 60 * 1000);
-    dispatch({ type: 'setScheduledAt', scheduledAt: toDatetimeLocal(targetDate) });
-    dispatch({ type: 'setContent', content: '' });
-    dispatch({ type: 'setComposerOpen', isComposerOpen: true });
+    if (!state.scheduledAt) {
+      dispatch({ type: "setScheduledAt", scheduledAt: toDatetimeLocal(targetDate) });
+    }
+    dispatch({ type: "setComposerOpen", isComposerOpen: true });
   };
 
   const handleCreatePost = async () => {
     if (!state.content.trim()) {
-      toast.error('Please enter post content.');
+      toast.error("Please enter post content.");
       return;
     }
     if (!state.selectedAccountId) {
-      toast.error('Please select a connected channel.');
+      toast.error("Please select a connected channel.");
       return;
     }
-    dispatch({ type: 'setSaving', isSaving: true });
+    dispatch({ type: "setSaving", isSaving: true });
     try {
       await socialHubApi.createPost({
         content: state.content.trim(),
         scheduledAt: state.scheduledAt ? new Date(state.scheduledAt).toISOString() : null,
-        socialAccountId: state.selectedAccountId,
+        socialAccountId: state.selectedAccountId
       });
-      toast.success('Post created successfully.');
-      dispatch({ type: 'resetComposer' });
+      toast.success("Post created successfully.");
+      window.localStorage.removeItem(COMPOSER_DRAFT_KEY);
+      dispatch({ type: "resetComposer" });
       await fetchData();
     } catch (error) {
-      console.error('Failed to create post', error);
-      toast.error('Failed to create post.');
+      console.error("Failed to create post", error);
+      toast.error("Failed to create post.");
     }
-    dispatch({ type: 'setSaving', isSaving: false });
+    dispatch({ type: "setSaving", isSaving: false });
   };
 
   const handleDeletePost = async (postId: number) => {
     toast.promise(socialHubApi.deletePost(postId), {
-      loading: 'Deleting post...',
+      loading: "Deleting post...",
       success: async () => {
         await fetchData();
-        return 'Post deleted.';
+        return "Post deleted.";
       },
-      error: 'Failed to delete post.',
+      error: "Failed to delete post."
     });
   };
 
@@ -236,34 +361,64 @@ export default function CalendarPage() {
     date.setHours(date.getHours() + 1);
     try {
       await socialHubApi.reschedulePost(postId, date.toISOString());
-      toast.success('Post rescheduled +1 hour.');
+      toast.success("Post rescheduled +1 hour.");
       await fetchData();
     } catch (error) {
-      console.error('Failed to reschedule post', error);
-      toast.error('Failed to reschedule post.');
+      console.error("Failed to reschedule post", error);
+      toast.error("Failed to reschedule post.");
     }
   };
 
+  const moveRange = (direction: -1 | 1) => {
+    if (state.view === "month") {
+      dispatch({
+        type: "setCurrentDate",
+        currentDate: new Date(
+          state.currentDate.getFullYear(),
+          state.currentDate.getMonth() + direction,
+          1
+        )
+      });
+      return;
+    }
+
+    if (state.view === "week") {
+      const next = new Date(state.currentDate);
+      next.setDate(next.getDate() + direction * 7);
+      dispatch({ type: "setCurrentDate", currentDate: next });
+      return;
+    }
+
+    const next = new Date(state.currentDate);
+    next.setDate(next.getDate() + direction);
+    dispatch({ type: "setCurrentDate", currentDate: next });
+  };
+
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-8 flex flex-col h-full">
+    <div className="mx-auto flex h-full max-w-7xl flex-col space-y-8 p-8">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-bold tracking-tight">Social Calendar</h1>
-          <p className="text-muted-foreground text-sm">
+          <h1 className="text-3xl font-semibold tracking-tight">Social Calendar</h1>
+          <p className="text-sm text-muted-foreground">
             Schedule and manage social posts from one timeline.
           </p>
+          <div className="pt-2">
+            <Button asChild variant="outline" size="sm" className="w-fit">
+              <Link href="/social">Open Social Hub overview</Link>
+            </Button>
+          </div>
         </div>
         <div className="flex items-center gap-3">
-          <div className="flex p-1 bg-muted rounded-lg border border-border">
-            {(['month', 'week', 'day'] as const).map((v) => (
+          <div className="flex rounded-lg border border-border bg-muted p-1">
+            {(["month", "week", "day"] as const).map((v) => (
               <button
                 key={v}
-                onClick={() => dispatch({ type: 'setView', view: v })}
+                onClick={() => dispatch({ type: "setView", view: v })}
                 className={cn(
-                  'px-4 py-1.5 text-xs font-medium rounded-md capitalize transition-all',
+                  "rounded-md px-4 py-1.5 text-xs font-medium capitalize transition-all",
                   state.view === v
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground hover:text-foreground"
                 )}
               >
                 {v}
@@ -271,54 +426,98 @@ export default function CalendarPage() {
             ))}
           </div>
           <Button onClick={() => openComposer()}>
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="mr-2 h-4 w-4" />
             New Post
           </Button>
         </div>
       </div>
 
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <GlassCard variant="morphism" className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Connected</p>
+          <div className="mt-3 text-3xl font-bold">{activeChannels}</div>
+          <p className="mt-1 text-sm text-muted-foreground">Channels available to schedule</p>
+        </GlassCard>
+        <GlassCard variant="morphism" className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Scheduled</p>
+          <div className="mt-3 text-3xl font-bold">{scheduledPosts.length}</div>
+          <p className="mt-1 text-sm text-muted-foreground">Queued for delivery</p>
+        </GlassCard>
+        <GlassCard variant="morphism" className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Published</p>
+          <div className="mt-3 text-3xl font-bold">{publishedPosts.length}</div>
+          <p className="mt-1 text-sm text-muted-foreground">Visible in post history</p>
+        </GlassCard>
+        <GlassCard variant="morphism" className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Drafts</p>
+          <div className="mt-3 text-3xl font-bold">{draftPosts.length}</div>
+          <p className="mt-1 text-sm text-muted-foreground">Needs review or copy work</p>
+        </GlassCard>
+        <GlassCard variant="morphism" className="border border-white/10 p-5">
+          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Failed</p>
+          <div className="mt-3 text-3xl font-bold">{failedPosts.length}</div>
+          <p className="mt-1 text-sm text-muted-foreground">Needs action before publish</p>
+        </GlassCard>
+      </div>
+
+      <GlassCard variant="morphism" className="border border-white/10 p-6">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+          <div className="max-w-3xl">
+            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Planner snapshot</p>
+            <h2 className="mt-2 text-2xl font-semibold">Month, week, and day are all backed by live post data</h2>
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
+              This calendar follows the real social workflow: schedule the content, move it across time, and keep a visible queue of what is next.
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-muted-foreground">
+              {state.view} view
+            </span>
+            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-muted-foreground">
+              {nextScheduledPost ? `Next at ${nextScheduledLabel}` : 'No future schedule yet'}
+            </span>
+          </div>
+        </div>
+        <div className="mt-4 grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Today</p>
+            <p className="mt-2 text-sm font-semibold">
+              {currentDayPosts.length} post{currentDayPosts.length === 1 ? '' : 's'} on the selected day
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Next action</p>
+            <p className="mt-2 text-sm font-semibold">
+              {nextScheduledPost ? nextScheduledPost.content : 'Use New Post to fill the calendar'}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
+            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Workflow</p>
+            <p className="mt-2 text-sm font-semibold">Open a date, create, reschedule, or delete from the timeline</p>
+          </div>
+        </div>
+      </GlassCard>
+
       <GlassCard
         variant="morphism"
-        className="flex-1 flex flex-col p-0 overflow-hidden border border-white/10"
+        className="flex flex-1 flex-col overflow-hidden border border-white/10 p-0"
       >
-        <div className="flex items-center justify-between p-6 border-b border-white/10 bg-white/5">
+        <div className="flex items-center justify-between border-b border-white/10 bg-white/5 p-6">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold">
-              {monthName} {year}
-            </h2>
+            <h2 className="text-xl font-semibold">{visibleMonthLabel}</h2>
             <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() =>
-                  dispatch({
-                    type: 'setCurrentDate',
-                    currentDate: new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() - 1, 1),
-                  })
-                }
-              >
-                <ChevronLeft className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveRange(-1)}>
+                <ChevronLeft className="h-4 w-4" />
               </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() =>
-                  dispatch({
-                    type: 'setCurrentDate',
-                    currentDate: new Date(state.currentDate.getFullYear(), state.currentDate.getMonth() + 1, 1),
-                  })
-                }
-              >
-                <ChevronRight className="w-4 h-4" />
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => moveRange(1)}>
+                <ChevronRight className="h-4 w-4" />
               </Button>
             </div>
             <Button
               variant="outline"
               size="sm"
               className="h-8 text-xs"
-              onClick={() => dispatch({ type: 'setCurrentDate', currentDate: new Date() })}
+              onClick={() => dispatch({ type: "setCurrentDate", currentDate: new Date() })}
             >
               Today
             </Button>
@@ -330,122 +529,283 @@ export default function CalendarPage() {
               className="h-8 text-xs text-muted-foreground"
               onClick={() => {
                 const sequence: StatusFilter[] = [
-                  'all',
-                  'scheduled',
-                  'draft',
-                  'published',
-                  'failed',
+                  "all",
+                  "scheduled",
+                  "draft",
+                  "published",
+                  "failed"
                 ];
                 const currentIndex = sequence.indexOf(state.statusFilter);
                 const next = sequence[(currentIndex + 1) % sequence.length];
-                dispatch({ type: 'setStatusFilter', statusFilter: next });
+                dispatch({ type: "setStatusFilter", statusFilter: next });
               }}
             >
-              <Filter className="w-3.5 h-3.5 mr-2" />
-              {state.statusFilter === 'all' ? 'All statuses' : state.statusFilter}
+              <Filter className="mr-2 h-3.5 w-3.5" />
+              {state.statusFilter === "all" ? "All statuses" : state.statusFilter}
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 grid grid-cols-7 border-collapse">
-          {DAYS.map((day) => (
-            <div
-              key={day}
-              className="p-3 text-center text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-b border-r border-white/5 bg-white/5"
-            >
-              {day}
-            </div>
-          ))}
-
-          {gridDays.map((day) => {
-            const key = day.toISOString().slice(0, 10);
-            const dayPosts = postsByDay.get(key) ?? [];
-            const isCurrentMonth = day.getMonth() === state.currentDate.getMonth();
-            const isToday = key === new Date().toISOString().slice(0, 10);
-
-            return (
+        {state.view === "month" ? (
+          <div className="grid flex-1 border-collapse grid-cols-7">
+            {DAYS.map((day) => (
               <div
-                key={key}
-                className={cn(
-                  'min-h-[140px] p-2 border-b border-r border-white/5 relative group transition-colors',
-                  isCurrentMonth ? 'hover:bg-white/[0.02]' : 'bg-gray-950/20',
-                )}
+                key={day}
+                className="border-r border-b border-white/5 bg-white/5 p-3 text-center text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
               >
-                <span
+                {day}
+              </div>
+            ))}
+
+            {gridDays.map((day) => {
+              const key = toDayKey(day);
+              const dayPosts = postsByDay.get(key) ?? [];
+              const isCurrentMonth = day.getMonth() === state.currentDate.getMonth();
+              const isToday = key === toDayKey(new Date());
+
+              return (
+                <div
+                  key={key}
                   className={cn(
-                    'text-xs font-medium ml-1',
-                    isCurrentMonth ? 'text-foreground' : 'text-muted-foreground/30',
-                    isToday &&
-                      'w-6 h-6 flex items-center justify-center bg-primary text-primary-foreground rounded-full -ml-1 mt-0',
+                    "group relative min-h-[140px] border-r border-b border-white/5 p-2 transition-colors",
+                    isCurrentMonth ? "hover:bg-white/[0.02]" : "bg-gray-950/20"
                   )}
                 >
-                  {day.getDate()}
-                </span>
+                  <span
+                    className={cn(
+                      "ml-1 text-xs font-medium",
+                      isCurrentMonth ? "text-foreground" : "text-muted-foreground/30",
+                      isToday &&
+                        "mt-0 -ml-1 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground"
+                    )}
+                  >
+                    {day.getDate()}
+                  </span>
 
-                <div className="mt-2 space-y-1">
-              {dayPosts.slice(0, 3).map((post) => (
-                    <motion.div
-                      key={post.id}
-                      initial={{ opacity: 0, scale: 0.95 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      className={cn(
-                        'p-1.5 rounded-md text-[10px] flex flex-col gap-1 cursor-pointer transition-all border',
-                        post.status === 'published'
-                          ? 'bg-green-500/10 border-green-500/20 text-green-500'
-                          : post.status === 'scheduled'
-                            ? 'bg-primary/10 border-primary/20 text-primary'
-                            : post.status === 'failed'
-                              ? 'bg-red-500/10 border-red-500/20 text-red-400'
-                              : 'bg-muted border-border text-muted-foreground',
-                      )}
-                    >
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="font-bold uppercase tracking-tighter truncate">
-                          {post.socialAccount?.platform || 'general'}
-                        </span>
-                        <span className="opacity-70">
-                          {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </span>
+                  <div className="mt-2 space-y-1">
+                    {dayPosts.slice(0, 3).map((post) => (
+                      <motion.div
+                        key={post.id}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className={cn(
+                          "flex cursor-pointer flex-col gap-1 rounded-md border p-1.5 text-[10px] transition-all",
+                          post.status === "published"
+                            ? "border-green-500/20 bg-green-500/10 text-green-500"
+                            : post.status === "scheduled"
+                              ? "border-primary/20 bg-primary/10 text-primary"
+                              : post.status === "failed"
+                                ? "border-red-500/20 bg-red-500/10 text-red-400"
+                                : "border-border bg-muted text-muted-foreground"
+                        )}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="truncate font-bold tracking-tighter uppercase">
+                            {post.socialAccount?.platform || "general"}
+                          </span>
+                          <span className="opacity-70">
+                            {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
+                              hour: "2-digit",
+                              minute: "2-digit"
+                            })}
+                          </span>
+                        </div>
+                        <span className="truncate font-medium">{post.content}</span>
+                        <div className="flex items-center gap-1">
+                          <button
+                            className="underline"
+                            onClick={() =>
+                              handleReschedulePost(post.id, post.scheduledAt || post.createdAt)
+                            }
+                          >
+                            +1h
+                          </button>
+                          <button
+                            className="inline-flex items-center text-red-400 underline"
+                            onClick={() => handleDeletePost(post.id)}
+                          >
+                            <Trash2 className="mr-0.5 h-3 w-3" />
+                            Delete
+                          </button>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  <button
+                    className="absolute right-2 bottom-2 translate-y-2 transform rounded-lg bg-primary p-2 text-primary-foreground opacity-0 shadow-lg shadow-primary/40 transition-all duration-300 group-hover:translate-y-0 group-hover:opacity-100"
+                    title="Schedule post"
+                    onClick={() => openComposer(day)}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        ) : state.view === "week" ? (
+          <div className="grid flex-1 grid-cols-1 border-t border-white/5 md:grid-cols-7">
+            {weekDays.map((day) => {
+              const key = toDayKey(day);
+              const dayPosts = postsByDay.get(key) ?? [];
+              const isToday = key === toDayKey(new Date());
+
+              return (
+                <div key={key} className="min-h-[320px] border-r border-white/5 last:border-r-0">
+                  <div className="border-b border-white/5 bg-white/5 p-3">
+                    <div className="text-[10px] tracking-wider text-muted-foreground uppercase">
+                      {DAYS[day.getDay() === 0 ? 6 : day.getDay() - 1]}
+                    </div>
+                    <div className={cn("text-lg font-bold", isToday && "text-primary")}>
+                      {day.getDate()}
+                    </div>
+                  </div>
+                  <div className="space-y-2 p-2">
+                    {dayPosts.length > 0 ? (
+                      dayPosts.map((post) => (
+                        <motion.div
+                          key={post.id}
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={cn(
+                            "cursor-pointer rounded-lg border p-3 text-xs transition-colors",
+                            post.status === "published"
+                              ? "border-green-500/20 bg-green-500/10 text-green-500"
+                              : post.status === "scheduled"
+                                ? "border-primary/20 bg-primary/10 text-primary"
+                                : post.status === "failed"
+                                  ? "border-red-500/20 bg-red-500/10 text-red-400"
+                                  : "border-border bg-muted text-muted-foreground"
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="truncate font-semibold tracking-tight uppercase">
+                              {post.socialAccount?.platform || "general"}
+                            </span>
+                            <span className="opacity-70">
+                              {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit"
+                              })}
+                            </span>
+                          </div>
+                          <p className="mt-1 line-clamp-3">{post.content}</p>
+                          <div className="mt-2 flex items-center gap-2">
+                            <button
+                              className="underline"
+                              onClick={() =>
+                                handleReschedulePost(post.id, post.scheduledAt || post.createdAt)
+                              }
+                            >
+                              +1h
+                            </button>
+                            <button
+                              className="inline-flex items-center text-red-400 underline"
+                              onClick={() => handleDeletePost(post.id)}
+                            >
+                              <Trash2 className="mr-0.5 h-3 w-3" />
+                              Delete
+                            </button>
+                          </div>
+                        </motion.div>
+                      ))
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-white/10 p-3 text-xs text-muted-foreground">
+                        No posts this week.
                       </div>
-                      <span className="truncate font-medium">{post.content}</span>
-                      <div className="flex items-center gap-1">
+                    )}
+                    <button
+                      className="w-full rounded-lg border border-dashed border-white/10 px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                      onClick={() => openComposer(day)}
+                    >
+                      + Schedule
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="flex-1 space-y-4 p-6">
+            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+              <div>
+                <p className="text-xs tracking-wider text-muted-foreground uppercase">
+                  Selected day
+                </p>
+                <h3 className="text-xl font-semibold">
+                  {state.currentDate.toLocaleDateString(undefined, {
+                    weekday: "long",
+                    month: "long",
+                    day: "numeric",
+                    year: "numeric"
+                  })}
+                </h3>
+              </div>
+              <Button onClick={() => openComposer(state.currentDate)}>
+                <Plus className="mr-2 h-4 w-4" />
+                New Post
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {currentDayPosts.length > 0 ? (
+                currentDayPosts.map((post) => (
+                  <motion.div
+                    key={post.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className={cn(
+                      "flex flex-col gap-3 rounded-2xl border p-4",
+                      post.status === "published"
+                        ? "border-green-500/20 bg-green-500/10 text-green-500"
+                        : post.status === "scheduled"
+                          ? "border-primary/20 bg-primary/10 text-primary"
+                          : post.status === "failed"
+                            ? "border-red-500/20 bg-red-500/10 text-red-400"
+                            : "border-border bg-muted text-muted-foreground"
+                    )}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div>
+                        <div className="text-xs tracking-wider uppercase opacity-70">
+                          {post.socialAccount?.platform || "general"}
+                        </div>
+                        <div className="text-sm font-semibold">
+                          {new Date(post.scheduledAt || post.createdAt).toLocaleTimeString([], {
+                            hour: "2-digit",
+                            minute: "2-digit"
+                          })}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
                         <button
-                          className="underline"
+                          className="text-sm underline"
                           onClick={() =>
-                            handleReschedulePost(
-                              post.id,
-                              post.scheduledAt || post.createdAt,
-                            )
+                            handleReschedulePost(post.id, post.scheduledAt || post.createdAt)
                           }
                         >
                           +1h
                         </button>
                         <button
-                          className="underline text-red-400 inline-flex items-center"
+                          className="inline-flex items-center text-sm text-red-400 underline"
                           onClick={() => handleDeletePost(post.id)}
                         >
-                          <Trash2 className="w-3 h-3 mr-0.5" />
+                          <Trash2 className="mr-0.5 h-3 w-3" />
                           Delete
                         </button>
                       </div>
-                    </motion.div>
-                  ))}
+                    </div>
+                    <p className="text-sm leading-relaxed">{post.content}</p>
+                  </motion.div>
+                ))
+              ) : (
+                <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-muted-foreground">
+                  No posts scheduled for this day.
                 </div>
-
-                <button
-                  className="absolute bottom-2 right-2 p-2 rounded-lg bg-primary opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-2 group-hover:translate-y-0 text-primary-foreground shadow-lg shadow-primary/40"
-                  title="Schedule post"
-                    onClick={() => openComposer(day)}
-                  >
-                  <Plus className="w-4 h-4" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
+              )}
+            </div>
+          </div>
+        )}
       </GlassCard>
 
       {state.isLoading && (
@@ -453,77 +813,77 @@ export default function CalendarPage() {
       )}
 
       {state.isComposerOpen && (
-        <div className="fixed inset-0 z-50 bg-gray-950/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm">
           <GlassCard
             variant="morphism"
-            className="w-full max-w-xl border border-white/10 p-6 space-y-4"
+            className="w-full max-w-xl space-y-4 border border-white/10 p-6"
           >
             <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold inline-flex items-center">
-                <CalendarClock className="w-4 h-4 mr-2" />
+              <h3 className="inline-flex items-center text-lg font-semibold">
+                <CalendarClock className="mr-2 h-4 w-4" />
                 Create Scheduled Post
               </h3>
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => dispatch({ type: 'setComposerOpen', isComposerOpen: false })}
+                onClick={() => dispatch({ type: "setComposerOpen", isComposerOpen: false })}
               >
-                <X className="w-4 h-4" />
+                <X className="h-4 w-4" />
               </Button>
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                Channel
-              </div>
-              <select
-                value={state.selectedAccountId ?? ''}
-                onChange={(e) => dispatch({ type: 'setSelectedAccountId', selectedAccountId: Number(e.target.value) })}
-                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+              <div className="text-xs tracking-wider text-muted-foreground uppercase">Channel</div>
+              <Select
+                value={state.selectedAccountId ? String(state.selectedAccountId) : ""}
+                onValueChange={(value) =>
+                  dispatch({ type: "setSelectedAccountId", selectedAccountId: Number(value) })
+                }
               >
-                {state.channels.map((channel) => (
-                  <option key={channel.id} value={channel.id}>
-                    {channel.name || channel.username || channel.platform}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue placeholder="Choose a channel" />
+                </SelectTrigger>
+                <SelectContent>
+                  {state.channels.map((channel) => (
+                    <SelectItem key={channel.id} value={String(channel.id)}>
+                      {channel.name || channel.username || channel.platform}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                Content
-              </div>
+              <div className="text-xs tracking-wider text-muted-foreground uppercase">Content</div>
               <textarea
                 value={state.content}
-                onChange={(e) => dispatch({ type: 'setContent', content: e.target.value })}
+                onChange={(e) => dispatch({ type: "setContent", content: e.target.value })}
                 rows={4}
-                className="w-full rounded-md border border-border bg-background p-3 text-sm resize-none"
+                className="w-full resize-none rounded-md border border-border bg-background p-3 text-sm"
                 placeholder="Write your post content..."
               />
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">
+              <div className="text-xs tracking-wider text-muted-foreground uppercase">
                 Schedule Time
               </div>
-              <input
-                type="datetime-local"
+              <SocialDateTimePicker
                 value={state.scheduledAt}
-                onChange={(e) => dispatch({ type: 'setScheduledAt', scheduledAt: e.target.value })}
-                className="h-10 w-full rounded-md border border-border bg-background px-3 text-sm"
+                onChange={(value) => dispatch({ type: "setScheduledAt", scheduledAt: value })}
               />
             </div>
 
             <div className="flex justify-end gap-2">
               <Button
                 variant="outline"
-                onClick={() => dispatch({ type: 'setComposerOpen', isComposerOpen: false })}
+                onClick={() => dispatch({ type: "setComposerOpen", isComposerOpen: false })}
                 disabled={state.isSaving}
               >
                 Cancel
               </Button>
               <Button onClick={() => void handleCreatePost()} disabled={state.isSaving}>
-                {state.isSaving ? 'Saving...' : 'Create Post'}
+                {state.isSaving ? "Saving..." : "Create Post"}
               </Button>
             </div>
           </GlassCard>

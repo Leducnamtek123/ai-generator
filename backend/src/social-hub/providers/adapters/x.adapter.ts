@@ -289,10 +289,10 @@ export class XAdapter extends SocialAbstractBase implements SocialProvider {
     } catch (error) {
       this.logger.warn(`Failed to fetch X metrics for ${externalId}:`, error);
       return {
-        likes: Math.floor(Math.random() * 300) + 20,
-        comments: Math.floor(Math.random() * 50) + 5,
-        shares: Math.floor(Math.random() * 100) + 10,
-        views: Math.floor(Math.random() * 10000) + 1000,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        views: 0,
       };
     }
   }

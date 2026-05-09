@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { post } from '@/lib/api';
 import { signIn } from 'next-auth/react';
 import AuthLayout from '@/components/auth/AuthLayout';
+import { sanitizeAppPath } from '@/lib/auth-redirect';
 
 const registerSchema = z.object({
     firstName: z.string().min(2, "First name is too short"),
@@ -26,6 +27,10 @@ export default function SignUpPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [isLoading, setIsLoading] = useState(false);
+    const nextPath = sanitizeAppPath(searchParams.get('next'));
+    const signInHref = nextPath === '/dashboard'
+        ? '/sign-in'
+        : `/sign-in?next=${encodeURIComponent(nextPath)}`;
 
     const form = useForm<RegisterValues>({
         resolver: zodResolver(registerSchema),
@@ -55,7 +60,7 @@ export default function SignUpPage() {
             toast.success("Account created!", {
                 description: "Please check your email to confirm your account."
             });
-            router.push('/sign-in');
+            router.replace(`/sign-in?next=${encodeURIComponent(nextPath)}&email=${encodeURIComponent(data.email)}`);
         } catch (error: any) {
             console.error("Signup error:", error.response?.data);
             
@@ -90,7 +95,7 @@ export default function SignUpPage() {
                 {/* Google OAuth */}
                 <button
                     type="button"
-                    onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+                    onClick={() => signIn('google', { callbackUrl: nextPath })}
                     className="auth-social"
                 >
                     <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
@@ -171,7 +176,7 @@ export default function SignUpPage() {
                     </div>
 
                     <button type="submit" disabled={isLoading} className="auth-submit">
-                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Continue'}
+                        {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
                     </button>
                 </form>
 
@@ -179,7 +184,7 @@ export default function SignUpPage() {
                 <div className="auth-footer">
                     <p className="auth-footer__text">
                         Already have an account?{' '}
-                        <Link href="/sign-in">Sign in</Link>
+                        <Link href={signInHref}>Sign in</Link>
                     </p>
                     <div className="auth-footer__secured">
                         <Lock size={12} aria-hidden="true" />

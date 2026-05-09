@@ -13,6 +13,7 @@ export class WorkflowMapper {
     domainEntity.organizationId = raw.organizationId;
     domainEntity.visibility = raw.visibility;
     domainEntity.previewUrl = raw.previewUrl;
+    domainEntity.lastExecution = raw.lastExecution;
     if (raw.project) {
       domainEntity.project = ProjectMapper.toDomain(raw.project);
     }
@@ -35,6 +36,7 @@ export class WorkflowMapper {
     persistenceEntity.organizationId = domainEntity.organizationId || '';
     persistenceEntity.visibility = domainEntity.visibility;
     persistenceEntity.previewUrl = domainEntity.previewUrl || undefined;
+    persistenceEntity.lastExecution = domainEntity.lastExecution || null;
     persistenceEntity.createdAt = domainEntity.createdAt;
     persistenceEntity.updatedAt = domainEntity.updatedAt;
     persistenceEntity.deletedAt = domainEntity.deletedAt;

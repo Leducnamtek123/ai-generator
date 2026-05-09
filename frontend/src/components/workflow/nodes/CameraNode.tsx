@@ -85,7 +85,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                     )}>
                         {isProcessing && (
                             <div className="absolute inset-0 z-20 bg-gray-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                                <Loader2 className="w-6 h-6 text-white animate-spin mb-2" />
+                                <Loader2 className="size-6 text-white animate-spin mb-2" />
                                 <span className="text-[10px] text-white/60 uppercase tracking-widest">Adjusting...</span>
                             </div>
                         )}
@@ -114,7 +114,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                             </div>
                         ) : (
                             <div className="flex flex-col items-center gap-2 text-muted-foreground/30">
-                                <Camera className="w-8 h-8" />
+                                <Camera className="size-8" />
                                 <span className="text-[10px]">No Image</span>
                             </div>
                         )}
@@ -144,7 +144,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                                                         : "bg-transparent border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                                                 )}
                                             >
-                                                <Icon className="w-3.5 h-3.5" />
+                                                <Icon className="size-3.5" />
                                                 {a.name}
                                             </button>
                                         );
@@ -158,7 +158,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                                     disabled={isProcessing || !data.inputImageUrl}
                                     className="w-full py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs text-white font-medium transition-colors flex items-center justify-center gap-2"
                                 >
-                                    {isProcessing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                                    {isProcessing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
                                     Update View
                                 </button>
                             </div>

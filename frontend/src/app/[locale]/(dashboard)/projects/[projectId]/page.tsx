@@ -40,7 +40,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                             onClick={() => router.push('/projects')}
                             className="p-2 hover:bg-accent rounded-lg text-muted-foreground hover:text-foreground transition-colors"
                         >
-                            <ArrowLeft className="w-5 h-5" />
+                            <ArrowLeft className="size-5" />
                         </button>
                         <div>
                             <h1 className="text-xl font-semibold">
@@ -53,7 +53,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                     </div>
 
                     <div className="flex items-center gap-3">
-                        <CreateWorkflowDialog onCreate={async (name) => {
+                        <CreateWorkflowDialog projectId={projectId} onCreate={async (name) => {
                             const newId = await createWorkflow({ name, projectId });
                             if (newId) {
                                 router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
@@ -95,7 +95,7 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                                 : "border-transparent text-muted-foreground hover:text-foreground/70"
                         )}
                     >
-                        <MoreHorizontal className="w-4 h-4" />
+                        <MoreHorizontal className="size-4" />
                     </button>
                 </div>
             </div>
@@ -106,9 +106,9 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
                         {workflows.length === 0 ? (
                             <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
-                                <MonitorPlay className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                <MonitorPlay className="size-12 mx-auto mb-4 opacity-20" />
                                 <p>No workflows in this project yet.</p>
-                                <CreateWorkflowDialog onCreate={async (name) => {
+                                <CreateWorkflowDialog projectId={projectId} onCreate={async (name) => {
                                     const newId = await createWorkflow({ name, projectId });
                                     if (newId) {
                                         router.push(`/creator/workflow-editor?workflowId=${newId}&projectId=${projectId}`);
@@ -132,11 +132,11 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
 
                 {activeTab === 'assets' && (
                     <div className="text-center py-20 text-muted-foreground">
-                        <ImageIcon className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                        <ImageIcon className="size-12 mx-auto mb-4 opacity-20" />
                         <p>Asset management coming soon.</p>
                     </div>
                 )}
             </div>
         </div>
     );
-}
+}

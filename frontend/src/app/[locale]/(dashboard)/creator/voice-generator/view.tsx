@@ -1,4 +1,5 @@
 import React from 'react';
+import { toast } from 'sonner';
 import {
     Volume2,
     Upload,
@@ -7,33 +8,15 @@ import {
     Play,
     User,
     Languages,
-    Smile,
-    Frown,
-    Angry,
-    Meh,
-    MicVocal,
     Sparkles,
-    Search,
-    Pause,
+    Folder,
 } from 'lucide-react';
 import { Button } from '@/ui/button';
-import { Slider } from '@/ui/slider';
-import { Label } from '@/ui/label';
-import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
+import { createVoiceExportFilename, getVoicePreviewUrl, type VoiceTrackLike } from '@/lib/voice-track';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 import type { VoiceGeneratorState, VoiceGeneratorAction } from './page';
 import { CONTENT_TABS, COMMUNITY_TAB, TEMPLATES_TAB } from '@/components/layouts/navigation-data';
-
-const voices = [
-    { id: 'aria', name: 'Aria', gender: 'Female', accent: 'American', tags: ['Natural', 'Warm'] },
-    { id: 'james', name: 'James', gender: 'Male', accent: 'British', tags: ['Deep', 'Authoritative'] },
-    { id: 'luna', name: 'Luna', gender: 'Female', accent: 'American', tags: ['Soft', 'Soothing'] },
-    { id: 'marcus', name: 'Marcus', gender: 'Male', accent: 'American', tags: ['Energetic', 'Casual'] },
-    { id: 'yuki', name: 'Yuki', gender: 'Female', accent: 'Japanese', tags: ['Cute', 'Expressive'] },
-    { id: 'hans', name: 'Hans', gender: 'Male', accent: 'German', tags: ['Clear', 'Professional'] },
-    { id: 'sofia', name: 'Sofia', gender: 'Female', accent: 'Spanish', tags: ['Warm', 'Melodic'] },
-    { id: 'david', name: 'David', gender: 'Male', accent: 'Australian', tags: ['Friendly', 'Casual'] },
-];
 
 const languages = [
     { id: 'en', label: 'English' },
@@ -46,45 +29,76 @@ const languages = [
     { id: 'vi', label: 'Vietnamese' },
 ];
 
-const emotions = [
-    { id: 'neutral', label: 'Neutral', icon: Meh },
-    { id: 'happy', label: 'Happy', icon: Smile },
-    { id: 'sad', label: 'Sad', icon: Frown },
-    { id: 'excited', label: 'Excited', icon: Sparkles },
-    { id: 'angry', label: 'Angry', icon: Angry },
-    { id: 'whispering', label: 'Whisper', icon: MicVocal },
-];
+type VoiceGenerationItem = {
+    id: string;
+    prompt: string;
+    status: string;
+    resultUrl?: string | null;
+} & VoiceTrackLike;
+
+type VoiceListingItem = {
+    id: string;
+    title?: string;
+    name?: string;
+    description?: string;
+};
+
+type VoiceTemplateItem = {
+    id: string;
+    title: string;
+    description?: string;
+};
 
 type Props = {
     state: VoiceGeneratorState;
     dispatch: React.Dispatch<VoiceGeneratorAction>;
     onGenerate: () => void;
+    onReset: () => void;
+    onSaveProject: () => void;
+    onPickSample: () => void;
+    onUploadSample: (file: File) => Promise<void>;
     isGenerating: boolean;
-    generations: any[];
+    generations: VoiceGenerationItem[];
     isGenerationsLoading: boolean;
-    templates: any[];
+    templates: VoiceTemplateItem[];
     isTemplatesLoading: boolean;
-    communityListings: any[];
+    communityListings: VoiceListingItem[];
     isCommunityLoading: boolean;
+    sampleUrl: string | null;
+    sampleName: string;
+    projectError: string | null;
+    isProjectLoading: boolean;
+    isProjectSaving: boolean;
 };
 
 export function VoiceGeneratorView({ 
-    state, 
-    dispatch, 
+    state,
+    dispatch,
     onGenerate,
+    onReset,
+    onSaveProject,
+    onPickSample,
+    onUploadSample,
     isGenerating,
     generations,
     isGenerationsLoading,
     templates,
     isTemplatesLoading,
     communityListings,
-    isCommunityLoading
+    isCommunityLoading,
+    sampleUrl,
+    sampleName,
+    projectError,
+    isProjectLoading,
+    isProjectSaving,
 }: Props) {
+    const isProjectBusy = isProjectLoading || isProjectSaving;
+
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             <div className="w-[340px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Voice Generator</h2>
+                    <h2 className="font-semibold text-muted-foreground">Voice Generator</h2>
                 </div>
                 <div className="px-4 pt-4">
                     <div className="grid grid-cols-2 p-1 bg-muted rounded-xl border border-border">
@@ -117,7 +131,7 @@ export function VoiceGeneratorView({
                         <>
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Text</h4>
+                                    <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Text</h4>
                                     <span className="text-[10px] text-muted-foreground">{state.text.length}/5000</span>
                                 </div>
                                 <div className="bg-card rounded-xl border border-border p-2">
@@ -132,7 +146,7 @@ export function VoiceGeneratorView({
                             </div>
 
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Language</h4>
+                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Language</h4>
                                 <div className="grid grid-cols-4 gap-1.5">
                                     {languages.map((lang) => (
                                         <button
@@ -143,7 +157,7 @@ export function VoiceGeneratorView({
                                                 state.selectedLanguage === lang.id ? 'bg-accent border border-primary/20' : 'bg-card border border-border text-muted-foreground',
                                             )}
                                         >
-                                            <Languages className="w-4 h-4" />
+                                            <Languages className="size-4" />
                                             <span className="truncate w-full text-center">{lang.label}</span>
                                         </button>
                                     ))}
@@ -152,21 +166,64 @@ export function VoiceGeneratorView({
                         </>
                     ) : (
                         <div className="space-y-6">
-                            <div className="aspect-[3/1] rounded-xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-all gap-2">
-                                <Upload className="w-6 h-6 text-muted-foreground/50" />
+                            <button
+                                type="button"
+                                onClick={onPickSample}
+                                className="aspect-[3/1] w-full rounded-xl bg-muted border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary/30 transition-all gap-2"
+                            >
+                                <Upload className="size-6 text-muted-foreground/50" />
                                 <div className="text-center">
-                                    <p className="text-xs font-medium">Upload Sample</p>
+                                    <p className="text-xs font-medium">{sampleName || 'Upload Sample'}</p>
                                     <p className="text-[10px] text-muted-foreground">MP3, WAV</p>
                                 </div>
+                            </button>
+                            <div className="flex gap-2">
+                                <Button variant="outline" size="sm" className="flex-1 gap-2" onClick={onPickSample}>
+                                    <Folder className="size-4" />
+                                    Choose from uploads
+                                </Button>
+                                <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="flex-1 gap-2"
+                                    onClick={() => {
+                                        const input = document.createElement('input');
+                                        input.type = 'file';
+                                        input.accept = 'audio/*';
+                                        input.onchange = async () => {
+                                            const file = input.files?.[0];
+                                            if (file) {
+                                                await onUploadSample(file);
+                                            }
+                                        };
+                                        input.click();
+                                    }}
+                                >
+                                    <Upload className="size-4" />
+                                    Upload file
+                                </Button>
                             </div>
+                            {sampleUrl && (
+                                <audio className="w-full" controls src={sampleUrl} />
+                            )}
                         </div>
                     )}
                 </div>
                 <div className="p-4 border-t border-border bg-background space-y-3">
-                    <Button onClick={onGenerate} disabled={isGenerating || !state.text.trim()} className="w-full h-12 font-bold rounded-xl gap-2">
-                        {isGenerating ? <Loader2 className="w-5 h-5 animate-spin" /> : <Volume2 className="w-5 h-5" />}
-                        {isGenerating ? 'Generating...' : 'Generate Voice'}
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button variant="outline" onClick={onReset} disabled={isProjectBusy} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                            <Folder className="size-5" />
+                            Reset
+                        </Button>
+                        <Button variant="outline" onClick={onSaveProject} disabled={isProjectBusy || isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                            {isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
+                            Save
+                        </Button>
+                        <Button onClick={onGenerate} disabled={isGenerating || isProjectBusy || !state.text.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
+                            {isGenerating ? <Loader2 className="size-5 animate-spin" /> : <Volume2 className="size-5" />}
+                            {isGenerating ? 'Generating...' : 'Generate Voice'}
+                        </Button>
+                    </div>
                 </div>
             </div>
 
@@ -189,6 +246,11 @@ export function VoiceGeneratorView({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">
+                    {projectError && (
+                        <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+                            {projectError}
+                        </div>
+                    )}
                     {state.activeContentTab === CONTENT_TABS[0] && ( // Personal
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Your Generations</h2>
@@ -241,7 +303,7 @@ export function VoiceGeneratorView({
                     )}
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }
 
@@ -258,37 +320,103 @@ function LoadingGrid() {
 function EmptyState({ message }: { message: string }) {
     return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
-                <Sparkles className="w-8 h-8 text-muted-foreground/30" />
+            <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                <Sparkles className="size-8 text-muted-foreground/30" />
             </div>
             <p className="text-muted-foreground">{message}</p>
         </div>
     );
 }
 
-function GenerationCard({ generation }: { generation: any }) {
+function GenerationCard({ generation }: { generation: VoiceGenerationItem }) {
+    const handlePreview = async () => {
+        const previewUrl = getVoicePreviewUrl(generation);
+
+        if (previewUrl) {
+            try {
+                const audio = new Audio(previewUrl);
+                await audio.play();
+                return;
+            } catch (error) {
+                console.error('Failed to preview voice audio, falling back to speech synthesis', error);
+            }
+        }
+
+        if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+            toast.info('Audio preview is not available in this browser.');
+            return;
+        }
+
+        const utterance = new SpeechSynthesisUtterance(generation.prompt);
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(utterance);
+    };
+
+    const handleDownload = async () => {
+        const previewUrl = getVoicePreviewUrl(generation);
+
+        if (previewUrl) {
+            try {
+                const response = await fetch(previewUrl);
+                if (!response.ok) {
+                    throw new Error(`Failed to fetch preview (${response.status})`);
+                }
+
+                const blob = await response.blob();
+                const mimeType = blob.type || 'audio/mpeg';
+                const extension = mimeType.split('/')[1]?.split('+')[0] || 'mp3';
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = createVoiceExportFilename(generation, extension);
+                link.click();
+                URL.revokeObjectURL(url);
+                toast.success('Voice audio exported.');
+                return;
+            } catch (error) {
+                console.error('Failed to download voice audio preview, falling back to JSON export', error);
+            }
+        }
+
+        const blob = new Blob([JSON.stringify({
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            id: generation.id,
+            prompt: generation.prompt,
+            status: generation.status,
+        }, null, 2)], { type: 'application/json' });
+
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = createVoiceExportFilename(generation, 'json');
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Voice generation exported.');
+    };
+
     return (
         <div className="flex items-center gap-4 p-4 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group text-left">
-            <button className="w-12 h-12 rounded-full bg-muted flex items-center justify-center hover:bg-accent transition-colors shrink-0">
-                <Play className="w-5 h-5 fill-current" />
+            <button className="size-12 rounded-full bg-muted flex items-center justify-center hover:bg-accent transition-colors shrink-0" onClick={handlePreview}>
+                <Play className="size-5 fill-current" />
             </button>
             <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium truncate">{generation.prompt}</p>
                 <p className="text-xs text-muted-foreground capitalize">{generation.status}</p>
             </div>
-            <Button variant="outline" size="icon" className="w-8 h-8">
-                <Download className="w-4 h-4" />
+            <Button variant="outline" size="icon" className="size-8" onClick={handleDownload}>
+                <Download className="size-4" />
             </Button>
         </div>
     );
 }
 
-function VoiceCard({ voice, onClick }: { voice: any; onClick?: () => void }) {
+function VoiceCard({ voice, onClick }: { voice: VoiceListingItem; onClick?: () => void }) {
     return (
         <div className="p-4 bg-card rounded-xl border border-border hover:border-border/80 transition-colors text-left group">
             <div className="flex items-center gap-3 mb-3">
-                <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
-                    <User className="w-5 h-5 text-muted-foreground" />
+                <div className="size-10 rounded-full bg-muted flex items-center justify-center">
+                    <User className="size-5 text-muted-foreground" />
                 </div>
                 <div>
                     <p className="text-sm font-medium group-hover:text-primary transition-colors">{voice.title || voice.name}</p>
@@ -296,7 +424,7 @@ function VoiceCard({ voice, onClick }: { voice: any; onClick?: () => void }) {
                 </div>
             </div>
             <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={onClick}>
-                <Play className="w-3 h-3 fill-current" />
+                <Play className="size-3 fill-current" />
                 Preview
             </Button>
         </div>

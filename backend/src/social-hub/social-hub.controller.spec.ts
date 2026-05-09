@@ -16,6 +16,7 @@ describe('SocialHubController', () => {
     getFeed: jest.fn(),
     replyToInteraction: jest.fn(),
     markInteractionHandled: jest.fn(),
+    updateInteractionTriage: jest.fn(),
     listAvailableProviders: jest.fn(),
   } as any;
 
@@ -88,8 +89,8 @@ describe('SocialHubController', () => {
   });
 
   it('should scope analytics to the authenticated user', async () => {
-    await controller.getAnalytics(user, '14');
-    await controller.getChannelAnalytics(user, 12, '21');
+    await controller.getAnalytics(user, { days: 14 });
+    await controller.getChannelAnalytics(user, 12, { days: 21 });
     await controller.getPostAnalytics(user, 41);
 
     expect(analyticsService.getDashboardStats).toHaveBeenCalledWith(user, 14);
@@ -99,5 +100,24 @@ describe('SocialHubController', () => {
       user.id,
     );
     expect(analyticsService.getPostAnalytics).toHaveBeenCalledWith(41, user.id);
+  });
+
+  it('should scope inbox triage to the authenticated user', async () => {
+    await controller.updateInboxInteractionTriage(user, 12, 'interaction-1', {
+      assignedTo: 'Support',
+      labels: ['VIP'],
+      followUp: true,
+    });
+
+    expect(channelsService.updateInteractionTriage).toHaveBeenCalledWith(
+      user,
+      12,
+      'interaction-1',
+      {
+        assignedTo: 'Support',
+        labels: ['VIP'],
+        followUp: true,
+      },
+    );
   });
 });

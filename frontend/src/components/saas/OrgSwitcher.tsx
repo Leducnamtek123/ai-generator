@@ -58,7 +58,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
             <div className="flex justify-center py-2">
                 <button
                     onClick={() => setIsOpen(!isOpen)}
-                    className="w-9 h-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
+                    className="size-9 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-xs font-bold shadow-md hover:shadow-lg transition-all"
                 >
                     {currentOrg?.name?.charAt(0)?.toUpperCase() || '?'}
                 </button>
@@ -76,7 +76,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                     isOpen && "bg-sidebar-accent text-sidebar-foreground"
                 )}
             >
-                <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0">
+                <div className="size-7 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-[10px] font-bold shadow-sm shrink-0">
                     {currentOrg?.name?.charAt(0)?.toUpperCase() || '?'}
                 </div>
                 <div className="flex-1 text-left min-w-0">
@@ -84,7 +84,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                         {loading ? 'Loading...' : currentOrg?.name || 'Select Org'}
                     </div>
                 </div>
-                <ChevronDown className={cn("w-3.5 h-3.5 text-sidebar-foreground/40 transition-transform", isOpen && "rotate-180")} />
+                <ChevronDown className={cn("size-3.5 text-sidebar-foreground/40 transition-transform", isOpen && "rotate-180")} />
             </button>
 
             {isOpen && (
@@ -110,12 +110,12 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                             : "text-muted-foreground"
                                     )}
                                 >
-                                    <div className="w-6 h-6 rounded bg-gradient-to-br from-violet-500/80 to-indigo-600/80 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
+                                    <div className="size-6 rounded bg-gradient-to-br from-violet-500/80 to-indigo-600/80 flex items-center justify-center text-white text-[9px] font-bold shrink-0">
                                         {org.name?.charAt(0)?.toUpperCase()}
                                     </div>
                                     <span className="flex-1 text-left truncate">{org.name}</span>
                                     {currentOrg?.id === org.id && (
-                                        <Check className="w-3.5 h-3.5 text-primary" />
+                                        <Check className="size-3.5 text-primary" />
                                     )}
                                 </button>
                             ))}
@@ -129,7 +129,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
-                                    <Settings className="w-4 h-4" />
+                                    <Settings className="size-4" />
                                     Settings
                                 </Link>
                                 <Link
@@ -137,7 +137,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
-                                    <Users className="w-4 h-4" />
+                                    <Users className="size-4" />
                                     Members
                                 </Link>
                                 <Link
@@ -145,7 +145,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
-                                    <FolderKanban className="w-4 h-4" />
+                                    <FolderKanban className="size-4" />
                                     Projects
                                 </Link>
                                 <Link
@@ -153,7 +153,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
-                                    <Mail className="w-4 h-4" />
+                                    <Mail className="size-4" />
                                     Invites
                                 </Link>
                                 <Link
@@ -161,7 +161,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                     className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-muted-foreground hover:text-foreground hover:bg-accent transition-all"
                                     onClick={() => setIsOpen(false)}
                                 >
-                                    <CreditCard className="w-4 h-4" />
+                                    <CreditCard className="size-4" />
                                     Billing
                                 </Link>
                             </div>
@@ -174,7 +174,7 @@ export function OrgSwitcher({ isCollapsed = false }: { isCollapsed?: boolean }) 
                                 className="flex items-center gap-2.5 w-full px-2.5 py-2 rounded-lg text-sm text-primary hover:bg-primary/5 transition-all font-medium"
                                 onClick={() => setIsOpen(false)}
                             >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="size-4" />
                                 Create Workspace
                             </Link>
                         </div>

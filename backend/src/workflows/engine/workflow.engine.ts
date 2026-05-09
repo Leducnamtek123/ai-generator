@@ -19,7 +19,7 @@ import {
   AssistantNodeProcessor,
   ToolNodeProcessor,
 } from './processors';
-import { GENERATION_QUEUE } from 'src/queues/queues.constants';
+import { GENERATION_QUEUE } from '../../queues/queues.constants';
 
 function firstString(...values: unknown[]) {
   for (const value of values) {
@@ -66,6 +66,7 @@ export class WorkflowEngine {
     graph: WorkflowGraph,
     userId: string,
     projectId?: string,
+    runId = workflowId,
   ): Promise<WorkflowExecutionState> {
     this.logger.log(`Starting execution of workflow ${workflowId}`);
 
@@ -107,6 +108,7 @@ export class WorkflowEngine {
             userId,
             nodeInputs,
             projectId,
+            runId,
           },
           state,
         );
@@ -122,8 +124,14 @@ export class WorkflowEngine {
         }
       }
 
+      const hasQueuedNodes = [...state.nodeStates.values()].some(
+        (nodeState) => nodeState.status === NodeStatus.QUEUED,
+      );
+
       if (state.status !== WorkflowStatus.FAILED) {
-        state.status = WorkflowStatus.COMPLETED;
+        state.status = hasQueuedNodes
+          ? WorkflowStatus.RUNNING
+          : WorkflowStatus.COMPLETED;
       }
     } catch (error: any) {
       this.logger.error(`Workflow ${workflowId} failed: ${error.message}`);
@@ -131,7 +139,12 @@ export class WorkflowEngine {
       state.error = error.message;
     }
 
-    state.completedAt = new Date();
+    if (
+      state.status === WorkflowStatus.COMPLETED ||
+      state.status === WorkflowStatus.FAILED
+    ) {
+      state.completedAt = new Date();
+    }
     return state;
   }
 
@@ -159,12 +172,14 @@ export class WorkflowEngine {
       const result = await processor.process(node, context);
 
       if (result.success) {
-        nodeState.status = NodeStatus.COMPLETED;
         nodeState.output = result.output;
 
         // If the output indicates a queued job, add to BullMQ
         if (result.output?.status === 'queued') {
+          nodeState.status = NodeStatus.QUEUED;
           await this.queueGenerationJob(node, context, result.output);
+        } else {
+          nodeState.status = NodeStatus.COMPLETED;
         }
       } else {
         nodeState.status = NodeStatus.FAILED;
@@ -192,14 +207,41 @@ export class WorkflowEngine {
     const jobType = this.getJobType(node);
     if (!jobType) return;
 
-    await this.generationQueue.add(jobType, {
-      type: jobType,
-      userId: context.userId,
-      params: output,
-      nodeId: node.id,
-      workflowId: context.workflowId,
-      projectId: context.projectId,
-    });
+    const jobId = `${context.workflowId}:${context.runId}:${node.id}:${jobType}`;
+    const existingJob = await this.generationQueue.getJob(jobId);
+    if (existingJob) {
+      const state = await existingJob.getState().catch(() => undefined);
+      if (state === 'active') {
+        this.logger.warn(
+          `Job ${jobId} is already active, skipping duplicate enqueue`,
+        );
+        return;
+      }
+
+      await existingJob.remove().catch((error: any) => {
+        this.logger.debug(
+          `Failed to remove existing workflow job ${jobId}: ${error.message}`,
+        );
+      });
+    }
+
+    await this.generationQueue.add(
+      jobType,
+      {
+        type: jobType,
+        userId: context.userId,
+        params: output,
+        nodeId: node.id,
+        workflowId: context.workflowId,
+        projectId: context.projectId,
+        runId: context.runId,
+      },
+      {
+        jobId,
+        removeOnComplete: true,
+        removeOnFail: 10,
+      },
+    );
 
     this.logger.debug(`Queued ${jobType} job for node ${node.id}`);
   }

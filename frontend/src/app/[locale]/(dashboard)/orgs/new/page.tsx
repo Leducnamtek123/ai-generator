@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { orgApi, type CreateOrgData } from '@/services/orgApi';
 import { useOrgStore } from '@/stores/org-store';
@@ -8,11 +8,20 @@ import { Building2, Globe, ArrowLeft, Loader2, Link2, FileText, Shield } from 'l
 import { Button } from '@/ui/button';
 import { Link } from '@/i18n/navigation';
 
+type OrgDraft = {
+    version: number;
+    savedAt: string;
+    form: Partial<CreateOrgData>;
+};
+
+const ORG_DRAFT_KEY = 'orgs:new:draft';
+
 export default function NewOrgPage() {
     const router = useRouter();
     const { setCurrentOrg, setOrganizations, organizations } = useOrgStore();
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [draftReady, setDraftReady] = useState(false);
     const [form, setForm] = useState<CreateOrgData>({
         name: '',
         url: '',
@@ -20,6 +29,41 @@ export default function NewOrgPage() {
         domain: '',
         shouldAttachUsersByDomain: false,
     });
+
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(ORG_DRAFT_KEY);
+            if (!raw) {
+                setDraftReady(true);
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as Partial<OrgDraft>;
+            if (parsed.form) {
+                setForm((current) => ({
+                    ...current,
+                    ...parsed.form,
+                }));
+            }
+        } catch (restoreError) {
+            console.error('Failed to restore organization draft', restoreError);
+        } finally {
+            setDraftReady(true);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!draftReady) {
+            return;
+        }
+
+        const draft: OrgDraft = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            form,
+        };
+        window.localStorage.setItem(ORG_DRAFT_KEY, JSON.stringify(draft));
+    }, [draftReady, form]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -37,6 +81,7 @@ export default function NewOrgPage() {
             });
             setOrganizations([...organizations, org]);
             setCurrentOrg(org);
+            window.localStorage.removeItem(ORG_DRAFT_KEY);
             router.push(`/orgs/${org.slug}/settings`);
         } catch (err: any) {
             setError(err?.response?.data?.message || 'Failed to create organization');
@@ -52,10 +97,10 @@ export default function NewOrgPage() {
                     href={"/dashboard" as any}
                     className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
                 >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="size-4" />
                     Back to Dashboard
                 </Link>
-                <h1 className="text-2xl font-bold text-foreground">Create Organization</h1>
+                <h1 className="text-2xl font-semibold text-foreground">Create Organization</h1>
                 <p className="text-sm text-muted-foreground mt-1">
                     Set up a new organization to collaborate with your team
                 </p>
@@ -71,7 +116,7 @@ export default function NewOrgPage() {
 
                 <div className="bg-card border border-border rounded-xl p-6 space-y-5">
                     <h2 className="text-base font-semibold flex items-center gap-2">
-                        <Building2 className="w-4 h-4 text-primary" />
+                        <Building2 className="size-4 text-primary" />
                         Organization Details
                     </h2>
 
@@ -92,7 +137,7 @@ export default function NewOrgPage() {
                     {/* URL */}
                     <div className="space-y-2">
                         <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                            <Link2 className="w-3.5 h-3.5" />
+                            <Link2 className="size-3.5" />
                             URL <span className="text-destructive">*</span>
                         </div>
                         <input
@@ -107,7 +152,7 @@ export default function NewOrgPage() {
                     {/* Description */}
                     <div className="space-y-2">
                         <div className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                            <FileText className="w-3.5 h-3.5" />
+                            <FileText className="size-3.5" />
                             Description <span className="text-destructive">*</span>
                         </div>
                         <textarea
@@ -123,7 +168,7 @@ export default function NewOrgPage() {
                 {/* Domain Settings */}
                 <div className="bg-card border border-border rounded-xl p-6 space-y-5">
                     <h2 className="text-base font-semibold flex items-center gap-2">
-                        <Globe className="w-4 h-4 text-primary" />
+                        <Globe className="size-4 text-primary" />
                         Domain & Access
                     </h2>
 
@@ -153,9 +198,9 @@ export default function NewOrgPage() {
                                 }
                                 className="sr-only peer"
                             />
-                            <div className="w-5 h-5 border-2 border-input rounded peer-checked:bg-primary peer-checked:border-primary transition-all flex items-center justify-center">
+                            <div className="size-5 border-2 border-input rounded peer-checked:bg-primary peer-checked:border-primary transition-all flex items-center justify-center">
                                 {form.shouldAttachUsersByDomain && (
-                                    <svg className="w-3 h-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
+                                    <svg className="size-3 text-primary-foreground" viewBox="0 0 12 12" fill="none">
                                         <path d="M2 6L5 9L10 3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 )}
@@ -163,7 +208,7 @@ export default function NewOrgPage() {
                         </div>
                         <div>
                             <span className="text-sm font-medium text-foreground flex items-center gap-1.5">
-                                <Shield className="w-3.5 h-3.5" />
+                                <Shield className="size-3.5" />
                                 Auto-attach users by domain
                             </span>
                             <span className="text-xs text-muted-foreground block mt-0.5">
@@ -178,7 +223,7 @@ export default function NewOrgPage() {
                         Cancel
                     </Button>
                     <Button type="submit" disabled={loading}>
-                        {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                        {loading && <Loader2 className="size-4 animate-spin" />}
                         Create Organization
                     </Button>
                 </div>

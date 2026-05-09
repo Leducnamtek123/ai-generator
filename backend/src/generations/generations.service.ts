@@ -1,4 +1,9 @@
-import { Injectable, Logger, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { GenerationEntity } from './entities/generation.entity';
 import {
@@ -67,10 +72,14 @@ export class GenerationsService {
     return generation;
   }
 
-  async findAll(userId: string, options: { page: number; limit: number; type?: string; search?: string }) {
+  async findAll(
+    userId: string,
+    options: { page: number; limit: number; type?: string; search?: string },
+  ) {
     const { page, limit, type, search } = options;
     const repo = this.baseService.getRepository();
-    const query = repo.createQueryBuilder('generation')
+    const query = repo
+      .createQueryBuilder('generation')
       .where('generation.userId = :userId', { userId })
       .orderBy('generation.createdAt', 'DESC');
 
@@ -84,7 +93,9 @@ export class GenerationsService {
     }
 
     if (search) {
-      query.andWhere('generation.prompt ILIKE :search', { search: `%${search}%` });
+      query.andWhere('generation.prompt ILIKE :search', {
+        search: `%${search}%`,
+      });
     }
 
     const [data, total] = await query
@@ -115,11 +126,19 @@ export class GenerationsService {
   }
 
   // Delegate to specific services
-  async generateImage(dto: GenerateImageDto, userId: string, projectId?: string) {
+  async generateImage(
+    dto: GenerateImageDto,
+    userId: string,
+    projectId?: string,
+  ) {
     return this.imageService.generateImage(dto, userId, projectId);
   }
 
-  async generateVideo(dto: GenerateVideoDto, userId: string, projectId?: string) {
+  async generateVideo(
+    dto: GenerateVideoDto,
+    userId: string,
+    projectId?: string,
+  ) {
     return this.videoService.generateVideo(dto, userId, projectId);
   }
 
@@ -127,11 +146,19 @@ export class GenerationsService {
     return this.imageService.upscaleImage(dto, userId, projectId);
   }
 
-  async generateAudio(dto: Record<string, any>, userId: string, type: 'music' | 'sfx' | 'voice') {
+  async generateAudio(
+    dto: Record<string, any>,
+    userId: string,
+    type: 'music' | 'sfx' | 'voice',
+  ) {
     return this.audioService.generateAudio(dto, userId, type);
   }
 
-  async processVideo(dto: Record<string, any>, userId: string, type: 'lip-sync' | 'video-upscale') {
+  async processVideo(
+    dto: Record<string, any>,
+    userId: string,
+    type: 'lip-sync' | 'video-upscale',
+  ) {
     return this.videoService.processVideo(dto, userId, type);
   }
 
@@ -139,7 +166,7 @@ export class GenerationsService {
     return this.imageService.processImage(dto, userId, type);
   }
 
-  async enhancePrompt(dto: EnhancePromptDto, userId: string): Promise<string> {
+  async enhancePrompt(dto: EnhancePromptDto, _userId: string): Promise<string> {
     const provider = this.providerRegistry.getPromptEnhancerProvider();
     return provider.enhancePrompt(dto.prompt, dto.style);
   }
@@ -151,9 +178,12 @@ export class GenerationsService {
     error?: string,
     callbackSecret?: string,
   ): Promise<void> {
-    const expectedSecret = this.configService.get('app.generationCallbackSecret', {
-      infer: true,
-    });
+    const expectedSecret = this.configService.get(
+      'app.generationCallbackSecret',
+      {
+        infer: true,
+      },
+    );
 
     if (expectedSecret) {
       if (!callbackSecret || callbackSecret !== expectedSecret) {
@@ -210,6 +240,7 @@ export class GenerationsService {
       | undefined;
 
     if (status === 'completed' && resultUrl) {
+      await this.baseService.saveAsset(generation);
       if (creditTransactionId) {
         try {
           await this.baseService.captureCredits(
@@ -223,7 +254,6 @@ export class GenerationsService {
           );
         }
       }
-      await this.baseService.saveAsset(generation);
     }
 
     if (status === 'failed' && generation.cost) {

@@ -55,7 +55,7 @@ export function GroupNode({ id, data, selected }: GroupNodeProps) {
                 }}
             >
                 <div className="absolute top-4 left-4 flex items-center gap-2">
-                    <Layers className="w-4 h-4 text-muted-foreground" />
+                    <Layers className="size-4 text-muted-foreground" />
                     <input
                         value={label}
                         onChange={handleLabelChange}

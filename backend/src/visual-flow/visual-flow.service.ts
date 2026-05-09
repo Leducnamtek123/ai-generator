@@ -35,6 +35,7 @@ import {
 } from './dto/flowkit-features.dto';
 import { VisualFlowEventsService } from './services/visual-flow-events.service';
 import { GenerationEventsService } from '../generations/services/generation-events.service';
+import type { VFJobData } from './visual-flow.processor';
 
 @Injectable()
 export class VisualFlowService implements OnModuleInit {
@@ -61,8 +62,9 @@ export class VisualFlowService implements OnModuleInit {
 
   onModuleInit() {
     this.generationEventsService.generationUpdated.subscribe((data) => {
-      this.handleGenerationUpdate(data.generation, data.projectId).catch((err) =>
-        this.logger.error(`Error handling generation update: ${err.message}`),
+      this.handleGenerationUpdate(data.generation, data.projectId).catch(
+        (err) =>
+          this.logger.error(`Error handling generation update: ${err.message}`),
       );
     });
   }
@@ -73,7 +75,9 @@ export class VisualFlowService implements OnModuleInit {
     const vfAction = metadata.vfAction;
     if (!vfAction) return;
 
-    this.logger.log(`Handling VF generation update: ${vfAction} for project ${projectId}`);
+    this.logger.log(
+      `Handling VF generation update: ${vfAction} for project ${projectId}`,
+    );
 
     if (vfAction === 'generate_ref') {
       const charId = metadata.characterId;
@@ -81,7 +85,12 @@ export class VisualFlowService implements OnModuleInit {
       const char = await this.characterRepo.findOne({ where: { id: charId } });
       if (!char) return;
 
-      char.refStatus = generation.status === 'completed' ? 'COMPLETED' : generation.status === 'failed' ? 'FAILED' : 'PROCESSING';
+      char.refStatus =
+        generation.status === 'completed'
+          ? 'COMPLETED'
+          : generation.status === 'failed'
+            ? 'FAILED'
+            : 'PROCESSING';
       if (generation.resultUrl) char.referenceImageUrl = generation.resultUrl;
       await this.characterRepo.save(char);
 
@@ -97,14 +106,20 @@ export class VisualFlowService implements OnModuleInit {
       if (!scene) return;
 
       const isVertical = orientation === 'VERTICAL';
-      const status = generation.status === 'completed' ? 'COMPLETED' : generation.status === 'failed' ? 'FAILED' : 'PROCESSING';
+      const status =
+        generation.status === 'completed'
+          ? 'COMPLETED'
+          : generation.status === 'failed'
+            ? 'FAILED'
+            : 'PROCESSING';
 
       if (isVertical) {
         scene.verticalImageStatus = status;
         if (generation.resultUrl) scene.verticalImageUrl = generation.resultUrl;
       } else {
         scene.horizontalImageStatus = status;
-        if (generation.resultUrl) scene.horizontalImageUrl = generation.resultUrl;
+        if (generation.resultUrl)
+          scene.horizontalImageUrl = generation.resultUrl;
       }
 
       await this.sceneRepo.save(scene);
@@ -122,14 +137,20 @@ export class VisualFlowService implements OnModuleInit {
       if (!scene) return;
 
       const isVertical = orientation === 'VERTICAL';
-      const status = generation.status === 'completed' ? 'COMPLETED' : generation.status === 'failed' ? 'FAILED' : 'PROCESSING';
+      const status =
+        generation.status === 'completed'
+          ? 'COMPLETED'
+          : generation.status === 'failed'
+            ? 'FAILED'
+            : 'PROCESSING';
 
       if (isVertical) {
         scene.verticalVideoStatus = status;
         if (generation.resultUrl) scene.verticalVideoUrl = generation.resultUrl;
       } else {
         scene.horizontalVideoStatus = status;
-        if (generation.resultUrl) scene.horizontalVideoUrl = generation.resultUrl;
+        if (generation.resultUrl)
+          scene.horizontalVideoUrl = generation.resultUrl;
       }
 
       await this.sceneRepo.save(scene);
@@ -145,7 +166,7 @@ export class VisualFlowService implements OnModuleInit {
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
   // REPOSITORY HELPERS
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
-  
+
   async saveCharacter(character: VisualCharacterEntity) {
     return this.characterRepo.save(character);
   }
@@ -203,7 +224,10 @@ export class VisualFlowService implements OnModuleInit {
     return { data, total, page: options.page, limit: options.limit };
   }
 
-  async findOneProject(id: string, userId: string): Promise<VisualProjectEntity> {
+  async findOneProject(
+    id: string,
+    userId: string,
+  ): Promise<VisualProjectEntity> {
     const project = await this.projectRepo.findOne({
       where: { id, userId },
       relations: ['characters', 'videos', 'videos.scenes'],
@@ -250,7 +274,10 @@ export class VisualFlowService implements OnModuleInit {
 
   async getCharacters(projectId: string, userId: string) {
     await this.findOneProject(projectId, userId);
-    return this.characterRepo.find({ where: { projectId }, order: { createdAt: 'ASC' } });
+    return this.characterRepo.find({
+      where: { projectId },
+      order: { createdAt: 'ASC' },
+    });
   }
 
   async deleteCharacter(
@@ -291,13 +318,44 @@ export class VisualFlowService implements OnModuleInit {
     });
   }
 
-  async findOneVideo(videoId: string): Promise<VisualVideoEntity> {
+  async findOneVideo(
+    videoId: string,
+    userId?: string,
+  ): Promise<VisualVideoEntity> {
     const video = await this.videoRepo.findOne({
       where: { id: videoId },
       relations: ['scenes'],
     });
-    if (!video) throw new NotFoundException(`Video ${videoId} not found`);
+    if (!video) {
+      throw new NotFoundException(`Video ${videoId} not found`);
+    }
+    if (userId) {
+      const project = await this.projectRepo.findOne({
+        where: {
+          id: video.projectId,
+          userId,
+        },
+      });
+      if (!project) {
+        throw new NotFoundException(`Video ${videoId} not found`);
+      }
+    }
     return video;
+  }
+
+  private async findOneScene(
+    sceneId: string,
+    userId: string,
+  ): Promise<VisualSceneEntity> {
+    const scene = await this.sceneRepo.findOne({
+      where: { id: sceneId },
+      relations: ['video'],
+    });
+    if (!scene || !scene.video) {
+      throw new NotFoundException(`Scene ${sceneId} not found`);
+    }
+    await this.findOneVideo(scene.video.id, userId);
+    return scene;
   }
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -310,7 +368,7 @@ export class VisualFlowService implements OnModuleInit {
     userId: string,
   ): Promise<VisualSceneEntity> {
     await this.findOneProject(projectId, userId);
-    const video = await this.findOneVideo(dto.videoId);
+    const video = await this.findOneVideo(dto.videoId, userId);
     if (video.projectId !== projectId) {
       throw new BadRequestException('Video does not belong to this project');
     }
@@ -337,7 +395,15 @@ export class VisualFlowService implements OnModuleInit {
     return this.sceneRepo.save(scene);
   }
 
-  async getScenes(videoId: string): Promise<VisualSceneEntity[]> {
+  async getScenes(
+    videoId: string,
+    userId?: string,
+    projectId?: string,
+  ): Promise<VisualSceneEntity[]> {
+    await this.findOneVideo(videoId, userId);
+    if (projectId && userId) {
+      await this.findOneProject(projectId, userId);
+    }
     return this.sceneRepo.find({
       where: { videoId },
       order: { displayOrder: 'ASC', createdAt: 'ASC' },
@@ -347,15 +413,16 @@ export class VisualFlowService implements OnModuleInit {
   async updateScene(
     sceneId: string,
     dto: UpdateVisualSceneDto,
+    userId: string,
   ): Promise<VisualSceneEntity> {
-    const scene = await this.sceneRepo.findOne({ where: { id: sceneId } });
-    if (!scene) throw new NotFoundException(`Scene ${sceneId} not found`);
+    const scene = await this.findOneScene(sceneId, userId);
     Object.assign(scene, dto);
     return this.sceneRepo.save(scene);
   }
 
-  async deleteScene(sceneId: string): Promise<void> {
-    await this.sceneRepo.delete(sceneId);
+  async deleteScene(sceneId: string, userId: string): Promise<void> {
+    const scene = await this.findOneScene(sceneId, userId);
+    await this.sceneRepo.delete(scene.id);
   }
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -377,7 +444,10 @@ export class VisualFlowService implements OnModuleInit {
     }
 
     if (!characters.length) {
-      return { message: 'No pending characters to generate refs for', queued: 0 };
+      return {
+        message: 'No pending characters to generate refs for',
+        queued: 0,
+      };
     }
 
     // Add jobs to BullMQ queue
@@ -389,12 +459,16 @@ export class VisualFlowService implements OnModuleInit {
         refStatus: char.refStatus,
       });
 
-      await this.vfQueue.add('generate_ref', {
-        action: 'generate_ref',
-        projectId,
-        userId,
-        characterId: char.id,
-      });
+      await this.enqueueUniqueJob(
+        'generate_ref',
+        {
+          action: 'generate_ref',
+          projectId,
+          userId,
+          characterId: char.id,
+        },
+        this.getGenerateRefJobId(projectId, char.id),
+      );
 
       return { characterId: char.id, status: 'queued' };
     });
@@ -402,7 +476,9 @@ export class VisualFlowService implements OnModuleInit {
     const results = await Promise.allSettled(jobs);
     return {
       queued: characters.length,
-      results: results.map((r) => (r.status === 'fulfilled' ? r.value : { status: 'error' })),
+      results: results.map((r) =>
+        r.status === 'fulfilled' ? r.value : { status: 'error' },
+      ),
     };
   }
 
@@ -437,7 +513,9 @@ export class VisualFlowService implements OnModuleInit {
     // Build character name â†’ URL map for reference injection
     const chars = project.characters ?? [];
     const charMap = Object.fromEntries(
-      chars.filter((c) => c.referenceImageUrl).map((c) => [c.name, c.referenceImageUrl]),
+      chars
+        .filter((c) => c.referenceImageUrl)
+        .map((c) => [c.name, c.referenceImageUrl]),
     );
 
     const jobs = scenes.map(async (scene) => {
@@ -450,33 +528,45 @@ export class VisualFlowService implements OnModuleInit {
       if (orientation === 'VERTICAL' || orientation === 'BOTH') {
         scene.verticalImageStatus = 'PROCESSING';
         await this.sceneRepo.save(scene);
-        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { verticalImageStatus: 'PROCESSING' });
-
-        await this.vfQueue.add('generate_scene_image', {
-          action: 'generate_scene_image',
-          projectId,
-          videoId,
-          userId,
-          sceneId: scene.id,
-          orientation: 'VERTICAL',
-          prompt: enrichedPrompt,
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, {
+          verticalImageStatus: 'PROCESSING',
         });
+
+        await this.enqueueUniqueJob(
+          'generate_scene_image',
+          {
+            action: 'generate_scene_image',
+            projectId,
+            videoId,
+            userId,
+            sceneId: scene.id,
+            orientation: 'VERTICAL',
+            prompt: enrichedPrompt,
+          },
+          this.getSceneImageJobId(projectId, videoId, scene.id, 'VERTICAL'),
+        );
       }
 
       if (orientation === 'HORIZONTAL' || orientation === 'BOTH') {
         scene.horizontalImageStatus = 'PROCESSING';
         await this.sceneRepo.save(scene);
-        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { horizontalImageStatus: 'PROCESSING' });
-
-        await this.vfQueue.add('generate_scene_image', {
-          action: 'generate_scene_image',
-          projectId,
-          videoId,
-          userId,
-          sceneId: scene.id,
-          orientation: 'HORIZONTAL',
-          prompt: enrichedPrompt,
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, {
+          horizontalImageStatus: 'PROCESSING',
         });
+
+        await this.enqueueUniqueJob(
+          'generate_scene_image',
+          {
+            action: 'generate_scene_image',
+            projectId,
+            videoId,
+            userId,
+            sceneId: scene.id,
+            orientation: 'HORIZONTAL',
+            prompt: enrichedPrompt,
+          },
+          this.getSceneImageJobId(projectId, videoId, scene.id, 'HORIZONTAL'),
+        );
       }
 
       return { sceneId: scene.id, status: 'queued', refChars: refNames };
@@ -485,8 +575,61 @@ export class VisualFlowService implements OnModuleInit {
     const results = await Promise.allSettled(jobs);
     return {
       queued: scenes.length,
-      results: results.map((r) => (r.status === 'fulfilled' ? r.value : { status: 'error' })),
+      results: results.map((r) =>
+        r.status === 'fulfilled' ? r.value : { status: 'error' },
+      ),
     };
+  }
+
+  private getGenerateRefJobId(projectId: string, characterId: string) {
+    return `vf:${projectId}:ref:${characterId}`;
+  }
+
+  private getSceneImageJobId(
+    projectId: string,
+    videoId: string,
+    sceneId: string,
+    orientation: 'VERTICAL' | 'HORIZONTAL',
+  ) {
+    return `vf:${projectId}:scene-image:${videoId}:${sceneId}:${orientation}`;
+  }
+
+  private getSceneVideoJobId(
+    projectId: string,
+    videoId: string,
+    sceneId: string,
+    orientation: 'VERTICAL' | 'HORIZONTAL',
+  ) {
+    return `vf:${projectId}:scene-video:${videoId}:${sceneId}:${orientation}`;
+  }
+
+  private async enqueueUniqueJob(
+    name: string,
+    data: VFJobData,
+    jobId: string,
+  ): Promise<void> {
+    const existingJob = await this.vfQueue.getJob(jobId);
+    if (existingJob) {
+      const state = await existingJob.getState().catch(() => undefined);
+      if (state === 'active') {
+        this.logger.warn(
+          `Job ${jobId} is already active, skipping duplicate enqueue`,
+        );
+        return;
+      }
+
+      await existingJob.remove().catch((error: any) => {
+        this.logger.debug(
+          `Failed to remove existing job ${jobId}: ${error.message}`,
+        );
+      });
+    }
+
+    await this.vfQueue.add(name, data, {
+      jobId,
+      removeOnComplete: true,
+      removeOnFail: 10,
+    });
   }
 
   // â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
@@ -515,7 +658,10 @@ export class VisualFlowService implements OnModuleInit {
     }
 
     if (!scenes.length) {
-      return { message: 'No scenes with completed images ready for video gen', queued: 0 };
+      return {
+        message: 'No scenes with completed images ready for video gen',
+        queued: 0,
+      };
     }
 
     const jobs = scenes.map(async (scene) => {
@@ -525,17 +671,23 @@ export class VisualFlowService implements OnModuleInit {
       ) {
         scene.verticalVideoStatus = 'PROCESSING';
         await this.sceneRepo.save(scene);
-        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { verticalVideoStatus: 'PROCESSING' });
-
-        await this.vfQueue.add('generate_scene_video', {
-          action: 'generate_scene_video',
-          projectId,
-          videoId,
-          userId,
-          sceneId: scene.id,
-          orientation: 'VERTICAL',
-          prompt: scene.videoPrompt || scene.prompt,
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, {
+          verticalVideoStatus: 'PROCESSING',
         });
+
+        await this.enqueueUniqueJob(
+          'generate_scene_video',
+          {
+            action: 'generate_scene_video',
+            projectId,
+            videoId,
+            userId,
+            sceneId: scene.id,
+            orientation: 'VERTICAL',
+            prompt: scene.videoPrompt || scene.prompt,
+          },
+          this.getSceneVideoJobId(projectId, videoId, scene.id, 'VERTICAL'),
+        );
       }
 
       if (
@@ -544,17 +696,23 @@ export class VisualFlowService implements OnModuleInit {
       ) {
         scene.horizontalVideoStatus = 'PROCESSING';
         await this.sceneRepo.save(scene);
-        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, { horizontalVideoStatus: 'PROCESSING' });
-
-        await this.vfQueue.add('generate_scene_video', {
-          action: 'generate_scene_video',
-          projectId,
-          videoId,
-          userId,
-          sceneId: scene.id,
-          orientation: 'HORIZONTAL',
-          prompt: scene.videoPrompt || scene.prompt,
+        this.eventsService.emitSceneUpdate(projectId, videoId, scene.id, {
+          horizontalVideoStatus: 'PROCESSING',
         });
+
+        await this.enqueueUniqueJob(
+          'generate_scene_video',
+          {
+            action: 'generate_scene_video',
+            projectId,
+            videoId,
+            userId,
+            sceneId: scene.id,
+            orientation: 'HORIZONTAL',
+            prompt: scene.videoPrompt || scene.prompt,
+          },
+          this.getSceneVideoJobId(projectId, videoId, scene.id, 'HORIZONTAL'),
+        );
       }
 
       return { sceneId: scene.id, status: 'queued' };
@@ -563,7 +721,9 @@ export class VisualFlowService implements OnModuleInit {
     const results = await Promise.allSettled(jobs);
     return {
       queued: scenes.length,
-      results: results.map((r) => (r.status === 'fulfilled' ? r.value : { status: 'error' })),
+      results: results.map((r) =>
+        r.status === 'fulfilled' ? r.value : { status: 'error' },
+      ),
     };
   }
 
@@ -588,19 +748,29 @@ export class VisualFlowService implements OnModuleInit {
       scenes: {
         total: scenes.length,
         verticalImages: {
-          pending: scenes.filter((s) => s.verticalImageStatus === 'PENDING').length,
-          completed: scenes.filter((s) => s.verticalImageStatus === 'COMPLETED').length,
-          failed: scenes.filter((s) => s.verticalImageStatus === 'FAILED').length,
+          pending: scenes.filter((s) => s.verticalImageStatus === 'PENDING')
+            .length,
+          completed: scenes.filter((s) => s.verticalImageStatus === 'COMPLETED')
+            .length,
+          failed: scenes.filter((s) => s.verticalImageStatus === 'FAILED')
+            .length,
         },
         verticalVideos: {
-          pending: scenes.filter((s) => s.verticalVideoStatus === 'PENDING').length,
-          completed: scenes.filter((s) => s.verticalVideoStatus === 'COMPLETED').length,
-          failed: scenes.filter((s) => s.verticalVideoStatus === 'FAILED').length,
+          pending: scenes.filter((s) => s.verticalVideoStatus === 'PENDING')
+            .length,
+          completed: scenes.filter((s) => s.verticalVideoStatus === 'COMPLETED')
+            .length,
+          failed: scenes.filter((s) => s.verticalVideoStatus === 'FAILED')
+            .length,
         },
         horizontalImages: {
-          pending: scenes.filter((s) => s.horizontalImageStatus === 'PENDING').length,
-          completed: scenes.filter((s) => s.horizontalImageStatus === 'COMPLETED').length,
-          failed: scenes.filter((s) => s.horizontalImageStatus === 'FAILED').length,
+          pending: scenes.filter((s) => s.horizontalImageStatus === 'PENDING')
+            .length,
+          completed: scenes.filter(
+            (s) => s.horizontalImageStatus === 'COMPLETED',
+          ).length,
+          failed: scenes.filter((s) => s.horizontalImageStatus === 'FAILED')
+            .length,
         },
       },
       sceneList: scenes.map((s) => ({
@@ -644,7 +814,10 @@ export class VisualFlowService implements OnModuleInit {
 
     let updated = 0;
     for (const scene of allScenes) {
-      const newPrompt = this.materialsService.applyToPrompt(materialId, scene.prompt);
+      const newPrompt = this.materialsService.applyToPrompt(
+        materialId,
+        scene.prompt,
+      );
       if (newPrompt !== scene.prompt) {
         scene.prompt = newPrompt;
         // Reset image/video status since prompt changed
@@ -684,7 +857,8 @@ export class VisualFlowService implements OnModuleInit {
       scenes = scenes.filter((s) => sceneIds.includes(s.id));
     }
 
-    const urlField = orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
+    const urlField =
+      orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
     const videoPaths = scenes
       .filter((s) => s[urlField])
       .sort((a, b) => a.displayOrder - b.displayOrder)
@@ -743,12 +917,16 @@ export class VisualFlowService implements OnModuleInit {
     let scenes = await this.getScenes(videoId);
 
     if (dto.sceneIds) {
-      const ids = dto.sceneIds.split(',').map((s) => s.trim()).filter(Boolean);
+      const ids = dto.sceneIds
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
       scenes = scenes.filter((s) => ids.includes(s.id));
     }
 
     const orientation = dto.orientation || 'VERTICAL';
-    const urlField = orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
+    const urlField =
+      orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
 
     const videoPaths = scenes
       .filter((s) => s[urlField])
@@ -828,9 +1006,14 @@ export class VisualFlowService implements OnModuleInit {
     let finalPath = result.path;
     if (dto.musicUrl) {
       finalPath = `${outputBase}_slideshow_music_${orientation.toLowerCase()}.mp4`;
-      await this.postProcessService.addMusic(result.path, dto.musicUrl, finalPath, {
-        musicVolume: dto.musicVolume ?? 0.3,
-      });
+      await this.postProcessService.addMusic(
+        result.path,
+        dto.musicUrl,
+        finalPath,
+        {
+          musicVolume: dto.musicVolume ?? 0.3,
+        },
+      );
     }
 
     // Update video entity
@@ -882,7 +1065,8 @@ export class VisualFlowService implements OnModuleInit {
       return {
         videoId,
         narrationResults: [],
-        message: 'No scenes have narratorText. Add narrator_text to scenes first.',
+        message:
+          'No scenes have narratorText. Add narrator_text to scenes first.',
       };
     }
 
@@ -903,7 +1087,9 @@ export class VisualFlowService implements OnModuleInit {
     if (dto.overlayOnVideos) {
       const orientation = dto.orientation || 'VERTICAL';
       const videoField =
-        orientation === 'HORIZONTAL' ? 'horizontalVideoUrl' : 'verticalVideoUrl';
+        orientation === 'HORIZONTAL'
+          ? 'horizontalVideoUrl'
+          : 'verticalVideoUrl';
 
       for (const result of results) {
         if (result.status !== 'COMPLETED' || !result.audioPath) continue;
@@ -956,23 +1142,35 @@ export class VisualFlowService implements OnModuleInit {
   ) {
     const project = await this.findOneProject(projectId, userId);
     if (!project.story) {
-      throw new BadRequestException('Project story is required to suggest scenes');
+      throw new BadRequestException(
+        'Project story is required to suggest scenes',
+      );
     }
 
     const characters = project.characters || [];
     const charNames = characters.map((c) => c.name);
     const count = dto.count || 5;
 
-    this.logger.log(`Suggesting ${count} scenes for project ${projectId} using AI`);
+    this.logger.log(
+      `Suggesting ${count} scenes for project ${projectId} using AI`,
+    );
 
     // We use the OpenAI adapter for chat completion
     // Since we need structured JSON, we'll use a specific prompt
-    const openai = this.generationsService['providerRegistry'].getProvider('openai') as any;
+    const openai = this.generationsService['providerRegistry'].getProvider(
+      'openai',
+    ) as any;
     if (!openai || typeof openai.getHeaders !== 'function') {
-      throw new Error('OpenAI provider not properly configured for AI Assistant');
+      throw new Error(
+        'OpenAI provider not properly configured for AI Assistant',
+      );
     }
 
-    const openAIBaseUrl = (process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1').trim().replace(/\/+$/, '');
+    const openAIBaseUrl = (
+      process.env.OPENAI_BASE_URL || 'https://api.openai.com/v1'
+    )
+      .trim()
+      .replace(/\/+$/, '');
     const normalizedOpenAIBaseUrl = openAIBaseUrl.endsWith('/v1')
       ? openAIBaseUrl
       : `${openAIBaseUrl}/v1`;
@@ -1001,7 +1199,10 @@ JSON Schema:
           model: 'gpt-4o',
           messages: [
             { role: 'system', content: systemPrompt },
-            { role: 'user', content: `Story: ${project.story}\n\nAdditional Instructions: ${dto.instructions || 'None'}` },
+            {
+              role: 'user',
+              content: `Story: ${project.story}\n\nAdditional Instructions: ${dto.instructions || 'None'}`,
+            },
           ],
           response_format: { type: 'json_object' },
           max_tokens: 2000,
@@ -1012,10 +1213,11 @@ JSON Schema:
       const content = response.data?.choices?.[0]?.message?.content;
       if (!content) throw new Error('AI failed to return scene suggestions');
 
-      let suggestedScenes: any[];
       const parsed = JSON.parse(content);
       // GPT might wrap it in a "scenes" key if we use json_object mode
-      suggestedScenes = Array.isArray(parsed) ? parsed : parsed.scenes || Object.values(parsed)[0];
+      const suggestedScenes: any[] = Array.isArray(parsed)
+        ? parsed
+        : parsed.scenes || Object.values(parsed)[0];
 
       if (!Array.isArray(suggestedScenes)) {
         throw new Error('Invalid AI response format');
@@ -1031,7 +1233,7 @@ JSON Schema:
           videoId,
           prompt: s.prompt,
           videoPrompt: s.videoPrompt,
-          characterNames: Array.isArray(s.characterNames) 
+          characterNames: Array.isArray(s.characterNames)
             ? s.characterNames.filter((n: string) => charNames.includes(n))
             : [],
           displayOrder: nextOrder++,
@@ -1045,7 +1247,9 @@ JSON Schema:
         createdScenes.push(scene);
       }
 
-      this.logger.log(`Created ${createdScenes.length} suggested scenes for video ${videoId}`);
+      this.logger.log(
+        `Created ${createdScenes.length} suggested scenes for video ${videoId}`,
+      );
       return {
         message: `Successfully generated ${createdScenes.length} scenes`,
         scenes: createdScenes,

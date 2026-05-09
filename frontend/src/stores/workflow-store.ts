@@ -189,6 +189,8 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
                 }, 3000);
 
                 set({ pollingInterval: intervalId });
+            } else {
+                set({ isExecuting: false });
             }
 
         } catch (error: unknown) {
@@ -270,8 +272,9 @@ export const useWorkflowStore = create<WorkflowState>((set, get) => ({
         } catch (error) {
             console.error('Failed to create workflow', error);
             return null;
+        } finally {
+            set({ isLoading: false });
         }
-        set({ isLoading: false });
     },
 
     fetchWorkflow: async (id) => {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -23,19 +23,29 @@ const formSchema = z.object({
     name: z.string().min(1, "Name is required"),
 });
 
+const WORKFLOW_DRAFT_PREFIX = "create-workflow-dialog";
+
 interface CreateWorkflowDialogProps {
     onCreate: (name: string) => Promise<void>;
     isLoading?: boolean;
     children?: React.ReactNode;
+    projectId: string;
 }
 
-export function CreateWorkflowDialog({ onCreate, isLoading, children }: CreateWorkflowDialogProps) {
+export function CreateWorkflowDialog({
+    onCreate,
+    isLoading,
+    children,
+    projectId,
+}: CreateWorkflowDialogProps) {
     const [open, setOpen] = useState(false);
+    const draftKey = `${WORKFLOW_DRAFT_PREFIX}:${projectId}`;
 
     const {
         register,
         handleSubmit,
         reset,
+        watch,
         formState: { errors },
     } = useForm<z.infer<typeof formSchema>>({
         resolver: zodResolver(formSchema),
@@ -44,8 +54,48 @@ export function CreateWorkflowDialog({ onCreate, isLoading, children }: CreateWo
         },
     });
 
+    const name = watch("name");
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const rawDraft = window.localStorage.getItem(draftKey);
+        if (!rawDraft) {
+            return;
+        }
+
+        try {
+            const draft = JSON.parse(rawDraft) as Partial<z.infer<typeof formSchema>>;
+            reset({
+                name: draft.name ?? "",
+            });
+        } catch {
+            window.localStorage.removeItem(draftKey);
+        }
+    }, [draftKey, open, reset]);
+
+    useEffect(() => {
+        if (!open) {
+            return;
+        }
+
+        const nextDraft = {
+            name: name?.trim() ?? "",
+        };
+
+        if (!nextDraft.name) {
+            window.localStorage.removeItem(draftKey);
+            return;
+        }
+
+        window.localStorage.setItem(draftKey, JSON.stringify(nextDraft));
+    }, [draftKey, name, open]);
+
     const onSubmit = async (values: z.infer<typeof formSchema>) => {
         await onCreate(values.name);
+        window.localStorage.removeItem(draftKey);
         setOpen(false);
         reset();
     };
@@ -55,7 +105,7 @@ export function CreateWorkflowDialog({ onCreate, isLoading, children }: CreateWo
             <DialogTrigger asChild>
                 {children || (
                     <Button className="gap-2 px-5">
-                        <Plus className="w-4 h-4" />
+                        <Plus className="size-4" />
                         New Workflow
                     </Button>
                 )}

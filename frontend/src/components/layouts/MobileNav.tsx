@@ -45,7 +45,7 @@ function NavItem({ item, pathname }: NavItemProps) {
             pathname === item.href && "text-foreground bg-accent font-medium"
         )}
     >
-        <item.icon className="w-5 h-5 mr-3 shrink-0" />
+        <item.icon className="size-5 mr-3 shrink-0" />
         <span>{item.label}</span>
         {item.isNew && (
             <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded">New</span>
@@ -119,10 +119,10 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                                 className="absolute top-2 right-2"
                                 onClick={() => onOpenChange(false)}
                             >
-                                <X className="w-5 h-5" />
+                                <X className="size-5" />
                             </Button>
                             <div className="flex flex-col items-center gap-3">
-                                <div className="w-16 h-16 rounded-2xl overflow-hidden flex items-center justify-center p-1 bg-muted border border-border">
+                                <div className="size-16 rounded-2xl overflow-hidden flex items-center justify-center p-1 bg-muted border border-border">
                                     <Image src="/logo.svg" alt="Logo" width={64} height={64} className="w-full h-full object-contain" />
                                 </div>
                                 <div className="flex flex-col items-center">
@@ -137,11 +137,11 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                             {/* Workspace */}
                             <div>
                                 <button className="flex items-center gap-2 text-sm text-foreground bg-muted px-3 py-2 rounded-lg w-full">
-                                    <div className="w-5 h-5 rounded bg-destructive flex items-center justify-center text-[10px] font-bold text-destructive-foreground">
+                                    <div className="size-5 rounded bg-destructive flex items-center justify-center text-[10px] font-bold text-destructive-foreground">
                                         {WORKSPACE_ROOT.label.slice(0, 1)}
                                     </div>
                                     <span className="flex-1 text-left">{WORKSPACE_ROOT.label}</span>
-                                    <ChevronDown className="w-4 h-4 text-muted-foreground" />
+                                    <ChevronDown className="size-4 text-muted-foreground" />
                                 </button>
                             </div>
 
@@ -173,20 +173,20 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                         {/* Footer */}
                         <div className="p-4 border-t border-border bg-card">
                             <div className="rounded-xl bg-pricing/10 p-4 border border-pricing/20 mb-4">
-                                <h4 className="text-sm font-bold text-pricing">Upgrade plan</h4>
+                                <h4 className="text-sm font-semibold text-pricing">Upgrade plan</h4>
                                 <p className="text-xs text-muted-foreground mt-1">Unlock more credits and team features</p>
                             </div>
 
                             <div className="flex items-center justify-between text-muted-foreground">
                                 <Button variant="ghost" size="icon">
-                                    <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px] font-bold">?</div>
+                                    <div className="size-5 rounded-full border border-current flex items-center justify-center text-[10px] font-bold">?</div>
                                 </Button>
                                 <Button variant="ghost" size="icon" className="relative">
-                                    <div className="w-5 h-5 rounded-full border border-current flex items-center justify-center text-[10px]">&bull;</div>
-                                    <div className="absolute top-2 right-2 w-2 h-2 bg-destructive rounded-full border-2 border-card" />
+                                    <div className="size-5 rounded-full border border-current flex items-center justify-center text-[10px]">&bull;</div>
+                                    <div className="absolute top-2 right-2 size-2 bg-destructive rounded-full border-2 border-card" />
                                 </Button>
                                 <Button variant="ghost" size="icon">
-                                    <MoreHorizontal className="w-5 h-5" />
+                                    <MoreHorizontal className="size-5" />
                                 </Button>
                             </div>
                         </div>

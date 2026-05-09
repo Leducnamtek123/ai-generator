@@ -110,7 +110,7 @@ export default function BillingPage() {
   if (loading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+        <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     );
   }
@@ -122,11 +122,11 @@ export default function BillingPage() {
           href={"/dashboard" as string}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
-          <ArrowLeft className="w-4 h-4" />
+          <ArrowLeft className="size-4" />
           Back
         </Link>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <CreditCard className="w-6 h-6 text-primary" />
+        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+          <CreditCard className="size-6 text-primary" />
           Billing
         </h1>
         <p className="text-sm text-muted-foreground mt-1">
@@ -145,10 +145,10 @@ export default function BillingPage() {
         <div className="space-y-6">
           <div className="relative overflow-hidden bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 rounded-2xl p-8 text-white">
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(255,255,255,0.15),transparent_50%)]" />
-            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-2xl" />
+            <div className="absolute -bottom-10 -right-10 size-40 bg-white/5 rounded-full blur-2xl" />
             <div className="relative z-10">
               <div className="flex items-center gap-2 text-white/70 text-sm mb-2">
-                <TrendingUp className="w-4 h-4" />
+                <TrendingUp className="size-4" />
                 Monthly Total
               </div>
               <div className="text-4xl font-bold tracking-tight">
@@ -163,7 +163,7 @@ export default function BillingPage() {
           <div className="grid gap-4 md:grid-cols-2">
             <div className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-4">
-                <Wallet className="w-4 h-4 text-blue-500" />
+                <Wallet className="size-4 text-blue-500" />
                 Shared wallet
               </div>
               <div className="space-y-3">
@@ -198,7 +198,7 @@ export default function BillingPage() {
 
             <div className="bg-card border border-border rounded-xl p-6">
               <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-4">
-                <Users className="w-4 h-4 text-blue-500" />
+                <Users className="size-4 text-blue-500" />
                 Seats
               </div>
               <div className="space-y-2">
@@ -227,7 +227,7 @@ export default function BillingPage() {
           <div className="bg-card border border-border rounded-xl overflow-hidden">
             <div className="px-5 py-4 border-b border-border">
               <h3 className="text-sm font-semibold flex items-center gap-2">
-                <DollarSign className="w-4 h-4 text-primary" />
+                <DollarSign className="size-4 text-primary" />
                 Billing Breakdown
               </h3>
             </div>
@@ -303,7 +303,7 @@ export default function BillingPage() {
                         key={feature}
                         className="flex items-start gap-2 text-sm text-foreground/85"
                       >
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                        <CheckCircle2 className="size-4 text-emerald-400 mt-0.5 shrink-0" />
                         <span>{feature}</span>
                       </li>
                     ))}
@@ -373,7 +373,7 @@ export default function BillingPage() {
 
       {!billing && !error && (
         <div className="text-center py-16 text-muted-foreground">
-          <CreditCard className="w-12 h-12 mx-auto mb-3 opacity-20" />
+          <CreditCard className="size-12 mx-auto mb-3 opacity-20" />
           <p className="text-sm">No billing information available</p>
         </div>
       )}

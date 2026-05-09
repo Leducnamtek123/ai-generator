@@ -96,7 +96,7 @@ export default function InviteAcceptPage() {
     if (!state.invite && !state.error) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -105,10 +105,10 @@ export default function InviteAcceptPage() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="text-center max-w-md">
-                    <div className="w-16 h-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                        <X className="w-8 h-8 text-destructive" />
+                    <div className="size-16 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-4">
+                        <X className="size-8 text-destructive" />
                     </div>
-                    <h1 className="text-xl font-bold text-foreground mb-2">Invalid Invite</h1>
+                    <h1 className="text-xl font-semibold text-foreground mb-2">Invalid Invite</h1>
                     <p className="text-sm text-muted-foreground">{state.error}</p>
                 </div>
             </div>
@@ -119,16 +119,16 @@ export default function InviteAcceptPage() {
         return (
             <div className="min-h-screen flex items-center justify-center bg-background">
                 <div className="text-center max-w-md">
-                    <div className={`w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
+                    <div className={`size-16 rounded-full flex items-center justify-center mx-auto mb-4 ${
                         state.result === 'accepted' ? 'bg-emerald-500/10' : 'bg-muted'
                     }`}>
                         {state.result === 'accepted' ? (
-                            <Check className="w-8 h-8 text-emerald-500" />
+                            <Check className="size-8 text-emerald-500" />
                         ) : (
-                            <X className="w-8 h-8 text-muted-foreground" />
+                            <X className="size-8 text-muted-foreground" />
                         )}
                     </div>
-                    <h1 className="text-xl font-bold text-foreground mb-2">
+                    <h1 className="text-xl font-semibold text-foreground mb-2">
                         {state.result === 'accepted' ? 'Invite Accepted!' : 'Invite Rejected'}
                     </h1>
                     <p className="text-sm text-muted-foreground">
@@ -149,14 +149,14 @@ export default function InviteAcceptPage() {
                     <div className="h-32 bg-gradient-to-br from-violet-600 via-indigo-600 to-blue-600 relative">
                         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_50%,rgba(255,255,255,0.15),transparent_60%)]" />
                         <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2">
-                            <div className="w-16 h-16 rounded-2xl bg-card border-4 border-card flex items-center justify-center shadow-lg">
-                                <Mail className="w-7 h-7 text-primary" />
+                            <div className="size-16 rounded-2xl bg-card border-4 border-card flex items-center justify-center shadow-lg">
+                                <Mail className="size-7 text-primary" />
                             </div>
                         </div>
                     </div>
 
                     <div className="pt-12 pb-8 px-8 text-center">
-                        <h1 className="text-xl font-bold text-foreground mb-1">You&apos;re Invited!</h1>
+                        <h1 className="text-xl font-semibold text-foreground mb-1">You&apos;re Invited!</h1>
                         <p className="text-sm text-muted-foreground mb-8">
                             You&apos;ve been invited to join an organization
                         </p>
@@ -164,12 +164,12 @@ export default function InviteAcceptPage() {
                         {/* Org Info */}
                         <div className="bg-muted/50 rounded-xl p-5 mb-6 space-y-4">
                             <div className="flex items-center gap-3">
-                                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
+                                <div className="size-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center text-white text-sm font-bold">
                         {state.invite?.org?.name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div className="text-left">
                         <div className="text-sm font-semibold flex items-center gap-1.5">
-                            <Building2 className="w-3.5 h-3.5 text-muted-foreground" />
+                            <Building2 className="size-3.5 text-muted-foreground" />
                             {state.invite?.org?.name}
                         </div>
                     </div>
@@ -179,7 +179,7 @@ export default function InviteAcceptPage() {
 
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2 text-muted-foreground">
-                                    <User className="w-3.5 h-3.5" />
+                                    <User className="size-3.5" />
                                     Invited by
                                 </div>
                                 <span className="font-medium text-foreground">
@@ -189,7 +189,7 @@ export default function InviteAcceptPage() {
 
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Shield className="w-3.5 h-3.5" />
+                                    <Shield className="size-3.5" />
                                     Role
                                 </div>
                                 <span className="font-medium text-foreground capitalize">
@@ -199,7 +199,7 @@ export default function InviteAcceptPage() {
 
                             <div className="flex items-center justify-between text-sm">
                                 <div className="flex items-center gap-2 text-muted-foreground">
-                                    <Mail className="w-3.5 h-3.5" />
+                                    <Mail className="size-3.5" />
                                     Email
                                 </div>
                                 <span className="font-medium text-foreground">
@@ -221,7 +221,7 @@ export default function InviteAcceptPage() {
                                 onClick={handleReject}
                                 disabled={state.rejecting || state.accepting}
                             >
-                                {state.rejecting ? <Loader2 className="w-4 h-4 animate-spin" /> : <X className="w-4 h-4" />}
+                                {state.rejecting ? <Loader2 className="size-4 animate-spin" /> : <X className="size-4" />}
                                 Decline
                             </Button>
                             <Button
@@ -229,7 +229,7 @@ export default function InviteAcceptPage() {
                                 onClick={handleAccept}
                                 disabled={state.accepting || state.rejecting}
                             >
-                                {state.accepting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                {state.accepting ? <Loader2 className="size-4 animate-spin" /> : <Check className="size-4" />}
                                 Accept
                             </Button>
                         </div>

@@ -59,4 +59,10 @@ export class Workflow {
 
   @ApiProperty()
   deletedAt: Date;
+
+  @ApiProperty({
+    type: Object,
+    nullable: true,
+  })
+  lastExecution?: Record<string, unknown> | null;
 }

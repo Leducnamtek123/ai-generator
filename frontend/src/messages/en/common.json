@@ -1,14 +1,49 @@
 {
-    "Dashboard": {
-        "title": "Nizam - Next.js 16 Boilerplate",
-        "description": "Open-source boilerplate for modern Next.js applications, featuring <react>React</react>, <typescript>TypeScript</typescript>, <tailwind>Tailwind CSS</tailwind>, and <tanstack>TanStack Query</tanstack>. Includes reusable components, hooks, and utilities to speed up development.",
-        "starOnGithub": "Star on Github",
-        "deployToVercel": "Deploy to Vercel",
-        "useTemplate": "Use Template",
-        "projectBy": "Project by"
+  "Dashboard": {
+    "title": "Nizam - Next.js 16 Boilerplate",
+    "description": "Open-source boilerplate for modern Next.js applications, featuring <react>React</react>, <typescript>TypeScript</typescript>, <tailwind>Tailwind CSS</tailwind>, and <tanstack>TanStack Query</tanstack>. Includes reusable components, hooks, and utilities to speed up development.",
+    "starOnGithub": "Star on Github",
+    "deployToVercel": "Deploy to Vercel",
+    "useTemplate": "Use Template",
+    "projectBy": "Project by"
+  },
+  "Header": {
+    "brandTagline": "Your paint, your choice",
+    "getPro": "Get Pro"
+  },
+  "LocaleSwitcher": {
+    "ariaLabel": "Change language"
+  },
+  "ThemeSwitcher": {
+    "ariaLabel": "Toggle theme"
+  },
+  "UserMenu": {
+    "billing": {
+      "workspace": "Workspace billing",
+      "personal": "Personal billing"
     },
-    "Showcase": {
-        "title": "Showcase",
-        "description": "A showcase of the features of the project."
+    "secondaryAction": {
+      "workspace": "Personal plan",
+      "personal": "Create your workspace"
+    },
+    "items": {
+      "billing": {
+        "workspace": "Workspace billing",
+        "personal": "Personal billing"
+      },
+      "settings": "Settings",
+      "profile": "Creator profile",
+      "collections": "My collections",
+      "language": "Language",
+      "theme": "Theme",
+      "developer": "Developer & MCP",
+      "docs": "Docs API",
+      "help": "Help center",
+      "logout": "Log out"
     }
+  },
+  "Showcase": {
+    "title": "Showcase",
+    "description": "A showcase of the features of the project."
+  }
 }

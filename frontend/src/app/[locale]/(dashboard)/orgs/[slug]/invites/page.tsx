@@ -1,6 +1,6 @@
 'use client';
 
-import { useReducer, useEffect, useCallback } from 'react';
+import { useReducer, useEffect, useCallback, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { inviteApi, type Invite, type CreateInviteData } from '@/services/inviteApi';
 import { useOrgStore } from '@/stores/org-store';
@@ -14,6 +14,14 @@ const roleConfig: Record<string, { label: string; icon: typeof Shield; color: st
     MEMBER: { label: 'Member', icon: Shield, color: 'text-blue-500 bg-blue-500/10' },
     BILLING: { label: 'Billing', icon: Receipt, color: 'text-emerald-500 bg-emerald-500/10' },
 };
+
+type InviteDraft = {
+    version: number;
+    savedAt: string;
+    form: Partial<CreateInviteData>;
+};
+
+const INVITE_DRAFT_PREFIX = 'org-invites';
 
 type InvitePageState = {
     invites: Invite[];
@@ -66,8 +74,10 @@ function reducer(state: InvitePageState, action: InvitePageAction): InvitePageSt
 export default function InvitesPage() {
     const params = useParams();
     const slug = params?.slug as string;
+    const draftKey = slug ? `${INVITE_DRAFT_PREFIX}:${slug}:draft` : null;
     const { hasPermission } = useOrgStore();
     const [state, dispatch] = useReducer(reducer, initialState);
+    const [draftReady, setDraftReady] = useState(false);
 
     const canInvite = hasPermission('create', 'Invite');
 
@@ -85,6 +95,42 @@ export default function InvitesPage() {
         queueMicrotask(() => { void loadInvites(); });
     }, [loadInvites]);
 
+    useEffect(() => {
+        if (!draftKey) {
+            return;
+        }
+
+        try {
+            const raw = window.localStorage.getItem(draftKey);
+            if (!raw) {
+                setDraftReady(true);
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as Partial<InviteDraft>;
+            if (parsed.form) {
+                dispatch({ type: 'setForm', form: parsed.form });
+            }
+        } catch (restoreError) {
+            console.error('Failed to restore invite draft', restoreError);
+        } finally {
+            setDraftReady(true);
+        }
+    }, [draftKey]);
+
+    useEffect(() => {
+        if (!draftReady || !draftKey || !state.showForm) {
+            return;
+        }
+
+        const draft: InviteDraft = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            form: state.form,
+        };
+        window.localStorage.setItem(draftKey, JSON.stringify(draft));
+    }, [draftKey, draftReady, state.form]);
+
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!state.form.email) return;
@@ -93,6 +139,9 @@ export default function InvitesPage() {
         try {
             const invite = await inviteApi.create(slug, state.form);
             dispatch({ type: 'setInvites', invites: [invite, ...state.invites] });
+            if (draftKey) {
+                window.localStorage.removeItem(draftKey);
+            }
             dispatch({ type: 'resetForm' });
             dispatch({ type: 'setShowForm', showForm: false });
         } catch (err: unknown) {
@@ -115,7 +164,7 @@ export default function InvitesPage() {
     if (state.loading) {
         return (
             <div className="flex items-center justify-center py-20">
-                <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                <Loader2 className="size-6 animate-spin text-muted-foreground" />
             </div>
         );
     }
@@ -124,18 +173,18 @@ export default function InvitesPage() {
         <div className="max-w-3xl mx-auto py-8 px-4 sm:px-6">
             <div className="mb-8">
                 <Link href={'/dashboard' as string} className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4">
-                    <ArrowLeft className="w-4 h-4" />Back
+                    <ArrowLeft className="size-4" />Back
                 </Link>
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                            <Mail className="w-6 h-6 text-primary" />Invites
+                        <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
+                            <Mail className="size-6 text-primary" />Invites
                         </h1>
                         <p className="text-sm text-muted-foreground mt-1">{state.invites.length} pending invite{state.invites.length !== 1 ? 's' : ''}</p>
                     </div>
                     {canInvite && (
                         <Button onClick={() => dispatch({ type: 'setShowForm', showForm: !state.showForm })}>
-                            <Plus className="w-4 h-4" />Invite Member
+                            <Plus className="size-4" />Invite Member
                         </Button>
                     )}
                 </div>
@@ -167,7 +216,7 @@ export default function InvitesPage() {
                             <option value="BILLING">Billing</option>
                         </select>
                         <Button type="submit" disabled={state.submitting}>
-                            {state.submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}Send
+                            {state.submitting ? <Loader2 className="size-4 animate-spin" /> : <Mail className="size-4" />}Send
                         </Button>
                     </form>
                 </div>
@@ -180,21 +229,21 @@ export default function InvitesPage() {
                         const RoleIcon = config.icon;
                         return (
                             <div key={invite.id} className="flex items-center gap-4 px-5 py-4 hover:bg-muted/30 transition-colors group">
-                                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shrink-0">
-                                    <Mail className="w-4 h-4" />
+                                <div className="size-10 rounded-full bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center text-white shrink-0">
+                                    <Mail className="size-4" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                     <div className="text-sm font-medium text-foreground truncate">{invite.email}</div>
                                     <div className="text-xs text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                                        <Clock className="w-3 h-3" />{new Date(invite.createdAt).toLocaleDateString()}
+                                        <Clock className="size-3" />{new Date(invite.createdAt).toLocaleDateString()}
                                     </div>
                                 </div>
                                 <div className={cn('flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium', config.color)}>
-                                    <RoleIcon className="w-3.5 h-3.5" />{config.label}
+                                    <RoleIcon className="size-3.5" />{config.label}
                                 </div>
                                 {canInvite && (
                                     <Button variant="ghost" size="icon-xs" onClick={() => handleDelete(invite.id)} className="opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive hover:bg-destructive/10">
-                                        <Trash2 className="w-4 h-4" />
+                                        <Trash2 className="size-4" />
                                     </Button>
                                 )}
                             </div>
@@ -202,7 +251,7 @@ export default function InvitesPage() {
                     })}
                     {state.invites.length === 0 && (
                         <div className="text-center py-12 text-muted-foreground">
-                            <Mail className="w-10 h-10 mx-auto mb-3 opacity-30" />
+                            <Mail className="size-10 mx-auto mb-3 opacity-30" />
                             <p className="text-sm">No pending invites</p>
                             {canInvite && (
                                 <Button variant="link" size="sm" onClick={() => dispatch({ type: 'setShowForm', showForm: true })} className="mt-2">

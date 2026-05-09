@@ -1,9 +1,10 @@
 "use client";
 
 import { Languages } from "lucide-react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 import { LOCALES, type LocaleCode } from "@/constants/i18n";
+
 import { usePathname, useRouter } from "@/i18n/navigation";
 
 import {
@@ -16,6 +17,7 @@ import {
 
 export function LocaleSwitcher() {
   const currentLocale = useLocale() as LocaleCode;
+  const t = useTranslations("LocaleSwitcher");
   const router = useRouter();
   const pathname = usePathname();
   const locales = Object.keys(LOCALES) as LocaleCode[];
@@ -24,6 +26,7 @@ export function LocaleSwitcher() {
 
   const switchLocale = (locale: LocaleCode) => {
     router.replace(pathname, { locale });
+    router.refresh();
   };
 
   return (
@@ -34,10 +37,10 @@ export function LocaleSwitcher() {
           variant="ghost"
           size="icon"
           className="h-11 w-11 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
-          aria-label="Change language"
+          aria-label={t("ariaLabel")}
         >
           <Languages className="size-4" />
-          <span className="sr-only">Change language</span>
+          <span className="sr-only">{t("ariaLabel")}</span>
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="min-w-[12rem]">

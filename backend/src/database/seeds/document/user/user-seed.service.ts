@@ -14,17 +14,13 @@ export class UserSeedService {
   ) {}
 
   async run() {
-    const admin = await this.model.findOne({
-      email: 'admin@example.com',
-    });
+    const password = await bcrypt.hash('secret', await bcrypt.genSalt());
 
-    if (!admin) {
-      const salt = await bcrypt.genSalt();
-      const password = await bcrypt.hash('secret', salt);
-
-      const data = new this.model({
+    await this.model.findOneAndUpdate(
+      { email: 'admin@example.com' },
+      {
         email: 'admin@example.com',
-        password: password,
+        password,
         firstName: 'Super',
         lastName: 'Admin',
         role: {
@@ -33,21 +29,15 @@ export class UserSeedService {
         status: {
           _id: StatusEnum.active.toString(),
         },
-      });
-      await data.save();
-    }
+      },
+      { upsert: true, new: true },
+    );
 
-    const user = await this.model.findOne({
-      email: 'john.doe@example.com',
-    });
-
-    if (!user) {
-      const salt = await bcrypt.genSalt();
-      const password = await bcrypt.hash('secret', salt);
-
-      const data = new this.model({
+    await this.model.findOneAndUpdate(
+      { email: 'john.doe@example.com' },
+      {
         email: 'john.doe@example.com',
-        password: password,
+        password,
         firstName: 'John',
         lastName: 'Doe',
         role: {
@@ -56,9 +46,8 @@ export class UserSeedService {
         status: {
           _id: StatusEnum.active.toString(),
         },
-      });
-
-      await data.save();
-    }
+      },
+      { upsert: true, new: true },
+    );
   }
 }

@@ -34,7 +34,7 @@ export default function DashboardPage() {
                     <div className="flex items-center gap-4">
                         {stats && (
                             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-credits/10 border border-credits/20">
-                                <Sparkles className="w-3.5 h-3.5 text-credits" />
+                                <Sparkles className="size-3.5 text-credits" />
                                 <span className="text-xs font-semibold text-credits">{stats.creditBalance} credits</span>
                             </div>
                         )}
@@ -69,7 +69,7 @@ export default function DashboardPage() {
                             ))
                         ) : stats?.recentWorkflows.length === 0 ? (
                             <div className="w-full py-12 flex flex-col items-center justify-center border border-dashed border-border rounded-xl bg-card/30">
-                                <LayoutGrid className="w-8 h-8 text-muted-foreground mb-4 opacity-20" />
+                                <LayoutGrid className="size-8 text-muted-foreground mb-4 opacity-20" />
                                 <p className="text-xs text-muted-foreground">No recent creations yet</p>
                                 <Button variant="link" size="sm" className="mt-2 text-xs" onClick={() => router.push('/creator/workflow-editor')}>
                                     Start your first space

@@ -1,26 +1,23 @@
 import { Module, forwardRef } from '@nestjs/common';
-import { BullModule } from '@nestjs/bullmq';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { WorkflowsService } from './workflows.service';
 import { WorkflowsController } from './workflows.controller';
 import { WorkflowsExecutionController } from './workflows.execution.controller';
 import { RelationalPersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
+import { WorkflowExecutionEntity } from './infrastructure/persistence/relational/entities/workflow-execution.entity';
 import { WorkflowEngine } from './engine/workflow.engine';
 import { WorkflowProcessor } from './engine/workflow.processor';
 import { QueuesModule } from '../queues/queues.module';
 import { GenerationsModule } from '../generations/generations.module';
 import { NotificationsModule } from '../notifications/notifications.module';
-import { WORKFLOW_QUEUE, GENERATION_QUEUE } from '../queues/queues.constants';
 
 @Module({
   imports: [
     RelationalPersistenceModule,
+    TypeOrmModule.forFeature([WorkflowExecutionEntity]),
     forwardRef(() => QueuesModule),
     GenerationsModule,
     NotificationsModule,
-    BullModule.registerQueue(
-      { name: WORKFLOW_QUEUE },
-      { name: GENERATION_QUEUE },
-    ),
   ],
   controllers: [WorkflowsController, WorkflowsExecutionController],
   providers: [WorkflowsService, WorkflowEngine, WorkflowProcessor],

@@ -744,7 +744,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   <div className="mt-5 text-[11px] font-semibold tracking-[0.28em] text-white/34 uppercase">
                     Step {String(index + 1).padStart(2, "0")}
                   </div>
-                  <h3 className="mt-3 text-2xl font-bold tracking-[-0.04em]">
+                  <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
                     {step.title}
                   </h3>
                   <p className="mt-3 text-sm leading-7 text-white/58">
@@ -804,7 +804,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     </div>
                   </div>
                   <div className="space-y-4 p-6">
-                    <h3 className="text-2xl font-bold tracking-[-0.04em]">
+                    <h3 className="text-2xl font-semibold tracking-[-0.04em]">
                       {card.title}
                     </h3>
                     <p className="text-sm leading-7 text-white/60">
@@ -872,7 +872,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   <div className="text-[10px] font-semibold tracking-[0.28em] text-white/42 uppercase">
                     {item.tag}
                   </div>
-                  <h3 className="mt-2 text-lg font-bold tracking-[-0.03em]">
+                  <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em]">
                     {item.title}
                   </h3>
                 </div>
@@ -1087,6 +1087,23 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 </div>
               </div>
             ))}
+          </div>
+
+          <div className="mt-8 flex flex-col items-center gap-3 text-center">
+            <Button
+              asChild
+              className="h-11 rounded-full bg-white px-5 text-sm font-bold text-black hover:bg-white/90"
+            >
+              <Link href="/pricing">
+                Open full pricing page
+                <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+            <p className="max-w-2xl text-sm leading-7 text-white/50">
+              The dedicated page keeps personal and workspace plans separated,
+              shows annualized credit volume, and leaves add-ons in a separate
+              block so the comparison is faster.
+            </p>
           </div>
         </section>
 

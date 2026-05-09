@@ -8,7 +8,11 @@ import {
   MetricsData,
   AnalyticsData,
 } from '../social.provider.interface';
-import { SocialAbstractBase, RefreshTokenError, BadBodyError } from '../social-abstract.base';
+import {
+  SocialAbstractBase,
+  RefreshTokenError,
+  BadBodyError,
+} from '../social-abstract.base';
 import { ConfigService } from '@nestjs/config';
 
 /**
@@ -21,7 +25,10 @@ import { ConfigService } from '@nestjs/config';
  * - Video + photo upload handling
  */
 @Injectable()
-export class FacebookAdapter extends SocialAbstractBase implements SocialProvider {
+export class FacebookAdapter
+  extends SocialAbstractBase
+  implements SocialProvider
+{
   readonly identifier = 'facebook';
   readonly name = 'Facebook';
   readonly supportsTokenRefresh = false; // Facebook uses long-lived tokens (60 days)
@@ -50,24 +57,38 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
    */
   protected override handleErrors(
     body: string,
-    status: number,
-  ): { type: 'refresh-token' | 'bad-body' | 'retry'; value: string } | undefined {
+    _status: number,
+  ):
+    | { type: 'refresh-token' | 'bad-body' | 'retry'; value: string }
+    | undefined {
     // Token Invalid
     if (body.includes('Error validating access token')) {
-      return { type: 'refresh-token', value: 'Please re-authenticate your Facebook account' };
+      return {
+        type: 'refresh-token',
+        value: 'Please re-authenticate your Facebook account',
+      };
     }
     if (body.includes('490') || body.includes('REVOKED_ACCESS_TOKEN')) {
-      return { type: 'refresh-token', value: 'Token expired or revoked, please re-authenticate' };
+      return {
+        type: 'refresh-token',
+        value: 'Token expired or revoked, please re-authenticate',
+      };
     }
 
     // Permission issues
     if (body.includes('1404078')) {
-      return { type: 'refresh-token', value: 'Page publishing authorization required' };
+      return {
+        type: 'refresh-token',
+        value: 'Page publishing authorization required',
+      };
     }
 
     // Content policy
     if (body.includes('1346003') || body.includes('1404102')) {
-      return { type: 'bad-body', value: 'Content flagged by Facebook Community Standards' };
+      return {
+        type: 'bad-body',
+        value: 'Content flagged by Facebook Community Standards',
+      };
     }
 
     // Rate limiting
@@ -77,27 +98,43 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
 
     // Media errors
     if (body.includes('1366046')) {
-      return { type: 'bad-body', value: 'Photos must be under 4MB and in JPG/PNG format' };
+      return {
+        type: 'bad-body',
+        value: 'Photos must be under 4MB and in JPG/PNG format',
+      };
     }
 
     // Transient service errors
     if (body.includes('1363047') || body.includes('1609010')) {
-      return { type: 'retry', value: 'Facebook service temporarily unavailable' };
+      return {
+        type: 'retry',
+        value: 'Facebook service temporarily unavailable',
+      };
     }
 
     if (body.includes('Name parameter too long')) {
-      return { type: 'bad-body', value: 'Post content is too long for Facebook' };
+      return {
+        type: 'bad-body',
+        value: 'Post content is too long for Facebook',
+      };
     }
 
     return undefined;
   }
 
-  async authenticate(code: string, extraParams: Record<string, any> = {}): Promise<AuthTokenDetails> {
+  async authenticate(
+    code: string,
+    extraParams: Record<string, any> = {},
+  ): Promise<AuthTokenDetails> {
     this.logger.log('Exchanging code for Facebook access token...');
 
-    const appId = extraParams.appId || this.configService.get('FACEBOOK_APP_ID');
-    const appSecret = extraParams.appSecret || this.configService.get('FACEBOOK_APP_SECRET');
-    const redirectUri = `${this.configService.get('BACKEND_DOMAIN')}/api/v1/social-hub/auth/facebook/callback`;
+    const appId =
+      extraParams.appId ||
+      this.configService.get('FACEBOOK_APP_ID', { infer: true });
+    const appSecret =
+      extraParams.appSecret ||
+      this.configService.get('FACEBOOK_APP_SECRET', { infer: true });
+    const redirectUri = `${this.configService.get('BACKEND_DOMAIN', { infer: true })}/api/v1/social-hub/auth/facebook/callback`;
 
     try {
       // Step 1: Exchange code for short-lived token
@@ -144,6 +181,19 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
       );
       const { id, name, picture } = await userResponse.json();
 
+      const pagesResponse = await this.fetchWithRetry(
+        `https://graph.facebook.com/v20.0/me/accounts?fields=id,name,access_token,picture{url}&limit=100&access_token=${access_token}`,
+        {},
+        'facebook_pages',
+      );
+      const { data: pages } = await pagesResponse.json();
+      const facebookPages = (pages || []).map((page: any) => ({
+        id: String(page.id),
+        name: page.name || `Facebook Page ${page.id}`,
+        accessToken: page.access_token || access_token,
+        picture: page.picture?.data?.url || '',
+      }));
+
       return {
         id,
         name,
@@ -151,6 +201,9 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
         refreshToken: access_token, // Facebook doesn't use refresh tokens; we re-use the long-lived token
         expiresIn: 59 * 24 * 3600, // ~59 days
         picture: picture?.data?.url || '',
+        extraData: {
+          facebookPages,
+        },
       };
     } catch (error) {
       if (error instanceof RefreshTokenError || error instanceof BadBodyError) {
@@ -161,13 +214,17 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
     }
   }
 
-  async post(accessToken: string, details: PostDetails, platformId: string): Promise<PostResponse> {
+  async post(
+    accessToken: string,
+    details: PostDetails,
+    platformId: string,
+  ): Promise<PostResponse> {
     this.logger.log(`Publishing to Facebook Page ${platformId}...`);
 
     try {
       // Handle video posts
-      if (details.media?.some(m => m.path.includes('mp4'))) {
-        const videoMedia = details.media!.find(m => m.path.includes('mp4'))!;
+      if (details.media?.some((m) => m.path.includes('mp4'))) {
+        const videoMedia = details.media!.find((m) => m.path.includes('mp4'))!;
         const response = await this.fetchWithRetry(
           `https://graph.facebook.com/v20.0/${platformId}/videos?access_token=${accessToken}&fields=id,permalink_url`,
           {
@@ -192,7 +249,7 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
       // Handle photo posts
       const uploadedPhotos: { media_fbid: string }[] = [];
       if (details.media?.length) {
-        for (const media of details.media.filter(m => m.type === 'image')) {
+        for (const media of details.media.filter((m) => m.type === 'image')) {
           const photoResponse = await this.fetchWithRetry(
             `https://graph.facebook.com/v20.0/${platformId}/photos?access_token=${accessToken}`,
             {
@@ -215,7 +272,9 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             message: details.message,
-            ...(uploadedPhotos.length ? { attached_media: uploadedPhotos } : {}),
+            ...(uploadedPhotos.length
+              ? { attached_media: uploadedPhotos }
+              : {}),
             published: true,
           }),
         },
@@ -239,7 +298,10 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
     }
   }
 
-  async getInteractions(accessToken: string, platformId: string): Promise<any[]> {
+  async getInteractions(
+    accessToken: string,
+    platformId: string,
+  ): Promise<any[]> {
     try {
       // Fetch recent posts and their comments
       const response = await this.fetchWithRetry(
@@ -250,7 +312,7 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
       const { data: posts } = await response.json();
 
       const interactions: any[] = [];
-      for (const post of (posts || [])) {
+      for (const post of posts || []) {
         if (post.comments?.data) {
           for (const comment of post.comments.data) {
             interactions.push({
@@ -269,12 +331,18 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
 
       return interactions;
     } catch (error) {
-      this.logger.warn('Failed to fetch Facebook interactions, returning empty:', error);
+      this.logger.warn(
+        'Failed to fetch Facebook interactions, returning empty:',
+        error,
+      );
       return [];
     }
   }
 
-  async getMetrics(accessToken: string, externalId: string): Promise<MetricsData> {
+  async getMetrics(
+    accessToken: string,
+    externalId: string,
+  ): Promise<MetricsData> {
     this.logger.log(`Fetching metrics for Facebook post ${externalId}...`);
 
     try {
@@ -292,17 +360,20 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
       };
     } catch (error) {
       this.logger.warn(`Failed to fetch metrics for ${externalId}:`, error);
-      // Fallback with realistic random data for development
       return {
-        likes: Math.floor(Math.random() * 500) + 50,
-        comments: Math.floor(Math.random() * 100) + 10,
-        shares: Math.floor(Math.random() * 20),
-        views: Math.floor(Math.random() * 2000) + 500,
+        likes: 0,
+        comments: 0,
+        shares: 0,
+        views: 0,
       };
     }
   }
 
-  async getAnalytics(accessToken: string, platformId: string, days: number): Promise<AnalyticsData[]> {
+  async getAnalytics(
+    accessToken: string,
+    platformId: string,
+    days: number,
+  ): Promise<AnalyticsData[]> {
     try {
       const until = Math.floor(Date.now() / 1000);
       const since = until - days * 86400;
@@ -338,7 +409,10 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
     }
   }
 
-  async getPostAnalytics(accessToken: string, externalPostId: string): Promise<AnalyticsData[]> {
+  async getPostAnalytics(
+    accessToken: string,
+    externalPostId: string,
+  ): Promise<AnalyticsData[]> {
     try {
       const response = await this.fetchWithRetry(
         `https://graph.facebook.com/v20.0/${externalPostId}/insights` +
@@ -358,7 +432,12 @@ export class FacebookAdapter extends SocialAbstractBase implements SocialProvide
         let total = '0';
 
         if (typeof value === 'object') {
-          total = String(Object.values(value as Record<string, number>).reduce((s, v) => s + v, 0));
+          total = String(
+            Object.values(value as Record<string, number>).reduce(
+              (s, v) => s + v,
+              0,
+            ),
+          );
         } else {
           total = String(value || 0);
         }

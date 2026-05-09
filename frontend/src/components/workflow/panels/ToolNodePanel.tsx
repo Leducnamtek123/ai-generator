@@ -32,7 +32,7 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
         <div className="space-y-4">
             <div className="p-3 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                    <Wand2 className="w-4 h-4 text-fuchsia-300 shrink-0 mt-0.5" />
+                    <Wand2 className="size-4 text-fuchsia-300 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs text-fuchsia-200 font-medium">Tool Node</p>
                         <p className="text-[10px] text-fuchsia-200/60 mt-1">

@@ -67,14 +67,14 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                     onClick={onClose}
                     className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
                 >
-                    <ChevronDown className="w-4 h-4 rotate-90" />
+                    <ChevronDown className="size-4 rotate-90" />
                 </button>
             </div>
 
             {/* Search */}
             <div className="p-4 border-b border-border">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         className="w-full bg-accent/50 border-input rounded-xl py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring h-10"
                         placeholder="Search nodes..."
@@ -102,7 +102,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                                     className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors group text-left"
                                 >
                                     <div className={cn("p-1.5 rounded-md bg-accent/50 group-hover:bg-accent-foreground/10 transition-colors")}>
-                                        <Icon className={cn("w-4 h-4", node.color)} />
+                                        <Icon className={cn("size-4", node.color)} />
                                     </div>
                                     <div className="text-sm font-medium text-foreground/90 group-hover:text-foreground">
                                         {node.label}
@@ -129,7 +129,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                                         className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors group text-left"
                                     >
                                         <div className={cn("p-1.5 rounded-md bg-accent/50 group-hover:bg-accent-foreground/10 transition-colors")}>
-                                            <Icon className={cn("w-4 h-4", node.color)} />
+                                            <Icon className={cn("size-4", node.color)} />
                                         </div>
                                         <div className="text-sm font-medium text-foreground/90 group-hover:text-foreground">
                                             {node.label}

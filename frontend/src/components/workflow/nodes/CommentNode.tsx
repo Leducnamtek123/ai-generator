@@ -116,12 +116,12 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 onDoubleClick={() => commentData.onToggleMinimize?.(id)}
             >
                 <div className={cn(
-                    "w-10 h-10 rounded-full flex items-center justify-center shadow-lg",
+                    "size-10 rounded-full flex items-center justify-center shadow-lg",
                     styles.bg,
                     styles.border,
                     "border-2"
                 )}>
-                    <MessageSquare className={cn("w-5 h-5", styles.icon)} />
+                    <MessageSquare className={cn("size-5", styles.icon)} />
                 </div>
 
                 {draftText && (
@@ -140,14 +140,14 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 <button
                     type="button"
                     onClick={() => commentData.onToggleMinimize?.(id)}
-                    className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full bg-popover border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute -bottom-1 -right-1 size-5 rounded-full bg-popover border border-border flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                 >
-                    <ChevronDown className="w-3 h-3 text-muted-foreground" />
+                    <ChevronDown className="size-3 text-muted-foreground" />
                 </button>
 
                 {isPinned && (
                     <div className="absolute -top-1 -right-1">
-                        <Pin className="w-3 h-3 text-foreground" />
+                        <Pin className="size-3 text-foreground" />
                     </div>
                 )}
             </div>
@@ -169,8 +169,8 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                 styles.header
             )}>
                 <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-full bg-background/20 flex items-center justify-center">
-                        <User className="w-3.5 h-3.5 text-foreground/80" />
+                    <div className="size-6 rounded-full bg-background/20 flex items-center justify-center">
+                        <User className="size-3.5 text-foreground/80" />
                     </div>
                     <div>
                         <p className="text-xs font-medium text-foreground/90">
@@ -188,13 +188,13 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                         onClick={() => commentData.onToggleMinimize?.(id)}
                         className="p-1 rounded hover:bg-background/10 transition-colors"
                     >
-                        <ChevronUp className="w-4 h-4 text-foreground/60" />
+                        <ChevronUp className="size-4 text-foreground/60" />
                     </button>
 
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button type="button" className="p-1 rounded hover:bg-background/10 transition-colors">
-                                <MoreHorizontal className="w-4 h-4 text-foreground/60" />
+                                <MoreHorizontal className="size-4 text-foreground/60" />
                             </button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end" className="w-40 bg-popover border-border">
@@ -203,9 +203,9 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                                 className="text-foreground/70 hover:text-foreground hover:bg-accent"
                             >
                                 {isPinned ? (
-                                    <><PinOff className="w-4 h-4 mr-2" /> Unpin</>
+                                    <><PinOff className="size-4 mr-2" /> Unpin</>
                                 ) : (
-                                    <><Pin className="w-4 h-4 mr-2" /> Pin</>
+                                    <><Pin className="size-4 mr-2" /> Pin</>
                                 )}
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border" />
@@ -218,7 +218,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                                             key={noteColor}
                                             onClick={() => commentData.onColorChange?.(id, noteColor)}
                                             className={cn(
-                                                "w-5 h-5 rounded-full border-2 transition-transform",
+                                                "size-5 rounded-full border-2 transition-transform",
                                                 colorStyles[noteColor].bg,
                                                 color === noteColor ? "scale-110 border-white" : "border-transparent hover:scale-105"
                                             )}
@@ -231,7 +231,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                                 onClick={commentData.onDelete}
                                 className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
                             >
-                                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                <Trash2 className="size-4 mr-2" /> Delete
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -265,8 +265,8 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
 
             {isPinned && (
                 <div className="absolute -top-2 -right-2">
-                    <div className="w-5 h-5 rounded-full bg-white flex items-center justify-center shadow-lg">
-                        <Pin className="w-3 h-3 text-black" />
+                    <div className="size-5 rounded-full bg-white flex items-center justify-center shadow-lg">
+                        <Pin className="size-3 text-black" />
                     </div>
                 </div>
             )}

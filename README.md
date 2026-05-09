@@ -22,7 +22,7 @@ If you want image and video generation to use your local NVIDIA GPU:
    - `http://localhost`
    - `http://localhost:8188`
 
-The stack is already wired to ComfyUI in `docker/.env`, and the model files are expected under `docker/comfyui/models/...`.
+The stack is already wired to ComfyUI in `docker/.env`, and the image result URL is rewritten to `http://localhost:8188` so the browser can open the generated file directly.
 
 ## Project Structure
 

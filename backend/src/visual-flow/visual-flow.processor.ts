@@ -2,6 +2,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { VISUAL_FLOW_QUEUE } from '../queues/queues.constants';
+import { QueueReliabilityService } from '../queues/queue-reliability.service';
 import { VisualFlowService } from './visual-flow.service';
 import { GenerationsService } from '../generations/generations.service';
 import { VisualFlowEventsService } from './services/visual-flow-events.service';
@@ -25,13 +26,14 @@ export class VisualFlowProcessor extends WorkerHost {
     private readonly visualFlowService: VisualFlowService,
     private readonly generationsService: GenerationsService,
     private readonly eventsService: VisualFlowEventsService,
+    private readonly queueReliabilityService: QueueReliabilityService,
   ) {
     super();
   }
 
   async process(job: Job<VFJobData>): Promise<any> {
     this.logger.log(`Processing VF job ${job.id} - Action: ${job.data.action}`);
-    
+
     switch (job.data.action) {
       case 'generate_ref':
         return this.processGenerateRef(job);
@@ -44,42 +46,65 @@ export class VisualFlowProcessor extends WorkerHost {
     }
   }
 
+  private getRequestId(job: Job<VFJobData>): string {
+    return String(job.id ?? `${job.data.action}:${job.data.projectId}`);
+  }
+
+  private buildJobMetadata(
+    job: Job<VFJobData>,
+    extra: Record<string, any> = {},
+  ): Record<string, any> {
+    return {
+      requestId: this.getRequestId(job),
+      vfAction: job.data.action,
+      projectId: job.data.projectId,
+      ...extra,
+    };
+  }
+
   private async processGenerateRef(job: Job<VFJobData>) {
     const { projectId, userId, characterId } = job.data;
     if (!characterId) throw new Error('characterId missing');
 
-    const project = await this.visualFlowService.findOneProject(projectId, userId);
-    const char = project.characters?.find(c => c.id === characterId);
+    const project = await this.visualFlowService.findOneProject(
+      projectId,
+      userId,
+    );
+    const char = project.characters?.find((c) => c.id === characterId);
     if (!char) throw new Error(`Character ${characterId} not found`);
 
     try {
       char.refStatus = 'PROCESSING';
       await this.visualFlowService.saveCharacter(char);
 
-      this.eventsService.emitCharacterUpdate(projectId, char.id, { refStatus: 'PROCESSING' });
+      this.eventsService.emitCharacterUpdate(projectId, char.id, {
+        refStatus: 'PROCESSING',
+      });
 
       // Generate Image
-      const generation = await this.generationsService.generateImage({
-        prompt: char.description
-          ? `Reference portrait of: ${char.description}. Clean studio background, no text.`
-          : `Reference image of ${char.name}`,
-        aspectRatio: '1:1',
-        quality: 'hd',
-        metadata: {
-          vfAction: 'generate_ref',
-          characterId: char.id,
+      const generation = await this.generationsService.generateImage(
+        {
+          prompt: char.description
+            ? `Reference portrait of: ${char.description}. Clean studio background, no text.`
+            : `Reference image of ${char.name}`,
+          aspectRatio: '1:1',
+          quality: 'hd',
+          metadata: this.buildJobMetadata(job, { characterId: char.id }),
         },
-      }, userId, projectId);
+        userId,
+        projectId,
+      );
 
       // We wait for it if it returns completed synchronously, otherwise we'd need callback polling.
       // Assuming generateImage returns immediately but we can mock completion:
-      char.refStatus = generation.status === 'completed' ? 'COMPLETED' : 'PROCESSING';
+      char.refStatus =
+        generation.status === 'completed' ? 'COMPLETED' : 'PROCESSING';
       if (generation.resultUrl) {
         char.referenceImageUrl = generation.resultUrl;
         char.mediaId = generation.id;
         char.refStatus = 'COMPLETED';
       }
-      
+
       await this.visualFlowService.saveCharacter(char);
 
       this.eventsService.emitCharacterUpdate(projectId, char.id, {
@@ -89,7 +114,9 @@ export class VisualFlowProcessor extends WorkerHost {
 
       return { characterId: char.id, status: char.refStatus };
     } catch (err: any) {
-      this.logger.error(`Failed to generate ref for character ${char.id}: ${err.message}`);
+      this.logger.error(
+        `Failed to generate ref for character ${char.id}: ${err.message}`,
+      );
       char.refStatus = 'FAILED';
       await this.visualFlowService.saveCharacter(char);
       this.eventsService.emitCharacterUpdate(projectId, char.id, {
@@ -101,15 +128,17 @@ export class VisualFlowProcessor extends WorkerHost {
   }
 
   private async processGenerateSceneImage(job: Job<VFJobData>) {
-    const { projectId, videoId, userId, sceneId, orientation, prompt } = job.data;
-    if (!sceneId || !videoId || !orientation || !prompt) throw new Error('Missing params');
+    const { projectId, videoId, userId, sceneId, orientation, prompt } =
+      job.data;
+    if (!sceneId || !videoId || !orientation || !prompt)
+      throw new Error('Missing params');
 
     const scenes = await this.visualFlowService.getScenes(videoId);
-    const scene = scenes.find(s => s.id === sceneId);
+    const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) throw new Error(`Scene ${sceneId} not found`);
 
     const isVertical = orientation === 'VERTICAL';
-    
+
     try {
       if (isVertical) {
         scene.verticalImageStatus = 'PROCESSING';
@@ -123,17 +152,20 @@ export class VisualFlowProcessor extends WorkerHost {
         horizontalImageStatus: scene.horizontalImageStatus,
       });
 
-      const generation = await this.generationsService.generateImage({
-        prompt,
-        aspectRatio: isVertical ? '9:16' : '16:9',
-        quality: 'hd',
-        metadata: {
-          vfAction: 'generate_scene_image',
-          videoId,
-          sceneId: scene.id,
-          orientation,
+      const generation = await this.generationsService.generateImage(
+        {
+          prompt,
+          aspectRatio: isVertical ? '9:16' : '16:9',
+          quality: 'hd',
+          metadata: this.buildJobMetadata(job, {
+            videoId,
+            sceneId: scene.id,
+            orientation,
+          }),
         },
-      }, userId, projectId);
+        userId,
+        projectId,
+      );
 
       if (isVertical) {
         scene.verticalMediaId = generation.id;
@@ -174,15 +206,17 @@ export class VisualFlowProcessor extends WorkerHost {
   }
 
   private async processGenerateSceneVideo(job: Job<VFJobData>) {
-    const { projectId, videoId, userId, sceneId, orientation, prompt } = job.data;
-    if (!sceneId || !videoId || !orientation || !prompt) throw new Error('Missing params');
+    const { projectId, videoId, userId, sceneId, orientation, prompt } =
+      job.data;
+    if (!sceneId || !videoId || !orientation || !prompt)
+      throw new Error('Missing params');
 
     const scenes = await this.visualFlowService.getScenes(videoId);
-    const scene = scenes.find(s => s.id === sceneId);
+    const scene = scenes.find((s) => s.id === sceneId);
     if (!scene) throw new Error(`Scene ${sceneId} not found`);
 
     const isVertical = orientation === 'VERTICAL';
-    
+
     try {
       if (isVertical) {
         scene.verticalVideoStatus = 'PROCESSING';
@@ -196,19 +230,24 @@ export class VisualFlowProcessor extends WorkerHost {
         horizontalVideoStatus: scene.horizontalVideoStatus,
       });
 
-      const startImageUrl = isVertical ? scene.verticalImageUrl : scene.horizontalImageUrl;
+      const startImageUrl = isVertical
+        ? scene.verticalImageUrl
+        : scene.horizontalImageUrl;
 
-      const generation = await this.generationsService.generateVideo({
-        prompt: prompt,
-        aspectRatio: isVertical ? '9:16' : '16:9',
-        startImageUrl: startImageUrl,
-        metadata: {
-          vfAction: 'generate_scene_video',
-          videoId,
-          sceneId: scene.id,
-          orientation,
+      const generation = await this.generationsService.generateVideo(
+        {
+          prompt: prompt,
+          aspectRatio: isVertical ? '9:16' : '16:9',
+          startImageUrl: startImageUrl,
+          metadata: this.buildJobMetadata(job, {
+            videoId,
+            sceneId: scene.id,
+            orientation,
+          }),
         },
-      }, userId, projectId);
+        userId,
+        projectId,
+      );
 
       if (isVertical) {
         scene.verticalVideoMediaId = generation.id;
@@ -254,7 +293,20 @@ export class VisualFlowProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job, error: Error) {
+  async onFailed(job: Job, error: Error) {
     this.logger.error(`VF Job ${job.id} failed: ${error.message}`);
+    await this.queueReliabilityService.archiveFailure(
+      VISUAL_FLOW_QUEUE,
+      job,
+      error,
+      {
+        action: job.data.action,
+        projectId: job.data.projectId,
+        userId: job.data.userId,
+        videoId: job.data.videoId,
+        characterId: job.data.characterId,
+        sceneId: job.data.sceneId,
+      },
+    );
   }
 }

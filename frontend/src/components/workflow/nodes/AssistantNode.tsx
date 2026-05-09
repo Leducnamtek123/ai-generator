@@ -89,10 +89,10 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                                 className="w-full flex items-center justify-between px-3 py-2 bg-gradient-to-r from-amber-900/20 to-orange-900/20 border border-amber-500/20 rounded-lg text-sm text-amber-400 hover:text-amber-300 transition-colors"
                             >
                                 <div className="flex items-center gap-2">
-                                    <Sparkles className="w-4 h-4" />
+                                    <Sparkles className="size-4" />
                                     <span>{currentMode.name}</span>
                                 </div>
-                                <ChevronDown className="w-4 h-4" />
+                                <ChevronDown className="size-4" />
                             </button>
                             {showModeDropdown && (
                                 <div className="absolute top-full left-0 right-0 mt-1 bg-popover border border-border rounded-lg overflow-hidden z-50 shadow-xl">
@@ -132,7 +132,7 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                                     className="p-1 text-muted-foreground hover:text-foreground transition-colors"
                                     title="Copy"
                                 >
-                                    <Copy className="w-3 h-3" />
+                                    <Copy className="size-3" />
                                 </button>
                             )}
                         </div>
@@ -141,7 +141,7 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                                 <div className="flex items-center gap-2 text-amber-500">
                                     <div className="relative">
                                         <div className="absolute inset-0 border border-amber-500/20 rounded-full animate-ping" />
-                                        <Loader2 className="w-4 h-4 animate-spin relative z-10" />
+                                        <Loader2 className="size-4 animate-spin relative z-10" />
                                     </div>
                                     <span className="animate-pulse">{data.status === NodeStatus.QUEUED ? 'In Queue...' : 'Enhancing prompt...'}</span>
                                 </div>
@@ -162,12 +162,12 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                         >
                             {isGenerating || data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                                 <>
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <Loader2 className="size-4 animate-spin" />
                                     {isGenerating ? 'Enhancing...' : data.status === NodeStatus.QUEUED ? 'Queued...' : 'Processing...'}
                                 </>
                             ) : (
                                 <>
-                                    <Sparkles className="w-4 h-4" />
+                                    <Sparkles className="size-4" />
                                     Enhance
                                 </>
                             )}

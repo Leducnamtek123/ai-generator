@@ -8,6 +8,7 @@ export interface ProcessorContext {
   userId: string;
   nodeInputs: Map<string, any>;
   projectId?: string;
+  runId: string;
 }
 
 /**

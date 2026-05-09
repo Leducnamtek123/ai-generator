@@ -52,6 +52,25 @@ import { Throttle } from '@nestjs/throttler';
 export class GenerationsController {
   constructor(private readonly generationsService: GenerationsService) {}
 
+  private withRequestMetadata<T extends Record<string, any>>(
+    dto: T,
+    req?: { requestId?: string },
+  ): T & { metadata?: Record<string, any> } {
+    const requestId = req?.requestId?.trim();
+
+    if (!requestId) {
+      return dto;
+    }
+
+    return {
+      ...dto,
+      metadata: {
+        ...(dto.metadata ?? {}),
+        requestId,
+      },
+    } as T;
+  }
+
   @Get()
   @UseGuards(AuthGuard(['jwt', 'api-key']))
   @ApiBearerAuth()
@@ -111,9 +130,13 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Generation started' })
   async generateImage(
     @Body() dto: GenerateImageDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.generateImage(dto, String(user.id));
+    return this.generationsService.generateImage(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+    );
   }
 
   @Post('video')
@@ -124,9 +147,13 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Generation started' })
   async generateVideo(
     @Body() dto: GenerateVideoDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.generateVideo(dto, String(user.id));
+    return this.generationsService.generateVideo(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+    );
   }
 
   @Post('upscale')
@@ -137,9 +164,13 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Upscale started' })
   async upscaleImage(
     @Body() dto: UpscaleImageDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.upscaleImage(dto, String(user.id));
+    return this.generationsService.upscaleImage(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+    );
   }
 
   @Post('enhance-prompt')
@@ -169,9 +200,14 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Music generation started' })
   async generateMusic(
     @Body() dto: GenerateMusicDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.generateAudio(dto, String(user.id), 'music');
+    return this.generationsService.generateAudio(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+      'music',
+    );
   }
 
   @Post('sfx')
@@ -182,9 +218,14 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'SFX generation started' })
   async generateSfx(
     @Body() dto: GenerateSfxDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.generateAudio(dto, String(user.id), 'sfx');
+    return this.generationsService.generateAudio(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+      'sfx',
+    );
   }
 
   @Post('voice')
@@ -195,9 +236,14 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Voice generation started' })
   async generateVoice(
     @Body() dto: GenerateVoiceDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.generateAudio(dto, String(user.id), 'voice');
+    return this.generationsService.generateAudio(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+      'voice',
+    );
   }
 
   // ======== Video Processing Endpoints ========
@@ -210,10 +256,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Lip sync processing started' })
   async lipSync(
     @Body() dto: LipSyncDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processVideo(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'lip-sync',
     );
@@ -227,10 +274,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Video upscale started' })
   async upscaleVideo(
     @Body() dto: UpscaleVideoDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processVideo(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'video-upscale',
     );
@@ -246,10 +294,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Background removal started' })
   async removeBackground(
     @Body() dto: RemoveBackgroundDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'bg-remove',
     );
@@ -266,10 +315,11 @@ export class GenerationsController {
   })
   async sketchToImage(
     @Body() dto: SketchToImageDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'sketch-to-image',
     );
@@ -283,10 +333,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Image variations started' })
   async imageVariations(
     @Body() dto: ImageVariationsDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'variations',
     );
@@ -300,10 +351,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Camera change started' })
   async cameraChange(
     @Body() dto: CameraChangeDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'camera-change',
     );
@@ -317,10 +369,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Icon generation started' })
   async iconGenerator(
     @Body() dto: IconGeneratorDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'icon-gen',
     );
@@ -334,10 +387,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Image extension started' })
   async imageExtend(
     @Body() dto: ImageExtendDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'image-extend',
     );
@@ -351,9 +405,14 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Mockup generation started' })
   async mockupGenerator(
     @Body() dto: MockupGeneratorDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
-    return this.generationsService.processImage(dto, String(user.id), 'mockup');
+    return this.generationsService.processImage(
+      this.withRequestMetadata(dto, req),
+      String(user.id),
+      'mockup',
+    );
   }
 
   @Post('skin-enhance')
@@ -364,10 +423,11 @@ export class GenerationsController {
   @ApiResponse({ status: 201, description: 'Skin enhancement started' })
   async skinEnhance(
     @Body() dto: SkinEnhanceDto,
+    @Request() req: any,
     @CurrentUser() user: AuthenticatedUser,
   ) {
     return this.generationsService.processImage(
-      dto,
+      this.withRequestMetadata(dto, req),
       String(user.id),
       'skin-enhance',
     );

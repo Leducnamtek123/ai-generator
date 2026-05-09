@@ -9,7 +9,34 @@ import {
   PipelineStatus,
   EntityType,
   ChainType,
+  SceneStatus,
 } from '@/services/visualFlowApi';
+
+const extractApiErrorMessage = (error: unknown) => {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const response = error as {
+      response?: { data?: { message?: unknown } };
+    };
+    const message = response.response?.data?.message;
+    if (Array.isArray(message)) {
+      return message.join(' ');
+    }
+    if (typeof message === 'string') {
+      return message;
+    }
+  }
+
+  return error instanceof Error ? error.message : String(error);
+};
+
+const isMissingRenderedVideoError = (error: unknown) => {
+  const message: string = extractApiErrorMessage(error);
+  return (
+    message.includes('No vertical videos found to concatenate') ||
+    message.includes('No horizontal videos found to concatenate') ||
+    message.includes('No videos found to concatenate')
+  );
+};
 
 // ─────────────────────────────────────────────
 // Types
@@ -84,6 +111,7 @@ interface VisualFlowState {
   concatScenes: (projectId: string, videoId: string, options?: {
 
     orientation?: 'VERTICAL' | 'HORIZONTAL';
+    sceneIds?: string[];
     musicUrl?: string;
     musicVolume?: number;
   }) => Promise<void>;
@@ -256,11 +284,53 @@ export const useVisualFlowStore = create<VisualFlowState>((set, get) => ({
   },
 
   addScene: async (projectId, data) => {
+    const tempId = `temp-scene-${Date.now()}`;
+    const tempScene: VisualScene = {
+      id: tempId,
+      videoId: data.videoId,
+      displayOrder: data.displayOrder ?? 0,
+      prompt: data.prompt,
+      videoPrompt: data.videoPrompt,
+      characterNames: data.characterNames ?? [],
+      chainType: (data.chainType ?? 'ROOT') as ChainType,
+      parentSceneId: data.parentSceneId,
+      verticalImageUrl: undefined,
+      verticalVideoUrl: undefined,
+      verticalMediaId: undefined,
+      verticalImageStatus: 'PENDING' as SceneStatus,
+      verticalVideoStatus: 'PENDING' as SceneStatus,
+      horizontalImageUrl: undefined,
+      horizontalVideoUrl: undefined,
+      horizontalMediaId: undefined,
+      horizontalImageStatus: 'PENDING' as SceneStatus,
+      horizontalVideoStatus: 'PENDING' as SceneStatus,
+      trimStart: undefined,
+      trimEnd: undefined,
+      duration: undefined,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    set((state) => ({
+      scenes: [...state.scenes, tempScene].sort((a, b) => a.displayOrder - b.displayOrder),
+    }));
+
     try {
       const scene = await visualFlowApi.scenes.create(projectId, data);
-      set((s) => ({ scenes: [...s.scenes, scene].sort((a, b) => a.displayOrder - b.displayOrder) }));
+      set((state) => ({
+        scenes: state.scenes
+          .filter((current) => current.id !== tempId)
+          .concat(scene)
+          .sort((a, b) => a.displayOrder - b.displayOrder),
+      }));
+      // Keep the just-created scene visible immediately.
+      // A follow-up reconnect or explicit refresh will reconcile with the backend.
+      void get().loadPipelineStatus(projectId, data.videoId);
       toast.success('Scene added');
     } catch (error) {
+      set((state) => ({
+        scenes: state.scenes.filter((current) => current.id !== tempId),
+      }));
       console.error('Failed to add scene', error);
       toast.error('Failed to add scene');
     }
@@ -366,15 +436,38 @@ export const useVisualFlowStore = create<VisualFlowState>((set, get) => ({
   },
 
   concatScenes: async (projectId, videoId, options) => {
-
     set({ runningStep: 'concat' });
     try {
       await visualFlowApi.pipeline.concat(projectId, videoId, options);
       toast.success('Video concatenation complete');
       await get().loadPipelineStatus(projectId, videoId);
     } catch (error) {
+      if (isMissingRenderedVideoError(error)) {
+        try {
+          await visualFlowApi.pipeline.slideshow(projectId, videoId, {
+            orientation: options?.orientation,
+            sceneIds: options?.sceneIds,
+            musicUrl: options?.musicUrl,
+            musicVolume: options?.musicVolume,
+            zoomEffect: true,
+          });
+          toast.success(
+            'No rendered clips were ready yet, so a slideshow export was created instead.',
+          );
+          await get().loadPipelineStatus(projectId, videoId);
+          set({ runningStep: null });
+          return;
+        } catch (fallbackError) {
+          console.error('Failed to create slideshow fallback', fallbackError);
+        }
+      }
+
       console.error('Failed to concat scenes', error);
-      toast.error('Failed to concatenate scenes');
+      toast.error(
+        isMissingRenderedVideoError(error)
+          ? 'No rendered scene videos were ready yet. Generate videos first or use the slideshow export.'
+          : 'Failed to concatenate scenes',
+      );
     }
     set({ runningStep: null });
   },

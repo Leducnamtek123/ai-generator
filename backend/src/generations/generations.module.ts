@@ -11,6 +11,7 @@ import { VideoGenerationService } from './services/video-generation.service';
 import { AudioGenerationService } from './services/audio-generation.service';
 import { GenerationEventsService } from './services/generation-events.service';
 import { BillingClientModule } from '../billing-client/billing-client.module';
+import { ProjectsModule } from '../projects/projects.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { BillingClientModule } from '../billing-client/billing-client.module';
     ProvidersModule,
     AssetsModule,
     BillingClientModule,
+    ProjectsModule,
   ],
   controllers: [GenerationsController],
   providers: [

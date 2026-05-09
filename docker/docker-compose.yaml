@@ -95,6 +95,14 @@ services:
       - ./comfyui/manager:/opt/comfyui-manager
       - ./comfyui/output:/opt/comfyui/output
 
+  maildev:
+    container_name: ai-generator-maildev
+    image: maildev/maildev:latest
+    restart: unless-stopped
+    ports:
+      - "1025:1025"
+      - "1080:1080"
+
   # billing-service:
   #   container_name: ai-generator-billing-service
   #   build:

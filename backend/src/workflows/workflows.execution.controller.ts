@@ -1,5 +1,6 @@
 import {
   Controller,
+  Get,
   Post,
   Param,
   UseGuards,
@@ -38,8 +39,6 @@ export class WorkflowsExecutionController {
       throw new NotFoundException('Workflow not found');
     }
 
-
-
     // Use provided graph or fallback to stored graph (if we store JSON in DB)
     // For now, we expect the frontend to send the latest graph state
     const graph: WorkflowGraph = body.graph || {
@@ -57,5 +56,12 @@ export class WorkflowsExecutionController {
       graph.nodes,
       graph.edges,
     );
+  }
+
+  @UseGuards(AuthGuard('jwt'))
+  @Get(':id/executions')
+  @ApiOperation({ summary: 'List workflow execution snapshots' })
+  getExecutions(@Request() req, @Param('id') id: string) {
+    return this.workflowsService.findExecutions(id, req.user.id);
   }
 }

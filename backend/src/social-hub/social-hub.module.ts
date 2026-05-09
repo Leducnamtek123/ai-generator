@@ -3,13 +3,12 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { SocialAccountEntity } from './infrastructure/persistence/relational/entities/social-account.entity';
+import { FacebookPendingConnectionEntity } from './infrastructure/persistence/relational/entities/facebook-pending-connection.entity';
 import { SocialPostEntity } from './infrastructure/persistence/relational/entities/social-post.entity';
 import { SocialPostMetricEntity } from './infrastructure/persistence/relational/entities/social-post-metric.entity';
 
 import { HttpModule } from '@nestjs/axios';
-import { BullModule } from '@nestjs/bullmq';
 // Token refresh uses BullMQ repeatable jobs instead of @nestjs/schedule
-import { SOCIAL_POSTING_QUEUE, SOCIAL_ANALYTICS_QUEUE } from '../queues/queues.constants';
 import { SocialPostingProcessor } from './queues/social-posting.processor';
 import { SocialAnalyticsProcessor } from './queues/social-analytics.processor';
 import { SocialAnalyticsService } from './services/social-analytics.service';
@@ -26,6 +25,7 @@ import { PublishingService } from './services/publishing.service';
 import { SocialHubGateway } from './gateways/social-hub.gateway';
 import { AllConfigType } from '../config/config.type';
 import { NotificationsModule } from '../notifications/notifications.module';
+import { QueuesModule } from '../queues/queues.module';
 
 import { MessengerService } from './services/messenger.service';
 import { FacebookMessengerController } from './controllers/facebook-messenger.controller';
@@ -34,15 +34,10 @@ import { FacebookMessengerController } from './controllers/facebook-messenger.co
   imports: [
     TypeOrmModule.forFeature([
       SocialAccountEntity,
+      FacebookPendingConnectionEntity,
       SocialPostEntity,
       SocialPostMetricEntity,
     ]),
-    BullModule.registerQueue({
-      name: SOCIAL_POSTING_QUEUE,
-    }),
-    BullModule.registerQueue({
-      name: SOCIAL_ANALYTICS_QUEUE,
-    }),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -56,6 +51,7 @@ import { FacebookMessengerController } from './controllers/facebook-messenger.co
     HttpModule,
     ConfigModule,
     NotificationsModule,
+    QueuesModule,
   ],
   controllers: [
     SocialHubController,

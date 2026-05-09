@@ -29,7 +29,7 @@ export function TemplateGallery({ hidePagination = false }: TemplateGalleryProps
     if (isLoading) {
         return (
             <div className="flex justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                <Loader2 className="size-8 animate-spin text-muted-foreground" />
             </div>
         );
     }

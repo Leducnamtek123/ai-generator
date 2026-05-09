@@ -2,7 +2,7 @@
 
 ## Status
 
-in_progress
+implemented
 
 ## Lane
 
@@ -61,7 +61,7 @@ in-app, and admin alert channels per notification category.
 | Integration | Backend endpoints persist preferences and create notifications from real domain events. |
 | E2E | Settings page saves toggles and inbox reflects category-labeled events. |
 | Platform | N/A |
-| Release | Build and typecheck on both apps. |
+| Release | Build and typecheck on both apps, with browser verification on notifications and settings notification surfaces. |
 
 ## Harness Delta
 
@@ -71,5 +71,9 @@ in-app, and admin alert channels per notification category.
 
 ## Evidence
 
-- Pending validation.
-
+- `backend/src/notifications/notifications.service.ts` owns real notification dispatch, unread counts, mark-read flows, and per-category preference persistence.
+- `backend/src/notifications/notifications.controller.ts` exposes the live `GET /notifications`, `GET /notifications/unread-count`, `GET /notifications/preferences`, `PATCH /notifications/preferences`, `PATCH /notifications/:id/read`, and `PATCH /notifications/mark-all-read` routes.
+- `backend/src/workflows/workflows.service.ts`, `backend/src/payments/payments.service.ts`, `backend/src/social-hub/services/channels.service.ts`, and `backend/src/admin/admin-catalog.service.ts` already call `notifyUser()` from real product events.
+- `frontend/src/services/notificationApi.ts`, `frontend/src/app/[locale]/(dashboard)/settings/page.tsx`, and `frontend/src/app/[locale]/(dashboard)/notifications/page.tsx` are wired to the live notification contract.
+- `frontend` `npm run typecheck`, `frontend` `npm run build`, and `backend` `npm run build` passed in this sweep.
+- Browser verification covered the notifications inbox and the Settings `Notifications` tab, including the live category toggles, unread count, inbox shortcut, and save preferences action.

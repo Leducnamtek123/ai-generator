@@ -1,0 +1,228 @@
+{
+  "Settings": {
+    "title": "Settings",
+    "tabs": {
+      "profile": "Profile",
+      "account": "Account",
+      "billing": "Billing",
+      "notifications": "Notifications",
+      "apiKeys": "API Keys"
+    },
+    "toasts": {
+      "paymentPaid": "{provider} payment completed",
+      "paymentPending": "{provider} payment is pending",
+      "paymentFailed": "{provider} payment failed",
+      "paymentCompleted": "{provider} payment finished",
+      "socialConnectedPlatform": "{platform} connected successfully",
+      "socialConnected": "Social channel connected successfully",
+      "socialConnectPlatformFailed": "Failed to connect {platform}",
+      "socialConnectFailed": "Failed to connect social channel"
+    },
+    "profile": {
+      "title": "Profile",
+      "description": "Manage your public profile information.",
+      "photoLabel": "Profile photo",
+      "photoHint": "Use your Google avatar if available, or upload a new one to MinIO.",
+      "firstNameLabel": "First Name",
+      "firstNamePlaceholder": "John",
+      "lastNameLabel": "Last Name",
+      "lastNamePlaceholder": "Doe",
+      "emailLabel": "Email",
+      "emailPlaceholder": "john@example.com",
+      "save": "Save Changes",
+      "toasts": {
+        "updated": "Profile updated",
+        "updateFailed": "Failed to update profile",
+        "avatarUpdated": "Avatar updated",
+        "avatarUpdateFailed": "Failed to update avatar"
+      }
+    },
+    "account": {
+      "title": "Account",
+      "description": "Manage your account security.",
+      "changePassword": "Change Password",
+      "currentPassword": "Current Password",
+      "newPassword": "New Password",
+      "confirmPassword": "Confirm New Password",
+      "updatingPassword": "Updating...",
+      "updatePassword": "Update Password",
+      "connectedAccounts": "Connected Social Accounts",
+      "refresh": "Refresh",
+      "loading": "Loading...",
+      "disconnect": "Disconnect",
+      "connect": "Connect",
+      "webhookConfigurationTitle": "Webhook Configuration (for Messenger/Feed)",
+      "webhookUrl": "Webhook URL",
+      "copy": "Copy",
+      "copiedUrl": "Copied URL",
+      "verifyToken": "Verify Token",
+      "copiedToken": "Copied Token",
+      "dangerZone": "Danger Zone",
+      "dangerZoneDescription": "Once deleted, your account cannot be recovered.",
+      "signOut": "Sign Out",
+      "deleteAccount": "Delete Account",
+      "deleteConfirmTitle": "Delete account permanently?",
+      "deleteConfirmDescription": "This action cannot be undone. Your account and associated data will be removed.",
+      "deleteConfirmAction": "Delete Account",
+      "facebookDialog": {
+        "title": "Connect Facebook Page",
+        "description": "Enter your Meta App ID and App Secret to start the connection process.",
+        "appId": "Facebook App ID",
+        "appIdPlaceholder": "123456789012345",
+        "appSecret": "Facebook App Secret",
+        "appSecretPlaceholder": "••••••••••••••••••••",
+        "cancel": "Cancel",
+        "connect": "Connect & Authorize"
+      },
+      "toasts": {
+        "loadConnectedAccountsFailed": "Failed to load connected accounts",
+        "passwordFieldsRequired": "Please fill all password fields.",
+        "passwordMismatch": "New password and confirmation do not match.",
+        "passwordUpdated": "Password updated.",
+        "passwordUpdateFailed": "Failed to update password",
+        "providerConnectionFailed": "Failed to start provider connection.",
+        "facebookAppIdRequired": "Please enter your Facebook App ID",
+        "facebookAppSecretRequired": "Please enter your Facebook App Secret",
+        "disconnecting": "Disconnecting...",
+        "disconnected": "Disconnected",
+        "disconnectFailed": "Failed to disconnect",
+        "accountDeleted": "Account deleted",
+        "deleteAccountFailed": "Failed to delete account"
+      }
+    },
+    "billing": {
+      "title": "Plan & billing",
+      "description": "Pick and activate plans here without leaving settings.",
+      "subscriptionLabel": "Subscription",
+      "noActiveSubscription": "No active subscription",
+      "freeStatus": "free",
+      "topUpOnly": "Top-up credits only - purchase a plan to activate subscription benefits",
+      "noSubscriptionNoCredits": "No subscription and no credits yet",
+      "refreshing": "Refreshing...",
+      "refresh": "Refresh",
+      "spendableCredits": "Spendable credits",
+      "includedCredits": "included",
+      "topUp": "top-up",
+      "compareScope": "Compare by billing scope",
+      "noPlanData": "Pricing data is temporarily unavailable for this segment.",
+      "featured": "Featured",
+      "plan": "plan",
+      "active": "Active",
+      "creditsIncluded": "credits included",
+      "approximateUsage": "Approximate usage",
+      "freeTrial": "Free trial on sign-up",
+      "processing": "Processing...",
+      "workspacePlansNote": "Workspace plans are available here too. Switch to the Workspace tab when you need shared credits or org seats instead of a personal subscription.",
+      "topUpCreditsTitle": "Optional top-up credits",
+      "credits": "credits",
+      "buyTopUp": "Buy top-up",
+      "creditCostGuide": {
+        "title": "Credit cost guide",
+        "description": "This is the rule of thumb for how credits are spent across tools."
+      },
+      "creditUnit": "{count, plural, one {credit} other {credits}}",
+      "topUpNoticeTitle": "Top-up credits do not change your subscription plan.",
+      "topUpNoticeDescription": "If you want the sidebar and plan card to stop showing Free, choose one of the subscription plans above.",
+      "noRenewalScheduled": "No renewal scheduled",
+      "segment": {
+        "individual": {
+          "label": "Individual",
+          "title": "Personal billing",
+          "description": "One owner, one wallet, one clear monthly quota."
+        },
+        "team": {
+          "label": "Workspace",
+          "title": "Team billing",
+          "description": "Shared credits, included seats, and workspace controls."
+        }
+      },
+      "toasts": {
+        "loadFailed": "Failed to load billing summary",
+        "paymentUrlMissing": "Failed to create payment URL",
+        "checkoutFailed": "Failed to initialize payment"
+      }
+    },
+    "notifications": {
+      "title": "Notifications",
+      "description": "Control which event families land in email, the inbox, and admin alert views.",
+      "refresh": "Refresh",
+      "openInbox": "Open inbox",
+      "unread": "Unread",
+      "unreadDescription": "Messages waiting in the in-app inbox.",
+      "channels": "Channels",
+      "channelsDescription": "Payment, workflow, social, moderation, and system categories.",
+      "adminAlerts": "Admin alerts",
+      "adminAlertsDescription": "Per-category controls for admin-facing moderation notices are saved here too.",
+      "restoreDefaults": "Restore defaults",
+      "table": {
+        "type": "Type",
+        "email": "Email",
+        "inApp": "In-app",
+        "adminAlerts": "Admin alerts"
+      },
+      "actions": {
+        "sendEmail": "Send email",
+        "showInInbox": "Show in inbox",
+        "adminAlert": "Admin alert"
+      },
+      "markAllRead": "Mark All as Read",
+      "savePreferences": "Save Preferences",
+      "categories": {
+        "payment": {
+          "label": "Payment",
+          "description": "Checkout outcomes, refunds, and credit balance changes."
+        },
+        "workflow": {
+          "label": "Workflow",
+          "description": "Execution completion, queue updates, and generation failures."
+        },
+        "social": {
+          "label": "Social",
+          "description": "Account connections, disconnects, and publishing activity."
+        },
+        "moderation": {
+          "label": "Moderation",
+          "description": "Template review, approval, and admin moderation actions."
+        },
+        "system": {
+          "label": "System",
+          "description": "Platform-wide notices and operational alerts."
+        }
+      },
+      "toasts": {
+        "loadFailed": "Failed to load notification settings",
+        "markAllReadSuccess": "All notifications marked as read",
+        "markAllReadFailed": "Failed to mark all read",
+        "saveSuccess": "Notification preferences saved",
+        "saveFailed": "Failed to save notification preferences"
+      }
+    },
+    "apiKeys": {
+      "title": "Developer & MCP Settings",
+      "description": "Manage your API keys to connect with external AI agents via Model Context Protocol (MCP).",
+      "newKeyName": "New Key Name",
+      "newKeyNamePlaceholder": "e.g. Claude Desktop",
+      "generate": "Generate New Key",
+      "yourKeys": "Your API Keys",
+      "noKeys": "No API keys found.",
+      "untitledKey": "Untitled Key",
+      "revoke": "Revoke",
+      "storedSecurely": "Stored securely",
+      "created": "Created",
+      "lastUsed": "Last used",
+      "never": "Never",
+      "mcpTitle": "MCP Connection Info",
+      "mcpDescription": "To connect your AI agents (like Claude Desktop) to this platform, use the following configuration in your",
+      "copyConfig": "Copy Config",
+      "viewDocs": "View full documentation →",
+      "toasts": {
+        "nameRequired": "Please enter a name for the key",
+        "generateSuccess": "API Key generated successfully",
+        "generateFailed": "Failed to generate API Key",
+        "revokeSuccess": "API Key revoked",
+        "revokeFailed": "Failed to revoke API Key",
+        "copied": "Copied to clipboard"
+      }
+    }
+  }
+}

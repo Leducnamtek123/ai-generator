@@ -28,6 +28,10 @@ function isAdminRoute(pathname: string): boolean {
   return pathname === "/admin" || pathname.startsWith("/admin/");
 }
 
+function isWorkflowEditorAlias(pathname: string): boolean {
+  return pathname === "/workflow-editor" || pathname === "/spaces";
+}
+
 function getRedirectUrl(req: NextRequest, pathname: string) {
   const url = req.nextUrl.clone();
   url.pathname = pathname;
@@ -39,6 +43,13 @@ function getRedirectUrl(req: NextRequest, pathname: string) {
 // Manually get session.
 export default async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
+
+  if (isWorkflowEditorAlias(pathname)) {
+    const url = req.nextUrl.clone();
+    const locale = req.cookies.get("NEXT_LOCALE")?.value || routing.defaultLocale;
+    url.pathname = `/${locale}/creator/workflow-editor`;
+    return NextResponse.rewrite(url);
+  }
 
   if (isAdminRoute(pathname)) {
     const token = await getToken({ req, secret: process.env.AUTH_SECRET });
@@ -113,10 +124,6 @@ export default async function proxy(req: NextRequest) {
         headers.set("authorization", `Bearer ${accessToken}`);
       }
     }
-
-    console.log(
-      `[PROXY] Forwarding ${pathname} to ${url.toString()} with AuthHeader: ${headers.has("authorization")}`
-    );
 
     return NextResponse.rewrite(url, {
       request: {

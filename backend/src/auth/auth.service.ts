@@ -1,11 +1,9 @@
 import {
   HttpStatus,
   Injectable,
-  NotFoundException,
   UnauthorizedException,
   UnprocessableEntityException,
 } from '@nestjs/common';
-import ms from 'ms';
 import crypto from 'crypto';
 import { randomStringGenerator } from '@nestjs/common/utils/random-string-generator.util';
 import { JwtService } from '@nestjs/jwt';
@@ -24,8 +22,6 @@ import { UsersService } from '../users/users.service';
 import { AllConfigType } from '../config/config.type';
 import { MailService } from '../mail/mail.service';
 import { RoleEnum } from '../roles/roles.enum';
-import { OrganizationsService } from '../organizations/organizations.service';
-import { Session } from '../session/domain/session';
 import { SessionService } from '../session/session.service';
 import { StatusEnum } from '../statuses/statuses.enum';
 import { User } from '../users/domain/user';
@@ -47,6 +43,17 @@ export class AuthService {
     private authProvisioningService: AuthProvisioningService,
     private authPasswordService: AuthPasswordService,
   ) {}
+
+  private assertUserIsActive(user: User) {
+    if (user?.status?.id?.toString() !== StatusEnum.active.toString()) {
+      throw new UnprocessableEntityException({
+        status: HttpStatus.UNPROCESSABLE_ENTITY,
+        errors: {
+          email: 'inactiveAccount',
+        },
+      });
+    }
+  }
 
   async validateLogin(loginDto: AuthEmailLoginDto): Promise<LoginResponseDto> {
     const user = await this.usersService.findByEmail(loginDto.email);
@@ -92,6 +99,8 @@ export class AuthService {
       });
     }
 
+    this.assertUserIsActive(user);
+
     const hash = crypto
       .createHash('sha256')
       .update(randomStringGenerator())
@@ -102,12 +111,13 @@ export class AuthService {
       hash,
     });
 
-    const { token, refreshToken, tokenExpires } = await this.authTokenService.getTokensData({
-      id: user.id,
-      role: user.role,
-      sessionId: session.id,
-      hash,
-    });
+    const { token, refreshToken, tokenExpires } =
+      await this.authTokenService.getTokensData({
+        id: user.id,
+        role: user.role,
+        sessionId: session.id,
+        hash,
+      });
 
     await this.authProvisioningService.provisionUser(user.id);
 
@@ -123,8 +133,12 @@ export class AuthService {
     authProvider: string,
     socialData: SocialInterface,
   ): Promise<LoginResponseDto> {
-    const user = await this.socialAuthService.getOrCreateUser(authProvider, socialData);
-    
+    const user = await this.socialAuthService.getOrCreateUser(
+      authProvider,
+      socialData,
+    );
+    this.assertUserIsActive(user);
+
     await this.authProvisioningService.provisionUser(user.id);
 
     const hash = crypto
@@ -333,18 +347,21 @@ export class AuthService {
       throw new UnauthorizedException();
     }
 
+    this.assertUserIsActive(user);
+
     await this.sessionService.update(session.id, {
       hash,
     });
 
-    const { token, refreshToken, tokenExpires } = await this.authTokenService.getTokensData({
-      id: session.user.id,
-      role: {
-        id: user.role.id,
-      },
-      sessionId: session.id,
-      hash,
-    });
+    const { token, refreshToken, tokenExpires } =
+      await this.authTokenService.getTokensData({
+        id: session.user.id,
+        role: {
+          id: user.role.id,
+        },
+        sessionId: session.id,
+        hash,
+      });
 
     return {
       token,
@@ -360,5 +377,4 @@ export class AuthService {
   async logout(data: Pick<JwtRefreshPayloadType, 'sessionId'>) {
     return this.sessionService.deleteById(data.sessionId);
   }
-
 }

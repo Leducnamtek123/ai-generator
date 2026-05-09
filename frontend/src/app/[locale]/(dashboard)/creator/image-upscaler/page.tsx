@@ -1,8 +1,11 @@
 'use client';
 
 import Image from 'next/image';
-import { useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useGenerationStore } from '@/stores/generation-store';
+import { mediaApi } from '@/services/mediaApi';
+import { projectApi } from '@/services/projectApi';
 import {
     Select,
     SelectContent,
@@ -42,6 +45,7 @@ import {
 import { toast } from 'sonner';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 import {
     UpscaleMode,
     UpscaleModel,
@@ -54,8 +58,7 @@ import { MediaPickerModal } from '@/components/common/MediaPickerModal';
 import { MediaItem } from '@/types/media';
 import { ReactCompareSlider, ReactCompareSliderImage } from 'react-compare-slider';
 import { PersonalGallery } from '@/components/upscaler/PersonalGallery';
-import { post } from '@/lib/api'; // Import post helper
-
+import { getUserFacingErrorMessage } from '@/lib/async-operation';
 const PRESETS = [
     { label: 'Subtle', value: 'subtle' },
     { label: 'Balanced', value: 'balanced' },
@@ -63,25 +66,145 @@ const PRESETS = [
     { label: 'Creative', value: 'creative' },
 ];
 
+const initialParams: UpscaleParams = {
+    mode: UpscaleMode.CREATIVE,
+    model: UpscaleModel.MAGNIFIC,
+    scale: UpscaleScale.X2,
+    optimization: UpscaleOptimization.STANDARD_ULTRA,
+    creativity: -3,
+    hdr: 0,
+    resemblance: 5,
+    fractality: 0,
+    engine: UpscaleEngine.AUTOMATIC,
+    prompt: '',
+};
+
+type ImageUpscalerSnapshot = {
+    uploadedImage: string | null;
+    previewImage: string | null;
+    resultImage: string | null;
+    params: UpscaleParams;
+};
+
+type ImageUpscalerProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<ImageUpscalerSnapshot>;
+};
+
+const normalizeImageUpscalerSnapshot = (value: unknown): Partial<ImageUpscalerSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+
+    return {
+        uploadedImage: typeof snapshot.uploadedImage === 'string' ? snapshot.uploadedImage : null,
+        previewImage: typeof snapshot.previewImage === 'string' ? snapshot.previewImage : null,
+        resultImage: typeof snapshot.resultImage === 'string' ? snapshot.resultImage : null,
+        params: (snapshot.params && typeof snapshot.params === 'object' ? snapshot.params : initialParams) as UpscaleParams,
+    };
+};
+
 export default function ImageUpscalerPage() {
     const { upscaleImage, isGenerating, currentGeneration, reset } = useGenerationStore();
-    const [params, setParams] = useState<UpscaleParams>({
-        mode: UpscaleMode.CREATIVE,
-        model: UpscaleModel.MAGNIFIC,
-        scale: UpscaleScale.X2,
-        optimization: UpscaleOptimization.STANDARD_ULTRA,
-        creativity: -3,
-        hdr: 0,
-        resemblance: 5,
-        fractality: 0,
-        engine: UpscaleEngine.AUTOMATIC,
-        prompt: ''
-    });
+    const [params, setParams] = useState<UpscaleParams>(initialParams);
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
 
     const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [restoredResultImage, setRestoredResultImage] = useState<string | null>(null);
     const [isMediaModalOpen, setIsMediaModalOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const previewObjectUrlRef = useRef<string | null>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
     const localUpscaledImage = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
+    const resultImage = localUpscaledImage ?? restoredResultImage;
+
+    useEffect(() => {
+        return () => {
+            if (previewObjectUrlRef.current?.startsWith('blob:')) {
+                URL.revokeObjectURL(previewObjectUrlRef.current);
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        const queryProjectId = searchParams.get('projectId');
+        if (queryProjectId) {
+            setProjectId(queryProjectId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrateFromSnapshot = (snapshot: Partial<ImageUpscalerSnapshot>) => {
+            setUploadedImage(snapshot.uploadedImage ?? null);
+            setPreviewSource(snapshot.previewImage ?? snapshot.uploadedImage ?? null);
+            setParams({ ...initialParams, ...(snapshot.params ?? {}) });
+            setRestoredResultImage(snapshot.resultImage ?? null);
+        };
+
+        const loadProject = async () => {
+            if (!projectId) {
+                try {
+                    const raw = localStorage.getItem('image-upscaler:draft');
+                    if (raw) {
+                        hydrateFromSnapshot(normalizeImageUpscalerSnapshot(JSON.parse(raw)));
+                    }
+                } catch (loadError) {
+                    console.error('Failed to restore image upscaler draft', loadError);
+                }
+                return;
+            }
+
+            setIsProjectLoading(true);
+            setProjectError(null);
+            try {
+                const project = await projectApi.get(projectId);
+                const rawContent = project.content as string | Record<string, unknown> | null | undefined;
+                const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+                if (!cancelled) {
+                    hydrateFromSnapshot(normalizeImageUpscalerSnapshot(parsed));
+                }
+            } catch (loadError) {
+                console.error('Failed to restore image upscaler project', loadError);
+                if (!cancelled) {
+                    setProjectError('Could not load the saved image upscaler project. Falling back to a local draft.');
+                    try {
+                        const raw = localStorage.getItem('image-upscaler:draft');
+                        if (raw) {
+                            hydrateFromSnapshot(normalizeImageUpscalerSnapshot(JSON.parse(raw)));
+                        }
+                    } catch (fallbackError) {
+                        console.error('Failed to restore image upscaler fallback', fallbackError);
+                    }
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        };
+
+        void loadProject();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+
+    const setPreviewSource = (nextPreview: string | null) => {
+        if (previewObjectUrlRef.current?.startsWith('blob:')) {
+            URL.revokeObjectURL(previewObjectUrlRef.current);
+        }
+
+        previewObjectUrlRef.current = nextPreview?.startsWith('blob:') ? nextPreview : null;
+        setPreviewImage(nextPreview);
+    };
 
     const updateParam = <K extends keyof UpscaleParams>(key: K, value: UpscaleParams[K]) => {
         setParams(prev => ({ ...prev, [key]: value }));
@@ -89,6 +212,7 @@ export default function ImageUpscalerPage() {
 
     const handleSelectImage = (media: MediaItem) => {
         setUploadedImage(media.url);
+        setPreviewSource(media.url);
         reset(); // Reset previous generation
         setIsMediaModalOpen(false);
     };
@@ -96,62 +220,118 @@ export default function ImageUpscalerPage() {
     const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            const url = URL.createObjectURL(file);
-            setUploadedImage(url);
             reset();
+            void (async () => {
+                const localPreviewUrl = URL.createObjectURL(file);
+                setPreviewSource(localPreviewUrl);
+                const uploaded = await mediaApi.uploadMedia(file);
+                if (!uploaded?.url) {
+                    toast.error('Upload failed. Please try again.');
+                    if (previewObjectUrlRef.current === localPreviewUrl) {
+                        setPreviewSource(null);
+                    }
+                    return;
+                }
+                setUploadedImage(uploaded.url);
+            })();
         }
     };
 
     const handleUpscale = async () => {
         if (!uploadedImage) return;
 
-        let imageUrlToUse = uploadedImage;
-
-        // If it's a local blob URL (new upload), upload it first
-        if (uploadedImage.startsWith('blob:')) {
-            try {
-                const formData = new FormData();
-                // We need to convert the blob URL back to a File object or use the fileInputRef if available.
-                // Since we don't persist the File object in state, let's fetch the blob and create a File.
-                const response = await fetch(uploadedImage);
-                const blob = await response.blob();
-                const file = new File([blob], "image.png", { type: blob.type });
-
-                formData.append('file', file);
-
-                // Use the configured API client (axios) which handles auth headers
-                // We need to import 'api' from '@/lib/api' or use fetch with token.
-                // Assuming 'api' is available or we use a direct fetch with session token if needed.
-                // Better: Use the api helper. 
-                // But api.post returns data, not full response. 
-                // Let's import { post } from '@/lib/api' and use that.
-
-                // We need to cast the response because our api wrapper types might be generic
-                const uploadResult = await post<{ path: string }>('/files/upload', formData, {
-                    headers: { 'Content-Type': 'multipart/form-data' }
-                });
-
-                if (uploadResult && uploadResult.path) {
-                    imageUrlToUse = uploadResult.path;
-                } else {
-                    console.error('Upload failed: No path returned');
-                    toast.error('Upload failed. Please try again.');
-                    return;
-                }
-            } catch (error) {
-                console.error("Failed to upload image:", error);
-                // Optionally set error state here using store or local state
-                return;
-            }
+        try {
+            await upscaleImage({
+                imageUrl: uploadedImage,
+                scale: Number(params.scale) || 2,
+                creativity: params.creativity,
+                hdr: params.hdr,
+                resemblance: params.resemblance,
+                model: params.model,
+                optimization: params.optimization,
+                engine: params.engine,
+                mode: params.mode,
+                prompt: params.prompt?.trim() || undefined,
+                fractality: params.fractality,
+            });
+        } catch (error) {
+            toast.error(getUserFacingErrorMessage(error, 'Failed to upscale image'));
         }
+    };
 
-        await upscaleImage({
-            imageUrl: imageUrlToUse,
-            scale: Number(params.scale) || 2,
-            creativity: params.creativity,
-            hdr: params.hdr,
-            resemblance: params.resemblance
-        });
+    const handleSave = () => {
+        const snapshot: Partial<ImageUpscalerSnapshot> = {
+            uploadedImage,
+            previewImage,
+            resultImage,
+            params,
+        };
+        const payload: ImageUpscalerProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot,
+        };
+
+        localStorage.setItem('image-upscaler:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Image Upscaler Draft',
+                        description: 'Image upscaler draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Image Upscaler Draft',
+                        description: 'Image upscaler draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                toast.success('Image upscaler saved to your projects.');
+            } catch (saveError) {
+                console.error('Failed to persist image upscaler project', saveError);
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExport = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            uploadedImage,
+            previewImage,
+            resultImage: localUpscaledImage,
+            params,
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'image-upscaler-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Image upscaler export created.');
+    };
+
+    const handleReset = () => {
+        reset();
+        setUploadedImage(null);
+        setParams(initialParams);
+        setPreviewSource(null);
+        setRestoredResultImage(null);
+        setProjectError(null);
     };
 
     const triggerUpload = () => {
@@ -159,12 +339,15 @@ export default function ImageUpscalerPage() {
     };
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             {/* Left Control Panel */}
             <div className="w-[340px] border-r border-border flex flex-col shrink-0 bg-background">
                 {/* Header - Aligned height h-14 */}
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Image Upscaler</h2>
+                    <h2 className="font-semibold text-muted-foreground">Image Upscaler</h2>
+                    <span className="text-xs text-muted-foreground">
+                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                    </span>
                 </div>
 
                 {/* Control Content */}
@@ -197,17 +380,24 @@ export default function ImageUpscalerPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <button
-                            type="button"
+                        <div
                             onClick={triggerUpload}
-                            className="group relative aspect-[4/3] rounded-2xl bg-muted border border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3"
+                            role="button"
+                            tabIndex={0}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    triggerUpload();
+                                }
+                            }}
+                            className="group relative aspect-[4/3] rounded-2xl bg-muted border border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3 outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         >
-                            {uploadedImage ? (
-                                <Image src={uploadedImage} alt="Preview" fill className="object-cover" sizes="(max-width: 768px) 100vw, 340px" />
+                            {previewImage ? (
+                                <Image src={previewImage} alt="Preview" fill className="object-cover" sizes="(max-width: 768px) 100vw, 340px" unoptimized />
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
-                                        <Upload className="w-6 h-6 text-muted-foreground group-hover:text-foreground" />
+                                    <div className="size-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
+                                        <Upload className="size-6 text-muted-foreground group-hover:text-foreground" />
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs font-medium text-foreground">Source Image</p>
@@ -219,18 +409,19 @@ export default function ImageUpscalerPage() {
                             {/* Library Overlay */}
                             <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                                 <Button
+                                    type="button"
                                     size="icon"
                                     variant="secondary"
-                                    className="w-8 h-8 rounded-lg"
+                                    className="size-8 rounded-lg"
                                     onClick={(e) => {
                                         e.stopPropagation();
                                         setIsMediaModalOpen(true);
                                     }}
                                 >
-                                    <Grid3X3 className="w-4 h-4" />
+                                    <Grid3X3 className="size-4" />
                                 </Button>
                             </div>
-                        </button>
+                        </div>
 
                         <input
                             type="file"
@@ -247,7 +438,7 @@ export default function ImageUpscalerPage() {
                         <div className="space-y-4">
                             <div className="space-y-2">
                                 <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2">
-                                    <Sparkles className="w-3 h-3" />
+                                    <Sparkles className="size-3" />
                                     Model
                                 </Label>
                                 <Select
@@ -330,7 +521,7 @@ export default function ImageUpscalerPage() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Creativity</span>
-                                        <Info className="w-3 h-3 text-muted-foreground" />
+                                        <Info className="size-3 text-muted-foreground" />
                                     </div>
                                     <span className="text-[11px] font-mono text-foreground">{params.creativity}</span>
                                 </div>
@@ -346,7 +537,7 @@ export default function ImageUpscalerPage() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">HDR</span>
-                                        <Info className="w-3 h-3 text-muted-foreground" />
+                                        <Info className="size-3 text-muted-foreground" />
                                     </div>
                                     <span className="text-[11px] font-mono text-foreground">{params.hdr}</span>
                                 </div>
@@ -362,7 +553,7 @@ export default function ImageUpscalerPage() {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
                                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Resemblance</span>
-                                        <Info className="w-3 h-3 text-muted-foreground" />
+                                        <Info className="size-3 text-muted-foreground" />
                                     </div>
                                     <span className="text-[11px] font-mono text-foreground">{params.resemblance}</span>
                                 </div>
@@ -409,17 +600,17 @@ export default function ImageUpscalerPage() {
                 <div className="p-4 border-t border-border bg-background">
                     <Button
                         onClick={handleUpscale}
-                        disabled={isGenerating || !uploadedImage}
+                        disabled={isGenerating || !uploadedImage || isProjectLoading || isProjectSaving}
                         className="w-full h-12 font-bold rounded-xl gap-2 shadow-sm"
                     >
                         {isGenerating ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 Upscaling...
                             </>
                         ) : (
                             <>
-                                <Sparkles className="w-5 h-5" />
+                                <Sparkles className="size-5" />
                                 Upscale
                             </>
                         )}
@@ -435,49 +626,52 @@ export default function ImageUpscalerPage() {
                 {(localUpscaledImage || currentGeneration?.status === 'completed') && (
                     <div className="h-14 px-6 border-b border-border flex items-center justify-end gap-2 shrink-0 animate-in fade-in slide-in-from-top-2">
                         <div className="flex items-center gap-2 mr-auto text-xs text-muted-foreground">
-                            <Clock className="w-3.5 h-3.5" />
+                            <Clock className="size-3.5" />
                             <span>Just now</span>
                         </div>
 
                         <DropdownMenu>
                             <DropdownMenuTrigger asChild>
                                 <Button variant="secondary" size="sm" className="gap-2">
-                                    <Repeat className="w-4 h-4" />
+                                    <Repeat className="size-4" />
                                     Reuse
-                                    <ChevronDown className="w-3.5 h-3.5 opacity-50" />
+                                    <ChevronDown className="size-3.5 opacity-50" />
                                 </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="w-56">
                                 <DropdownMenuLabel>Reuse Image As</DropdownMenuLabel>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem>
-                                    <FileText className="w-4 h-4 mr-2" />
+                                    <FileText className="size-4 mr-2" />
                                     <span>Prompt</span>
                                     <span className="ml-auto text-xs text-muted-foreground">Get prompt</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
-                                    <Repeat className="w-4 h-4 mr-2" />
+                                    <Repeat className="size-4 mr-2" />
                                     <span>Reimagine</span>
                                     <span className="ml-auto text-xs text-muted-foreground">Variations</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
-                                    <Sparkles className="w-4 h-4 mr-2" />
+                                    <Sparkles className="size-4 mr-2" />
                                     <span>Style Reference</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem>
-                                    <Video className="w-4 h-4 mr-2" />
+                                    <Video className="size-4 mr-2" />
                                     <span>Video</span>
                                     <span className="ml-auto text-xs text-muted-foreground">Img2Vid</span>
                                 </DropdownMenuItem>
                             </DropdownMenuContent>
                         </DropdownMenu>
 
-                        <Button variant="outline" size="sm" className="gap-2">
-                            <Folder className="w-4 h-4" />
+                        <Button variant="ghost" size="sm" className="gap-2" onClick={handleReset}>
+                            Reset
+                        </Button>
+                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}>
+                            <Folder className="size-4" />
                             Save
                         </Button>
-                        <Button size="sm" className="gap-2">
-                            <Download className="w-4 h-4" />
+                        <Button size="sm" className="gap-2" onClick={handleExport}>
+                            <Download className="size-4" />
                             Export
                         </Button>
                     </div>
@@ -491,7 +685,7 @@ export default function ImageUpscalerPage() {
                     )}
 
                     {/* Show Result only when Upscaled Image is available */}
-                    {localUpscaledImage && (
+                    {resultImage && (
                         <div className="flex-1 flex items-center justify-center p-8 animate-in fade-in zoom-in-95 duration-500">
                             <ReactCompareSlider
                                 itemOne={
@@ -502,7 +696,7 @@ export default function ImageUpscalerPage() {
                                 }
                                 itemTwo={
                                     <ReactCompareSliderImage
-                                        src={localUpscaledImage}
+                                        src={resultImage}
                                         alt="Upscaled"
                                     />
                                 }
@@ -520,6 +714,6 @@ export default function ImageUpscalerPage() {
                 onSelect={handleSelectImage}
                 mediaType="image"
             />
-        </div>
+        </CreatorWorkspaceShell>
     );
 }

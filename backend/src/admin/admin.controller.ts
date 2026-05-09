@@ -19,6 +19,7 @@ import { Roles } from '../roles/roles.decorator';
 import { RoleEnum } from '../roles/roles.enum';
 import { RolesGuard } from '../roles/roles.guard';
 import { AdminCatalogService } from './admin-catalog.service';
+import { AdminQueueService } from './admin-queue.service';
 import { ImportExternalCatalogDto } from './dto/import-external-catalog.dto';
 import { UpdateAdminTemplateDto } from './dto/update-admin-template.dto';
 import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
@@ -57,6 +58,7 @@ export class AdminController {
     private readonly adminCatalogService: AdminCatalogService,
     private readonly siteConfigService: SiteConfigService,
     private readonly adminAuditService: AdminAuditService,
+    private readonly adminQueueService: AdminQueueService,
   ) {}
 
   @ApiOkResponse({ description: 'Admin operational overview.' })
@@ -302,6 +304,20 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   async exportAuditLogs(@Query() query: QueryAdminAuditLogsDto) {
     return this.adminCatalogService.exportAuditLogs(query);
+  }
+
+  @ApiOkResponse({ description: 'Dead-letter queue job summaries.' })
+  @Get('queues/dead-letter')
+  @HttpCode(HttpStatus.OK)
+  listDeadLetterJobs() {
+    return this.adminQueueService.listDeadLetterJobs();
+  }
+
+  @ApiOkResponse({ description: 'Recovered a dead-letter queue job.' })
+  @Post('queues/dead-letter/:jobId/requeue')
+  @HttpCode(HttpStatus.OK)
+  recoverDeadLetterJob(@Param('jobId') jobId: string) {
+    return this.adminQueueService.recoverDeadLetterJob(jobId);
   }
 
   @ApiOkResponse({ description: 'External catalog source configuration.' })

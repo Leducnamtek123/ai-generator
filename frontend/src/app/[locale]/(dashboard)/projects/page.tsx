@@ -40,6 +40,15 @@ type ProjectsAction =
     | { type: 'setProjectDesc'; projectDesc: string }
     | { type: 'resetCreateForm' };
 
+type ProjectDraft = {
+    version: number;
+    savedAt: string;
+    projectName: string;
+    projectDesc: string;
+};
+
+const PROJECT_DRAFT_KEY = 'projects:create-modal:draft';
+
 const initialState: ProjectsState = {
     activeTab: 'my',
     viewMode: 'grid',
@@ -80,6 +89,39 @@ export default function ProjectsPage() {
         }
     }, [state.activeTab, fetchProjects]);
 
+    useEffect(() => {
+        try {
+            const raw = window.localStorage.getItem(PROJECT_DRAFT_KEY);
+            if (!raw) {
+                return;
+            }
+
+            const parsed = JSON.parse(raw) as Partial<ProjectDraft>;
+            if (typeof parsed.projectName === 'string') {
+                dispatch({ type: 'setProjectName', projectName: parsed.projectName });
+            }
+            if (typeof parsed.projectDesc === 'string') {
+                dispatch({ type: 'setProjectDesc', projectDesc: parsed.projectDesc });
+            }
+        } catch (error) {
+            console.error('Failed to restore project draft', error);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (!state.showCreateModal) {
+            return;
+        }
+
+        const draft: ProjectDraft = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            projectName: state.projectName,
+            projectDesc: state.projectDesc,
+        };
+        window.localStorage.setItem(PROJECT_DRAFT_KEY, JSON.stringify(draft));
+    }, [state.projectDesc, state.projectName]);
+
     const handleCreateProject = async () => {
         if (!state.projectName.trim()) return;
 
@@ -89,6 +131,7 @@ export default function ProjectsPage() {
         });
 
         if (newId) {
+            window.localStorage.removeItem(PROJECT_DRAFT_KEY);
             dispatch({ type: 'closeCreateModal' });
             dispatch({ type: 'resetCreateForm' });
             router.push(`/projects/${newId}`);
@@ -100,7 +143,7 @@ export default function ProjectsPage() {
             {/* Hero Section - simplified, no gradient */}
             <div className="px-8 py-12 border-b border-border">
                 <div className="max-w-lg">
-                    <h1 className="text-3xl font-bold text-foreground mb-2">
+                    <h1 className="text-3xl font-semibold text-foreground mb-2">
                         My Projects
                     </h1>
                     <p className="text-sm text-muted-foreground mb-6">Manage and organize your creative assets</p>
@@ -108,7 +151,7 @@ export default function ProjectsPage() {
                         onClick={() => dispatch({ type: 'openCreateModal' })}
                         className="gap-2 px-5"
                     >
-                        <Plus className="w-4 h-4" />
+                        <Plus className="size-4" />
                         New Project
                     </Button>
                 </div>
@@ -128,7 +171,7 @@ export default function ProjectsPage() {
                                     : "text-muted-foreground hover:text-foreground"
                             )}
                         >
-                            <tab.icon className="w-4 h-4" />
+                            <tab.icon className="size-4" />
                             {tab.label}
                         </button>
                     ))}
@@ -136,7 +179,7 @@ export default function ProjectsPage() {
 
                 <div className="flex items-center gap-3">
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <Input
                             type="text"
                             placeholder="Search projects..."
@@ -151,7 +194,7 @@ export default function ProjectsPage() {
                             className="h-7 w-7"
                             title="Grid View"
                         >
-                            <LayoutGrid className="w-4 h-4" />
+                            <LayoutGrid className="size-4" />
                         </Button>
                         <Button
                             variant={state.viewMode === 'list' ? 'secondary' : 'ghost'}
@@ -160,7 +203,7 @@ export default function ProjectsPage() {
                             className="h-7 w-7"
                             title="List View"
                         >
-                            <List className="w-4 h-4" />
+                            <List className="size-4" />
                         </Button>
                     </div>
                 </div>
@@ -172,7 +215,7 @@ export default function ProjectsPage() {
                     <>
                         {projects.length === 0 ? (
                             <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
-                                <Folder className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                                <Folder className="size-12 mx-auto mb-4 opacity-20" />
                                 <p>No projects found. Create one to get started!</p>
                             </div>
                         ) : (
@@ -191,7 +234,7 @@ export default function ProjectsPage() {
 
                 {state.activeTab === 'shared' && (
                     <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-                        <Users className="w-12 h-12 mb-4 opacity-20" />
+                        <Users className="size-12 mb-4 opacity-20" />
                         <p>No shared projects yet.</p>
                     </div>
                 )}
@@ -207,7 +250,7 @@ export default function ProjectsPage() {
                         onClick={() => dispatch({ type: 'closeCreateModal' })}
                     />
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl">
-                        <h2 className="text-xl font-bold mb-4">Create New Project</h2>
+                        <h2 className="text-xl font-semibold mb-4">Create New Project</h2>
 
                         <div className="space-y-4 mb-6">
                             <div>
@@ -258,11 +301,11 @@ function ProjectCard({ project }: { project: Project }) {
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl p-5 hover:bg-accent/50 transition-all"
         >
             <div className="flex justify-between items-start mb-4">
-                <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
-                    <Folder className="w-5 h-5" />
+                <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
+                    <Folder className="size-5" />
                 </div>
                 <button className="text-muted-foreground/50 hover:text-foreground transition-colors">
-                    <MoreHorizontal className="w-5 h-5" />
+                    <MoreHorizontal className="size-5" />
                 </button>
             </div>
 

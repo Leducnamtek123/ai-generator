@@ -89,6 +89,7 @@ export const navItems: SidebarItem[] = [
 ];
 
 export const socialItems: SidebarItem[] = [
+    { icon: LayoutGrid, label: 'Social Hub', href: '/social' },
     { icon: LayoutDashboard, label: 'Social Dashboard', href: '/social/dashboard' },
     { icon: Share2, label: 'Channels', href: '/social/channels' },
     { icon: Clock, label: 'Calendar', href: '/social/calendar' },
@@ -145,7 +146,7 @@ export const DEFAULT_PINNED_TOOL_IDS = ALL_TOOLS_LIST
 
 export const CREATOR_TOOL_HIGHLIGHTS: ToolHighlight[] = [
     { icon: Search, label: 'Find assets', href: '/stock' },
-    { icon: LayoutGrid, label: 'Spaces', href: '/creator/workflow-editor', isNew: true, color: 'text-chart-1' },
+    { icon: LayoutGrid, label: 'Spaces', href: '/spaces', isNew: true, color: 'text-chart-1' },
     { icon: ImagePlus, label: 'Image Gen', href: '/creator/image-generator', color: 'text-chart-2' },
     { icon: Video, label: 'Video Gen', href: '/creator/video-generator', color: 'text-chart-3' },
     { icon: Wand2, label: 'Editor', href: '/creator/image-editor' },

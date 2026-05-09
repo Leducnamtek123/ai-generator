@@ -1,13 +1,18 @@
 'use client';
 
-import { useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
-import { ZoomIn, Download, Loader2, Folder, Video, Check } from 'lucide-react';
+import { projectApi } from '@/services/projectApi';
+import { ZoomIn, Download, Loader2, Folder, Video, Check, RotateCcw } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
+import { uploadFileWithToast } from '@/lib/upload';
 
 const resolutions = [
     { id: '720p', label: '720p HD', description: '1280x720' },
@@ -43,7 +48,8 @@ type Action =
     | { type: 'toggleFpsBoost' }
     | { type: 'toggleColorCorrection' }
     | { type: 'setProgress'; progress: number }
-    | { type: 'resetProgress' };
+    | { type: 'resetProgress' }
+    | { type: 'reset' };
 
 const initialState: State = {
     videoFile: null,
@@ -55,6 +61,39 @@ const initialState: State = {
     fpsBoost: false,
     colorCorrection: true,
     progress: 0,
+};
+
+type VideoUpscalerSnapshot = {
+    videoFile: string | null;
+    videoName: string;
+    resultVideo: string | null;
+    settings: Pick<State, 'targetResolution' | 'model' | 'denoise' | 'sharpen' | 'fpsBoost' | 'colorCorrection'>;
+};
+
+type VideoUpscalerProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<VideoUpscalerSnapshot>;
+};
+
+const normalizeVideoUpscalerSnapshot = (value: unknown): Partial<VideoUpscalerSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+    const settings = (snapshot.settings && typeof snapshot.settings === 'object' ? snapshot.settings : {}) as Record<string, unknown>;
+
+    return {
+        videoFile: typeof snapshot.videoFile === 'string' ? snapshot.videoFile : null,
+        videoName: typeof snapshot.videoName === 'string' ? snapshot.videoName : '',
+        resultVideo: typeof snapshot.resultVideo === 'string' ? snapshot.resultVideo : null,
+        settings: {
+            targetResolution: typeof settings.targetResolution === 'string' ? settings.targetResolution : initialState.targetResolution,
+            model: typeof settings.model === 'string' ? settings.model : initialState.model,
+            denoise: typeof settings.denoise === 'number' ? settings.denoise : initialState.denoise,
+            sharpen: typeof settings.sharpen === 'number' ? settings.sharpen : initialState.sharpen,
+            fpsBoost: typeof settings.fpsBoost === 'boolean' ? settings.fpsBoost : initialState.fpsBoost,
+            colorCorrection: typeof settings.colorCorrection === 'boolean' ? settings.colorCorrection : initialState.colorCorrection,
+        },
+    };
 };
 
 function reducer(state: State, action: Action): State {
@@ -82,6 +121,8 @@ function reducer(state: State, action: Action): State {
             return { ...state, progress: action.progress };
         case 'resetProgress':
             return { ...state, progress: 0 };
+        case 'reset':
+            return initialState;
         default:
             return state;
     }
@@ -91,17 +132,103 @@ export default function VideoUpscalerPage() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
     const { upscaleVideo, currentGeneration, reset, isGenerating } = useGenerationStore();
-    const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
+    const [restoredResultVideo, setRestoredResultVideo] = useState<string | null>(null);
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : restoredResultVideo;
     const isProcessing = isGenerating;
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    useEffect(() => {
+        const queryProjectId = searchParams.get('projectId');
+        if (queryProjectId) {
+            setProjectId(queryProjectId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrateFromSnapshot = (snapshot: Partial<VideoUpscalerSnapshot>) => {
+            if (typeof snapshot.videoFile === 'string' && snapshot.videoFile) {
+                dispatch({ type: 'setVideo', videoFile: snapshot.videoFile, videoName: snapshot.videoName ?? '' });
+            }
+            dispatch({ type: 'setTargetResolution', targetResolution: snapshot.settings?.targetResolution ?? initialState.targetResolution });
+            dispatch({ type: 'setModel', model: snapshot.settings?.model ?? initialState.model });
+            dispatch({ type: 'setDenoise', denoise: snapshot.settings?.denoise ?? initialState.denoise });
+            dispatch({ type: 'setSharpen', sharpen: snapshot.settings?.sharpen ?? initialState.sharpen });
+            if ((snapshot.settings?.fpsBoost ?? initialState.fpsBoost) !== state.fpsBoost) {
+                dispatch({ type: 'toggleFpsBoost' });
+            }
+            if ((snapshot.settings?.colorCorrection ?? initialState.colorCorrection) !== state.colorCorrection) {
+                dispatch({ type: 'toggleColorCorrection' });
+            }
+            setRestoredResultVideo(snapshot.resultVideo ?? null);
+        };
+
+        const loadProject = async () => {
+            if (!projectId) {
+                try {
+                    const raw = localStorage.getItem('video-upscaler:draft');
+                    if (raw) {
+                        hydrateFromSnapshot(normalizeVideoUpscalerSnapshot(JSON.parse(raw)));
+                    }
+                } catch (loadError) {
+                    console.error('Failed to restore video upscaler draft', loadError);
+                }
+                return;
+            }
+
+            setIsProjectLoading(true);
+            setProjectError(null);
+            try {
+                const project = await projectApi.get(projectId);
+                const rawContent = project.content as string | Record<string, unknown> | null | undefined;
+                const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+                if (!cancelled) {
+                    hydrateFromSnapshot(normalizeVideoUpscalerSnapshot(parsed));
+                }
+            } catch (loadError) {
+                console.error('Failed to restore video upscaler project', loadError);
+                if (!cancelled) {
+                    setProjectError('Could not load the saved video upscaler project. Falling back to a local draft.');
+                    try {
+                        const raw = localStorage.getItem('video-upscaler:draft');
+                        if (raw) {
+                            hydrateFromSnapshot(normalizeVideoUpscalerSnapshot(JSON.parse(raw)));
+                        }
+                    } catch (fallbackError) {
+                        console.error('Failed to restore video upscaler fallback', fallbackError);
+                    }
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        };
+
+        void loadProject();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
+
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
 
         reset();
+        const uploaded = await uploadFileWithToast(file, file.name);
+        if (!uploaded?.url) return;
+
         dispatch({
             type: 'setVideo',
-            videoFile: URL.createObjectURL(file),
+            videoFile: uploaded.url,
             videoName: file.name,
         });
     };
@@ -110,29 +237,123 @@ export default function VideoUpscalerPage() {
         if (!state.videoFile) return;
 
         dispatch({ type: 'setProgress', progress: 0 });
-        await upscaleVideo({
-            videoUrl: state.videoFile,
-            targetResolution: state.targetResolution,
-            model: state.model,
-            denoise: state.denoise,
-            sharpen: state.sharpen,
-            fpsBoost: state.fpsBoost,
-        });
-        dispatch({ type: 'setProgress', progress: 100 });
+        try {
+            await upscaleVideo({
+                videoUrl: state.videoFile,
+                targetResolution: state.targetResolution,
+                model: state.model,
+                denoise: state.denoise,
+                sharpen: state.sharpen,
+                fpsBoost: state.fpsBoost,
+            });
+            dispatch({ type: 'setProgress', progress: 100 });
+        } catch (error) {
+            dispatch({ type: 'resetProgress' });
+            toast.error(error instanceof Error ? error.message : 'Failed to upscale video');
+        }
+    };
+
+    const handleSave = () => {
+        const payload: VideoUpscalerProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot: {
+                videoFile: state.videoFile,
+                videoName: state.videoName,
+                resultVideo,
+                settings: {
+                    targetResolution: state.targetResolution,
+                    model: state.model,
+                    denoise: state.denoise,
+                    sharpen: state.sharpen,
+                    fpsBoost: state.fpsBoost,
+                    colorCorrection: state.colorCorrection,
+                },
+            },
+        };
+
+        localStorage.setItem('video-upscaler:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Video Upscaler Draft',
+                        description: 'Video upscaler draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Video Upscaler Draft',
+                        description: 'Video upscaler draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                toast.success('Video upscaler saved to your projects.');
+            } catch (saveError) {
+                console.error('Failed to persist video upscaler project', saveError);
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExport = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            videoFile: state.videoFile,
+            videoName: state.videoName,
+            resultVideo,
+            settings: {
+                targetResolution: state.targetResolution,
+                model: state.model,
+                denoise: state.denoise,
+                sharpen: state.sharpen,
+                fpsBoost: state.fpsBoost,
+                colorCorrection: state.colorCorrection,
+            },
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'video-upscaler-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Video upscaler export created.');
+    };
+
+    const handleReset = () => {
+        reset();
+        dispatch({ type: 'reset' });
+        setRestoredResultVideo(null);
+        setProjectError(null);
     };
 
     const selectedResolution = resolutions.find((resolution) => resolution.id === state.targetResolution);
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Video Upscaler</h2>
+                    <h2 className="font-semibold text-muted-foreground">Video Upscaler</h2>
+                    <span className="ml-auto text-xs text-muted-foreground">
+                        {isProjectLoading ? 'Loading project...' : projectError ?? ''}
+                    </span>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Source Video</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Source Video</h4>
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -147,8 +368,8 @@ export default function VideoUpscalerPage() {
                                 </>
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
-                                        <Video className="w-5 h-5 text-muted-foreground" />
+                                    <div className="size-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
+                                        <Video className="size-5 text-muted-foreground" />
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs font-medium">Upload Video</p>
@@ -161,7 +382,7 @@ export default function VideoUpscalerPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Target Resolution</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Target Resolution</h4>
                         <div className="grid grid-cols-2 gap-1.5">
                             {resolutions.map((resolution) => (
                                 <button
@@ -180,7 +401,7 @@ export default function VideoUpscalerPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Processing Mode</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Processing Mode</h4>
                         <Select value={state.model} onValueChange={(value) => dispatch({ type: 'setModel', model: value })}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Choose mode" />
@@ -223,7 +444,7 @@ export default function VideoUpscalerPage() {
                                 <span className="text-[9px] text-muted-foreground">Interpolate to 60fps</span>
                             </div>
                             <div className={cn('w-9 h-5 rounded-full transition-colors flex items-center px-0.5', state.fpsBoost ? 'bg-primary' : 'bg-muted-foreground/20')}>
-                                <div className={cn('w-4 h-4 rounded-full bg-white shadow-sm transition-transform', state.fpsBoost ? 'translate-x-4' : 'translate-x-0')} />
+                                <div className={cn('size-4 rounded-full bg-white shadow-sm transition-transform', state.fpsBoost ? 'translate-x-4' : 'translate-x-0')} />
                             </div>
                         </button>
 
@@ -236,7 +457,7 @@ export default function VideoUpscalerPage() {
                                 <span className="text-[9px] text-muted-foreground">Optimize colors & contrast</span>
                             </div>
                             <div className={cn('w-9 h-5 rounded-full transition-colors flex items-center px-0.5', state.colorCorrection ? 'bg-primary' : 'bg-muted-foreground/20')}>
-                                <div className={cn('w-4 h-4 rounded-full bg-white shadow-sm transition-transform', state.colorCorrection ? 'translate-x-4' : 'translate-x-0')} />
+                                <div className={cn('size-4 rounded-full bg-white shadow-sm transition-transform', state.colorCorrection ? 'translate-x-4' : 'translate-x-0')} />
                             </div>
                         </button>
                     </div>
@@ -247,15 +468,15 @@ export default function VideoUpscalerPage() {
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">5 Credits/min</span>
                     </div>
-                    <Button onClick={handleUpscale} disabled={isProcessing || !state.videoFile} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleUpscale} disabled={isProcessing || !state.videoFile || isProjectLoading || isProjectSaving} className="w-full h-12 font-bold rounded-xl gap-2">
                         {isProcessing ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 Processing {state.progress}%
                             </>
                         ) : (
                             <>
-                                <ZoomIn className="w-5 h-5" />
+                                <ZoomIn className="size-5" />
                                 Upscale Video
                             </>
                         )}
@@ -267,14 +488,18 @@ export default function VideoUpscalerPage() {
                 {resultVideo && (
                     <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0 animate-in fade-in">
                         <div className="flex items-center gap-2">
-                            <Check className="w-4 h-4 text-green-500" />
+                            <Button variant="ghost" size="sm" className="gap-1.5 text-xs" onClick={handleReset}>
+                                <RotateCcw className="size-4" />
+                                Reset
+                            </Button>
+                            <Check className="size-4 text-green-500" />
                             <span className="text-sm font-medium">
                                 Upscale complete - {selectedResolution?.label}
                             </span>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="gap-2"><Folder className="w-4 h-4" /> Save</Button>
-                            <Button size="sm" className="gap-2"><Download className="w-4 h-4" /> Export</Button>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSave} disabled={isProjectLoading || isProjectSaving}><Folder className="size-4" /> Save</Button>
+                            <Button size="sm" className="gap-2" onClick={handleExport}><Download className="size-4" /> Export</Button>
                         </div>
                     </div>
                 )}
@@ -282,8 +507,8 @@ export default function VideoUpscalerPage() {
                 <div className="flex-1 flex items-center justify-center p-8">
                     {!state.videoFile ? (
                         <div className="text-center space-y-4">
-                            <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto">
-                                <ZoomIn className="w-8 h-8 text-muted-foreground" />
+                            <div className="size-20 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto">
+                                <ZoomIn className="size-8 text-muted-foreground" />
                             </div>
                             <div>
                                 <h3 className="font-semibold">Video Upscaler</h3>
@@ -300,8 +525,8 @@ export default function VideoUpscalerPage() {
                     ) : isProcessing ? (
                         <div className="flex flex-col items-center gap-6 w-full max-w-md">
                             <div className="relative">
-                                <div className="w-20 h-20 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                <ZoomIn className="w-8 h-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                <div className="size-20 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                <ZoomIn className="size-8 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <div className="text-center">
                                 <p className="font-medium">Upscaling to {selectedResolution?.label}...</p>
@@ -321,6 +546,6 @@ export default function VideoUpscalerPage() {
                     )}
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }

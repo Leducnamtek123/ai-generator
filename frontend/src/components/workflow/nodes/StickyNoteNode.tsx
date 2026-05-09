@@ -95,7 +95,7 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
                                         handleColorChange(noteColor);
                                     }}
                                     className={cn(
-                                        "w-3 h-3 rounded-full mx-0.5 border border-black/10",
+                                        "size-3 rounded-full mx-0.5 border border-black/10",
                                         COLORS[noteColor].split(' ')[0],
                                         color === noteColor && "ring-1 ring-black/50 scale-125"
                                     )}
@@ -122,7 +122,7 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
 
                 {!data.isPreview && (
                     <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] text-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <Palette className="w-3 h-3" />
+                        <Palette className="size-3" />
                         Sticky note
                     </div>
                 )}

@@ -89,11 +89,15 @@ export class FacebookMessengerController {
   @ApiOperation({ summary: 'Handle Meta Webhook Events' })
   async handleWebhook(
     @Param('channelId') channelId: string,
-    @Body() payload: any,
+    @Body() payload: Record<string, unknown>,
     @Headers('x-hub-signature-256') signature?: string,
     @Req() req?: Request & { rawBody?: Buffer },
   ) {
-    this.verifyWebhookSignature(req?.rawBody ?? Buffer.from(JSON.stringify(payload ?? {})), signature);
+    if (!req?.rawBody) {
+      throw new BadRequestException('Missing raw webhook body');
+    }
+
+    this.verifyWebhookSignature(req.rawBody, signature);
 
     const account = await this.socialAccountRepository.findOne({
       where: { id: parseInt(channelId) },

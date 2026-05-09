@@ -133,10 +133,10 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                         {isProcessing ? (
                             <div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-950/60 backdrop-blur-md z-10 transition-all">
                                 <div className="relative">
-                                    <div className="w-16 h-16 border-4 border-green-500/20 rounded-full" />
-                                    <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-green-500 rounded-full animate-spin" />
+                                    <div className="size-16 border-4 border-green-500/20 rounded-full" />
+                                    <div className="absolute inset-0 size-16 border-4 border-transparent border-t-green-500 rounded-full animate-spin" />
                                     <div className="absolute inset-0 flex items-center justify-center text-green-500">
-                                        <Video className="w-6 h-6 animate-pulse" />
+                                        <Video className="size-6 animate-pulse" />
                                     </div>
                                 </div>
                                 <span className="mt-4 text-[10px] text-green-400 font-bold uppercase tracking-widest animate-pulse">
@@ -162,13 +162,13 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                         onClick={() => setShowFullscreen(true)}
                                         className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
                                     >
-                                        <Maximize2 className="w-5 h-5" />
+                                        <Maximize2 className="size-5" />
                                     </button>
                                 </div>
                             </div>
                         ) : (
                             <div className="flex flex-col items-center gap-3 text-white/5 italic py-6">
-                                <Video className={data.isPreview ? "w-6 h-6" : "w-12 h-12"} />
+                                <Video className={data.isPreview ? "size-6" : "size-12"} />
                             </div>
                         )}
 
@@ -217,7 +217,7 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                         <div className="p-3 bg-card border-t border-border flex items-center gap-2">
                             <div className="flex-1 truncate text-xs text-muted-foreground flex items-center gap-2">
                                 <span className="text-green-500">{currentModel.name}</span>
-                                <span className="w-1 h-1 rounded-full bg-white/20" />
+                                <span className="size-1 rounded-full bg-white/20" />
                                 <span>{data.duration || '4s'}</span>
                             </div>
 
@@ -227,9 +227,9 @@ export function VideoNode({ id, data, selected }: VideoNodeProps) {
                                 className="p-2 bg-green-500 hover:bg-green-400 disabled:opacity-50 rounded-full text-white h-8 w-8 flex items-center justify-center transition-all shadow-lg shadow-green-500/20"
                             >
                                 {isProcessing ? (
-                                    <Loader2 className="w-4 h-4 animate-spin" />
+                                    <Loader2 className="size-4 animate-spin" />
                                 ) : (
-                                    <Play className="w-4 h-4 fill-current" />
+                                    <Play className="size-4 fill-current" />
                                 )}
                             </button>
                         </div>

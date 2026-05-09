@@ -78,14 +78,14 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
 
     const getIcon = () => {
         switch (selectedNode.type) {
-            case WorkflowNodeType.TEXT: return <Type className="w-4 h-4 text-green-400" />;
-            case WorkflowNodeType.MEDIA: return <Upload className="w-4 h-4 text-cyan-400" />;
-            case WorkflowNodeType.IMAGE_GEN: return <ImageIcon className="w-4 h-4 text-blue-400" />;
-            case WorkflowNodeType.VIDEO_GEN: return <Video className="w-4 h-4 text-purple-400" />;
-            case WorkflowNodeType.ASSISTANT: return <Sparkles className="w-4 h-4 text-emerald-400" />;
-            case WorkflowNodeType.UPSCALE: return <Scan className="w-4 h-4 text-indigo-400" />;
-            case WorkflowNodeType.TOOL: return <Wand2 className="w-4 h-4 text-fuchsia-400" />;
-            default: return <Settings2 className="w-4 h-4 text-white/60" />;
+            case WorkflowNodeType.TEXT: return <Type className="size-4 text-green-400" />;
+            case WorkflowNodeType.MEDIA: return <Upload className="size-4 text-cyan-400" />;
+            case WorkflowNodeType.IMAGE_GEN: return <ImageIcon className="size-4 text-blue-400" />;
+            case WorkflowNodeType.VIDEO_GEN: return <Video className="size-4 text-purple-400" />;
+            case WorkflowNodeType.ASSISTANT: return <Sparkles className="size-4 text-emerald-400" />;
+            case WorkflowNodeType.UPSCALE: return <Scan className="size-4 text-indigo-400" />;
+            case WorkflowNodeType.TOOL: return <Wand2 className="size-4 text-fuchsia-400" />;
+            default: return <Settings2 className="size-4 text-white/60" />;
         }
     };
 
@@ -116,7 +116,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     onClick={onClose}
                     className="h-8 w-8 text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg"
                 >
-                    <X className="w-4 h-4" />
+                    <X className="size-4" />
                 </Button>
             </div>
 
@@ -220,7 +220,7 @@ function PropertiesContent({
         default:
             return (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Settings2 className="w-8 h-8 text-white/20 mb-3" />
+                    <Settings2 className="size-8 text-white/20 mb-3" />
                     <p className="text-sm text-white/40">No properties available</p>
                     <p className="text-xs text-white/20 mt-1">Select a different node</p>
                 </div>

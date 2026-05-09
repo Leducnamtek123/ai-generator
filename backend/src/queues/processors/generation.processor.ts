@@ -2,6 +2,7 @@ import { Processor, WorkerHost, OnWorkerEvent } from '@nestjs/bullmq';
 import { Logger, Inject, forwardRef } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { GENERATION_QUEUE } from '../queues.constants';
+import { QueueReliabilityService } from '../queue-reliability.service';
 import { WorkflowsService } from '../../workflows/workflows.service';
 import { GenerationsService } from '../../generations/generations.service';
 
@@ -48,39 +49,39 @@ export class GenerationProcessor extends WorkerHost {
     private readonly generationsService: GenerationsService,
     @Inject(forwardRef(() => WorkflowsService))
     private readonly workflowsService: WorkflowsService,
+    private readonly queueReliabilityService: QueueReliabilityService,
   ) {
     super();
   }
 
   async process(job: Job<GenerationJobData>): Promise<GenerationJobResult> {
     this.logger.log(`Processing job ${job.id} of type ${job.data.type}`);
+    const requestId = String(
+      job.id ??
+        `${job.data.workflowId ?? 'job'}:${job.data.nodeId ?? 'node'}:${job.data.type}`,
+    );
+    const jobData: GenerationJobData = {
+      ...job.data,
+      params: {
+        ...(job.data.params || {}),
+        metadata: {
+          ...((job.data.params || {}).metadata || {}),
+          requestId,
+        },
+      },
+    };
 
     try {
       // Update progress
       await job.updateProgress(10);
 
-      // Simulate AI generation (replace with actual provider calls)
-      const result = await this.executeGeneration(job.data);
+      await this.patchWorkflowNode(jobData, {
+        status: 'processing',
+        generationJobId: requestId,
+      });
 
-      // If part of a workflow, update workflow node state to 'processing'
-      if (job.data.workflowId && job.data.nodeId) {
-        await this.workflowsService.update(
-          job.data.workflowId,
-          job.data.userId,
-          {
-            nodes: (
-              await this.workflowsService.findOne(job.data.workflowId)
-            )?.nodes.map((node: any) =>
-              node.id === job.data.nodeId
-                ? {
-                    ...node,
-                    data: { ...node.data, status: 'processing' },
-                  }
-                : node,
-            ),
-          } as any,
-        );
-      }
+      // Execute the generation submission step; provider work continues in generation services.
+      const result = await this.executeGeneration(jobData);
 
       await job.updateProgress(100);
 
@@ -89,34 +90,37 @@ export class GenerationProcessor extends WorkerHost {
     } catch (error: any) {
       this.logger.error(`Job ${job.id} failed: ${error.message}`);
       // Update workflow node on failure
-      if (job.data.workflowId && job.data.nodeId) {
+      if (jobData.workflowId && jobData.nodeId) {
         try {
-          const patchData = {
+          await this.patchWorkflowNode(jobData, {
             status: 'error',
             errorMessage: error.message,
-          };
-          await this.workflowsService.update(
-            job.data.workflowId,
-            job.data.userId,
-            {
-              nodes: (
-                await this.workflowsService.findOne(job.data.workflowId)
-              )?.nodes.map((node: any) =>
-                node.id === job.data.nodeId
-                  ? {
-                      ...node,
-                      data: { ...node.data, ...patchData },
-                    }
-                  : node,
-              ),
-            } as any,
-          );
+          });
         } catch (updateErr) {
           this.logger.error('Failed to update node failure state', updateErr);
         }
       }
       throw error;
     }
+  }
+
+  private async patchWorkflowNode(
+    data: GenerationJobData,
+    patchData: Record<string, any>,
+  ): Promise<void> {
+    if (!data.workflowId || !data.nodeId) return;
+
+    await this.workflowsService.update(data.workflowId, data.userId, {
+      nodes: (await this.workflowsService.findOne(data.workflowId))?.nodes.map(
+        (node: any) =>
+          node.id === data.nodeId
+            ? {
+                ...node,
+                data: { ...node.data, ...patchData },
+              }
+            : node,
+      ),
+    } as any);
   }
 
   private async executeGeneration(
@@ -145,6 +149,7 @@ export class GenerationProcessor extends WorkerHost {
                 params.referenceImageUrl || params.inputImageUrl,
               provider: params.provider,
               metadata: {
+                ...(params.metadata || {}),
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
                 referenceImageUrl:
@@ -178,6 +183,7 @@ export class GenerationProcessor extends WorkerHost {
               category: params.category,
               format: params.format,
               metadata: {
+                ...(params.metadata || {}),
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
               },
@@ -205,6 +211,7 @@ export class GenerationProcessor extends WorkerHost {
               fpsBoost: params.fpsBoost,
               prompt: params.prompt,
               metadata: {
+                ...(params.metadata || {}),
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
               },
@@ -248,6 +255,7 @@ export class GenerationProcessor extends WorkerHost {
               level: params.level,
               preserveDetails: params.preserveDetails,
               metadata: {
+                ...(params.metadata || {}),
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
               },
@@ -270,6 +278,7 @@ export class GenerationProcessor extends WorkerHost {
               endImageUrl: params.endImageUrl,
               provider: params.provider,
               metadata: {
+                ...(params.metadata || {}),
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
               },
@@ -296,6 +305,7 @@ export class GenerationProcessor extends WorkerHost {
               prompt: params.prompt || params.text,
               provider: params.provider,
               metadata: {
+                ...(params.metadata || {}),
                 workflowId: data.workflowId,
                 nodeId: data.nodeId,
               },
@@ -341,8 +351,19 @@ export class GenerationProcessor extends WorkerHost {
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job<GenerationJobData>, error: Error) {
+  async onFailed(job: Job<GenerationJobData>, error: Error) {
     this.logger.error(`Job ${job.id} failed: ${error.message}`);
+    await this.queueReliabilityService.archiveFailure(
+      GENERATION_QUEUE,
+      job,
+      error,
+      {
+        type: job.data.type,
+        workflowId: job.data.workflowId,
+        nodeId: job.data.nodeId,
+        projectId: job.data.projectId,
+      },
+    );
   }
 
   @OnWorkerEvent('progress')

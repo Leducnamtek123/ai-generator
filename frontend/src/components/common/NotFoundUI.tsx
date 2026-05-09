@@ -27,9 +27,9 @@ export function NotFoundUI() {
                         <motion.div
                             animate={{ y: [0, -10, 0] }}
                             transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-                            className="absolute -top-4 -right-4 w-12 h-12 bg-blue-500/20 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl"
+                            className="absolute -top-4 -right-4 size-12 bg-blue-500/20 backdrop-blur-xl border border-white/10 rounded-2xl flex items-center justify-center shadow-2xl"
                         >
-                            <Ghost className="w-6 h-6 text-blue-400" />
+                            <Ghost className="size-6 text-blue-400" />
                         </motion.div>
                     </motion.div>
 
@@ -57,9 +57,9 @@ export function NotFoundUI() {
                         className="w-full sm:w-auto bg-white text-black hover:bg-white/90 rounded-2xl px-8 h-14 font-black text-sm uppercase tracking-widest transition-all hover:scale-105 active:scale-95 group shadow-xl shadow-white/5"
                     >
                         <Link href="/dashboard" className="flex items-center gap-2">
-                            <Home className="w-4 h-4" />
+                            <Home className="size-4" />
                             Back to Safety
-                            <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                            <ArrowRight className="size-4 group-hover:translate-x-1 transition-transform" />
                         </Link>
                     </Button>
 
@@ -68,7 +68,7 @@ export function NotFoundUI() {
                         className="w-full sm:w-auto text-white/40 hover:text-white hover:bg-white/5 rounded-2xl h-14 px-8 font-bold text-xs uppercase tracking-widest border border-white/5"
                         onClick={() => typeof window !== 'undefined' && window.history.back()}
                     >
-                        <ChevronLeft className="w-4 h-4 mr-2" />
+                        <ChevronLeft className="size-4 mr-2" />
                         Previous Orbit
                     </Button>
                 </motion.div>

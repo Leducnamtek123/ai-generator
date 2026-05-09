@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import Link from 'next/link';
 import { GlassCard } from '@/components/ui/glass-card';
 import { Button } from '@/components/ui/button';
 import { 
@@ -25,6 +26,14 @@ import { socialHubApi, type SocialInteraction } from '@/services/socialHubApi';
 import { toast } from 'sonner';
 
 type InboxFilter = 'all' | 'mention' | 'comment' | 'dm';
+
+const ASSIGNEES = ['Me', 'Support', 'Sales', 'Marketing'] as const;
+const QUICK_LABELS = ['VIP', 'Bug', 'Lead', 'Escalation'] as const;
+const SAVED_REPLIES = [
+    'Thanks for reaching out. We are checking this now.',
+    'Appreciate the note. We will follow up shortly.',
+    'Thanks. Can you share a little more detail so we can help?',
+] as const;
 
 const FILTERS: Array<{ key: InboxFilter; label: string }> = [
     { key: 'all', label: 'All' },
@@ -103,6 +112,12 @@ export default function InboxPage() {
     }, [getInteractionKey, handledInteractionIds, interactions, searchQuery, typeFilter]);
 
     const selectedInteraction = visibleInteractions.find(i => i.id === selectedId) ?? visibleInteractions[0] ?? null;
+    const openCount = interactions.filter((item) => !handledInteractionIds.includes(getInteractionKey(item))).length;
+    const followUpCount = interactions.filter((item) => Boolean(item.followUp)).length;
+    const replyableCount = interactions.filter((item) => item.canReply !== false && !handledInteractionIds.includes(getInteractionKey(item))).length;
+    const selectedAssignment = selectedInteraction?.assignedTo ?? 'Unassigned';
+    const selectedLabels = selectedInteraction?.labels ?? [];
+    const selectedFollowUp = Boolean(selectedInteraction?.followUp);
 
     React.useEffect(() => {
         if (!visibleInteractions.length) {
@@ -125,6 +140,97 @@ export default function InboxPage() {
         );
         setSelectedId((current) => (current === item.id ? null : current));
     }, [getInteractionKey]);
+
+    const applyInteractionPatch = React.useCallback((item: SocialInteraction, patch: Partial<SocialInteraction>) => {
+        const key = getInteractionKey(item);
+        setInteractions((current) =>
+            current.map((entry) =>
+                getInteractionKey(entry) === key ? { ...entry, ...patch } : entry,
+            ),
+        );
+    }, [getInteractionKey]);
+
+    const toggleFollowUp = React.useCallback(async (item: SocialInteraction) => {
+        if (!item.accountId) {
+            toast.error('This interaction cannot be updated yet.');
+            return;
+        }
+
+        const nextFollowUp = !Boolean(item.followUp);
+        const previousFollowUp = Boolean(item.followUp);
+
+        applyInteractionPatch(item, { followUp: nextFollowUp });
+
+        try {
+            await socialHubApi.updateInboxInteractionTriage({
+                accountId: item.accountId,
+                interactionId: String(item.id),
+                followUp: nextFollowUp,
+            });
+        } catch (error) {
+            console.error('Failed to update follow-up', error);
+            applyInteractionPatch(item, { followUp: previousFollowUp });
+            toast.error('Failed to update follow-up.');
+        }
+    }, [applyInteractionPatch, getInteractionKey]);
+
+    const cycleAssignment = React.useCallback(async (item: SocialInteraction) => {
+        if (!item.accountId) {
+            toast.error('This interaction cannot be assigned yet.');
+            return;
+        }
+
+        const currentIndex = ASSIGNEES.findIndex((assignee) => assignee === item.assignedTo);
+        const nextAssignee = ASSIGNEES[(currentIndex + 1) % ASSIGNEES.length];
+        const previousAssignee = item.assignedTo ?? null;
+
+        applyInteractionPatch(item, { assignedTo: nextAssignee });
+
+        try {
+            await socialHubApi.updateInboxInteractionTriage({
+                accountId: item.accountId,
+                interactionId: String(item.id),
+                assignedTo: nextAssignee,
+            });
+        } catch (error) {
+            console.error('Failed to update assignment', error);
+            applyInteractionPatch(item, { assignedTo: previousAssignee });
+            toast.error('Failed to update assignment.');
+        }
+    }, [applyInteractionPatch]);
+
+    const toggleLabel = React.useCallback(async (item: SocialInteraction, label: string) => {
+        if (!item.accountId) {
+            toast.error('This interaction cannot be labeled yet.');
+            return;
+        }
+
+        const currentLabels = item.labels ?? [];
+        const nextLabels = currentLabels.includes(label)
+            ? currentLabels.filter((entry) => entry !== label)
+            : [...currentLabels, label];
+
+        applyInteractionPatch(item, { labels: nextLabels });
+
+        try {
+            await socialHubApi.updateInboxInteractionTriage({
+                accountId: item.accountId,
+                interactionId: String(item.id),
+                labels: nextLabels,
+            });
+        } catch (error) {
+            console.error('Failed to update labels', error);
+            applyInteractionPatch(item, { labels: currentLabels });
+            toast.error('Failed to update labels.');
+        }
+    }, [applyInteractionPatch]);
+
+    const applySavedReply = (snippet: string) => {
+        setReplyText((current) => {
+            const prefix = current.trim().length > 0 ? `${current.trim()}\n\n` : '';
+            return `${prefix}${snippet}`;
+        });
+    };
 
     const handleReply = async () => {
         if (!replyText.trim()) {
@@ -188,10 +294,32 @@ export default function InboxPage() {
             <div className="w-[450px] border-r border-border bg-sidebar flex flex-col h-full">
                 <div className="p-6 border-b border-border space-y-4">
                     <div className="flex items-center justify-between">
-                        <h1 className="text-2xl font-bold">Social Inbox</h1>
-                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cycleFilter}>
-                            <Filter className="w-4 h-4" />
+                        <h1 className="text-2xl font-semibold">Social Inbox</h1>
+                        <Button asChild variant="ghost" size="sm" className="h-8 px-2">
+                            <Link href="/social">Hub</Link>
                         </Button>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-3">
+                            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Open</p>
+                            <p className="mt-2 text-2xl font-bold">{openCount}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-3">
+                            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Replyable</p>
+                            <p className="mt-2 text-2xl font-bold">{replyableCount}</p>
+                        </div>
+                        <div className="rounded-xl border border-white/10 bg-background/40 p-3">
+                            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Follow-up</p>
+                            <p className="mt-2 text-2xl font-bold">{followUpCount}</p>
+                        </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={cycleFilter}>
+                            <Filter className="size-4" />
+                        </Button>
+                        <div className="text-xs text-muted-foreground">
+                            Unified inbox: filter, reply, mark follow-up, and close the loop.
+                        </div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                         {FILTERS.map((filter) => (
@@ -207,7 +335,7 @@ export default function InboxPage() {
                         ))}
                     </div>
                     <div className="relative">
-                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <input 
                             className="w-full bg-muted/50 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary"
                             placeholder="Search interactions..."
@@ -239,24 +367,46 @@ export default function InboxPage() {
                                     )}
                                     <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center gap-2">
-                                            <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                                                <User className="w-4 h-4 text-muted-foreground" />
+                                            <div className="size-8 rounded-full bg-muted flex items-center justify-center">
+                                                <User className="size-4 text-muted-foreground" />
                                             </div>
                                             <div>
-                                                <h4 className="text-sm font-bold">{item.user}</h4>
+                                                <h4 className="text-sm font-semibold">{item.user}</h4>
                                                 <div className="flex items-center gap-1.5">
-                                                    {item.platform === 'facebook' && <Facebook className="w-3 h-3 text-[#1877F2]" />}
-                                                    {item.platform === 'twitter' && <Twitter className="w-3 h-3 text-foreground" />}
-                                                    {item.platform === 'linkedin' && <Linkedin className="w-3 h-3 text-[#0A66C2]" />}
+                                                    {item.platform === 'facebook' && <Facebook className="size-3 text-[#1877F2]" />}
+                                                    {item.platform === 'twitter' && <Twitter className="size-3 text-foreground" />}
+                                                    {item.platform === 'linkedin' && <Linkedin className="size-3 text-[#0A66C2]" />}
                                                     <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tighter">{item.type}</span>
                                                 </div>
                                             </div>
                                         </div>
                                         <span className="text-[10px] text-muted-foreground font-medium">{item.time}</span>
                                     </div>
-                                    <p className="text-sm line-clamp-2 text-muted-foreground font-medium">
-                                        {item.content}
-                                    </p>
+                                <p className="text-sm line-clamp-2 text-muted-foreground font-medium">
+                                    {item.content}
+                                </p>
+                                    {item.followUp && (
+                                        <div className="mt-3 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                                            Follow-up
+                                        </div>
+                                    )}
+                                    {(item.assignedTo || item.labels?.length) && (
+                                        <div className="mt-3 flex flex-wrap gap-2">
+                                            {item.assignedTo && (
+                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                                    {item.assignedTo}
+                                                </span>
+                                            )}
+                                            {(item.labels ?? []).slice(0, 2).map((label) => (
+                                                <span
+                                                    key={label}
+                                                    className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                                                >
+                                                    {label}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    )}
                                 </motion.div>
                             ))}
                             {visibleInteractions.length === 0 && (
@@ -283,18 +433,37 @@ export default function InboxPage() {
                             {/* Header */}
                             <div className="p-6 border-b border-border bg-white/[0.02] flex items-center justify-between">
                                 <div className="flex items-center gap-4">
-                                    <h3 className="text-lg font-bold">Conversation with {selectedInteraction.user}</h3>
+                                    <h3 className="text-lg font-semibold">Conversation with {selectedInteraction.user}</h3>
                                     <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-wider">
                                         View on {selectedInteraction.platform}
-                                        <ArrowUpRight className="w-3 h-3 ml-1.5" />
+                                        <ArrowUpRight className="size-3 ml-1.5" />
                                     </Button>
                                 </div>
                                 <div className="flex items-center gap-2">
                                     <Button variant="ghost" size="icon" className="h-9 w-9 text-green-500" onClick={() => void handleMarkDone()}>
-                                        <CheckCircle className="w-5 h-5" />
+                                        <CheckCircle className="size-5" />
+                                    </Button>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                            "h-9 w-9",
+                                            selectedFollowUp && "text-amber-400",
+                                        )}
+                                        onClick={() => toggleFollowUp(selectedInteraction)}
+                                    >
+                                        <Filter className="size-5" />
+                                    </Button>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="h-9 text-xs"
+                                        onClick={() => cycleAssignment(selectedInteraction)}
+                                    >
+                                        Assign: {selectedAssignment}
                                     </Button>
                                     <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => toast.info('More actions coming soon.')}>
-                                        <MoreHorizontal className="w-5 h-5" />
+                                        <MoreHorizontal className="size-5" />
                                     </Button>
                                 </div>
                             </div>
@@ -302,7 +471,7 @@ export default function InboxPage() {
                             {/* Message Area */}
                             <div className="flex-1 p-8 overflow-auto space-y-6">
                                 <div className="flex gap-4 max-w-2xl">
-                                    <div className="w-10 h-10 rounded-full bg-muted shrink-0" />
+                                    <div className="size-10 rounded-full bg-muted shrink-0" />
                                     <GlassCard variant="morphism" className="border border-white/5 bg-white/5 p-6 rounded-2xl rounded-tl-none">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="font-bold text-sm">{selectedInteraction.user}</span>
@@ -312,8 +481,62 @@ export default function InboxPage() {
                                     </GlassCard>
                                 </div>
 
+                                <div className="max-w-2xl space-y-3">
+                                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Saved replies</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {SAVED_REPLIES.map((snippet) => (
+                                            <Button
+                                                key={snippet}
+                                                variant="outline"
+                                                size="sm"
+                                                className="h-8 text-xs"
+                                                onClick={() => applySavedReply(snippet)}
+                                            >
+                                                Use template
+                                            </Button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="max-w-2xl space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Assignment & labels</p>
+                                        <span className="text-xs text-muted-foreground">Current assignee: {selectedAssignment}</span>
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {QUICK_LABELS.map((label) => {
+                                            const active = selectedLabels.includes(label);
+                                            return (
+                                                <Button
+                                                    key={label}
+                                                    variant={active ? 'default' : 'outline'}
+                                                    size="sm"
+                                                    className="h-8 text-xs"
+                                                    onClick={() => toggleLabel(selectedInteraction, label)}
+                                                >
+                                                    {label}
+                                                </Button>
+                                            );
+                                        })}
+                                    </div>
+                                    <div className="flex flex-wrap gap-2">
+                                        {selectedLabels.length > 0 ? (
+                                            selectedLabels.map((label) => (
+                                                <span
+                                                    key={label}
+                                                    className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
+                                                >
+                                                    {label}
+                                                </span>
+                                            ))
+                                        ) : (
+                                            <span className="text-xs text-muted-foreground">No labels assigned yet.</span>
+                                        )}
+                                    </div>
+                                </div>
+
                                 <div className="flex gap-4 max-w-2xl ml-auto flex-row-reverse">
-                                    <div className="w-10 h-10 rounded-full bg-primary/20 shrink-0" />
+                                    <div className="size-10 rounded-full bg-primary/20 shrink-0" />
                                     <div className="bg-primary text-primary-foreground p-6 rounded-2xl rounded-tr-none shadow-lg shadow-primary/20">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="font-bold text-sm">PaintAI Assistant</span>
@@ -335,15 +558,21 @@ export default function InboxPage() {
                                     />
                                     <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1">
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Attachments coming soon')}><Plus className="w-4 h-4" /></Button>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Emojis coming soon')}><Smile className="w-4 h-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Attachments coming soon')}><Plus className="size-4" /></Button>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => toast.info('Emojis coming soon')}><Smile className="size-4" /></Button>
+                                    </div>
+                                    <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+                                        {selectedFollowUp ? 'Marked for follow-up' : 'Ready to send'}
                                     </div>
                                         <Button size="sm" onClick={() => void handleReply()} disabled={isReplying}>
-                                            <Reply className="w-4 h-4 mr-2" />
+                                            <Reply className="size-4 mr-2" />
                                             {isReplying ? 'Sending...' : 'Send Response'}
                                         </Button>
                                     </div>
                                 </GlassCard>
+                                <div className="text-xs text-muted-foreground">
+                                    This inbox keeps the operational loop in one place: open, reply, follow up, and mark done.
+                                </div>
                             </div>
                         </motion.div>
                     ) : (
@@ -353,20 +582,20 @@ export default function InboxPage() {
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="relative z-10 flex flex-col items-center"
                             >
-                                <div className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 relative">
-                                    <MessageSquare className="w-12 h-12 text-primary" />
-                                    <div className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-background border-2 border-primary flex items-center justify-center animate-bounce">
-                                         <Plus className="w-4 h-4 text-primary" />
+                                <div className="size-24 rounded-3xl bg-primary/10 flex items-center justify-center mb-6 relative">
+                                    <MessageSquare className="size-12 text-primary" />
+                                    <div className="absolute -top-2 -right-2 size-8 rounded-full bg-background border-2 border-primary flex items-center justify-center animate-bounce">
+                                         <Plus className="size-4 text-primary" />
                                     </div>
                                 </div>
-                                <h3 className="text-2xl font-bold mb-2">Select a Conversation</h3>
+                                <h3 className="text-2xl font-semibold mb-2">Select a Conversation</h3>
                                 <p className="text-muted-foreground max-w-sm text-sm">
                                     Click on an interaction from the sidebar to view the conversation details and reply across all your social channels.
                                 </p>
                             </motion.div>
                             
                             {/* Decorative background blur */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-96 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
                         </div>
                     )}
                 </AnimatePresence>

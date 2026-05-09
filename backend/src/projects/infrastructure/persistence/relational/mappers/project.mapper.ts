@@ -1,5 +1,6 @@
 import { Project } from '../../../../domain/project';
 import { ProjectEntity } from '../entities/project.entity';
+import { DeepPartial } from '../../../../../utils/types/deep-partial.type';
 
 export class ProjectMapper {
   static toDomain(raw: ProjectEntity): Project {
@@ -11,6 +12,7 @@ export class ProjectMapper {
     domainEntity.description = raw.description;
     domainEntity.userId = raw.userId;
     domainEntity.thumbnail = raw.thumbnail;
+    domainEntity.content = raw.content;
     domainEntity.organizationId = raw.organizationId;
 
     domainEntity.createdAt = raw.createdAt;
@@ -20,25 +22,27 @@ export class ProjectMapper {
     return domainEntity;
   }
 
-  static toPersistence(domainEntity: Project): ProjectEntity {
+  static toPersistence(domainEntity: Project | DeepPartial<Project>): ProjectEntity {
     const persistenceEntity = new ProjectEntity() as ProjectEntity & {
-      organizationId?: string;
+      organizationId?: string | null;
     };
     const projectEntity = domainEntity as Project & {
       organizationId?: string | null;
+      content?: unknown;
     };
     if (domainEntity.id) {
       persistenceEntity.id = domainEntity.id;
     }
-    persistenceEntity.name = domainEntity.name;
-    persistenceEntity.description = domainEntity.description || '';
-    persistenceEntity.userId = domainEntity.userId;
-    persistenceEntity.thumbnail = domainEntity.thumbnail || '';
-    persistenceEntity.organizationId = projectEntity.organizationId || '';
+    persistenceEntity.name = projectEntity.name;
+    persistenceEntity.description = projectEntity.description || '';
+    persistenceEntity.userId = projectEntity.userId;
+    persistenceEntity.thumbnail = projectEntity.thumbnail || '';
+    persistenceEntity.content = projectEntity.content ?? null;
+    persistenceEntity.organizationId = projectEntity.organizationId ?? null;
 
-    persistenceEntity.createdAt = domainEntity.createdAt;
-    persistenceEntity.updatedAt = domainEntity.updatedAt;
-    persistenceEntity.deletedAt = domainEntity.deletedAt;
+    persistenceEntity.createdAt = projectEntity.createdAt as Date;
+    persistenceEntity.updatedAt = projectEntity.updatedAt as Date;
+    persistenceEntity.deletedAt = projectEntity.deletedAt as Date;
 
     return persistenceEntity;
   }

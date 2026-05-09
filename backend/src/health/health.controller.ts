@@ -6,6 +6,7 @@ import {
   TypeOrmHealthIndicator,
   MemoryHealthIndicator,
 } from '@nestjs/terminus';
+import { QueueHealthService } from './queue-health.service';
 
 @Controller('health')
 export class HealthController {
@@ -14,6 +15,7 @@ export class HealthController {
     private http: HttpHealthIndicator,
     private db: TypeOrmHealthIndicator,
     private memory: MemoryHealthIndicator,
+    private readonly queueHealth: QueueHealthService,
   ) {}
 
   @Get()
@@ -24,5 +26,10 @@ export class HealthController {
       () => this.memory.checkHeap('memory_heap', 150 * 1024 * 1024),
       // We can add more checks here as needed
     ]);
+  }
+
+  @Get('queues')
+  async queues() {
+    return this.queueHealth.snapshot();
   }
 }

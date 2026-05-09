@@ -21,8 +21,24 @@ export class AudioGenerationService {
     userId: string,
     type: 'music' | 'sfx' | 'voice',
   ): Promise<GenerationEntity> {
+    const requestId = dto.metadata?.requestId as string | undefined;
+    await this.baseService.assertProjectAccess(
+      dto.projectId ?? dto.metadata?.projectId,
+      userId,
+    );
+    const existingGeneration = await this.baseService.findByRequestId(
+      userId,
+      type,
+      requestId,
+    );
+    if (existingGeneration) {
+      return existingGeneration;
+    }
     const defaultProvider = this.providerRegistry.getAudioProvider(type);
-    const preferredProvider = this.getPreferredProvider(dto.provider, defaultProvider.name);
+    const preferredProvider = this.getPreferredProvider(
+      dto.provider,
+      defaultProvider.name,
+    );
     const reservation = await this.baseService.reserveCredits(userId, type);
 
     let generation: GenerationEntity;
@@ -38,10 +54,15 @@ export class AudioGenerationService {
           provider: preferredProvider,
           creditTransactionId: reservation.transactionId,
           creditReservationId: reservation.referenceId,
+          requestId,
         },
       });
     } catch (error) {
-      await this.baseService.releaseCredits(userId, reservation.transactionId, type);
+      await this.baseService.releaseCredits(
+        userId,
+        reservation.transactionId,
+        type,
+      );
       throw error;
     }
 
@@ -52,8 +73,11 @@ export class AudioGenerationService {
       type,
       userId,
       reservation,
-    )
-      .catch((error) => this.logger.error(`${type} generation ${generation.id} failed: ${error.message}`));
+    ).catch((error) =>
+      this.logger.error(
+        `${type} generation ${generation.id} failed: ${error.message}`,
+      ),
+    );
 
     return generation;
   }
@@ -68,7 +92,11 @@ export class AudioGenerationService {
   ): Promise<void> {
     try {
       const capability =
-        type === 'music' ? 'audio-music' : type === 'sfx' ? 'audio-sfx' : 'audio-voice';
+        type === 'music'
+          ? 'audio-music'
+          : type === 'sfx'
+            ? 'audio-sfx'
+            : 'audio-voice';
 
       const result = await this.providerRegistry.executeWithFallback(
         capability,
@@ -89,7 +117,8 @@ export class AudioGenerationService {
           );
 
           generation.status = providerResult.status || 'completed';
-          if (providerResult.resultUrl) generation.resultUrl = providerResult.resultUrl;
+          if (providerResult.resultUrl)
+            generation.resultUrl = providerResult.resultUrl;
           generation.metadata = {
             ...generation.metadata,
             ...(providerResult.metadata || {}),
@@ -97,18 +126,12 @@ export class AudioGenerationService {
           };
 
           await this.baseService.save(generation);
-          try {
-            await this.baseService.captureCredits(
-              userId,
-              reservation.transactionId,
-              type,
-            );
-          } catch (captureError: any) {
-            this.logger.error(
-              `Failed to capture credits for ${type} generation ${generation.id}: ${captureError.message}`,
-            );
-          }
           await this.baseService.saveAsset(generation);
+          await this.baseService.captureCredits(
+            userId,
+            reservation.transactionId,
+            type,
+          );
           return providerResult;
         },
         preferredProvider,

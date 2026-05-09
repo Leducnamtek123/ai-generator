@@ -5,12 +5,15 @@ import { ConfigService } from '@nestjs/config';
 import { JwtPayloadType } from './types/jwt-payload.type';
 import { AllConfigType } from '../../config/config.type';
 import { SessionService } from '../../session/session.service';
+import { UsersService } from '../../users/users.service';
+import { StatusEnum } from '../../statuses/statuses.enum';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
   constructor(
     configService: ConfigService<AllConfigType>,
     private readonly sessionService: SessionService,
+    private readonly usersService: UsersService,
   ) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -25,6 +28,11 @@ export class JwtStrategy extends PassportStrategy(Strategy, 'jwt') {
 
     const session = await this.sessionService.findById(payload.sessionId);
     if (!session || String(session.user.id) !== String(payload.id)) {
+      throw new UnauthorizedException();
+    }
+
+    const user = await this.usersService.findById(payload.id);
+    if (!user || user.status?.id?.toString() !== StatusEnum.active.toString()) {
       throw new UnauthorizedException();
     }
 

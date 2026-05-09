@@ -6,6 +6,7 @@ export interface AuthTokenDetails {
   expiresIn?: number;
   picture?: string;
   username?: string;
+  extraData?: Record<string, any>;
 }
 
 export interface PostDetails {
@@ -44,7 +45,7 @@ export interface AnalyticsData {
 
 /**
  * Main social provider interface.
- * Extended with token refresh, auth URL generation, and analytics 
+ * Extended with token refresh, auth URL generation, and analytics
  * patterns learned from Postiz-app & Chatwoot clones.
  */
 export interface SocialProvider {
@@ -67,7 +68,9 @@ export interface SocialProvider {
   refreshToken?(refreshToken: string): Promise<AuthTokenDetails>;
 
   /** Generate the OAuth authorization URL for this provider */
-  generateAuthUrl?(): Promise<{ url: string; codeVerifier?: string; state: string }>;
+  generateAuthUrl?(
+    extraParams?: Record<string, string>,
+  ): Promise<{ url: string; codeVerifier?: string; state: string }>;
 
   /** Publish a post to the social platform */
   post(
@@ -85,16 +88,10 @@ export interface SocialProvider {
   ): Promise<PostResponse>;
 
   /** Fetch interactions (comments, likes, mentions) from the platform */
-  getInteractions?(
-    accessToken: string,
-    platformId: string,
-  ): Promise<any[]>;
+  getInteractions?(accessToken: string, platformId: string): Promise<any[]>;
 
   /** Fetch engagement metrics for a specific post */
-  getMetrics?(
-    accessToken: string,
-    externalId: string,
-  ): Promise<MetricsData>;
+  getMetrics?(accessToken: string, externalId: string): Promise<MetricsData>;
 
   /** Fetch channel-level analytics (impressions, followers, engagement over time) */
   getAnalytics?(

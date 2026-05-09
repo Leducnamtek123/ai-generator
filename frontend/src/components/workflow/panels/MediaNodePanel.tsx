@@ -31,7 +31,7 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
         <div className="space-y-4">
             <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                    <Upload className="w-4 h-4 text-cyan-400 shrink-0 mt-0.5" />
+                    <Upload className="size-4 text-cyan-400 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs text-cyan-300 font-medium">Media Upload</p>
                         <p className="text-[10px] text-cyan-300/60 mt-1">
@@ -50,10 +50,10 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
                         <p className="text-xs text-foreground truncate">{mediaName || ''}</p>
                         <div className="flex gap-2">
                             <Button variant="ghost" size="sm" onClick={handleOpen} className="flex-1 gap-1 bg-background/70 hover:bg-accent rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-                                <ExternalLink className="w-3 h-3" /> Open
+                                <ExternalLink className="size-3" /> Open
                             </Button>
                             <Button variant="ghost" size="sm" onClick={handleDownload} className="flex-1 gap-1 bg-background/70 hover:bg-accent rounded text-[10px] text-muted-foreground hover:text-foreground transition-colors">
-                                <Download className="w-3 h-3" /> Download
+                                <Download className="size-3" /> Download
                             </Button>
                             <Button
                                 variant="ghost"
@@ -61,7 +61,7 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
                                 onClick={() => { onChange('mediaUrl', ''); onChange('mediaName', ''); }}
                                 className="h-8 w-8 bg-red-500/10 hover:bg-red-500/20 rounded text-red-400 transition-colors p-0"
                             >
-                                <X className="w-3 h-3" />
+                                <X className="size-3" />
                             </Button>
                         </div>
                     </div>

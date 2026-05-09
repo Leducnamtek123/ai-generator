@@ -3,8 +3,6 @@ import {
   createMongoAbility,
   MongoAbility,
   CreateAbility,
-  InferSubjects,
-  ExtractSubjectType,
 } from '@casl/ability';
 
 export enum OrgAction {
@@ -39,6 +37,8 @@ export function defineAbilityFor(user: PermissionUser): AppAbility {
     createAppAbility,
   );
 
+  can(OrgAction.Create, 'Organization');
+
   // If the user is the explicit owner, they get everything
   if (user.id === user.ownerId || user.role === 'OWNER') {
     can(OrgAction.Manage, 'all');
@@ -53,17 +53,20 @@ export function defineAbilityFor(user: PermissionUser): AppAbility {
     case 'ADMIN':
       can(OrgAction.Manage, 'all');
       // Admin cannot delete the organization or transfer ownership
-      cannot(
-        [OrgAction.Delete, OrgAction.TransferOwnership],
-        'Organization',
-      );
+      cannot([OrgAction.Delete, OrgAction.TransferOwnership], 'Organization');
       break;
 
     case 'MEMBER':
       can(OrgAction.Read, 'Organization');
       can(OrgAction.Read, 'User');
-      can([OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete], 'Project');
-      can([OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete], 'Workflow' as any);
+      can(
+        [OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete],
+        'Project',
+      );
+      can(
+        [OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete],
+        'Workflow' as any,
+      );
       break;
 
     case 'VIEWER':

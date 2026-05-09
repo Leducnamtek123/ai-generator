@@ -26,7 +26,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
 
     const {
         videoRef, isPlaying, isMuted, currentTime, duration,
-        togglePlay, toggleMute, handleTimeUpdate, handleLoadedMetadata, formatTime,
+        togglePlay, toggleMute, handleTimeUpdate, handleLoadedMetadata, handlePlay, handlePause, formatTime,
     } = useVideoPlayer(isOpen);
 
     const handleEdit = async () => {
@@ -45,7 +45,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                 <DialogHeader className="h-14 px-6 flex flex-row items-center justify-between border-b border-white/5 bg-[#0F1014] space-y-0">
                     <div className="flex items-center gap-4">
                         <button onClick={onClose} className="p-1 hover:bg-white/5 rounded-lg text-white/60 hover:text-white transition-colors">
-                            <X className="w-5 h-5" />
+                            <X className="size-5" />
                         </button>
                         <DialogTitle className="text-sm font-medium text-white">Clip Editor</DialogTitle>
                     </div>
@@ -65,6 +65,8 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                             muted={isMuted}
                             onTimeUpdate={handleTimeUpdate}
                             onLoadedMetadata={handleLoadedMetadata}
+                            onPlay={handlePlay}
+                            onPause={handlePause}
                             onClick={togglePlay}
                             loop
                         />
@@ -72,8 +74,8 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                         {/* Play Overlay */}
                         {!isPlaying && (
                             <div className="absolute inset-0 flex items-center justify-center bg-gray-950/20 pointer-events-none">
-                                <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
-                                    <Play className="w-8 h-8 text-white fill-white ml-1" />
+                                <div className="size-16 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20">
+                                    <Play className="size-8 text-white fill-white ml-1" />
                                 </div>
                             </div>
                         )}
@@ -83,7 +85,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                             <div className="absolute inset-0 bg-gray-950/60 backdrop-blur-md flex items-center justify-center z-20">
                                 <div className="flex flex-col items-center gap-4 text-center">
                                     <div className="relative">
-                                        <Wand2 className="w-12 h-12 text-blue-500 animate-[pulse_1.5s_ease-in-out_infinite]" />
+                                        <Wand2 className="size-12 text-blue-500 animate-[pulse_1.5s_ease-in-out_infinite]" />
                                         <div className="absolute -inset-4 border-2 border-blue-500/20 rounded-full animate-[ping_2s_linear_infinite]" />
                                     </div>
                                     <div>
@@ -132,7 +134,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                                     onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
                                 />
                                 <div className="absolute left-4 -top-3 px-2 flex items-center gap-1.5 pointer-events-none">
-                                    <Wand2 className="w-3 h-3 text-blue-400" />
+                                    <Wand2 className="size-3 text-blue-400" />
                                     <span className="text-[10px] font-bold text-blue-400/80 uppercase tracking-widest bg-[#1A1B1F] px-1">AI Action</span>
                                 </div>
                                 <Button
@@ -141,7 +143,7 @@ export function VideoEditorModal({ isOpen, onClose, videoUrl }: VideoEditorModal
                                     disabled={!prompt.trim() || isProcessing}
                                     className="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 bg-blue-600 hover:bg-blue-500 rounded-xl shadow-lg transition-transform active:scale-95"
                                 >
-                                    <Send className="w-4 h-4" />
+                                    <Send className="size-4" />
                                 </Button>
                             </div>
                             <div className="flex items-center justify-between px-2">

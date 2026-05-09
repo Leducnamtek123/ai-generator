@@ -49,7 +49,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
                 {isUploading && (
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-2">
-                            <Loader2 className="w-6 h-6 text-foreground animate-spin" />
+                            <Loader2 className="size-6 text-foreground animate-spin" />
                             <span className="text-xs text-foreground/80 font-medium">Uploading...</span>
                         </div>
                     </div>
@@ -79,8 +79,8 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
                             sizes="(max-width: 1024px) 100vw, 20vw"
                         />
                         <div className="absolute inset-0 flex items-center justify-center">
-                            <div className="w-10 h-10 rounded-lg bg-muted/80 backdrop-blur-sm flex items-center justify-center mb-2 group-hover:bg-muted transition-colors">
-                                <Plus className="w-5 h-5 text-muted-foreground group-hover:text-foreground" />
+                            <div className="size-10 rounded-lg bg-muted/80 backdrop-blur-sm flex items-center justify-center mb-2 group-hover:bg-muted transition-colors">
+                                <Plus className="size-5 text-muted-foreground group-hover:text-foreground" />
                             </div>
                         </div>
                     </div>
@@ -96,7 +96,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
             <div className="flex flex-col px-1">
                 <h3 className="text-sm font-medium group-hover:text-foreground truncate">{workflow.name}</h3>
                 <div className="flex items-center gap-2 mt-1">
-                    {variant === 'compact' && <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground/50 shrink-0"></span>}
+                    {variant === 'compact' && <span className="size-1.5 rounded-full bg-muted-foreground/50 shrink-0"></span>}
                     <p className="text-xs text-muted-foreground truncate">
                         {variant === 'default'
                             ? `${new Date(workflow.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ago`

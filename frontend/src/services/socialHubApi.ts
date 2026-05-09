@@ -12,7 +12,25 @@ export interface SocialChannel {
   expiresAt?: string | null;
   needsReauth?: boolean;
   createdAt: string;
-  metadata?: Record<string, any> | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface FacebookPendingPage {
+  id: string;
+  name: string;
+  picture?: string | null;
+}
+
+export interface FacebookPendingConnection {
+  id: string;
+  platform: string;
+  providerUserId: string;
+  providerName: string;
+  providerPicture?: string | null;
+  expiresAt?: string | null;
+  pages: FacebookPendingPage[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface SocialProvider {
@@ -39,6 +57,7 @@ interface CreateSocialPostPayload {
   mediaUrls?: string[];
   socialAccountId?: number;
   socialAccountIds?: number[];
+  saveDraft?: boolean;
 }
 
 export interface SocialInteraction {
@@ -52,6 +71,9 @@ export interface SocialInteraction {
   isNew?: boolean;
   accountId?: number;
   canReply?: boolean;
+  assignedTo?: string | null;
+  labels?: string[];
+  followUp?: boolean;
 }
 
 export interface SocialAnalytics {
@@ -80,6 +102,14 @@ export interface SocialAnalytics {
 export const socialHubApi = {
   getChannels: async () => apiGet<SocialChannel[]>('/social-hub/channels'),
   getProviders: async () => apiGet<SocialProvider[]>('/social-hub/providers'),
+  getFacebookPendingConnections: async () =>
+    apiGet<FacebookPendingConnection[]>('/social-hub/channels/facebook/pending'),
+  confirmFacebookPendingConnection: async (pendingId: string, selectedPageIds: string[]) =>
+    apiPost(`/social-hub/channels/facebook/pending/${pendingId}/confirm`, {
+      selectedPageIds,
+    }),
+  discardFacebookPendingConnection: async (pendingId: string) =>
+    apiDel(`/social-hub/channels/facebook/pending/${pendingId}`),
   getAuthUrl: async (platform: string, params?: Record<string, string>) => {
     const query = params ? `?${new URLSearchParams(params).toString()}` : '';
     return apiGet<{ url: string }>(`/social-hub/auth/${platform}${query}`);
@@ -92,6 +122,11 @@ export const socialHubApi = {
     apiPost<SocialPost | { created: number; posts: SocialPost[] }, CreateSocialPostPayload>(
       '/social-hub/posts',
       payload,
+    ),
+  saveDraft: async (payload: CreateSocialPostPayload) =>
+    apiPost<SocialPost | { created: number; posts: SocialPost[] }, CreateSocialPostPayload>(
+      '/social-hub/posts',
+      { ...payload, saveDraft: true },
     ),
   updatePost: async (id: number, payload: Partial<Pick<SocialPost, 'content' | 'mediaUrls'>>) =>
     apiPatch<SocialPost>(`/social-hub/posts/${id}`, payload),
@@ -110,6 +145,18 @@ export const socialHubApi = {
     interactionId: string;
   }) =>
     apiPatch('/social-hub/inbox/' + payload.accountId + '/' + payload.interactionId + '/handled', {}),
+  updateInboxInteractionTriage: async (payload: {
+    accountId: number;
+    interactionId: string;
+    assignedTo?: string | null;
+    labels?: string[];
+    followUp?: boolean;
+  }) =>
+    apiPatch('/social-hub/inbox/' + payload.accountId + '/' + payload.interactionId + '/triage', {
+      assignedTo: payload.assignedTo,
+      labels: payload.labels,
+      followUp: payload.followUp,
+    }),
   getAnalytics: async (days?: number) => {
     const query = days ? `?days=${days}` : '';
     return apiGet<SocialAnalytics>(`/social-hub/analytics${query}`);

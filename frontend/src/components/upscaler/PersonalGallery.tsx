@@ -26,7 +26,7 @@ export function PersonalGallery() {
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" className="h-8 rounded-lg gap-2">
-                        <Grid3X3 className="w-3.5 h-3.5" />
+                        <Grid3X3 className="size-3.5" />
                         All
                     </Button>
                 </div>
@@ -44,7 +44,7 @@ export function PersonalGallery() {
                                 <div className="aspect-[4/3] rounded-xl bg-muted border border-border overflow-hidden relative">
                                     {/* Placeholder Image */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-accent/20">
-                                        <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+                                        <ImageIcon className="size-8 text-muted-foreground/30" />
                                     </div>
                                 </div>
                                 <div>
@@ -67,7 +67,7 @@ export function PersonalGallery() {
                                 <div className="aspect-[4/3] rounded-xl bg-muted border border-border overflow-hidden relative">
                                     {/* Placeholder Image */}
                                     <div className="absolute inset-0 flex items-center justify-center bg-accent/20">
-                                        <ImageIcon className="w-8 h-8 text-muted-foreground/30" />
+                                        <ImageIcon className="size-8 text-muted-foreground/30" />
                                     </div>
                                 </div>
                                 <div>

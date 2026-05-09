@@ -11,6 +11,10 @@ import { SOCIAL_POSTING_QUEUE } from '../../queues/queues.constants';
 import { UserEntity } from '../../users/infrastructure/persistence/relational/entities/user.entity';
 import { SocialAccountEntity } from '../infrastructure/persistence/relational/entities/social-account.entity';
 import { AuthenticatedUser } from '../../auth/types/authenticated-user.type';
+import {
+  CreateSocialPostDto,
+  UpdateSocialPostDto,
+} from '../dto/social-hub.dto';
 
 @Injectable()
 export class PublishingService {
@@ -24,6 +28,10 @@ export class PublishingService {
     @InjectQueue(SOCIAL_POSTING_QUEUE)
     private readonly socialPostingQueue: Queue,
   ) {}
+
+  private getPostJobId(postId: number) {
+    return `social-post:${postId}`;
+  }
 
   async findAll(user: AuthenticatedUser) {
     const userId = Number(user.id);
@@ -42,7 +50,7 @@ export class PublishingService {
     }
   }
 
-  async create(user: AuthenticatedUser, data: any) {
+  async create(user: AuthenticatedUser, data: CreateSocialPostDto) {
     const userId = Number(user.id);
     const requestedAccountIds = [
       ...(Array.isArray(data.socialAccountIds) ? data.socialAccountIds : []),
@@ -75,16 +83,22 @@ export class PublishingService {
 
     const targetAccounts = accounts.length > 0 ? accounts : [null];
     const userRef = { id: userId } as UserEntity;
+    const shouldSaveDraft = Boolean(data.saveDraft);
+    const scheduledAt = data.scheduledAt
+      ? new Date(data.scheduledAt)
+      : shouldSaveDraft
+        ? undefined
+        : new Date();
     const postsToCreate = targetAccounts.map((account) =>
       this.socialPostRepository.create({
         content: data.content,
         mediaUrls: data.mediaUrls,
-        scheduledAt: data.scheduledAt ? new Date(data.scheduledAt) : undefined,
+        scheduledAt,
         user: userRef,
         socialAccount: account ?? undefined,
-        status: data.scheduledAt
-          ? SocialPostStatus.SCHEDULED
-          : SocialPostStatus.DRAFT,
+        status: shouldSaveDraft
+          ? SocialPostStatus.DRAFT
+          : SocialPostStatus.SCHEDULED,
       }),
     );
 
@@ -101,7 +115,12 @@ export class PublishingService {
         await this.socialPostingQueue.add(
           'post',
           { postId: savedPost.id },
-          { delay: Math.max(0, delay) },
+          {
+            delay: Math.max(0, delay),
+            jobId: this.getPostJobId(savedPost.id),
+            removeOnComplete: true,
+            removeOnFail: 10,
+          },
         );
       }
     }
@@ -159,7 +178,7 @@ export class PublishingService {
   async update(
     id: number,
     userId: AuthenticatedUser['id'],
-    data: Partial<{ content: string; mediaUrls: string[] }>,
+    data: UpdateSocialPostDto,
   ) {
     const post = await this.findOwnedPost(id, userId);
 
@@ -168,8 +187,8 @@ export class PublishingService {
     }
 
     await this.socialPostRepository.update(id, {
-      ...(data.content ? { content: data.content } : {}),
-      ...(data.mediaUrls ? { mediaUrls: data.mediaUrls } : {}),
+      ...(data.content !== undefined ? { content: data.content } : {}),
+      ...(data.mediaUrls !== undefined ? { mediaUrls: data.mediaUrls } : {}),
     });
 
     return this.findOwnedPost(id, userId);
@@ -195,14 +214,21 @@ export class PublishingService {
       status: SocialPostStatus.SCHEDULED,
     });
 
-    // Remove old job and add new one
+    const jobId = this.getPostJobId(id);
+    const existingJob = await this.socialPostingQueue.getJob(jobId);
+    if (existingJob) {
+      await existingJob.remove();
+    }
+
     const delay = newScheduledAt.getTime() - Date.now();
     await this.socialPostingQueue.add(
       'post',
       { postId: id },
       {
         delay: Math.max(0, delay),
-        jobId: `reschedule_${id}_${Date.now()}`, // unique job ID
+        jobId,
+        removeOnComplete: true,
+        removeOnFail: 10,
       },
     );
 

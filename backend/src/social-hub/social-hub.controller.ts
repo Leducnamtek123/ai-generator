@@ -18,6 +18,16 @@ import { PublishingService } from './services/publishing.service';
 import { TokenRefreshService } from './services/token-refresh.service';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../auth/types/authenticated-user.type';
+import {
+  ConfirmFacebookPendingConnectionDto,
+  ConnectSocialChannelDto,
+  CreateSocialPostDto,
+  ReplyInboxInteractionDto,
+  RescheduleSocialPostDto,
+  SocialAnalyticsQueryDto,
+  UpdateInboxInteractionTriageDto,
+  UpdateSocialPostDto,
+} from './dto/social-hub.dto';
 
 @ApiTags('Social Hub')
 @ApiBearerAuth()
@@ -48,7 +58,7 @@ export class SocialHubController {
   @ApiOperation({ summary: 'Connect a new social channel via OAuth code' })
   connectChannel(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() data: { platform: string; code: string },
+    @Body() data: ConnectSocialChannelDto,
   ) {
     return this.channelsService.connect(user, data.platform, data.code);
   }
@@ -60,6 +70,35 @@ export class SocialHubController {
     @Param('id', ParseIntPipe) id: number,
   ) {
     return this.channelsService.disconnect(id, user.id);
+  }
+
+  @Get('channels/facebook/pending')
+  @ApiOperation({ summary: 'List pending Facebook page connections' })
+  findPendingFacebookConnections(@CurrentUser() user: AuthenticatedUser) {
+    return this.channelsService.getPendingFacebookConnections(user);
+  }
+
+  @Post('channels/facebook/pending/:id/confirm')
+  @ApiOperation({ summary: 'Confirm selected Facebook pages' })
+  confirmPendingFacebookConnection(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() data: ConfirmFacebookPendingConnectionDto,
+  ) {
+    return this.channelsService.confirmPendingFacebookConnection(
+      user,
+      id,
+      Array.isArray(data.selectedPageIds) ? data.selectedPageIds : [],
+    );
+  }
+
+  @Delete('channels/facebook/pending/:id')
+  @ApiOperation({ summary: 'Discard pending Facebook page connection' })
+  discardPendingFacebookConnection(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+  ) {
+    return this.channelsService.discardPendingFacebookConnection(user, id);
   }
 
   @Post('channels/:id/refresh')
@@ -92,7 +131,7 @@ export class SocialHubController {
 
   @Post('posts')
   @ApiOperation({ summary: 'Create a new post (draft or scheduled)' })
-  createPost(@CurrentUser() user: AuthenticatedUser, @Body() data: any) {
+  createPost(@CurrentUser() user: AuthenticatedUser, @Body() data: CreateSocialPostDto) {
     return this.publishingService.create(user, data);
   }
 
@@ -101,7 +140,7 @@ export class SocialHubController {
   updatePost(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: any,
+    @Body() data: UpdateSocialPostDto,
   ) {
     return this.publishingService.update(id, user.id, data);
   }
@@ -111,7 +150,7 @@ export class SocialHubController {
   reschedulePost(
     @CurrentUser() user: AuthenticatedUser,
     @Param('id', ParseIntPipe) id: number,
-    @Body() data: { scheduledAt: string },
+    @Body() data: RescheduleSocialPostDto,
   ) {
     return this.publishingService.reschedule(
       id,
@@ -152,12 +191,12 @@ export class SocialHubController {
   @ApiOperation({ summary: 'Reply to a social inbox interaction' })
   replyToInbox(
     @CurrentUser() user: AuthenticatedUser,
-    @Body() data: { accountId: number; interactionId: string; message: string },
+    @Body() data: ReplyInboxInteractionDto,
   ) {
     return this.channelsService.replyToInteraction(
       user,
-      Number(data.accountId),
-      String(data.interactionId),
+      data.accountId,
+      data.interactionId,
       data.message,
     );
   }
@@ -176,6 +215,21 @@ export class SocialHubController {
     );
   }
 
+  @Patch('inbox/:accountId/:interactionId/triage')
+  @ApiOperation({ summary: 'Update inbox assignment, labels, and follow-up state' })
+  updateInboxInteractionTriage(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('accountId', ParseIntPipe) accountId: number,
+    @Param('interactionId') interactionId: string,
+    @Body() data: UpdateInboxInteractionTriageDto,
+  ) {
+    return this.channelsService.updateInteractionTriage(user, accountId, interactionId, {
+      assignedTo: data.assignedTo,
+      labels: data.labels,
+      followUp: data.followUp,
+    });
+  }
+
   // ==========================================
   // ANALYTICS
   // ==========================================
@@ -184,13 +238,9 @@ export class SocialHubController {
   @ApiOperation({ summary: 'Get dashboard analytics overview' })
   getAnalytics(
     @CurrentUser() user: AuthenticatedUser,
-    @Query('days') days?: string,
+    @Query() query: SocialAnalyticsQueryDto,
   ) {
-    const windowDays = Number(days);
-    return this.analyticsService.getDashboardStats(
-      user,
-      Number.isFinite(windowDays) && windowDays > 0 ? windowDays : 7,
-    );
+    return this.analyticsService.getDashboardStats(user, query.days ?? 7);
   }
 
   @Get('analytics/channel/:accountId')
@@ -198,11 +248,11 @@ export class SocialHubController {
   getChannelAnalytics(
     @CurrentUser() user: AuthenticatedUser,
     @Param('accountId', ParseIntPipe) accountId: number,
-    @Query('days') days?: string,
+    @Query() query: SocialAnalyticsQueryDto,
   ) {
     return this.analyticsService.getChannelAnalytics(
       accountId,
-      days ? +days : 30,
+      query.days ?? 30,
       user.id,
     );
   }

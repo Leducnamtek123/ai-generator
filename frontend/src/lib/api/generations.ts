@@ -1,4 +1,4 @@
-import { get, post } from "@/lib/api";
+import { get, post, type Cfg } from "@/lib/api";
 
 export interface GenerationResult {
   id: string;
@@ -32,7 +32,16 @@ export interface GenerateVideoParams {
 export interface UpscaleImageParams {
   imageUrl: string;
   scale?: 2 | 4;
+  model?: string;
+  optimization?: string;
+  engine?: string;
+  mode?: string;
   enhanceMode?: "balanced" | "creative" | "faithful" | "precision";
+  creativity?: number;
+  hdr?: number;
+  resemblance?: number;
+  fractality?: number;
+  prompt?: string;
   provider?: string;
 }
 
@@ -106,58 +115,163 @@ export interface GenerationProviderInfo {
   capabilities: string[];
 }
 
+type GenerationCapabilityHint =
+  | 'image-generation'
+  | 'video-generation'
+  | 'audio-music'
+  | 'audio-sfx'
+  | 'audio-voice'
+  | 'upscale'
+  | 'prompt-enhance'
+  | 'bg-remove'
+  | 'sketch-to-image'
+  | 'variations'
+  | 'camera-change'
+  | 'icon-gen'
+  | 'image-extend'
+  | 'mockup'
+  | 'skin-enhance'
+  | 'lip-sync'
+  | 'video-upscale';
+
+const GENERATION_CAPABILITY_HINTS: Record<string, GenerationCapabilityHint[]> = {
+  '/generations/image': ['image-generation'],
+  '/generations/video': ['video-generation'],
+  '/generations/upscale': ['upscale'],
+  '/generations/enhance-prompt': ['prompt-enhance'],
+  '/generations/music': ['audio-music'],
+  '/generations/sfx': ['audio-sfx'],
+  '/generations/voice': ['audio-voice'],
+  '/generations/lip-sync': ['lip-sync', 'video-generation'],
+  '/generations/video-upscale': ['video-upscale'],
+  '/generations/bg-remove': ['bg-remove'],
+  '/generations/sketch-to-image': ['sketch-to-image'],
+  '/generations/variations': ['variations'],
+  '/generations/camera-change': ['camera-change', 'image-generation'],
+  '/generations/icon-gen': ['icon-gen', 'image-generation'],
+  '/generations/image-extend': ['image-extend', 'image-generation'],
+  '/generations/mockup': ['mockup', 'image-generation'],
+  '/generations/skin-enhance': ['skin-enhance', 'image-generation'],
+};
+
+let providerListCache: GenerationProviderInfo[] | null = null;
+let providerListPromise: Promise<GenerationProviderInfo[]> | null = null;
+
+async function loadGenerationProviders(): Promise<GenerationProviderInfo[]> {
+  if (providerListCache) {
+    return providerListCache;
+  }
+
+  if (!providerListPromise) {
+    providerListPromise = getGenerationProviders()
+      .then((providers) => {
+        providerListCache = providers;
+        return providers;
+      })
+      .catch(() => {
+        return [];
+      })
+      .finally(() => {
+        providerListPromise = null;
+      });
+  }
+
+  return providerListPromise;
+}
+
+function resolveProviderName(
+  providers: GenerationProviderInfo[],
+  hints: GenerationCapabilityHint[],
+): string | undefined {
+  for (const hint of hints) {
+    const provider = providers.find((item) => item.capabilities.includes(hint));
+    if (provider) {
+      return provider.name;
+    }
+  }
+
+  return undefined;
+}
+
+async function resolvePreferredProvider(
+  endpoint: string,
+  params: Record<string, unknown>,
+): Promise<string | undefined> {
+  const explicitProvider = typeof params.provider === 'string' ? params.provider.trim() : '';
+  if (explicitProvider) {
+    return explicitProvider;
+  }
+
+  const hints = GENERATION_CAPABILITY_HINTS[endpoint];
+  if (!hints?.length) {
+    return undefined;
+  }
+
+  const providers = await loadGenerationProviders();
+  return resolveProviderName(providers, hints);
+}
+
+export async function postGeneration<TResponse, TParams extends object>(
+  endpoint: string,
+  params: TParams,
+): Promise<TResponse> {
+  const provider = await resolvePreferredProvider(endpoint, params as Record<string, unknown>);
+  const payload = provider ? { ...(params as Record<string, unknown>), provider } : params;
+  return post<TResponse>(endpoint, payload);
+}
+
 // ======== API Functions ========
 
 /** Generate an image using the configured AI provider */
 export async function generateImage(params: GenerateImageParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/image", params);
+  return postGeneration<GenerationResult, GenerateImageParams>('/generations/image', params);
 }
 
 /** Generate a video using the configured AI provider */
 export async function generateVideo(params: GenerateVideoParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/video", params);
+  return postGeneration<GenerationResult, GenerateVideoParams>('/generations/video', params);
 }
 
 /** Upscale an image using the configured AI provider */
 export async function upscaleImage(params: UpscaleImageParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/upscale", params);
+  return postGeneration<GenerationResult, UpscaleImageParams>('/generations/upscale', params);
 }
 
 /** Enhance a prompt using AI */
 export async function enhancePrompt(
   params: EnhancePromptParams
 ): Promise<{ enhancedPrompt: string }> {
-  return post<{ enhancedPrompt: string }>("/generations/enhance-prompt", params);
+  return postGeneration<{ enhancedPrompt: string }, EnhancePromptParams>('/generations/enhance-prompt', params);
 }
 
 /** Generate music from text description */
 export async function generateMusic(params: GenerateMusicParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/music", params);
+  return postGeneration<GenerationResult, GenerateMusicParams>('/generations/music', params);
 }
 
 /** Generate a sound effect from text */
 export async function generateSfx(params: GenerateSfxParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/sfx", params);
+  return postGeneration<GenerationResult, GenerateSfxParams>('/generations/sfx', params);
 }
 
 /** Generate voice audio (TTS or clone) */
 export async function generateVoice(params: GenerateVoiceParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/voice", params);
+  return postGeneration<GenerationResult, GenerateVoiceParams>('/generations/voice', params);
 }
 
 /** Lip-sync a video to audio */
 export async function lipSync(params: LipSyncParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/lip-sync", params);
+  return postGeneration<GenerationResult, LipSyncParams>('/generations/lip-sync', params);
 }
 
 /** Upscale a video to higher resolution */
 export async function upscaleVideo(params: UpscaleVideoParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/video-upscale", params);
+  return postGeneration<GenerationResult, UpscaleVideoParams>('/generations/video-upscale', params);
 }
 
 /** Remove background from an image */
 export async function removeBackground(params: RemoveBackgroundParams): Promise<GenerationResult> {
-  return post<GenerationResult>("/generations/bg-remove", params);
+  return postGeneration<GenerationResult, RemoveBackgroundParams>('/generations/bg-remove', params);
 }
 
 export async function getGenerationProviders(): Promise<GenerationProviderInfo[]> {
@@ -165,6 +279,9 @@ export async function getGenerationProviders(): Promise<GenerationProviderInfo[]
 }
 
 /** Get generation status by ID */
-export async function getGeneration(id: string): Promise<GenerationResult> {
-  return get<GenerationResult>(`/generations/${id}`);
+export async function getGeneration(
+  id: string,
+  config?: Cfg,
+): Promise<GenerationResult> {
+  return get<GenerationResult>(`/generations/${id}`, config);
 }

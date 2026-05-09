@@ -11,12 +11,14 @@ describe('GenerationsService callback hardening', () => {
       status: 'pending',
       prompt: 'test',
       cost: 1,
-      metadata: {},
+      metadata: {
+        creditTransactionId: 'txn-1',
+      },
     };
 
     const baseService = {
       findOne: jest.fn().mockResolvedValue(generation),
-      save: jest.fn().mockImplementation(async (value) => value),
+      save: jest.fn().mockImplementation((value) => Promise.resolve(value)),
       captureCredits: jest.fn(),
       releaseCredits: jest.fn(),
       refundCredits: jest.fn(),
@@ -69,7 +71,7 @@ describe('GenerationsService callback hardening', () => {
     return { service, baseService, eventsService, generation };
   };
 
-  it('rejects callbacks with an invalid secret', async () => {
+  it('should reject callbacks with an invalid secret', async () => {
     const { service } = makeService('expected-secret');
 
     await expect(
@@ -83,8 +85,9 @@ describe('GenerationsService callback hardening', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
-  it('is idempotent for duplicate callback payloads', async () => {
-    const { service, baseService, eventsService, generation } = makeService('expected-secret');
+  it('should be idempotent for duplicate callback payloads', async () => {
+    const { service, baseService, eventsService, generation } =
+      makeService('expected-secret');
 
     await service.handleCallback(
       'gen-1',
@@ -104,6 +107,11 @@ describe('GenerationsService callback hardening', () => {
 
     expect(baseService.save).toHaveBeenCalledTimes(1);
     expect(eventsService.emitUpdate).toHaveBeenCalledTimes(1);
+    expect(baseService.saveAsset).toHaveBeenCalledTimes(1);
+    expect(baseService.captureCredits).toHaveBeenCalledTimes(1);
+    expect(baseService.saveAsset.mock.invocationCallOrder[0]).toBeLessThan(
+      baseService.captureCredits.mock.invocationCallOrder[0],
+    );
     expect(generation.metadata.callback.hash).toBeDefined();
     expect(generation.status).toBe('completed');
     expect(generation.resultUrl).toBe('https://example.com/result.png');

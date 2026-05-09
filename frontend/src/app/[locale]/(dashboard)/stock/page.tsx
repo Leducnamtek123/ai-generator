@@ -124,7 +124,7 @@ function StockPageContent() {
                 <div className="max-w-2xl w-full space-y-6 z-10 transition-all">
                     {!hasSearched && (
                         <>
-                            <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
+                            <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">
                                 Free & Premium stock content made for creators
                             </h1>
                             <p className="text-lg text-muted-foreground">
@@ -150,7 +150,7 @@ function StockPageContent() {
                                 className="h-full rounded-full px-6 gap-2" 
                                 disabled={isSearching || !query.trim()}
                             >
-                                {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <SearchIcon className="w-4 h-4" />}
+                                {isSearching ? <Loader2 className="size-4 animate-spin" /> : <SearchIcon className="size-4" />}
                             </Button>
                         </div>
                     </form>
@@ -193,7 +193,7 @@ function StockPageContent() {
                                         {/* Actions */}
                                         <div className="absolute top-3 right-3 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity translate-y-[-10px] group-hover:translate-y-0 duration-300">
                                             <Button variant="secondary" size="icon" className="h-8 w-8 rounded-full bg-white/20 backdrop-blur-md hover:bg-white text-white hover:text-black transition-colors" onClick={(e) => { e.stopPropagation(); toast.success('Saved to collection'); }}>
-                                                <Heart className="w-4 h-4" />
+                                                <Heart className="size-4" />
                                             </Button>
                                         </div>
 
@@ -203,7 +203,7 @@ function StockPageContent() {
                                                 <p className="text-xs text-white/70">by {res.author}</p>
                                             </div>
                                             <Button size="icon" className="h-8 w-8 rounded-full bg-primary hover:bg-primary text-primary-foreground" onClick={(e) => { e.stopPropagation(); handleDownload(res.url); }}>
-                                                <Download className="w-4 h-4" />
+                                                <Download className="size-4" />
                                             </Button>
                                         </div>
                                     </div>
@@ -235,11 +235,11 @@ function StockPageContent() {
                                         className={`h-24 rounded-xl relative overflow-hidden group cursor-pointer border border-border bg-gradient-to-br ${cat.color} opacity-80 hover:opacity-100 transition-opacity`}
                                     >
                                         <div className="absolute inset-0 flex items-center justify-start p-6 gap-3">
-                                            <CategoryIcon className="w-6 h-6 text-foreground/70 group-hover:text-foreground transition-colors" />
+                                            <CategoryIcon className="size-6 text-foreground/70 group-hover:text-foreground transition-colors" />
                                             <span className="font-semibold text-lg">{cat.title}</span>
                                         </div>
                                         <div className="absolute right-4 bottom-4 opacity-0 group-hover:opacity-100 transition-opacity transform translate-x-2 group-hover:translate-x-0 duration-300">
-                                            <ArrowRight className="w-5 h-5" />
+                                            <ArrowRight className="size-5" />
                                         </div>
                                     </div>
                                     );

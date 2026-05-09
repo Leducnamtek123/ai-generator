@@ -11,6 +11,7 @@ import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
 import { signIn } from 'next-auth/react';
 import AuthLayout from '@/components/auth/AuthLayout';
+import { sanitizeAppPath } from '@/lib/auth-redirect';
 
 const loginSchema = z.object({
     email: z.string().email("Invalid email address"),
@@ -22,13 +23,17 @@ type LoginValues = z.infer<typeof loginSchema>;
 export default function SignInPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
-    const nextPath = searchParams.get('next') || '/dashboard';
+    const nextPath = sanitizeAppPath(searchParams.get('next'));
+    const emailPrefill = searchParams.get('email') ?? '';
     const [isLoading, setIsLoading] = useState(false);
 
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
-        defaultValues: { email: "", password: "" }
+        defaultValues: { email: emailPrefill, password: "" }
     });
+    const signUpHref = nextPath === '/dashboard'
+        ? '/sign-up'
+        : `/sign-up?next=${encodeURIComponent(nextPath)}`;
 
     useEffect(() => {
         const error = searchParams.get('error');
@@ -66,9 +71,9 @@ export default function SignInPage() {
                 toast.success("Welcome back!", {
                     description: "You have successfully logged in."
                 });
-                router.push(nextPath);
+                router.replace(nextPath);
             }
-        } catch (error) {
+        } catch {
             toast.error("Login Failed", {
                 description: "Something went wrong. Please try again."
             });
@@ -130,7 +135,7 @@ export default function SignInPage() {
                     <div className="auth-field">
                         <div className="auth-field__header">
                             <label className="auth-field__label" htmlFor="signin-password">Password</label>
-                            <Link href="#" className="auth-field__link">Forgot?</Link>
+                            <Link href="/forgot-password" className="auth-field__link">Forgot password?</Link>
                         </div>
                         <input
                             id="signin-password"
@@ -146,7 +151,7 @@ export default function SignInPage() {
                     </div>
 
                     <button type="submit" disabled={isLoading} className="auth-submit">
-                        {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Continue'}
+                        {isLoading ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
                     </button>
                 </form>
 
@@ -154,7 +159,7 @@ export default function SignInPage() {
                 <div className="auth-footer">
                     <p className="auth-footer__text">
                         Don&apos;t have an account?{' '}
-                        <Link href="/sign-up">Sign up</Link>
+                        <Link href={signUpHref}>Sign up</Link>
                     </p>
                     <div className="auth-footer__secured">
                         <Lock size={12} aria-hidden="true" />

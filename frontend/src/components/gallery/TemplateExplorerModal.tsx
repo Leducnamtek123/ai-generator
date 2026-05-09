@@ -78,7 +78,7 @@ export function TemplateExplorerModal({ children }: { children?: React.ReactNode
                                     : "text-muted-foreground hover:bg-accent hover:text-foreground"
                             )}
                         >
-                            <cat.icon className="w-4 h-4" />
+                            <cat.icon className="size-4" />
                             {cat.label}
                         </button>
                     ))}
@@ -90,7 +90,7 @@ export function TemplateExplorerModal({ children }: { children?: React.ReactNode
                     {/* Header */}
                     <div className="h-16 border-b border-border flex items-center px-6 gap-4 shrink-0">
                         <div className="relative flex-1 max-w-xl">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                             <Input
                                 placeholder="Search templates..."
                                 className="pl-10 rounded-full"
@@ -109,7 +109,7 @@ export function TemplateExplorerModal({ children }: { children?: React.ReactNode
 
                             {status === 'pending' ? (
                                 <div className="h-40 flex items-center justify-center">
-                                    <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+                                    <Loader2 className="size-8 animate-spin text-muted-foreground" />
                                 </div>
                             ) : status === 'error' ? (
                                 <div className="h-40 flex items-center justify-center text-destructive">
@@ -125,7 +125,7 @@ export function TemplateExplorerModal({ children }: { children?: React.ReactNode
 
                             {/* Load More Trigger */}
                             <div ref={ref} className="h-20 flex items-center justify-center mt-8">
-                                {isFetchingNextPage && <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />}
+                                {isFetchingNextPage && <Loader2 className="size-6 animate-spin text-muted-foreground" />}
                             </div>
                         </div>
                     </div>

@@ -60,12 +60,12 @@ import {
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, { label: string; icon: React.ReactNode; cls: string }> = {
-    PENDING: { label: 'Pending', icon: <Clock className="w-3 h-3" />, cls: 'text-yellow-400 bg-yellow-400/10' },
-    PROCESSING: { label: 'Processing', icon: <Loader2 className="w-3 h-3 animate-spin" />, cls: 'text-blue-400 bg-blue-400/10' },
-    COMPLETED: { label: 'Done', icon: <CheckCircle2 className="w-3 h-3" />, cls: 'text-emerald-400 bg-emerald-400/10' },
-    FAILED: { label: 'Failed', icon: <XCircle className="w-3 h-3" />, cls: 'text-red-400 bg-red-400/10' },
-    ACTIVE: { label: 'Active', icon: <Sparkles className="w-3 h-3" />, cls: 'text-violet-400 bg-violet-400/10' },
-    DRAFT: { label: 'Draft', icon: <BookOpen className="w-3 h-3" />, cls: 'text-gray-400 bg-gray-400/10' },
+    PENDING: { label: 'Pending', icon: <Clock className="size-3" />, cls: 'text-yellow-400 bg-yellow-400/10' },
+    PROCESSING: { label: 'Processing', icon: <Loader2 className="size-3 animate-spin" />, cls: 'text-blue-400 bg-blue-400/10' },
+    COMPLETED: { label: 'Done', icon: <CheckCircle2 className="size-3" />, cls: 'text-emerald-400 bg-emerald-400/10' },
+    FAILED: { label: 'Failed', icon: <XCircle className="size-3" />, cls: 'text-red-400 bg-red-400/10' },
+    ACTIVE: { label: 'Active', icon: <Sparkles className="size-3" />, cls: 'text-violet-400 bg-violet-400/10' },
+    DRAFT: { label: 'Draft', icon: <BookOpen className="size-3" />, cls: 'text-gray-400 bg-gray-400/10' },
   };
   const s = map[status] ?? { label: status, icon: null, cls: 'text-gray-400 bg-gray-400/10' };
   return (
@@ -91,8 +91,8 @@ function CharacterRow({ char, onDelete }: CharacterRowProps) {
   const EntityIcon = ENTITY_TYPE_ICONS[char.entityType] ?? Clapperboard;
   return (
     <div className="flex items-center gap-3 p-3 rounded-xl bg-white/5 hover:bg-white/10 transition-colors group">
-      <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-lg shrink-0">
-        <EntityIcon className="w-4 h-4 text-white/80" />
+      <div className="size-10 rounded-lg bg-gradient-to-br from-violet-500/30 to-pink-500/30 border border-white/10 flex items-center justify-center text-lg shrink-0">
+        <EntityIcon className="size-4 text-white/80" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium truncate">{char.name}</p>
@@ -100,13 +100,14 @@ function CharacterRow({ char, onDelete }: CharacterRowProps) {
       </div>
       <StatusBadge status={char.refStatus} />
       {char.referenceImageUrl && (
-        <div className="relative w-8 h-8 overflow-hidden rounded-lg border border-white/10">
+        <div className="relative size-8 overflow-hidden rounded-lg border border-white/10">
           <Image
             src={char.referenceImageUrl}
             alt={char.name}
             fill
             className="object-cover"
             sizes="32px"
+            unoptimized
           />
         </div>
       )}
@@ -114,7 +115,7 @@ function CharacterRow({ char, onDelete }: CharacterRowProps) {
         onClick={() => onDelete(char.id)}
         className="opacity-0 group-hover:opacity-100 p-1.5 hover:text-red-400 transition-all"
       >
-        <Trash2 className="w-3.5 h-3.5" />
+        <Trash2 className="size-3.5" />
       </button>
     </div>
   );
@@ -129,6 +130,14 @@ interface CreateProjectWizardProps {
   onClose: () => void;
   onCreated: (project: VisualProject) => void;
 }
+
+type WizardDraft = {
+  version: number;
+  savedAt: string;
+  state: WizardState;
+};
+
+const WIZARD_DRAFT_KEY = 'visual-flow:create-project:draft';
 
 type WizardCharacter = {
   name: string;
@@ -195,6 +204,51 @@ function wizardReducer(state: WizardState, action: WizardAction): WizardState {
 
 function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardProps) {
   const [state, dispatch] = useReducer(wizardReducer, initialWizardState);
+  const [draftReady, setDraftReady] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      setDraftReady(false);
+      return;
+    }
+
+    try {
+      const raw = window.localStorage.getItem(WIZARD_DRAFT_KEY);
+      if (!raw) {
+        setDraftReady(true);
+        return;
+      }
+
+      const parsed = JSON.parse(raw) as Partial<WizardDraft>;
+      const restored = parsed.state;
+      if (restored) {
+        dispatch({ type: 'reset' });
+        dispatch({ type: 'setStep', step: restored.step ?? 1 });
+        dispatch({ type: 'setLoading', loading: false });
+        dispatch({ type: 'setForm', form: restored.form ?? {} });
+        dispatch({ type: 'setCharacters', characters: restored.characters ?? [] });
+        dispatch({ type: 'setNewChar', newChar: restored.newChar ?? {} });
+      }
+    } catch (error) {
+      console.error('Failed to restore VisualFlow wizard draft', error);
+    } finally {
+      setDraftReady(true);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    if (!open || !draftReady) {
+      return;
+    }
+
+    const draft: WizardDraft = {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      state,
+    };
+
+    window.localStorage.setItem(WIZARD_DRAFT_KEY, JSON.stringify(draft));
+  }, [draftReady, open, state]);
 
   const handleAddChar = () => {
     if (!state.newChar.name.trim()) return;
@@ -218,6 +272,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
         language: state.form.language,
         characters: state.characters.length ? state.characters : undefined,
       });
+      window.localStorage.removeItem(WIZARD_DRAFT_KEY);
       onCreated(project);
       onClose();
       dispatch({ type: 'reset' });
@@ -233,7 +288,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
       <DialogContent className="max-w-xl bg-zinc-900 border-white/10 text-white">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Clapperboard className="w-5 h-5 text-violet-400" />
+            <Clapperboard className="size-5 text-violet-400" />
             New VisualFlow Project
             <span className="ml-auto text-xs text-white/40">Step {state.step} / 2</span>
           </DialogTitle>
@@ -293,7 +348,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
 
                   return (
                     <div key={i} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 text-sm">
-                      <EntityIcon className="w-4 h-4" />
+                      <EntityIcon className="size-4" />
                       <span className="font-medium">{c.name}</span>
                       <span className="text-white/40 truncate flex-1">{c.description}</span>
                       <button
@@ -305,7 +360,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                         }
                         className="text-red-400 hover:text-red-300"
                       >
-                        <Trash2 className="w-3.5 h-3.5" />
+                        <Trash2 className="size-3.5" />
                       </button>
                     </div>
                   );
@@ -352,7 +407,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                 disabled={!state.newChar.name.trim()}
                 className="w-full border-white/10 text-white/70 hover:bg-white/10"
               >
-                <Plus className="w-3.5 h-3.5 mr-1" /> Add Entity
+                <Plus className="size-3.5 mr-1" /> Add Entity
               </Button>
             </div>
           </div>
@@ -373,7 +428,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
               disabled={!state.form.name.trim()}
               className="bg-violet-600 hover:bg-violet-500 text-white"
             >
-              Next <ChevronRight className="w-4 h-4 ml-1" />
+              Next <ChevronRight className="size-4 ml-1" />
             </Button>
           ) : (
             <Button
@@ -381,7 +436,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
               disabled={state.loading || !state.form.name.trim()}
               className="bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white"
             >
-              {state.loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Sparkles className="w-4 h-4 mr-2" />}
+              {state.loading ? <Loader2 className="size-4 animate-spin mr-2" /> : <Sparkles className="size-4 mr-2" />}
               Create Project
             </Button>
           )}
@@ -408,10 +463,10 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
       {/* Thumbnail / gradient header */}
       <div className="h-36 bg-gradient-to-br from-violet-900/60 via-pink-900/40 to-indigo-900/60 relative overflow-hidden">
         {project.thumbnailUrl ? (
-          <Image src={project.thumbnailUrl} alt={project.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
+          <Image src={project.thumbnailUrl} alt={project.name} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" unoptimized />
         ) : (
           <div className="absolute inset-0 flex items-center justify-center">
-            <Clapperboard className="w-12 h-12 text-white/10" />
+            <Clapperboard className="size-12 text-white/10" />
           </div>
         )}
         {/* Overlay actions */}
@@ -419,19 +474,19 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <button className="p-1.5 bg-gray-950/60 backdrop-blur rounded-lg text-white hover:bg-gray-950/80 transition">
-                <MoreHorizontal className="w-4 h-4" />
+                <MoreHorizontal className="size-4" />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-zinc-900 border-white/10 text-white">
               <DropdownMenuItem className="cursor-pointer hover:bg-white/10">
-                <Edit className="w-4 h-4 mr-2" /> Rename
+                <Edit className="size-4 mr-2" /> Rename
               </DropdownMenuItem>
               <DropdownMenuSeparator className="bg-white/10" />
               <DropdownMenuItem
                 onClick={onDelete}
                 className="cursor-pointer text-red-400 hover:bg-red-400/10 focus:text-red-400"
               >
-                <Trash2 className="w-4 h-4 mr-2" /> Delete
+                <Trash2 className="size-4 mr-2" /> Delete
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -451,11 +506,11 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
         {/* Stats row */}
         <div className="flex items-center gap-4 text-xs text-white/40">
           <span className="flex items-center gap-1">
-            <Users className="w-3.5 h-3.5" />
+            <Users className="size-3.5" />
             {chars.length} entities ({completedRefs} refs)
           </span>
           <span className="flex items-center gap-1">
-            <Film className="w-3.5 h-3.5" />
+            <Film className="size-3.5" />
             {videos.length} video{videos.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -523,17 +578,17 @@ export default function VisualFlowPage() {
       <div className="relative w-full rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-violet-950/80 via-[#0a0a0f] to-pink-950/50 p-8 flex items-center justify-between min-h-[180px]">
         {/* Animated background orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full bg-violet-600/20 blur-[80px]" />
-          <div className="absolute -bottom-20 right-20 w-60 h-60 rounded-full bg-pink-600/20 blur-[60px]" />
+          <div className="absolute -top-20 -left-20 size-80 rounded-full bg-violet-600/20 blur-[80px]" />
+          <div className="absolute -bottom-20 right-20 size-60 rounded-full bg-pink-600/20 blur-[60px]" />
         </div>
         <div className="relative z-10">
           <div className="flex items-center gap-2 mb-3">
             <div className="p-2 rounded-xl bg-violet-600/20 border border-violet-500/30">
-              <Clapperboard className="w-5 h-5 text-violet-400" />
+              <Clapperboard className="size-5 text-violet-400" />
             </div>
             <span className="text-xs font-medium text-violet-400 uppercase tracking-widest">VisualFlow Studio</span>
           </div>
-          <h1 className="text-3xl font-bold mb-2 bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-semibold mb-2 bg-gradient-to-r from-white to-white/60 bg-clip-text text-transparent">
             AI Video Pipeline
           </h1>
           <p className="text-sm text-white/50 max-w-md">
@@ -543,7 +598,7 @@ export default function VisualFlowPage() {
             onClick={() => setShowWizard(true)}
             className="mt-5 bg-gradient-to-r from-violet-600 to-pink-600 hover:from-violet-500 hover:to-pink-500 text-white border-0 rounded-full px-6"
           >
-            <Plus className="w-4 h-4 mr-2" />
+            <Plus className="size-4 mr-2" />
             New Project
           </Button>
         </div>
@@ -551,10 +606,10 @@ export default function VisualFlowPage() {
         {/* Feature pills */}
         <div className="relative z-10 hidden lg:flex flex-col gap-2.5">
           {[
-            { icon: <ImageIcon className="w-4 h-4 text-violet-400" />, label: 'Reference Image System' },
-            { icon: <Layers className="w-4 h-4 text-pink-400" />, label: 'Scene Chaining (ROOT → CONTINUATION)' },
-            { icon: <Video className="w-4 h-4 text-blue-400" />, label: 'Dual Orientation (9:16 + 16:9)' },
-            { icon: <Wand2 className="w-4 h-4 text-emerald-400" />, label: 'Auto Pipeline Generation' },
+            { icon: <ImageIcon className="size-4 text-violet-400" />, label: 'Reference Image System' },
+            { icon: <Layers className="size-4 text-pink-400" />, label: 'Scene Chaining (ROOT → CONTINUATION)' },
+            { icon: <Video className="size-4 text-blue-400" />, label: 'Dual Orientation (9:16 + 16:9)' },
+            { icon: <Wand2 className="size-4 text-emerald-400" />, label: 'Auto Pipeline Generation' },
           ].map((f) => (
             <div key={f.label} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/60">
               {f.icon} {f.label}
@@ -566,7 +621,7 @@ export default function VisualFlowPage() {
       {/* Controls */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-white/30" />
           <Input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -582,7 +637,7 @@ export default function VisualFlowPage() {
       {/* Project Grid */}
       {loading ? (
         <div className="flex items-center justify-center h-48">
-          <Loader2 className="w-6 h-6 text-violet-400 animate-spin" />
+          <Loader2 className="size-6 text-violet-400 animate-spin" />
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
@@ -591,8 +646,8 @@ export default function VisualFlowPage() {
             onClick={() => setShowWizard(true)}
             className="group cursor-pointer rounded-2xl border border-dashed border-white/10 bg-transparent hover:bg-white/[0.03] hover:border-violet-500/40 transition-all duration-300 flex flex-col items-center justify-center gap-3 min-h-[260px]"
           >
-            <div className="w-14 h-14 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-600/20 transition-colors">
-              <Plus className="w-6 h-6 text-violet-400" />
+            <div className="size-14 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-600/20 transition-colors">
+              <Plus className="size-6 text-violet-400" />
             </div>
             <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors">
               New Project
@@ -618,7 +673,7 @@ export default function VisualFlowPage() {
 
       {!loading && projects.length === 0 && (
         <div className="flex flex-col items-center justify-center h-48 gap-3 text-white/30">
-          <Clapperboard className="w-10 h-10" />
+          <Clapperboard className="size-10" />
           <p className="text-sm">No projects yet. Create your first VisualFlow project!</p>
         </div>
       )}

@@ -33,7 +33,7 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                             activeTab === 'general' ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
                         )}
                     >
-                        <Settings className="w-4 h-4" />
+                        <Settings className="size-4" />
                         General
                     </Button>
                     <Button
@@ -44,7 +44,7 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                             activeTab === 'shortcuts' ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
                         )}
                     >
-                        <Keyboard className="w-4 h-4" />
+                        <Keyboard className="size-4" />
                         Shortcuts
                     </Button>
                 </div>
@@ -179,7 +179,7 @@ function ToggleItem({
         >
             <span className="text-sm text-white/70 group-hover:text-white transition-colors">{label}</span>
             <div className={cn("w-9 h-5 rounded-full relative transition-colors", checked ? 'bg-blue-600' : 'bg-white/20')}>
-                <div className={cn("absolute top-1 w-3 h-3 rounded-full bg-white transition-transform", checked ? 'left-5' : 'left-1')} />
+                <div className={cn("absolute top-1 size-3 rounded-full bg-white transition-transform", checked ? 'left-5' : 'left-1')} />
             </div>
         </button>
     );

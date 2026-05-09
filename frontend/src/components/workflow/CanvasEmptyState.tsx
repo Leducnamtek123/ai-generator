@@ -192,11 +192,11 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                                 )}
                             >
                                 <div className={cn(
-                                    "w-10 h-10 rounded-lg flex items-center justify-center transition-colors",
+                                    "size-10 rounded-lg flex items-center justify-center transition-colors",
                                     colors.iconBg,
                                     "group-hover:bg-primary/10"
                                 )}>
-                                    <Icon className={cn("w-5 h-5", config.color.replace('text-white', 'text-foreground'))} />
+                                    <Icon className={cn("size-5", config.color.replace('text-white', 'text-foreground'))} />
                                 </div>
                                 <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
                                     {config.label}

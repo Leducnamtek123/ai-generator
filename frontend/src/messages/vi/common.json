@@ -1,14 +1,49 @@
 {
-    "Dashboard": {
-        "title": "Nizam - Next.js 16 Boilerplate",
-        "description": "Boilerplate mã nguồn mở cho các ứng dụng Next.js hiện đại, sử dụng <react>React</react>, <typescript>TypeScript</typescript>, <tailwind>Tailwind CSS</tailwind>, và <tanstack>TanStack Query</tanstack>. Bao gồm các thành phần, hook và tiện ích có thể tái sử dụng để tăng tốc độ phát triển.",
-        "starOnGithub": "Gắn sao trên Github",
-        "deployToVercel": "Triển khai lên Vercel",
-        "useTemplate": "Sử dụng Template",
-        "projectBy": "Dự án bởi"
+  "Dashboard": {
+    "title": "Nizam - Next.js 16 Boilerplate",
+    "description": "Boilerplate mã nguồn mở cho các ứng dụng Next.js hiện đại, sử dụng <react>React</react>, <typescript>TypeScript</typescript>, <tailwind>Tailwind CSS</tailwind>, và <tanstack>TanStack Query</tanstack>. Bao gồm các thành phần, hook và tiện ích có thể tái sử dụng để tăng tốc độ phát triển.",
+    "starOnGithub": "Gắn sao trên Github",
+    "deployToVercel": "Triển khai lên Vercel",
+    "useTemplate": "Sử dụng Template",
+    "projectBy": "Dự án bởi"
+  },
+  "Header": {
+    "brandTagline": "Màu của bạn, lựa chọn của bạn",
+    "getPro": "Nâng cấp Pro"
+  },
+  "LocaleSwitcher": {
+    "ariaLabel": "Thay đổi ngôn ngữ"
+  },
+  "ThemeSwitcher": {
+    "ariaLabel": "Chuyển giao diện"
+  },
+  "UserMenu": {
+    "billing": {
+      "workspace": "Thanh toán workspace",
+      "personal": "Thanh toán cá nhân"
     },
-    "Showcase": {
-        "title": "Trình diễn",
-        "description": "Bản trình diễn các tính năng của dự án."
+    "secondaryAction": {
+      "workspace": "Gói cá nhân",
+      "personal": "Tạo workspace của bạn"
+    },
+    "items": {
+      "billing": {
+        "workspace": "Thanh toán workspace",
+        "personal": "Thanh toán cá nhân"
+      },
+      "settings": "Cài đặt",
+      "profile": "Hồ sơ creator",
+      "collections": "Bộ sưu tập của tôi",
+      "language": "Ngôn ngữ",
+      "theme": "Giao diện",
+      "developer": "Developer & MCP",
+      "docs": "Tài liệu API",
+      "help": "Trung tâm hỗ trợ",
+      "logout": "Đăng xuất"
     }
+  },
+  "Showcase": {
+    "title": "Trình diễn",
+    "description": "Bản trình diễn các tính năng của dự án."
+  }
 }

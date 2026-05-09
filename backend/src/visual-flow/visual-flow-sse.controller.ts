@@ -1,8 +1,16 @@
-import { Controller, Sse, Param, UseGuards, Request, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Sse,
+  Param,
+  UseGuards,
+  Request,
+  Logger,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { VisualFlowEventsService } from './services/visual-flow-events.service';
+import { VisualFlowService } from './visual-flow.service';
 
 /**
  * SSE Controller for Visual Flow real-time events.
@@ -13,11 +21,14 @@ import { VisualFlowEventsService } from './services/visual-flow-events.service';
 @ApiTags('Visual Flow SSE')
 @ApiBearerAuth()
 @UseGuards(AuthGuard('jwt'))
-@Controller('visual-flow')
+@Controller({ path: 'visual-flow', version: '1' })
 export class VisualFlowSseController {
   private readonly logger = new Logger(VisualFlowSseController.name);
 
-  constructor(private readonly eventsService: VisualFlowEventsService) {}
+  constructor(
+    private readonly eventsService: VisualFlowEventsService,
+    private readonly visualFlowService: VisualFlowService,
+  ) {}
 
   @Sse('projects/:id/events')
   @ApiOperation({
@@ -26,11 +37,12 @@ export class VisualFlowSseController {
       'Server-Sent Events endpoint. Connect to receive real-time status updates ' +
       'for generation pipeline progress, scene updates, and export completion.',
   })
-  streamEvents(
+  async streamEvents(
     @Param('id') projectId: string,
     @Request() req: any,
-  ): Observable<MessageEvent> {
+  ): Promise<Observable<MessageEvent>> {
     const userId = req.user?.id ?? 'anonymous';
+    await this.visualFlowService.findOneProject(projectId, userId);
     this.logger.log(`SSE connected: project=${projectId} user=${userId}`);
 
     // Start heartbeat to keep the connection alive

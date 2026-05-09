@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { IsNotEmpty, IsObject, IsOptional, IsString } from 'class-validator';
 
 export class CreateProjectDto {
   @IsNotEmpty()
@@ -14,6 +14,7 @@ export class CreateProjectDto {
   thumbnail?: string;
 
   @IsOptional()
+  @IsObject()
   content?: any;
 
   @IsOptional()

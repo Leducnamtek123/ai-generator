@@ -5,9 +5,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DeepPartial, Repository } from 'typeorm';
+import { DataSource, DeepPartial, EntityManager, Repository } from 'typeorm';
 import { TemplateEntity } from '../templates/infrastructure/persistence/relational/entities/template.entity';
-import { CreditsService } from '../credits/credits.service';
+import { BillingAccountEntity } from '../billing-accounts/infrastructure/persistence/relational/entities/billing-account.entity';
+import { CreditTransactionEntity } from '../credits/infrastructure/persistence/relational/entities/credit-transaction.entity';
 import { IPaginationOptions } from '../utils/types/pagination-options';
 import { CreateCommunityListingDto } from './dto/create-community-listing.dto';
 import { UpdateCommunityListingDto } from './dto/update-community-listing.dto';
@@ -34,7 +35,7 @@ export class CommunityMarketplaceService {
   constructor(
     @InjectRepository(TemplateEntity)
     private readonly templateRepository: Repository<TemplateEntity>,
-    private readonly creditsService: CreditsService,
+    private readonly dataSource: DataSource,
   ) {}
 
   async findAll(
@@ -228,132 +229,294 @@ export class CommunityMarketplaceService {
   }
 
   async purchase(userId: string, id: string) {
-    const template = await this.templateRepository.findOne({
-      where: { id },
-      relations: ['author'],
-    });
+    return this.dataSource.transaction(async (manager) => {
+      const templateRepository = manager.getRepository(TemplateEntity);
+      const billingAccountRepository = manager.getRepository(BillingAccountEntity);
+      const creditTransactionRepository = manager.getRepository(CreditTransactionEntity);
 
-    if (!template) {
-      throw new NotFoundException('Template not found');
-    }
+      const template = await templateRepository
+        .createQueryBuilder('template')
+        .leftJoinAndSelect('template.author', 'author')
+        .setLock('pessimistic_write')
+        .where('template.id = :id', { id })
+        .getOne();
 
-    if (template.authorId === userId) {
-      throw new BadRequestException('You already own this template');
-    }
+      if (!template) {
+        throw new NotFoundException('Template not found');
+      }
 
-    const marketplace = this.extractMarketplaceMeta(template);
-    if (!marketplace.listed) {
-      throw new BadRequestException('This template is not listed for sale');
-    }
+      if (template.authorId === userId) {
+        throw new BadRequestException('You already own this template');
+      }
 
-    if (!marketplace.priceCredits || marketplace.priceCredits < 1) {
-      throw new BadRequestException('This template does not have a valid price');
-    }
+      const marketplace = this.extractMarketplaceMeta(template);
+      if (!marketplace.listed) {
+        throw new BadRequestException('This template is not listed for sale');
+      }
 
-    const balance = await this.creditsService.getBalance(userId);
-    if (balance < marketplace.priceCredits) {
-      throw new BadRequestException('Insufficient credits');
-    }
+      if (!marketplace.priceCredits || marketplace.priceCredits < 1) {
+        throw new BadRequestException('This template does not have a valid price');
+      }
 
-    const platformFeeCredits = this.computePlatformFee(
-      marketplace.priceCredits,
-      marketplace.platformFeeBps,
-    );
-    const creatorPayoutCredits =
-      marketplace.priceCredits - platformFeeCredits;
+      const platformFeeCredits = this.computePlatformFee(
+        marketplace.priceCredits,
+        marketplace.platformFeeBps,
+      );
+      const creatorPayoutCredits =
+        marketplace.priceCredits - platformFeeCredits;
 
-    const purchaseReservation = await this.creditsService.reserve({
-      userId,
-      amount: marketplace.priceCredits,
-      referenceType: 'template_purchase',
-      referenceId: template.id,
-      metadata: {
+      await this.lockBillingScope(manager, 'user', userId);
+      const buyerAccount = await this.getOrCreateBillingAccount(
+        billingAccountRepository,
+        'user',
+        userId,
+      );
+      const buyerAllocation = this.debitBillingAccount(
+        buyerAccount,
+        marketplace.priceCredits,
+      );
+      await billingAccountRepository.save(buyerAccount);
+
+      await creditTransactionRepository.save(
+        creditTransactionRepository.create({
+          userId,
+          scopeType: 'user',
+          scopeId: userId,
+          amount: -marketplace.priceCredits,
+          type: 'adjustment',
+          status: 'posted',
+          referenceType: 'template_purchase',
+          referenceId: template.id,
+          metadata: {
+            templateId: template.id,
+            sellerId: template.authorId,
+            buyerId: userId,
+            priceCredits: marketplace.priceCredits,
+            platformFeeCredits,
+            creatorPayoutCredits,
+            allocation: buyerAllocation,
+          },
+        }),
+      );
+
+      await this.lockBillingScope(manager, 'user', template.authorId);
+      const sellerAccount = await this.getOrCreateBillingAccount(
+        billingAccountRepository,
+        'user',
+        template.authorId,
+      );
+      this.creditBillingAccount(sellerAccount, creatorPayoutCredits, {
         templateId: template.id,
-        sellerId: template.authorId,
         buyerId: userId,
+        sellerId: template.authorId,
         priceCredits: marketplace.priceCredits,
         platformFeeCredits,
         creatorPayoutCredits,
-      },
-    });
-    await this.creditsService.capture(purchaseReservation.id, userId);
+        lastGrantType: 'sale',
+      });
+      await billingAccountRepository.save(sellerAccount);
 
-    await this.creditsService.addTopUpCredits({
-      userId: template.authorId,
-      amount: creatorPayoutCredits,
-      referenceType: 'template_sale',
-      referenceId: template.id,
-      metadata: {
-        templateId: template.id,
-        buyerId: userId,
-        sellerId: template.authorId,
-        priceCredits: marketplace.priceCredits,
-        platformFeeCredits,
-        creatorPayoutCredits,
-      },
-    });
+      await creditTransactionRepository.save(
+        creditTransactionRepository.create({
+          userId: template.authorId,
+          scopeType: 'user',
+          scopeId: template.authorId,
+          amount: creatorPayoutCredits,
+          type: 'topup',
+          status: 'posted',
+          referenceType: 'template_sale',
+          referenceId: template.id,
+          metadata: {
+            templateId: template.id,
+            buyerId: userId,
+            sellerId: template.authorId,
+            priceCredits: marketplace.priceCredits,
+            platformFeeCredits,
+            creatorPayoutCredits,
+          },
+        }),
+      );
 
-    if (platformFeeCredits > 0) {
-      await this.creditsService.addTopUpCredits({
-        userId: 'platform',
-        amount: platformFeeCredits,
-        referenceType: 'template_fee',
-        referenceId: template.id,
-        metadata: {
+      await this.lockBillingScope(manager, 'user', 'platform');
+      const platformAccount = await this.getOrCreateBillingAccount(
+        billingAccountRepository,
+        'user',
+        'platform',
+      );
+      if (platformFeeCredits > 0) {
+        this.creditBillingAccount(platformAccount, platformFeeCredits, {
           templateId: template.id,
           buyerId: userId,
           sellerId: template.authorId,
           priceCredits: marketplace.priceCredits,
           platformFeeCredits,
           creatorPayoutCredits,
-      },
-    });
-    }
+          lastGrantType: 'fee',
+        });
+        await billingAccountRepository.save(platformAccount);
 
-    template.usageCount = (template.usageCount || 0) + 1;
-    template.content = {
-      ...(template.content as Record<string, unknown> | null | undefined),
-      marketplace: {
-        ...marketplace,
-        purchasedAt: new Date().toISOString(),
-        lastPurchasedBy: userId,
-      },
-    };
-    await this.templateRepository.save(template);
+        await creditTransactionRepository.save(
+          creditTransactionRepository.create({
+            userId: 'platform',
+            scopeType: 'user',
+            scopeId: 'platform',
+            amount: platformFeeCredits,
+            type: 'topup',
+            status: 'posted',
+            referenceType: 'template_fee',
+            referenceId: template.id,
+            metadata: {
+              templateId: template.id,
+              buyerId: userId,
+              sellerId: template.authorId,
+              priceCredits: marketplace.priceCredits,
+              platformFeeCredits,
+              creatorPayoutCredits,
+            },
+          }),
+        );
+      }
 
-    const purchasedTemplate = this.templateRepository.create({
-      title: template.title,
-      description: template.description,
-      thumbnail: template.thumbnail,
-      type: template.type,
-      visibility: 'private',
-      content: {
+      template.usageCount = (template.usageCount || 0) + 1;
+      template.content = {
         ...(template.content as Record<string, unknown> | null | undefined),
         marketplace: {
           ...marketplace,
-          purchasedFrom: template.id,
           purchasedAt: new Date().toISOString(),
-          priceCredits: marketplace.priceCredits,
-          platformFeeCredits,
-          creatorPayoutCredits,
+          lastPurchasedBy: userId,
         },
-      },
-      authorId: userId,
-      usageCount: 0,
-    } as DeepPartial<TemplateEntity>);
+      };
+      const savedTemplate = await templateRepository.save(template);
 
-    const savedPurchased = await this.templateRepository.save(purchasedTemplate);
+      const purchasedTemplate = templateRepository.create({
+        title: template.title,
+        description: template.description,
+        thumbnail: template.thumbnail,
+        type: template.type,
+        visibility: 'private',
+        content: {
+          ...(template.content as Record<string, unknown> | null | undefined),
+          marketplace: {
+            ...marketplace,
+            purchasedFrom: template.id,
+            purchasedAt: new Date().toISOString(),
+            priceCredits: marketplace.priceCredits,
+            platformFeeCredits,
+            creatorPayoutCredits,
+          },
+        },
+        authorId: userId,
+        usageCount: 0,
+      } as DeepPartial<TemplateEntity>);
 
-    return {
-      marketplace: this.enrichMarketplaceItem(template),
-      purchasedTemplate: await this.templateRepository.findOneOrFail({
-        where: { id: savedPurchased.id },
-        relations: ['author'],
-      }),
-      balance: await this.creditsService.getBalance(userId),
-      creatorBalance: await this.creditsService.getBalance(template.authorId),
-      platformBalance: await this.creditsService.getBalance('platform'),
+      const savedPurchased = await templateRepository.save(purchasedTemplate);
+
+      return {
+        marketplace: this.enrichMarketplaceItem(savedTemplate),
+        purchasedTemplate: savedPurchased,
+        balance: this.getBillingBalance(buyerAccount),
+        creatorBalance: this.getBillingBalance(sellerAccount),
+        platformBalance: this.getBillingBalance(platformAccount),
+      };
+    });
+  }
+
+  private async lockBillingScope(
+    manager: EntityManager,
+    scopeType: string,
+    scopeId: string,
+  ) {
+    await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+      `billing-account:${scopeType}:${scopeId}`,
+    ]);
+  }
+
+  private async getOrCreateBillingAccount(
+    billingAccountRepository: Repository<BillingAccountEntity>,
+    scopeType: string,
+    scopeId: string,
+  ) {
+    let billingAccount = await billingAccountRepository.findOne({
+      where: { scopeType: scopeType as any, scopeId },
+    });
+
+    if (!billingAccount) {
+      billingAccount = billingAccountRepository.create({
+        scopeType: scopeType as any,
+        scopeId,
+        status: 'free',
+        currentPlanId: null,
+        includedCreditsGranted: 0,
+        includedCreditsRemaining: 0,
+        topUpCreditsPurchased: 0,
+        topUpCreditsBalance: 0,
+        currentPeriodStart: null,
+        currentPeriodEnd: null,
+        renewalAt: null,
+        metadata: null,
+      });
+    }
+
+    return billingAccount;
+  }
+
+  private debitBillingAccount(
+    billingAccount: BillingAccountEntity,
+    amount: number,
+  ) {
+    const normalizedAmount = Math.max(0, Math.abs(amount));
+    const totalAvailable =
+      (billingAccount.includedCreditsRemaining || 0) +
+      (billingAccount.topUpCreditsBalance || 0);
+
+    if (totalAvailable < normalizedAmount) {
+      throw new BadRequestException('Insufficient credits');
+    }
+
+    const includedCredits = Math.min(
+      billingAccount.includedCreditsRemaining || 0,
+      normalizedAmount,
+    );
+    const topUpCredits = normalizedAmount - includedCredits;
+
+    billingAccount.includedCreditsRemaining =
+      (billingAccount.includedCreditsRemaining || 0) - includedCredits;
+    billingAccount.topUpCreditsBalance =
+      (billingAccount.topUpCreditsBalance || 0) - topUpCredits;
+    billingAccount.metadata = {
+      ...(billingAccount.metadata || {}),
+      lastAllocationAt: new Date().toISOString(),
     };
+
+    return { includedCredits, topUpCredits };
+  }
+
+  private creditBillingAccount(
+    billingAccount: BillingAccountEntity,
+    amount: number,
+    metadata: Record<string, unknown>,
+  ) {
+    const normalizedAmount = Math.max(0, Math.abs(amount));
+
+    billingAccount.topUpCreditsPurchased =
+      (billingAccount.topUpCreditsPurchased || 0) + normalizedAmount;
+    billingAccount.topUpCreditsBalance =
+      (billingAccount.topUpCreditsBalance || 0) + normalizedAmount;
+    billingAccount.metadata = {
+      ...(billingAccount.metadata || {}),
+      ...metadata,
+    };
+  }
+
+  private getBillingBalance(billingAccount: BillingAccountEntity | null) {
+    if (!billingAccount) {
+      return 0;
+    }
+
+    return (
+      (billingAccount.includedCreditsRemaining || 0) +
+      (billingAccount.topUpCreditsBalance || 0)
+    );
   }
 
   private enrichMarketplaceItem(template: TemplateEntity): CommunityMarketplaceItem {

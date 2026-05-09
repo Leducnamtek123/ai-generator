@@ -77,13 +77,70 @@ describe('GenerationsController', () => {
   it('should create image generations for the authenticated user only', () => {
     service.generateImage.mockResolvedValue({ id: 'gen-1' } as never);
 
-    const result = controller.generateImage({ prompt: 'hello' } as never, user);
+    const result = controller.generateImage(
+      { prompt: 'hello' } as never,
+      { requestId: 'req-123' } as never,
+      user,
+    );
 
     expect(service.generateImage).toHaveBeenCalledWith(
-      { prompt: 'hello' },
+      {
+        prompt: 'hello',
+        metadata: {
+          requestId: 'req-123',
+        },
+      },
       '42',
     );
     return expect(result).resolves.toEqual({ id: 'gen-1' });
+  });
+
+  it('should keep existing metadata and add request ids to direct generation jobs', () => {
+    service.generateAudio.mockResolvedValue({ id: 'gen-2' } as never);
+
+    const result = controller.generateMusic(
+      {
+        prompt: 'hello',
+        metadata: { projectId: 'project-1' },
+      } as never,
+      { requestId: 'req-456' } as never,
+      user,
+    );
+
+    expect(service.generateAudio).toHaveBeenCalledWith(
+      {
+        prompt: 'hello',
+        metadata: {
+          projectId: 'project-1',
+          requestId: 'req-456',
+        },
+      },
+      '42',
+      'music',
+    );
+    return expect(result).resolves.toEqual({ id: 'gen-2' });
+  });
+
+  it('should pass request ids through image processing jobs', () => {
+    service.processImage.mockResolvedValue({ id: 'gen-3' } as never);
+
+    const result = controller.removeBackground(
+      { imageUrl: 'https://example.com/image.png' } as never,
+      { requestId: 'req-789' } as never,
+      user,
+    );
+
+    expect(service.processImage).toHaveBeenCalledWith(
+      {
+        imageUrl: 'https://example.com/image.png',
+        metadata: {
+          requestId: 'req-789',
+        },
+      },
+      '42',
+      'bg-remove',
+    );
+    return expect(result).resolves.toEqual({ id: 'gen-3' });
   });
 
   it('should enhance prompts for the authenticated user only', () => {

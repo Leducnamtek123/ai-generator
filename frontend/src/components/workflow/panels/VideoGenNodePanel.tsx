@@ -13,7 +13,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
         <div className="space-y-4">
             <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
                 <div className="flex items-start gap-2">
-                    <Video className="w-4 h-4 text-purple-400 shrink-0 mt-0.5" />
+                    <Video className="size-4 text-purple-400 shrink-0 mt-0.5" />
                     <div>
                         <p className="text-xs text-purple-300 font-medium">Video Generator</p>
                         <p className="text-[10px] text-purple-300/60 mt-1">Generate AI videos from text or images.</p>
@@ -93,7 +93,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
                     disabled={isGenerating}
                     className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-purple-600 to-purple-500 hover:from-purple-500 hover:to-purple-400 rounded-xl text-sm font-medium text-white shadow-lg shadow-purple-500/20 disabled:opacity-50"
                 >
-                    {isGenerating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+                    {isGenerating ? <Loader2 className="size-4 animate-spin" /> : <Play className="size-4" />}
                     {isGenerating ? 'Generating...' : 'Generate Video'}
                 </Button>
             </div>

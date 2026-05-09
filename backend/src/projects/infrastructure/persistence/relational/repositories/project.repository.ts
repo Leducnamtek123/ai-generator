@@ -7,6 +7,7 @@ import { Project } from '../../../../domain/project';
 import { ProjectMapper } from '../mappers/project.mapper';
 import { NullableType } from '../../../../../utils/types/nullable.type';
 import { IPaginationOptions } from '../../../../../utils/types/pagination-options';
+import { DeepPartial } from '../../../../../utils/types/deep-partial.type';
 import {
   FilterProjectDto,
   SortProjectDto,
@@ -99,7 +100,7 @@ export class ProjectsRelationalRepository implements ProjectRepository {
     return entity ? ProjectMapper.toDomain(entity) : null;
   }
 
-  async update(id: string, payload: Partial<Project>): Promise<Project> {
+  async update(id: string, payload: DeepPartial<Project>): Promise<Project> {
     const entity = await this.projectsRepository.findOne({
       where: { id },
     });
@@ -113,7 +114,7 @@ export class ProjectsRelationalRepository implements ProjectRepository {
         ProjectMapper.toPersistence({
           ...ProjectMapper.toDomain(entity),
           ...payload,
-        }),
+        } as Project),
       ),
     );
 

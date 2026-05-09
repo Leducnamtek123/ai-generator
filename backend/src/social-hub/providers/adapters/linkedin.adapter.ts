@@ -8,9 +8,9 @@ import {
   MediaContent,
   PostResponse,
   MetricsData,
-  AnalyticsData,
 } from '../social.provider.interface';
 import { SocialAbstractBase, RefreshTokenError } from '../social-abstract.base';
+import { buildSignedOAuthState } from '../../utils/oauth-state.helper';
 
 /**
  * LinkedIn Provider.
@@ -21,7 +21,10 @@ import { SocialAbstractBase, RefreshTokenError } from '../social-abstract.base';
  * - Share Statistics API for analytics
  */
 @Injectable()
-export class LinkedinAdapter extends SocialAbstractBase implements SocialProvider {
+export class LinkedinAdapter
+  extends SocialAbstractBase
+  implements SocialProvider
+{
   readonly identifier = 'linkedin';
   readonly name = 'LinkedIn';
   readonly supportsTokenRefresh = true;
@@ -37,9 +40,14 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
   protected override handleErrors(
     body: string,
     status: number,
-  ): { type: 'refresh-token' | 'bad-body' | 'retry'; value: string } | undefined {
+  ):
+    | { type: 'refresh-token' | 'bad-body' | 'retry'; value: string }
+    | undefined {
     if (body.includes('expired_token') || body.includes('invalid_token')) {
-      return { type: 'refresh-token', value: 'LinkedIn token expired, please re-authenticate' };
+      return {
+        type: 'refresh-token',
+        value: 'LinkedIn token expired, please re-authenticate',
+      };
     }
     if (body.includes('DUPLICATE_POST')) {
       return { type: 'bad-body', value: 'LinkedIn detected duplicate content' };
@@ -50,12 +58,26 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
     return undefined;
   }
 
-  async generateAuthUrl(): Promise<{ url: string; codeVerifier?: string; state: string }> {
-    const clientId = this.configService.get('LINKEDIN_CLIENT_ID');
-    const redirectUri = `${this.configService.get('BACKEND_DOMAIN')}/api/v1/social-hub/auth/linkedin/callback`;
-    const state = Math.random().toString(36).substring(7);
+  generateAuthUrl(extraParams: Record<string, string> = {}): Promise<{
+    url: string;
+    codeVerifier?: string;
+    state: string;
+  }> {
+    const clientId = this.configService.getOrThrow<string>(
+      'LINKEDIN_CLIENT_ID',
+      {
+        infer: true,
+      },
+    );
+    const redirectUri = `${this.configService.get<string>('BACKEND_DOMAIN', {
+      infer: true,
+    })}/api/v1/social-hub/auth/linkedin/callback`;
+    const secret = this.configService.getOrThrow('auth.secret', {
+      infer: true,
+    });
+    const state = buildSignedOAuthState(secret, extraParams);
 
-    return {
+    return Promise.resolve({
       url:
         `https://www.linkedin.com/oauth/v2/authorization` +
         `?response_type=code` +
@@ -64,15 +86,28 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
         `&scope=${encodeURIComponent(this.requiredScopes.join(' '))}` +
         `&state=${state}`,
       state,
-    };
+    });
   }
 
-  async authenticate(code: string, extraParams: Record<string, any> = {}): Promise<AuthTokenDetails> {
+  async authenticate(
+    code: string,
+    _extraParams: Record<string, any> = {},
+  ): Promise<AuthTokenDetails> {
     this.logger.log('Exchanging code for LinkedIn access token...');
 
-    const clientId = this.configService.get('LINKEDIN_CLIENT_ID');
-    const clientSecret = this.configService.get('LINKEDIN_CLIENT_SECRET');
-    const redirectUri = `${this.configService.get('BACKEND_DOMAIN')}/api/v1/social-hub/auth/linkedin/callback`;
+    const clientId = this.configService.getOrThrow<string>(
+      'LINKEDIN_CLIENT_ID',
+      {
+        infer: true,
+      },
+    );
+    const clientSecret = this.configService.getOrThrow<string>(
+      'LINKEDIN_CLIENT_SECRET',
+      { infer: true },
+    );
+    const redirectUri = `${this.configService.get<string>('BACKEND_DOMAIN', {
+      infer: true,
+    })}/api/v1/social-hub/auth/linkedin/callback`;
 
     try {
       // Exchange code for token
@@ -122,8 +157,16 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
   async refreshToken(refreshTokenValue: string): Promise<AuthTokenDetails> {
     this.logger.log('Refreshing LinkedIn token...');
 
-    const clientId = this.configService.get('LINKEDIN_CLIENT_ID');
-    const clientSecret = this.configService.get('LINKEDIN_CLIENT_SECRET');
+    const clientId = this.configService.getOrThrow<string>(
+      'LINKEDIN_CLIENT_ID',
+      {
+        infer: true,
+      },
+    );
+    const clientSecret = this.configService.getOrThrow<string>(
+      'LINKEDIN_CLIENT_SECRET',
+      { infer: true },
+    );
 
     const response = await this.fetchWithRetry(
       'https://www.linkedin.com/oauth/v2/accessToken',
@@ -150,7 +193,11 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
     };
   }
 
-  async post(accessToken: string, details: PostDetails, platformId: string): Promise<PostResponse> {
+  async post(
+    accessToken: string,
+    details: PostDetails,
+    platformId: string,
+  ): Promise<PostResponse> {
     this.logger.log(`Publishing to LinkedIn for user ${platformId}...`);
 
     try {
@@ -175,21 +222,30 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
         const assets: string[] = [];
         for (const media of details.media) {
           try {
-            const assetId = await this.uploadMedia(accessToken, media, platformId);
+            const assetId = await this.uploadMedia(
+              accessToken,
+              media,
+              platformId,
+            );
             if (assetId) assets.push(assetId);
           } catch (err) {
-            this.logger.error(`Failed to upload media to LinkedIn: ${err.message}`);
+            this.logger.error(
+              `Failed to upload media to LinkedIn: ${err.message}`,
+            );
           }
         }
 
         if (assets.length) {
-          postBody.specificContent['com.linkedin.ugc.ShareContent'].shareMediaCategory = 'IMAGE';
-          postBody.specificContent['com.linkedin.ugc.ShareContent'].media = assets.map(asset => ({
-            status: 'READY',
-            description: { text: details.message.substring(0, 200) },
-            media: asset,
-            title: { text: 'Shared via AI Generator' },
-          }));
+          postBody.specificContent[
+            'com.linkedin.ugc.ShareContent'
+          ].shareMediaCategory = 'IMAGE';
+          postBody.specificContent['com.linkedin.ugc.ShareContent'].media =
+            assets.map((asset) => ({
+              status: 'READY',
+              description: { text: details.message.substring(0, 200) },
+              media: asset,
+              title: { text: 'Shared via AI Generator' },
+            }));
         }
       }
 
@@ -207,7 +263,8 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
         'publish_post',
       );
 
-      const postId = response.headers.get('x-restli-id') || `li_post_${Date.now()}`;
+      const postId =
+        response.headers.get('x-restli-id') || `li_post_${Date.now()}`;
 
       return {
         postId,
@@ -225,13 +282,16 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
     }
   }
 
-  async getInteractions(accessToken: string, platformId: string): Promise<any[]> {
+  getInteractions(_accessToken: string, _platformId: string): Promise<any[]> {
     // LinkedIn API has limited interaction endpoints
     // Social Actions API for comments on posts
-    return [];
+    return Promise.resolve([]);
   }
 
-  async getMetrics(accessToken: string, externalId: string): Promise<MetricsData> {
+  async getMetrics(
+    accessToken: string,
+    externalId: string,
+  ): Promise<MetricsData> {
     this.logger.log(`Fetching metrics for LinkedIn post ${externalId}...`);
 
     try {
@@ -256,9 +316,9 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
     } catch (error) {
       this.logger.warn(`Failed to fetch LinkedIn metrics:`, error);
       return {
-        likes: Math.floor(Math.random() * 200) + 10,
-        comments: Math.floor(Math.random() * 30) + 2,
-        shares: Math.floor(Math.random() * 15),
+        likes: 0,
+        comments: 0,
+        shares: 0,
       };
     }
   }
@@ -267,10 +327,14 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
    * Upload media to LinkedIn using the Assets API.
    * Steps: Register -> Binary Upload (PUT) -> Asset ID
    */
-  private async uploadMedia(accessToken: string, media: MediaContent, platformId: string): Promise<string> {
+  private async uploadMedia(
+    accessToken: string,
+    media: MediaContent,
+    platformId: string,
+  ): Promise<string> {
     const isVideo = media.type === 'video';
-    const recipe = isVideo 
-      ? 'urn:li:digitalmediaRecipe:feedshare-video' 
+    const recipe = isVideo
+      ? 'urn:li:digitalmediaRecipe:feedshare-video'
       : 'urn:li:digitalmediaRecipe:feedshare-image';
 
     // 1. Register Upload
@@ -286,21 +350,28 @@ export class LinkedinAdapter extends SocialAbstractBase implements SocialProvide
           registerUploadRequest: {
             recipes: [recipe],
             owner: `urn:li:person:${platformId}`,
-            serviceRelationships: [{
-              relationshipType: 'OWNER',
-              identifier: 'urn:li:userGeneratedContent',
-            }],
+            serviceRelationships: [
+              {
+                relationshipType: 'OWNER',
+                identifier: 'urn:li:userGeneratedContent',
+              },
+            ],
           },
         }),
       },
       'register_upload',
     );
     const registerData = await registerResponse.json();
-    const uploadUrl = registerData.value.uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'].uploadUrl;
+    const uploadUrl =
+      registerData.value.uploadMechanism[
+        'com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'
+      ].uploadUrl;
     const assetId = registerData.value.asset;
 
     // 2. Download Media binary
-    const fileRes = await this.httpService.axiosRef.get(media.path, { responseType: 'arraybuffer' });
+    const fileRes = await this.httpService.axiosRef.get(media.path, {
+      responseType: 'arraybuffer',
+    });
     const buffer = Buffer.from(fileRes.data);
 
     // 3. Binary Upload (PUT)

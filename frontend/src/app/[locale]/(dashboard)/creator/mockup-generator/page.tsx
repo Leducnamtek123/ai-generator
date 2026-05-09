@@ -1,13 +1,18 @@
 'use client';
 
 import Image from 'next/image';
-import { useEffect, useReducer, useRef } from 'react';
+import { useEffect, useReducer, useRef, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
+import { mediaApi } from '@/services/mediaApi';
+import { projectApi } from '@/services/projectApi';
 import { Box, Upload, Download, Loader2, Folder, Smartphone, Monitor, Tablet, Watch } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
+import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 
 const mockupCategories = [
     { id: 'phone', label: 'Phone', icon: Smartphone, items: ['iPhone 15 Pro', 'Samsung S24', 'Pixel 8', 'iPhone SE'] },
@@ -39,6 +44,22 @@ type MockupState = {
     results: string[];
 };
 
+type MockupSnapshot = {
+    uploadedImage: string | null;
+    selectedCategory: string;
+    selectedDevice: string;
+    selectedScene: string;
+    angle: number;
+    shadow: number;
+    results: string[];
+};
+
+type MockupProjectPayload = {
+    version: number;
+    savedAt: string;
+    snapshot: Partial<MockupSnapshot>;
+};
+
 type MockupAction =
     | { type: 'setUploadedImage'; uploadedImage: string | null }
     | { type: 'setCategory'; selectedCategory: string; selectedDevice: string }
@@ -48,7 +69,8 @@ type MockupAction =
     | { type: 'setShadow'; shadow: number }
     | { type: 'setGenerating'; isGenerating: boolean }
     | { type: 'setResults'; results: string[] }
-    | { type: 'clearResults' };
+    | { type: 'clearResults' }
+    | { type: 'resetAll' };
 
 const initialState: MockupState = {
     uploadedImage: null,
@@ -59,6 +81,21 @@ const initialState: MockupState = {
     shadow: 50,
     isGenerating: false,
     results: [],
+};
+
+const normalizeMockupSnapshot = (value: unknown): Partial<MockupSnapshot> => {
+    const raw = (value ?? {}) as Record<string, unknown>;
+    const snapshot = (raw.snapshot && typeof raw.snapshot === 'object' ? raw.snapshot : raw) as Record<string, unknown>;
+
+    return {
+        uploadedImage: typeof snapshot.uploadedImage === 'string' ? snapshot.uploadedImage : null,
+        selectedCategory: typeof snapshot.selectedCategory === 'string' ? snapshot.selectedCategory : initialState.selectedCategory,
+        selectedDevice: typeof snapshot.selectedDevice === 'string' ? snapshot.selectedDevice : initialState.selectedDevice,
+        selectedScene: typeof snapshot.selectedScene === 'string' ? snapshot.selectedScene : initialState.selectedScene,
+        angle: typeof snapshot.angle === 'number' ? snapshot.angle : initialState.angle,
+        shadow: typeof snapshot.shadow === 'number' ? snapshot.shadow : initialState.shadow,
+        results: Array.isArray(snapshot.results) ? snapshot.results.filter((item): item is string => typeof item === 'string') : initialState.results,
+    };
 };
 
 function reducer(state: MockupState, action: MockupAction): MockupState {
@@ -81,6 +118,8 @@ function reducer(state: MockupState, action: MockupAction): MockupState {
             return { ...state, results: action.results };
         case 'clearResults':
             return { ...state, results: [] };
+        case 'resetAll':
+            return initialState;
         default:
             return state;
     }
@@ -89,12 +128,24 @@ function reducer(state: MockupState, action: MockupAction): MockupState {
 export default function MockupGeneratorPage() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const fileInputRef = useRef<HTMLInputElement>(null);
-    const { mockupGenerator, currentGeneration } = useGenerationStore();
+    const [projectId, setProjectId] = useState<string | null>(null);
+    const [isProjectLoading, setIsProjectLoading] = useState(false);
+    const [isProjectSaving, setIsProjectSaving] = useState(false);
+    const [projectError, setProjectError] = useState<string | null>(null);
+    const { mockupGenerator, currentGeneration, error, reset } = useGenerationStore();
+    const router = useRouter();
+    const searchParams = useSearchParams();
+    const isProjectBusy = isProjectLoading || isProjectSaving;
 
-    const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (file) {
-            dispatch({ type: 'setUploadedImage', uploadedImage: URL.createObjectURL(file) });
+            const uploaded = await mediaApi.uploadMedia(file);
+            if (!uploaded?.url) {
+                toast.error('Failed to upload image');
+                return;
+            }
+            dispatch({ type: 'setUploadedImage', uploadedImage: uploaded.url });
             dispatch({ type: 'clearResults' });
         }
     };
@@ -103,15 +154,176 @@ export default function MockupGeneratorPage() {
         if (!state.uploadedImage) return;
         dispatch({ type: 'setGenerating', isGenerating: true });
         dispatch({ type: 'clearResults' });
-        await mockupGenerator({
-            designUrl: state.uploadedImage,
-            template: state.selectedCategory,
-            prompt: `${state.selectedDevice} mockup in ${state.selectedScene} scene`,
-            scene: state.selectedScene,
-        });
+        try {
+            await mockupGenerator({
+                designUrl: state.uploadedImage,
+                template: state.selectedCategory,
+                prompt: `${state.selectedDevice} mockup in ${state.selectedScene} scene`,
+                scene: state.selectedScene,
+            });
+        } finally {
+            dispatch({ type: 'setGenerating', isGenerating: false });
+        }
+    };
+
+    const handleReset = () => {
+        reset();
+        dispatch({ type: 'resetAll' });
+        if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+        }
+        setProjectError(null);
+    };
+
+    const downloadMockup = (url: string, filename: string) => {
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        link.target = '_blank';
+        link.rel = 'noreferrer';
+        link.click();
+    };
+
+    const handleSaveAll = () => {
+        const payload: MockupProjectPayload = {
+            version: 1,
+            savedAt: new Date().toISOString(),
+            snapshot: {
+                uploadedImage: state.uploadedImage,
+                selectedCategory: state.selectedCategory,
+                selectedDevice: state.selectedDevice,
+                selectedScene: state.selectedScene,
+                angle: state.angle,
+                shadow: state.shadow,
+                results: state.results,
+            },
+        };
+
+        localStorage.setItem('mockup-generator:draft', JSON.stringify(payload));
+
+        const persistProject = async () => {
+            setIsProjectSaving(true);
+            try {
+                if (projectId) {
+                    await projectApi.update(projectId, {
+                        name: 'Mockup Generator Draft',
+                        description: 'Mockup generator draft',
+                        content: payload,
+                    });
+                } else {
+                    const created = await projectApi.create({
+                        name: 'Mockup Generator Draft',
+                        description: 'Mockup generator draft',
+                        content: payload,
+                    });
+                    setProjectId(created.project.id);
+                    router.replace(`${window.location.pathname}?projectId=${created.project.id}`);
+                }
+
+                toast.success('Mockup saved to your projects.');
+            } catch (saveError) {
+                console.error('Failed to persist mockup project', saveError);
+                toast.error('Saved locally, but backend project save failed.');
+            } finally {
+                setIsProjectSaving(false);
+            }
+        };
+
+        void persistProject();
+    };
+
+    const handleExportAll = () => {
+        const payload = {
+            version: 1,
+            exportedAt: new Date().toISOString(),
+            uploadedImage: state.uploadedImage,
+            selectedCategory: state.selectedCategory,
+            selectedDevice: state.selectedDevice,
+            selectedScene: state.selectedScene,
+            angle: state.angle,
+            shadow: state.shadow,
+            results: state.results,
+        };
+
+        const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'mockup-generator-export.json';
+        link.click();
+        URL.revokeObjectURL(url);
+        toast.success('Mockup export created.');
     };
 
     const currentCategory = mockupCategories.find((category) => category.id === state.selectedCategory);
+
+    useEffect(() => {
+        const queryProjectId = searchParams.get('projectId');
+        if (queryProjectId) {
+            setProjectId(queryProjectId);
+        }
+    }, [searchParams]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const hydrate = (snapshot: Partial<MockupSnapshot>) => {
+            dispatch({ type: 'setUploadedImage', uploadedImage: snapshot.uploadedImage ?? null });
+            dispatch({ type: 'setCategory', selectedCategory: snapshot.selectedCategory ?? initialState.selectedCategory, selectedDevice: snapshot.selectedDevice ?? initialState.selectedDevice });
+            dispatch({ type: 'setScene', selectedScene: snapshot.selectedScene ?? initialState.selectedScene });
+            dispatch({ type: 'setAngle', angle: snapshot.angle ?? initialState.angle });
+            dispatch({ type: 'setShadow', shadow: snapshot.shadow ?? initialState.shadow });
+            dispatch({ type: 'setResults', results: snapshot.results ?? initialState.results });
+        };
+
+        const loadProject = async () => {
+            if (!projectId) {
+                try {
+                    const raw = localStorage.getItem('mockup-generator:draft');
+                    if (raw) {
+                        hydrate(normalizeMockupSnapshot(JSON.parse(raw)));
+                    }
+                } catch (loadError) {
+                    console.error('Failed to restore mockup draft', loadError);
+                }
+                return;
+            }
+
+            setIsProjectLoading(true);
+            setProjectError(null);
+            try {
+                const project = await projectApi.get(projectId);
+                const rawContent = project.content as string | Record<string, unknown> | null | undefined;
+                const parsed = typeof rawContent === 'string' ? JSON.parse(rawContent) : rawContent;
+                if (!cancelled) {
+                    hydrate(normalizeMockupSnapshot(parsed));
+                }
+            } catch (loadError) {
+                console.error('Failed to restore mockup project', loadError);
+                if (!cancelled) {
+                    setProjectError('Could not load the saved mockup project. Falling back to a local draft.');
+                    try {
+                        const raw = localStorage.getItem('mockup-generator:draft');
+                        if (raw) {
+                            hydrate(normalizeMockupSnapshot(JSON.parse(raw)));
+                        }
+                    } catch (fallbackError) {
+                        console.error('Failed to restore mockup fallback', fallbackError);
+                    }
+                }
+            } finally {
+                if (!cancelled) {
+                    setIsProjectLoading(false);
+                }
+            }
+        };
+
+        void loadProject();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [projectId]);
 
     useEffect(() => {
         if (!currentGeneration || currentGeneration.type !== 'mockup') {
@@ -127,15 +339,15 @@ export default function MockupGeneratorPage() {
     }, [currentGeneration]);
 
     return (
-        <div className="h-full bg-background text-foreground flex overflow-hidden">
+        <CreatorWorkspaceShell>
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center shrink-0">
-                    <h2 className="font-bold text-muted-foreground">Mockup Generator</h2>
+                    <h2 className="font-semibold text-muted-foreground">Mockup Generator</h2>
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Your Screenshot</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Your Screenshot</h4>
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -145,8 +357,8 @@ export default function MockupGeneratorPage() {
                                 <Image src={state.uploadedImage} alt="Screenshot" fill className="object-contain" sizes="(max-width: 768px) 100vw, 320px" />
                             ) : (
                                 <>
-                                    <div className="w-12 h-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
-                                        <Upload className="w-5 h-5 text-muted-foreground" />
+                                    <div className="size-12 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all">
+                                        <Upload className="size-5 text-muted-foreground" />
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs font-medium">Upload Screenshot</p>
@@ -159,7 +371,7 @@ export default function MockupGeneratorPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Device</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Device</h4>
                         <div className="grid grid-cols-5 gap-1.5">
                             {mockupCategories.map((category) => (
                                 <button
@@ -170,7 +382,7 @@ export default function MockupGeneratorPage() {
                                         state.selectedCategory === category.id ? 'bg-accent border-primary/20' : 'bg-card border-border',
                                     )}
                                 >
-                                    <category.icon className="w-4 h-4" />
+                                    <category.icon className="size-4" />
                                     <span className="text-[8px] font-medium">{category.label}</span>
                                 </button>
                             ))}
@@ -193,7 +405,7 @@ export default function MockupGeneratorPage() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Scene</h4>
+                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Scene</h4>
                         <div className="grid grid-cols-2 gap-1.5">
                             {scenes.map((scene) => (
                                 <button
@@ -231,24 +443,27 @@ export default function MockupGeneratorPage() {
                 </div>
 
                 <div className="p-4 border-t border-border space-y-3">
+                    <Button variant="ghost" size="sm" className="w-full gap-2" onClick={handleReset} disabled={isProjectBusy}>
+                        Reset form
+                    </Button>
                     <div className="flex items-center justify-between text-xs text-muted-foreground px-1">
                         <span>Cost:</span>
                         <span className="font-medium text-foreground">2 Credits</span>
                     </div>
-                    {currentGeneration?.status === 'failed' && (
+                    {(currentGeneration?.status === 'failed' || error) && (
                         <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
-                            {currentGeneration.error || 'Mockup generation failed. Please try again.'}
+                            {currentGeneration?.error || error || 'Mockup generation failed. Please try again.'}
                         </div>
                     )}
-                    <Button onClick={handleGenerate} disabled={state.isGenerating || !state.uploadedImage} className="w-full h-12 font-bold rounded-xl gap-2">
+                    <Button onClick={handleGenerate} disabled={state.isGenerating || isProjectBusy || !state.uploadedImage} className="w-full h-12 font-bold rounded-xl gap-2">
                         {state.isGenerating ? (
                             <>
-                                <Loader2 className="w-5 h-5 animate-spin" />
+                                <Loader2 className="size-5 animate-spin" />
                                 Generating...
                             </>
                         ) : (
                             <>
-                                <Box className="w-5 h-5" />
+                                <Box className="size-5" />
                                 Generate Mockups
                             </>
                         )}
@@ -261,8 +476,8 @@ export default function MockupGeneratorPage() {
                     <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                         <span className="text-sm font-medium">{state.selectedDevice} • {scenes.find((scene) => scene.id === state.selectedScene)?.label}</span>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" className="gap-2"><Folder className="w-4 h-4" /> Save All</Button>
-                            <Button size="sm" className="gap-2"><Download className="w-4 h-4" /> Export All</Button>
+                            <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveAll} disabled={isProjectBusy}><Folder className="size-4" /> {isProjectSaving ? 'Saving...' : 'Save All'}</Button>
+                            <Button size="sm" className="gap-2" onClick={handleExportAll}><Download className="size-4" /> Export All</Button>
                         </div>
                     </div>
                 )}
@@ -271,8 +486,8 @@ export default function MockupGeneratorPage() {
                     {state.isGenerating ? (
                         <div className="flex flex-col items-center justify-center h-full gap-4">
                             <div className="relative">
-                                <div className="w-16 h-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
-                                <Box className="w-6 h-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+                                <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
+                                <Box className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
                             <p className="text-sm text-muted-foreground animate-pulse">Generating mockups...</p>
                         </div>
@@ -284,15 +499,15 @@ export default function MockupGeneratorPage() {
                                         <Image src={url} alt={`Mockup ${index + 1}`} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
                                     </div>
                                     <div className="absolute inset-0 bg-gray-950/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                                        <Button size="sm" variant="secondary" className="gap-2"><Download className="w-4 h-4" /> Download</Button>
+                                        <Button size="sm" variant="secondary" className="gap-2" onClick={() => downloadMockup(url, `mockup-${index + 1}.png`)}><Download className="size-4" /> Download</Button>
                                     </div>
                                 </div>
                             ))}
                         </div>
                     ) : (
                         <div className="flex flex-col items-center justify-center h-full gap-4 text-center">
-                            <div className="w-20 h-20 rounded-2xl bg-muted border border-border flex items-center justify-center">
-                                <Box className="w-8 h-8 text-muted-foreground" />
+                            <div className="size-20 rounded-2xl bg-muted border border-border flex items-center justify-center">
+                                <Box className="size-8 text-muted-foreground" />
                             </div>
                             <div>
                                 <h3 className="font-semibold">Create Product Mockups</h3>
@@ -300,8 +515,11 @@ export default function MockupGeneratorPage() {
                             </div>
                         </div>
                     )}
+                    {projectError && (
+                        <p className="mt-4 text-sm text-amber-500/90 text-center">{projectError}</p>
+                    )}
                 </div>
             </div>
-        </div>
+        </CreatorWorkspaceShell>
     );
 }
