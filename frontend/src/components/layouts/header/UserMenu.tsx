@@ -57,31 +57,30 @@ export function UserMenu() {
 
   useEffect(() => {
     let active = true;
-    void (hasWorkspaceContext ? billingApi.get(currentOrgSlug) : billingApi.getMe())
-      .then((summary) => {
-        if (active) {
-          if ("wallet" in summary) {
-            setBillingLabel(
-              hasWorkspaceContext
-                ? summary.plan?.name ||
-                    (summary.wallet.totalCredits > 0 ? "Credits only" : "Workspace")
-                : summary.plan?.name ||
-                    (summary.wallet.totalCredits > 0 ? "Credits only" : "Personal")
-            );
-          } else {
-            setBillingLabel(
-              hasWorkspaceContext
-                ? summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Workspace")
-                : summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Personal")
-            );
-          }
+    const loadBillingLabel = async () => {
+      let nextBillingLabel = hasWorkspaceContext ? "Workspace" : "Personal";
+
+      try {
+        const summary = await (hasWorkspaceContext ? billingApi.get(currentOrgSlug) : billingApi.getMe());
+        if ("wallet" in summary) {
+          nextBillingLabel = hasWorkspaceContext
+            ? summary.plan?.name || (summary.wallet.totalCredits > 0 ? "Credits only" : "Workspace")
+            : summary.plan?.name || (summary.wallet.totalCredits > 0 ? "Credits only" : "Personal");
+        } else {
+          nextBillingLabel = hasWorkspaceContext
+            ? summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Workspace")
+            : summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Personal");
         }
-      })
-      .catch(() => {
-        if (active) {
-          setBillingLabel(hasWorkspaceContext ? "Workspace" : "Personal");
-        }
-      });
+      } catch {
+        nextBillingLabel = hasWorkspaceContext ? "Workspace" : "Personal";
+      }
+
+      if (active) {
+        setBillingLabel(nextBillingLabel);
+      }
+    };
+
+    void loadBillingLabel();
     return () => {
       active = false;
     };

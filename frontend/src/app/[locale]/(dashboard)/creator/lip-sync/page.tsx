@@ -200,7 +200,8 @@ function LipSyncPageContent() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('lip-sync:draft:v1');
+                    const draftKey = 'lip-sync:draft:v1';
+                    const raw = localStorage.getItem(draftKey);
                     if (raw) {
                         hydrateFromSnapshot(normalizeLipSyncSnapshot(JSON.parse(raw)));
                     }
@@ -224,7 +225,8 @@ function LipSyncPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved lip sync project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('lip-sync:draft:v1');
+                        const draftKey = 'lip-sync:draft:v1';
+                        const raw = localStorage.getItem(draftKey);
                         if (raw) {
                             hydrateFromSnapshot(normalizeLipSyncSnapshot(JSON.parse(raw)));
                         }

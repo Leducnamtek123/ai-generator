@@ -26,7 +26,6 @@ interface PropertiesPanelProps {
 export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesPanelProps) {
     const { isGenerating, handleGenerateImage, handleGenerateVideo, handleUpscaleImage, handleEnhancePrompt } = useGeneration();
     const [providers, setProviders] = React.useState<GenerationProviderInfo[]>([]);
-    const [providersLoading, setProvidersLoading] = React.useState(false);
     const selectedType = selectedNode?.type;
     const nodeData = (selectedNode?.data ?? {}) as Record<string, unknown>;
 
@@ -40,26 +39,18 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                 selectedType === WorkflowNodeType.UPSCALE ||
                 selectedType === WorkflowNodeType.ASSISTANT ||
                 selectedType === WorkflowNodeType.TOOL;
+            let nextProviders: GenerationProviderInfo[] = [];
 
-            if (!supportedNode) {
-                setProviders([]);
-                return;
+            if (supportedNode) {
+                try {
+                    nextProviders = await getGenerationProviders();
+                } catch {
+                    nextProviders = [];
+                }
             }
 
-            setProvidersLoading(true);
-            try {
-                const list = await getGenerationProviders();
-                if (!cancelled) {
-                    setProviders(list);
-                }
-            } catch {
-                if (!cancelled) {
-                    setProviders([]);
-                }
-            } finally {
-                if (!cancelled) {
-                    setProvidersLoading(false);
-                }
+            if (!cancelled) {
+                setProviders(nextProviders);
             }
         };
 
@@ -135,7 +126,6 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                             className="w-full h-11 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
                         >
                             <option value="">Auto / Default</option>
-                            {providersLoading && <option value="">Loading providers?</option>}
                             {providers.map((provider) => (
                                 <option key={provider.name} value={provider.name}>
                                     {provider.name}

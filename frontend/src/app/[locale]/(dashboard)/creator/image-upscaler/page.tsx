@@ -184,7 +184,8 @@ function ImageUpscalerPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved image upscaler project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('image-upscaler:draft:v1');
+                        const draftKey = 'image-upscaler:draft:v1';
+                        const raw = localStorage.getItem(draftKey);
                         if (raw) {
                             hydrateFromSnapshot(normalizeImageUpscalerSnapshot(JSON.parse(raw)));
                         }

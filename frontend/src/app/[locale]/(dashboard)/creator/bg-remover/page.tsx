@@ -195,11 +195,12 @@ function BgRemoverPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('bg-remover:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('bg-remover:draft:v1');
-                    if (raw) {
-                        const parsed = JSON.parse(raw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
+                    if (draftRaw) {
+                        const parsed = JSON.parse(draftRaw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
                         hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
                     }
                 } catch (loadError) {
@@ -226,9 +227,8 @@ function BgRemoverPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved background remover project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('bg-remover:draft:v1');
-                        if (raw) {
-                            const parsed = JSON.parse(raw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
+                        if (draftRaw) {
+                            const parsed = JSON.parse(draftRaw) as Partial<BgRemoverProjectPayload> | BgRemoverLegacyDraft;
                             hydrateFromSnapshot(normalizeBgRemoverSnapshot(parsed));
                         }
                     } catch (fallbackError) {

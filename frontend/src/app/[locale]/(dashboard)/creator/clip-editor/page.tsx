@@ -223,11 +223,12 @@ function ClipEditorPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('clip-editor:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('clip-editor:draft:v1');
-                    if (raw) {
-                        hydrate(JSON.parse(raw) as Partial<ClipEditorSnapshot>);
+                    if (draftRaw) {
+                        hydrate(JSON.parse(draftRaw) as Partial<ClipEditorSnapshot>);
                     }
                 } catch (error) {
                     console.error('Failed to restore clip draft', error);
@@ -253,9 +254,8 @@ function ClipEditorPageContent() {
                 if (!cancelled) {
                     setErrorMessage('Could not load the saved clip project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('clip-editor:draft:v1');
-                        if (raw) {
-                            hydrate(JSON.parse(raw) as Partial<ClipEditorSnapshot>);
+                        if (draftRaw) {
+                            hydrate(JSON.parse(draftRaw) as Partial<ClipEditorSnapshot>);
                         }
                     } catch (fallbackError) {
                         console.error('Failed to restore clip draft fallback', fallbackError);

@@ -13,7 +13,7 @@ interface OrgState {
   // Actions
   setCurrentOrg: (org: Organization | null) => void;
   setCurrentMembership: (member: Member | null) => void;
-  setOrganizations: (orgs: Organization[]) => void;
+  setOrganizations: (orgs: Organization[] | ((current: Organization[]) => Organization[])) => void;
   getCurrentRole: () => UserRole | null;
   hasPermission: (action: string, subject: string) => boolean;
   reset: () => void;
@@ -64,7 +64,10 @@ export const useOrgStore = create<OrgState>()(
 
       setCurrentOrg: (org) => set({ currentOrg: org }),
       setCurrentMembership: (member) => set({ currentMembership: member }),
-      setOrganizations: (orgs) => set({ organizations: orgs }),
+      setOrganizations: (orgs) =>
+        set((state) => ({
+          organizations: typeof orgs === "function" ? orgs(state.organizations) : orgs,
+        })),
 
       getCurrentRole: () => {
         const membership = get().currentMembership;

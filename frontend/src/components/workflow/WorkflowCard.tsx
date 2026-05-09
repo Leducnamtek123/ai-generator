@@ -95,9 +95,8 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
                     {variant === 'compact' && <span className="size-1.5 rounded-full bg-muted-foreground/50 shrink-0"></span>}
                     <p className="text-xs text-muted-foreground truncate">
                         {variant === 'default'
-                            ? `${new Date(workflow.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} ago`
-                            : new Date(workflow.createdAt).toLocaleDateString()
-                        }
+                            ? workflow.updatedAt.toISOString().slice(0, 16).replace('T', ' ')
+                            : workflow.createdAt.toISOString().slice(0, 10)}
                     </p>
                 </div>
             </div>

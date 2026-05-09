@@ -473,7 +473,6 @@ export function Sidebar() {
     remainingCredits: number;
     managementHref: string;
   } | null>(null);
-  const [isBillingLoading, setIsBillingLoading] = useState(true);
   const viewportCollapsed = viewportWidth < BREAKPOINTS.lg;
   const isCollapsed = manualCollapsed ?? viewportCollapsed;
   const isTablet =
@@ -513,14 +512,12 @@ export function Sidebar() {
 
     if (!user) {
       setBillingSummary(null);
-      setIsBillingLoading(false);
       return () => {
         active = false;
       };
     }
 
     const loadBillingSummary = async () => {
-      setIsBillingLoading(true);
       try {
         if (isOrgRoute && currentOrg?.slug) {
           const billing = await billingApi.get(currentOrg.slug);
@@ -547,10 +544,6 @@ export function Sidebar() {
       } catch {
         if (active) {
           setBillingSummary(null);
-        }
-      } finally {
-        if (active) {
-          setIsBillingLoading(false);
         }
       }
     };

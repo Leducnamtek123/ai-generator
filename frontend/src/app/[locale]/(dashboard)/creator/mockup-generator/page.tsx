@@ -286,11 +286,12 @@ function MockupGeneratorPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('mockup-generator:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('mockup-generator:draft:v1');
-                    if (raw) {
-                        hydrate(normalizeMockupSnapshot(JSON.parse(raw)));
+                    if (draftRaw) {
+                        hydrate(normalizeMockupSnapshot(JSON.parse(draftRaw)));
                     }
                 } catch (loadError) {
                     console.error('Failed to restore mockup draft', loadError);
@@ -312,9 +313,8 @@ function MockupGeneratorPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved mockup project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('mockup-generator:draft:v1');
-                        if (raw) {
-                            hydrate(normalizeMockupSnapshot(JSON.parse(raw)));
+                        if (draftRaw) {
+                            hydrate(normalizeMockupSnapshot(JSON.parse(draftRaw)));
                         }
                     } catch (fallbackError) {
                         console.error('Failed to restore mockup fallback', fallbackError);

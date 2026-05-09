@@ -43,7 +43,8 @@ function buildDays(month: Date) {
 }
 
 function Calendar({ selected, month, onSelect, onMonthChange, className }: CalendarProps) {
-  const [internalMonth, setInternalMonth] = React.useState(month ?? selected ?? new Date());
+  const [internalMonth, setInternalMonth] = React.useState<Date | null>(month ?? selected ?? null);
+  const today = React.useMemo(() => new Date(), []);
 
   React.useEffect(() => {
     if (month) {
@@ -56,7 +57,10 @@ function Calendar({ selected, month, onSelect, onMonthChange, className }: Calen
     }
   }, [month, selected]);
 
-  const displayMonth = month ?? internalMonth;
+  const displayMonth = month ?? internalMonth ?? today;
+  if (!displayMonth) {
+    return <div className={cn("w-[320px] p-3", className)} />;
+  }
   const days = buildDays(displayMonth);
 
   const updateMonth = (nextMonth: Date) => {
@@ -109,7 +113,7 @@ function Calendar({ selected, month, onSelect, onMonthChange, className }: Calen
         {days.map((day) => {
           const isCurrentMonth = isSameMonth(day, displayMonth);
           const isSelected = Boolean(selected && isSameDay(day, selected));
-          const isToday = isSameDay(day, new Date());
+          const isToday = Boolean(today && isSameDay(day, today));
 
           return (
             <button

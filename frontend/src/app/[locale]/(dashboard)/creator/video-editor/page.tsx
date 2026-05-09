@@ -332,11 +332,12 @@ function VideoEditorPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('video-editor:project:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('video-editor:project:v1');
-                    if (raw) {
-                        const parsed = JSON.parse(raw) as Partial<VideoEditorSnapshot>;
+                    if (draftRaw) {
+                        const parsed = JSON.parse(draftRaw) as Partial<VideoEditorSnapshot>;
                         hydrateFromSnapshot(parsed);
                     }
                 } catch (loadError) {
@@ -363,9 +364,8 @@ function VideoEditorPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved video project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('video-editor:project:v1');
-                        if (raw) {
-                            const parsed = JSON.parse(raw) as Partial<VideoEditorSnapshot>;
+                        if (draftRaw) {
+                            const parsed = JSON.parse(draftRaw) as Partial<VideoEditorSnapshot>;
                             hydrateFromSnapshot(parsed);
                         }
                     } catch (fallbackError) {

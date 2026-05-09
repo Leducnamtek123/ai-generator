@@ -194,11 +194,12 @@ function SkinEnhancerPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('skin-enhancer:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('skin-enhancer:draft:v1');
-                    if (raw) {
-                        hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(raw)));
+                    if (draftRaw) {
+                        hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(draftRaw)));
                     }
                 } catch (loadError) {
                     console.error('Failed to restore skin enhancer draft', loadError);
@@ -220,9 +221,8 @@ function SkinEnhancerPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved skin enhancer project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('skin-enhancer:draft:v1');
-                        if (raw) {
-                            hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(raw)));
+                        if (draftRaw) {
+                            hydrateFromSnapshot(normalizeSkinEnhancerSnapshot(JSON.parse(draftRaw)));
                         }
                     } catch (fallbackError) {
                         console.error('Failed to restore skin enhancer fallback', fallbackError);

@@ -213,7 +213,8 @@ function CameraChangePageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved camera change project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('camera-change:draft:v1');
+                        const draftKey = 'camera-change:draft:v1';
+                        const raw = localStorage.getItem(draftKey);
                         if (raw) {
                             hydrateFromSnapshot(normalizeCameraChangeSnapshot(JSON.parse(raw)));
                         }

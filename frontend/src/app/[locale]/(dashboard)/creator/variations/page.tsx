@@ -303,11 +303,12 @@ function VariationsPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('variations:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('variations:draft:v1');
-                    if (raw) {
-                        hydrate(normalizeVariationsSnapshot(JSON.parse(raw)));
+                    if (draftRaw) {
+                        hydrate(normalizeVariationsSnapshot(JSON.parse(draftRaw)));
                     }
                 } catch (loadError) {
                     console.error('Failed to restore variations draft', loadError);
@@ -329,9 +330,8 @@ function VariationsPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved variations project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('variations:draft:v1');
-                        if (raw) {
-                            hydrate(normalizeVariationsSnapshot(JSON.parse(raw)));
+                        if (draftRaw) {
+                            hydrate(normalizeVariationsSnapshot(JSON.parse(draftRaw)));
                         }
                     } catch (fallbackError) {
                         console.error('Failed to restore variations fallback', fallbackError);

@@ -353,7 +353,8 @@ function DesignEditorPageContent() {
         const loadProject = async () => {
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('design-editor:draft:v1');
+                    const draftKey = 'design-editor:draft:v1';
+                    const raw = localStorage.getItem(draftKey);
                     if (!raw) {
                         return;
                     }
@@ -387,7 +388,8 @@ function DesignEditorPageContent() {
                 if (!cancelled) {
                     setErrorMessage('Could not load the saved design project. Falling back to a blank canvas.');
                     try {
-                        const raw = localStorage.getItem('design-editor:draft:v1');
+                        const draftKey = 'design-editor:draft:v1';
+                        const raw = localStorage.getItem(draftKey);
                         if (raw) {
                             const parsed = JSON.parse(raw) as Partial<DesignEditorSnapshot> & { canvasZoom?: number };
                             restoreFromPayload(parsed);

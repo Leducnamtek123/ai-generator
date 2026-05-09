@@ -281,7 +281,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                                                     <p className="text-sm font-medium leading-tight">{notification.title}</p>
                                                     <p className="text-xs text-muted-foreground">{notification.message}</p>
                                                     <p className="text-[10px] text-muted-foreground opacity-50">
-                                                        {new Date(notification.createdAt).toLocaleDateString()}
+                                                        {notification.createdAt.slice(0, 10)}
                                                     </p>
                                                 </div>
                                             </button>

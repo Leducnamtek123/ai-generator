@@ -78,7 +78,7 @@ export default function NewOrgPage() {
                 ...form,
                 domain: form.domain || undefined,
             });
-            setOrganizations([...organizations, org]);
+            setOrganizations((current) => [...current, org]);
             setCurrentOrg(org);
             window.localStorage.removeItem(ORG_DRAFT_KEY);
             push(`/orgs/${org.slug}/settings`);

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import * as React from "react";
 
@@ -61,25 +61,13 @@ export function SocialDateTimePicker({
   placeholder = "Select date & time"
 }: SocialDateTimePickerProps) {
   const parsedValue = parseDateTimeLocal(value);
-  const initialDate = parsedValue ?? new Date();
-  const [month, setMonth] = React.useState(initialDate);
+  const [month, setMonth] = React.useState<Date | null>(() => parsedValue ?? new Date());
   const [timeValue, setTimeValue] = React.useState(
-    parsedValue ? format(parsedValue, "HH:mm") : "09:00"
+    () => (parsedValue ? format(parsedValue, "HH:mm") : "09:00")
   );
 
-  React.useEffect(() => {
-    if (!parsedValue) {
-      setMonth(new Date());
-      setTimeValue("09:00");
-      return;
-    }
-
-    setMonth(parsedValue);
-    setTimeValue(format(parsedValue, "HH:mm"));
-  }, [parsedValue]);
-
-  const selectedDate = parsedValue ?? combineDateAndTime(month, timeValue);
-  const triggerLabel = parsedValue ? format(parsedValue, "MMM d, yyyy • HH:mm") : placeholder;
+  const selectedDate = parsedValue ?? (month ? combineDateAndTime(month, timeValue) : null);
+  const triggerLabel = parsedValue ? format(parsedValue, "MMM d, yyyy HH:mm") : placeholder;
 
   const handleSelectDate = (date: Date) => {
     setMonth(date);
@@ -88,7 +76,9 @@ export function SocialDateTimePicker({
 
   const handleSelectTime = (nextTime: string) => {
     setTimeValue(nextTime);
-    onChange(toDateTimeLocalValue(combineDateAndTime(selectedDate, nextTime)));
+    if (selectedDate) {
+      onChange(toDateTimeLocalValue(combineDateAndTime(selectedDate, nextTime)));
+    }
   };
 
   return (
@@ -115,7 +105,7 @@ export function SocialDateTimePicker({
         <div className="flex flex-col gap-3 p-3">
           <Calendar
             selected={parsedValue}
-            month={month}
+            month={month ?? undefined}
             onSelect={handleSelectDate}
             onMonthChange={setMonth}
           />
@@ -142,8 +132,7 @@ export function SocialDateTimePicker({
               variant="ghost"
               size="sm"
               onClick={() => {
-                const reset = new Date();
-                setMonth(reset);
+                setMonth(new Date());
                 setTimeValue("09:00");
                 onChange("");
               }}
@@ -155,7 +144,9 @@ export function SocialDateTimePicker({
               variant="secondary"
               size="sm"
               onClick={() => {
-                onChange(toDateTimeLocalValue(selectedDate));
+                if (selectedDate) {
+                  onChange(toDateTimeLocalValue(selectedDate));
+                }
               }}
             >
               Apply

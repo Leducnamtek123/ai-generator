@@ -203,11 +203,12 @@ function SketchToImagePageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('sketch-to-image:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('sketch-to-image:draft:v1');
-                    if (raw) {
-                        hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(raw)));
+                    if (draftRaw) {
+                        hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(draftRaw)));
                     }
                 } catch (loadError) {
                     console.error('Failed to restore sketch draft', loadError);
@@ -229,9 +230,8 @@ function SketchToImagePageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved sketch project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('sketch-to-image:draft:v1');
-                        if (raw) {
-                            hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(raw)));
+                        if (draftRaw) {
+                            hydrateFromSnapshot(normalizeSketchSnapshot(JSON.parse(draftRaw)));
                         }
                     } catch (fallbackError) {
                         console.error('Failed to restore sketch fallback', fallbackError);

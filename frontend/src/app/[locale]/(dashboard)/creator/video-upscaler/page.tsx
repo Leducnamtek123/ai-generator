@@ -205,7 +205,8 @@ function VideoUpscalerPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved video upscaler project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('video-upscaler:draft:v1');
+                        const draftKey = 'video-upscaler:draft:v1';
+                        const raw = localStorage.getItem(draftKey);
                         if (raw) {
                             hydrateFromSnapshot(normalizeVideoUpscalerSnapshot(JSON.parse(raw)));
                         }

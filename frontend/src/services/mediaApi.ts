@@ -205,10 +205,19 @@ function createUploadedMedia(fileRecord: StoredFileResponse['file'], sourceFile:
 export const mediaApi = {
     async uploadMedia(file: File, onProgress?: (progress: number) => void): Promise<MediaItem | null> {
         if (USE_MOCK) {
-            for (let i = 0; i <= 100; i += 10) {
-                await mockDelay(100);
-                onProgress?.(i);
-            }
+            await new Promise<void>((resolve) => {
+                let progress = 0;
+                const timer = window.setInterval(() => {
+                    onProgress?.(progress);
+                    if (progress >= 100) {
+                        window.clearInterval(timer);
+                        resolve();
+                        return;
+                    }
+
+                    progress += 10;
+                }, 100);
+            });
 
             const url = URL.createObjectURL(file);
             return {

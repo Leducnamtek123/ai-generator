@@ -156,11 +156,12 @@ function ImageExtenderPageContent() {
         };
 
         const loadProject = async () => {
+            const draftRaw = localStorage.getItem('image-extender:draft:v1');
+
             if (!projectId) {
                 try {
-                    const raw = localStorage.getItem('image-extender:draft:v1');
-                    if (raw) {
-                        hydrateFromSnapshot(normalizeImageExtenderSnapshot(JSON.parse(raw)));
+                    if (draftRaw) {
+                        hydrateFromSnapshot(normalizeImageExtenderSnapshot(JSON.parse(draftRaw)));
                     }
                 } catch (loadError) {
                     console.error('Failed to restore image extender draft', loadError);
@@ -186,9 +187,8 @@ function ImageExtenderPageContent() {
                 if (!cancelled) {
                     setProjectError('Could not load the saved image extender project. Falling back to a local draft.');
                     try {
-                        const raw = localStorage.getItem('image-extender:draft:v1');
-                        if (raw) {
-                            hydrateFromSnapshot(normalizeImageExtenderSnapshot(JSON.parse(raw)));
+                        if (draftRaw) {
+                            hydrateFromSnapshot(normalizeImageExtenderSnapshot(JSON.parse(draftRaw)));
                         }
                     } catch (fallbackError) {
                         console.error('Failed to restore image extender fallback', fallbackError);

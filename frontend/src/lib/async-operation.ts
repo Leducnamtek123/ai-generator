@@ -130,7 +130,7 @@ export async function pollUntil<T>({
   const activeSignal = signal ?? controller!.signal;
   const startedAt = Date.now();
 
-  while (true) {
+  const run = async (): Promise<T> => {
     if (activeSignal.aborted) {
       throw new DOMException("The operation was aborted.", "AbortError");
     }
@@ -145,5 +145,8 @@ export async function pollUntil<T>({
     }
 
     await sleep(intervalMs, activeSignal);
-  }
+    return run();
+  };
+
+  return run();
 }
