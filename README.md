@@ -1,10 +1,86 @@
-# AI Generator Project
+# AI Generator
 
-This project is a web application with a backend and frontend, now integrated with the **Harness v0** collaboration model.
+AI Generator is a full-stack AI creation platform with a Next.js frontend, a NestJS backend, and a small MCP server for tooling integration.
+
+The repository follows the Harness v0 operating model. Product behavior lives in `docs/product/*`, implementation work is tracked in `docs/stories/*`, and proof is mapped in `docs/TEST_MATRIX.md`.
+
+## What Is In This Repo
+
+- `frontend/`: Next.js 16 UI for dashboards, creator tools, social surfaces, billing, and workspace management.
+- `backend/`: NestJS API with PostgreSQL, Redis/BullMQ, S3-compatible storage, authentication, and service entrypoints for the split runtime.
+- `mcp-server/`: MCP bridge used by local tooling.
+- `docker/`: Docker and compose layout for the platform stack.
+- `docs/`: Harness docs, product contracts, stories, decisions, and validation proof.
+- `scripts/`: Setup scripts for local GPU workflows.
+
+## Current Product Areas
+
+The live docs and test matrix currently cover these areas:
+
+- Platform hardening
+- Social Hub
+- Notifications
+- Community Marketplace
+- Creator tools
+- Workflow editor and canvas behavior
+- Admin-managed content
+
+See [docs/TEST_MATRIX.md](docs/TEST_MATRIX.md) for the current implementation and proof status of each area.
+
+## Local Setup
+
+1. Install dependencies in each workspace that you plan to run:
+
+   ```powershell
+   cd frontend; npm install
+   cd ..\backend; npm install
+   cd ..\mcp-server; npm install
+   ```
+
+2. Review environment examples before starting local services:
+
+   - `.env.example`
+   - `.env.social.example`
+   - `backend/.env`
+   - `frontend/.env`
+   - `docker/.env.example`
+
+3. Read [AGENTS.md](AGENTS.md) for the repo operating rules and [docs/FEATURE_INTAKE.md](docs/FEATURE_INTAKE.md) before starting work on a feature.
+
+## Run Locally
+
+Frontend:
+
+```powershell
+cd frontend
+npm run dev
+```
+
+Backend:
+
+```powershell
+cd backend
+npm run start:dev
+```
+
+MCP server:
+
+```powershell
+cd mcp-server
+npm run dev
+```
+
+## Validation
+
+Use the smallest relevant checks for the area you are changing:
+
+- Frontend: `npm run typecheck`, `npm run build`, `npm run lint`
+- Backend: `npm run build`, `npm run test`, `npm run test:e2e`
+- Docker/runtime checks: see [docs/docker-architecture.md](docs/docker-architecture.md)
 
 ## Local GPU Quick Start
 
-If you want image and video generation to use your local NVIDIA GPU:
+If you want image and video generation to use a local NVIDIA GPU:
 
 1. Download the model files:
 
@@ -19,49 +95,37 @@ If you want image and video generation to use your local NVIDIA GPU:
    ```
 
 3. Open:
+
    - `http://localhost`
    - `http://localhost:8188`
 
-The stack is already wired to ComfyUI in `docker/.env`, and the image result URL is rewritten to `http://localhost:8188` so the browser can open the generated file directly.
+The stack is wired to ComfyUI through `docker/.env`, and generated image URLs are rewritten so the browser can open the result directly.
 
-### 16GB GPU fit
+### 16 GB GPU Fit
 
-For an RTX 5070 Ti class card with 16GB VRAM, the best fit in this repo is:
+For an RTX 5070 Ti class card with 16 GB VRAM, the current practical baseline is:
 
-- `SDXL base 1.0` for the current image workflow. This is the safest local baseline and matches the workflow already checked into `docker/comfyui-workflows/`.
-- `FLUX.1-schnell` if you want a faster local ComfyUI image model with strong quality.
-- `FLUX.1-dev` in FP8 form if you want the higher-quality FLUX path and accept a heavier setup.
-- `Stable Diffusion 3.5 Medium` if you want a newer balanced model and are okay with a larger model bundle.
+- `SDXL base 1.0` for the image workflow already checked into `docker/comfyui-workflows/`.
+- `FLUX.1-schnell` if you want a faster local image model.
+- `FLUX.1-dev` in FP8 form if you want the higher-quality FLUX path and can afford a heavier setup.
+- `Stable Diffusion 3.5 Medium` if you want a newer balanced model and accept a larger model bundle.
 
-In ComfyUI settings, use lower-precision encoders when VRAM gets tight. The official ComfyUI docs recommend `fp8` text encoder settings for lower memory use, and note that `fp32` VAE is for users with 16GB+ VRAM who want the highest quality.
+Use lower-precision encoders when VRAM gets tight. The ComfyUI guidance cited in the repo recommends `fp8` text encoders for lower memory use and `fp32` VAE for users with 16 GB+ VRAM who want the highest quality.
 
-## Project Structure
+## Documentation Index
 
-- `frontend/`: React/Next.js frontend.
-- `backend/`: Node.js/Express backend.
-- `docs/`: Project documentation and Harness artifacts.
-  - `docs/product/`: Product contract files.
-  - `docs/stories/`: Story packets and backlog.
-  - `docs/decisions/`: Architecture decisions and tradeoffs.
-  - `docs/templates/`: Reusable templates for stories, decisions, etc.
-- `scripts/`: Project scripts.
+- [docs/README.md](docs/README.md): documentation map and navigation
+- [docs/product/README.md](docs/product/README.md): current product contracts
+- [docs/stories/README.md](docs/stories/README.md): story packet guidance
+- [docs/HARNESS.md](docs/HARNESS.md): Harness operating model
+- [docs/FEATURE_INTAKE.md](docs/FEATURE_INTAKE.md): how prompts become work
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md): architecture discovery and boundary rules
+- [docs/TEST_MATRIX.md](docs/TEST_MATRIX.md): behavior-to-proof map
+- [docs/decisions/README.md](docs/decisions/README.md): architecture and contract decisions
+- [docs/HARNESS_BACKLOG.md](docs/HARNESS_BACKLOG.md): harness improvements
 
-## Collaboration Model
+## Working Notes
 
-This project follows the Harness v0 operating model for human-agent collaboration.
-
-- **Entrypoint**: See [AGENTS.md](AGENTS.md) for operating rules.
-- **Workflow**: Requests are classified via [docs/FEATURE_INTAKE.md](docs/FEATURE_INTAKE.md) and turned into stories in [docs/stories/](docs/stories/).
-- **Proof**: Behavior-to-proof mapping is tracked in [docs/TEST_MATRIX.md](docs/TEST_MATRIX.md).
-
-## Getting Started
-
-1. Check [AGENTS.md](AGENTS.md) to understand the agent operating model.
-2. Review the current backlog in [docs/stories/backlog.md](docs/stories/backlog.md).
-3. Follow the feature intake process in [docs/FEATURE_INTAKE.md](docs/FEATURE_INTAKE.md) for new work.
-
-## Development
-
-- Frontend: `npm run dev` inside `frontend/`.
-- Backend: `npm run dev` inside `backend/`.
-- Docker: See `docker/` for containerization setup.
+- The root working agreement is [AGENTS.md](AGENTS.md).
+- Story work should start from [docs/stories/backlog.md](docs/stories/backlog.md) or the relevant story packet.
+- When a behavior changes, update the product doc, the story packet, and the test matrix together.
