@@ -37,13 +37,13 @@ export class CreateCheckoutDto {
   packageId?: string;
 
   @ApiPropertyOptional({
-    enum: ['user', 'organization'],
+    enum: ['user', 'workspace'],
     default: 'user',
     description: 'Billing scope type',
   })
   @IsOptional()
-  @IsIn(['user', 'organization'])
-  scopeType?: 'user' | 'organization';
+  @IsIn(['user', 'workspace'])
+  scopeType?: 'user' | 'workspace';
 
   @ApiPropertyOptional({
     description: 'Billing scope identifier. Defaults to the current user.',

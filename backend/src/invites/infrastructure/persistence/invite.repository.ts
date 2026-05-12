@@ -7,10 +7,10 @@ export abstract class InviteRepository {
   ): Promise<Invite>;
 
   abstract findById(id: string): Promise<NullableType<Invite>>;
-  abstract findByOrganizationId(organizationId: string): Promise<Invite[]>;
+  abstract findByWorkspaceId(workspaceId: string): Promise<Invite[]>;
   abstract findByEmail(email: string): Promise<Invite[]>;
-  abstract findByOrgAndEmail(
-    organizationId: string,
+  abstract findByWorkspaceAndEmail(
+    workspaceId: string,
     email: string,
   ): Promise<NullableType<Invite>>;
 

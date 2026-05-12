@@ -1,7 +1,6 @@
 "use client";
 
 import React, { Suspense, useMemo } from "react";
-import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
@@ -16,7 +15,6 @@ import {
   XCircle,
   type LucideIcon
 } from "lucide-react";
-import { m } from 'framer-motion';
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -450,280 +448,317 @@ function ChannelsPageContent() {
   return (
     <div className="mx-auto max-w-7xl space-y-8 p-8">
       <div className="flex flex-col gap-2">
-        <h1 className="text-4xl font-semibold tracking-tight">Social Channels</h1>
+        <h1 className="text-4xl font-semibold tracking-tight">Channels</h1>
         <p className="text-muted-foreground">
-          Connect and manage your social media accounts for cross-platform publishing.
+          Connect the accounts this workspace can use for posting and scheduling.
         </p>
-        <div className="flex flex-wrap gap-2 pt-2">
-          <Button asChild variant="outline" size="sm">
-            <Link href="/social">Hub overview</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/social/publish">Open Publish</Link>
-          </Button>
-          <Button asChild variant="outline" size="sm">
-            <Link href="/social/inbox">Open Inbox</Link>
-          </Button>
-        </div>
       </div>
 
+      <GlassCard variant="morphism" className="border border-border/60 p-6">
+        <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div className="max-w-3xl">
+            <h2 className="mt-2 text-2xl font-semibold">Pick a provider and connect it here</h2>
+            <p className="mt-2 text-sm text-muted-foreground leading-6">
+              These are the actual connection targets. Open a provider card to authorize, review
+              pages, or disconnect what is already linked.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {providers.map((provider, index) => {
+            const meta = platformMeta[provider.identifier] ?? {
+              icon: MessageCircle,
+              color: "#6b7280",
+              name: provider.name,
+              description: "Connect this provider to publish and monitor interactions."
+            };
+            const connectedAccounts = getProviderAccounts(provider.identifier);
+            const isConnected = connectedAccounts.length > 0;
+            const isFacebookPending = provider.identifier === "facebook" && hasPendingFacebookConnection && !isConnected;
+            const Icon = meta.icon;
+
+            return (
+              <div
+                key={provider.identifier}
+              >
+                <GlassCard
+                  variant="morphism"
+                  className="group relative flex h-full flex-col overflow-hidden border border-border/60 transition-all hover:border-border/70"
+                >
+                  <div className="absolute top-0 right-0 p-4">
+                    {isConnected ? (
+                      <CheckCircle2 className="size-5 text-green-500" />
+                    ) : (
+                      <XCircle className="size-5 text-muted-foreground/30" />
+                    )}
+                  </div>
+
+                  <div className="mb-6 flex items-center gap-4">
+                    <div
+                      className="flex size-12 items-center justify-center rounded-xl text-white"
+                      style={{ backgroundColor: meta.color }}
+                    >
+                      <Icon className="size-6" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold">{meta.name}</h3>
+                      <span
+                        className={`text-xs ${isConnected ? "text-green-500" : "text-muted-foreground"}`}
+                      >
+                        {isConnected
+                          ? provider.identifier === "facebook"
+                            ? `Connected as ${connectedAccounts.length} Facebook page${connectedAccounts.length === 1 ? "" : "s"}`
+                            : `Connected as ${connectedAccounts[0]?.name ?? provider.name}`
+                          : isFacebookPending
+                            ? "Pending Facebook setup"
+                            : "Not Connected"}
+                      </span>
+                    </div>
+                  </div>
+
+                  <p className="mb-4 flex-1 text-sm text-muted-foreground">{meta.description}</p>
+
+                  {provider.identifier === "facebook" && isFacebookPending ? (
+                    <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
+                      <div className="text-sm font-medium text-amber-200">Facebook pages are waiting for review.</div>
+                      <p className="mt-1 text-xs text-amber-100/80">
+                        Meta returned page access tokens. Choose which pages you want to keep connected before anything is saved as a publish target.
+                      </p>
+                    </div>
+                  ) : null}
+
+                  {provider.identifier === "facebook" && isConnected ? (
+                    <div className="mb-6 rounded-xl border border-border/60 bg-card/70 p-4">
+                    <div className="mb-2 flex items-center justify-between text-sm font-medium text-muted-foreground">
+                      <span>Connected pages</span>
+                        <button
+                          type="button"
+                          className="text-primary transition-colors hover:text-primary/80"
+                          onClick={() => {
+                            dispatch({ type: 'setSelectedFacebookPageIds', selectedFacebookPageIds: facebookAccounts.map((account) => String(account.id)) });
+                            dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: 'connected' });
+                            dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
+                          }}
+                        >
+                          View all
+                        </button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {connectedAccounts.slice(0, 3).map((account) => (
+                          <span
+                            key={account.id}
+                            className="flex items-center gap-2 rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-foreground"
+                          >
+                            {account.picture ? (
+                              <Image
+                                src={account.picture}
+                                alt={account.name || "Facebook Page"}
+                                width={16}
+                                height={16}
+                                unoptimized
+                                className="size-4 rounded-full object-cover"
+                              />
+                            ) : (
+                              <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
+                                {getPageInitials(account.name)}
+                              </span>
+                            )}
+                            <span>{getFacebookPageLabel(account.name)}</span>
+                          </span>
+                        ))}
+                        {connectedAccounts.length > 3 ? (
+                          <span className="rounded-full border border-border/60 bg-background/60 px-3 py-1 text-xs text-muted-foreground">
+                            +{connectedAccounts.length - 3} more
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  <Button
+                    variant={isConnected ? "outline" : "default"}
+                    className="group w-full"
+                    onClick={() => {
+                      if (isConnected) {
+                        if (provider.identifier === "facebook") {
+                          dispatch({
+                            type: 'setSelectedFacebookPageIds',
+                            selectedFacebookPageIds: hasPendingFacebookConnection
+                              ? (activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [])
+                              : facebookAccounts.map((account) => String(account.id)),
+                          });
+                          dispatch({
+                            type: 'setFacebookReviewMode',
+                            facebookReviewMode: hasPendingFacebookConnection ? 'pending' : 'connected',
+                          });
+                          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
+                          return;
+                        }
+
+                        void handleDisconnect(connectedAccounts[0].id);
+                        return;
+                      }
+
+                      if (provider.identifier === "facebook") {
+                        if (hasPendingFacebookConnection) {
+                          dispatch({
+                            type: 'setSelectedFacebookPageIds',
+                            selectedFacebookPageIds: activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [],
+                          });
+                          dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: 'pending' });
+                          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
+                          return;
+                        }
+
+                        dispatch({ type: 'setIsFacebookDialogOpen', isFacebookDialogOpen: true });
+                        return;
+                      }
+
+                      void handleConnect(provider.identifier);
+                    }}
+                  >
+                    {isConnected ? (
+                      provider.identifier === "facebook"
+                        ? hasPendingFacebookConnection
+                          ? "Review Pages"
+                          : "Manage Pages"
+                        : "Disconnect"
+                    ) : hasPendingFacebookConnection && provider.identifier === "facebook" ? (
+                      "Review Pages"
+                    ) : (
+                      <>
+                        <Plus className="mr-2 size-4 transition-transform group-hover:rotate-90" />
+                        Connect Account
+                      </>
+                    )}
+                  </Button>
+                </GlassCard>
+              </div>
+            );
+          })}
+        </div>
+      </GlassCard>
+
       <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Connected</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Connected</p>
           <div className="mt-3 text-3xl font-bold">{connectedCount}</div>
           <p className="mt-1 text-sm text-muted-foreground">Total social accounts in this workspace</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Facebook pages</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Facebook pages</p>
           <div className="mt-3 text-3xl font-bold">{facebookPageCount}</div>
           <p className="mt-1 text-sm text-muted-foreground">Page-first publish targets</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Pending review</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Pending review</p>
           <div className="mt-3 text-3xl font-bold">{pendingFacebookPages}</div>
           <p className="mt-1 text-sm text-muted-foreground">Pages waiting for selection</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Reconnect</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Reconnect</p>
           <div className="mt-3 text-3xl font-bold">{reauthCount}</div>
           <p className="mt-1 text-sm text-muted-foreground">Accounts that need token refresh</p>
         </GlassCard>
       </div>
 
-      <GlassCard variant="morphism" className="border border-white/10 p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+      <GlassCard variant="morphism" className="border border-border/60 p-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="max-w-3xl">
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Facebook-first onboarding</p>
-            <h2 className="mt-2 text-2xl font-semibold">Review pages before they become publish targets</h2>
+            <h2 className="mt-2 text-2xl font-semibold">Active pages in this workspace</h2>
             <p className="mt-2 text-sm text-muted-foreground leading-6">
-              The workspace is page-first: connect a Facebook Page, review the returned pages, and keep only the ones you want to publish from. Other providers follow the same workspace pattern after Facebook is established.
+              Review the page list first, then keep connected pages selected as publish targets.
             </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline">
-              <Link href="/social/dashboard">View Dashboard</Link>
-            </Button>
-            <Button asChild>
-              <Link href="/social/calendar">Open Calendar</Link>
-            </Button>
           </div>
         </div>
-        <div className="mt-6 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
-            <p className="text-sm font-semibold">1. Connect</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Start OAuth from a provider card. Facebook asks for app credentials and returns page candidates.
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
-            <p className="text-sm font-semibold">2. Review pages</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Select which Facebook pages stay active. This is the publish target list for the workspace.
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
-            <p className="text-sm font-semibold">3. Keep fresh</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Reconnect accounts that need reauth before you publish or monitor interactions.
-            </p>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-2">
+          {hasPendingFacebookConnection && activeFacebookPendingConnection ? (
+            <div className="rounded-xl border border-border/60 bg-background/40 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-sm font-semibold">Pending review</p>
+                <span className="text-xs text-amber-400">Needs selection</span>
+              </div>
+              <div className="mt-3 space-y-2">
+                {activeFacebookPendingConnection.pages.slice(0, 3).map((page) => (
+                  <div key={page.id} className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2">
+                    {page.picture ? (
+                      <Image
+                        src={page.picture}
+                        alt={page.name || "Facebook Page"}
+                        width={28}
+                        height={28}
+                        unoptimized
+                        className="size-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-7 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+                        {getPageInitials(page.name)}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{getFacebookPageLabel(page.name)}</p>
+                      <p className="truncate text-xs text-muted-foreground">{page.id}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-xl border border-dashed border-border/60 p-4 text-sm text-muted-foreground">
+              No pending Facebook pages. Connect a page to see the selected publish targets here.
+            </div>
+          )}
+
+          <div className="rounded-xl border border-border/60 bg-background/40 p-4">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-sm font-semibold">Connected pages</p>
+              <span className="text-xs text-emerald-400">{facebookAccounts.length} active</span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {facebookAccounts.length > 0 ? (
+                facebookAccounts.slice(0, 3).map((account) => (
+                  <div key={account.id} className="flex items-center gap-3 rounded-lg border border-border/40 bg-background/50 px-3 py-2">
+                    {account.picture ? (
+                      <Image
+                        src={account.picture}
+                        alt={account.name || "Facebook Page"}
+                        width={28}
+                        height={28}
+                        unoptimized
+                        className="size-7 rounded-full object-cover"
+                      />
+                    ) : (
+                      <span className="flex size-7 items-center justify-center rounded-full bg-primary/20 text-[10px] font-bold text-primary">
+                        {getPageInitials(account.name)}
+                      </span>
+                    )}
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium">{getFacebookPageLabel(account.name)}</p>
+                      <p className="truncate text-xs text-muted-foreground">{account.platformId}</p>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-muted-foreground">No Facebook Page is connected yet.</p>
+              )}
+            </div>
           </div>
         </div>
       </GlassCard>
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {isLoading ? (
-          <p className="text-sm text-muted-foreground">Loading social providers?</p>
-        ) : null}
-        {providers.map((provider, index) => {
-          const meta = platformMeta[provider.identifier] ?? {
-            icon: MessageCircle,
-            color: "#6b7280",
-            name: provider.name,
-            description: "Connect this provider to publish and monitor interactions."
-          };
-          const connectedAccounts = getProviderAccounts(provider.identifier);
-          const isConnected = connectedAccounts.length > 0;
-          const isFacebookPending = provider.identifier === "facebook" && hasPendingFacebookConnection && !isConnected;
-          const Icon = meta.icon;
-
-          return (
-            <m.div
-              key={provider.identifier}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <GlassCard
-                variant="morphism"
-                className="group relative flex h-full flex-col overflow-hidden border border-white/10 transition-all hover:border-white/20"
-              >
-                <div className="absolute top-0 right-0 p-4">
-                  {isConnected ? (
-                    <CheckCircle2 className="size-5 text-green-500" />
-                  ) : (
-                    <XCircle className="size-5 text-muted-foreground/30" />
-                  )}
-                </div>
-
-                <div className="mb-6 flex items-center gap-4">
-                  <div
-                    className="flex size-12 items-center justify-center rounded-xl text-white"
-                    style={{ backgroundColor: meta.color }}
-                  >
-                    <Icon className="size-6" />
-                  </div>
-                <div>
-                  <h3 className="text-lg font-semibold">{meta.name}</h3>
-                  <span
-                    className={`text-xs ${isConnected ? "text-green-500" : "text-muted-foreground"}`}
-                  >
-                      {isConnected
-                        ? provider.identifier === "facebook"
-                          ? `Connected as ${connectedAccounts.length} Facebook page${connectedAccounts.length === 1 ? "" : "s"}`
-                          : `Connected as ${connectedAccounts[0]?.name ?? provider.name}`
-                        : isFacebookPending
-                          ? "Pending Facebook setup"
-                          : "Not Connected"}
-                  </span>
-                </div>
-                </div>
-
-                <p className="mb-4 flex-1 text-sm text-muted-foreground">{meta.description}</p>
-
-                {provider.identifier === "facebook" && isFacebookPending ? (
-                  <div className="mb-6 rounded-xl border border-amber-500/20 bg-amber-500/10 p-4">
-                    <div className="text-sm font-medium text-amber-200">Facebook pages are waiting for review.</div>
-                    <p className="mt-1 text-xs text-amber-100/80">
-                      Meta returned page access tokens. Choose which pages you want to keep connected before anything is saved as a publish target.
-                    </p>
-                  </div>
-                ) : null}
-
-                {provider.identifier === "facebook" && isConnected ? (
-                  <div className="mb-6 rounded-xl border border-white/10 bg-white/[0.03] p-4">
-                    <div className="mb-2 flex items-center justify-between text-xs uppercase tracking-wider text-muted-foreground">
-                      <span>Connected pages</span>
-                      <button
-                        type="button"
-                        className="text-primary transition-colors hover:text-primary/80"
-                        onClick={() => {
-                          dispatch({ type: 'setSelectedFacebookPageIds', selectedFacebookPageIds: facebookAccounts.map((account) => String(account.id)) });
-                          dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: 'connected' });
-                          dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
-                        }}
-                      >
-                        View all
-                      </button>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {connectedAccounts.slice(0, 3).map((account) => (
-                        <span
-                          key={account.id}
-                          className="flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-foreground"
-                        >
-                          {account.picture ? (
-                            <Image
-                              src={account.picture}
-                              alt={account.name || "Facebook Page"}
-                              width={16}
-                              height={16}
-                              unoptimized
-                              className="size-4 rounded-full object-cover"
-                            />
-                          ) : (
-                            <span className="flex size-4 items-center justify-center rounded-full bg-primary/20 text-[9px] font-bold text-primary">
-                              {getPageInitials(account.name)}
-                            </span>
-                          )}
-                          <span>{getFacebookPageLabel(account.name)}</span>
-                        </span>
-                      ))}
-                      {connectedAccounts.length > 3 ? (
-                        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-muted-foreground">
-                          +{connectedAccounts.length - 3} more
-                        </span>
-                      ) : null}
-                    </div>
-                    <p className="mt-3 text-xs text-muted-foreground">
-                      Publish from the <span className="font-medium text-foreground">Publish</span> screen and select the page you want.
-                    </p>
-                  </div>
-                ) : null}
-
-                <Button
-                  variant={isConnected ? "outline" : "default"}
-                  className="group w-full"
-                  onClick={() => {
-                    if (isConnected) {
-                      if (provider.identifier === "facebook") {
-                        dispatch({
-                          type: 'setSelectedFacebookPageIds',
-                          selectedFacebookPageIds: hasPendingFacebookConnection
-                            ? (activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [])
-                            : facebookAccounts.map((account) => String(account.id)),
-                        });
-                        dispatch({
-                          type: 'setFacebookReviewMode',
-                          facebookReviewMode: hasPendingFacebookConnection ? 'pending' : 'connected',
-                        });
-                        dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
-                        return;
-                      }
-
-                      void handleDisconnect(connectedAccounts[0].id);
-                      return;
-                    }
-
-                    if (provider.identifier === "facebook") {
-                      if (hasPendingFacebookConnection) {
-                        dispatch({
-                          type: 'setSelectedFacebookPageIds',
-                          selectedFacebookPageIds: activeFacebookPendingConnection?.pages.map((page) => page.id) ?? [],
-                        });
-                        dispatch({ type: 'setFacebookReviewMode', facebookReviewMode: 'pending' });
-                        dispatch({ type: 'setIsFacebookReviewDialogOpen', isFacebookReviewDialogOpen: true });
-                        return;
-                      }
-
-                      dispatch({ type: 'setIsFacebookDialogOpen', isFacebookDialogOpen: true });
-                      return;
-                    }
-
-                    void handleConnect(provider.identifier);
-                  }}
-                >
-                  {isConnected ? (
-                    provider.identifier === "facebook"
-                      ? hasPendingFacebookConnection
-                        ? "Review Pages"
-                        : "Manage Pages"
-                      : "Disconnect"
-                  ) : hasPendingFacebookConnection && provider.identifier === "facebook" ? (
-                    "Review Pages"
-                  ) : (
-                    <>
-                      <Plus className="mr-2 size-4 transition-transform group-hover:rotate-90" />
-                      Connect Account
-                    </>
-                  )}
-                </Button>
-              </GlassCard>
-            </m.div>
-          );
-        })}
-      </div>
-
-      <div className="mt-12 rounded-2xl border border-primary/10 bg-primary/5 p-6">
-        <div className="flex items-center gap-4">
-          <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
-            <Plus className="size-6 text-primary" />
-          </div>
-          <div>
-            <h4 className="font-semibold">Missing a platform?</h4>
-            <p className="text-sm text-muted-foreground">
-              We&apos;re constantly adding new integrations. Let us know which one you need!
-            </p>
-          </div>
+        <div className="mt-12 rounded-2xl border border-primary/10 bg-primary/5 p-6">
+          <div className="flex items-center gap-4">
+            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10">
+              <Plus className="size-6 text-primary" />
+            </div>
+            <div>
+              <h4 className="font-semibold">Need another integration?</h4>
+              <p className="text-sm text-muted-foreground">
+              Tell us which social platform matters next and we&apos;ll prioritize the request.
+              </p>
+            </div>
           <Button variant="ghost" className="ml-auto" onClick={() => dispatch({ type: 'setIsRequestDialogOpen', isRequestDialogOpen: true })}>
             Send Request
           </Button>
@@ -752,7 +787,7 @@ function ChannelsPageContent() {
                   className={`flex items-center justify-between rounded-xl border p-4 transition-colors ${
                     selectedFacebookPageIds.includes(page.id)
                       ? "border-primary/40 bg-primary/10"
-                      : "border-white/10 bg-white/[0.03]"
+                      : "border-border/60 bg-card/70"
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -788,7 +823,7 @@ function ChannelsPageContent() {
                       <div className="text-xs text-muted-foreground">Page ID: {page.id}</div>
                     </div>
                   </div>
-                  <span className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <span className="rounded-full bg-muted/70 px-2 py-0.5 text-xs font-medium text-muted-foreground">
                     {isFacebookReviewPending ? "Pending" : "Connected"}
                   </span>
                 </div>
@@ -866,9 +901,9 @@ function ChannelsPageContent() {
       <Dialog open={isRequestDialogOpen} onOpenChange={(open) => dispatch({ type: 'setIsRequestDialogOpen', isRequestDialogOpen: open })}>
         <DialogContent className="sm:max-w-[520px]">
           <DialogHeader>
-            <DialogTitle>Request a new platform</DialogTitle>
+            <DialogTitle>Request an integration</DialogTitle>
             <DialogDescription>
-              Tell us which social platform you need and why it matters for your workflow.
+              Tell us which platform matters next and why it should be added to the workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">

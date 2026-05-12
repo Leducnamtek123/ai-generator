@@ -27,9 +27,9 @@ import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
 import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
+import { TemplateExplorerModal } from '@/components/gallery/TemplateExplorerModal';
 import { CONTENT_TABS } from '@/components/layouts/navigation-data';
 import { TemplateTypeEnum } from '@/lib/api/templates';
-import { useGenerationProviders } from '@/hooks/useGenerationProviders';
 import { projectApi } from '@/services/projectApi';
 
 const COMMUNITY_TAB = CONTENT_TABS[1];
@@ -37,11 +37,12 @@ const TEMPLATES_TAB = CONTENT_TABS[2];
 const TUTORIALS_TAB = CONTENT_TABS[3];
 
 const models = [
-    { id: 'auto', label: 'Auto', description: 'Best model for your prompt' },
-    { id: 'sora', label: 'Sora 2', description: 'OpenAI cinematic video' },
-    { id: 'runway', label: 'Runway Gen-3', description: 'High quality video gen' },
-    { id: 'kling', label: 'Kling 1.6', description: 'Fast video generation' },
-    { id: 'minimax', label: 'MiniMax', description: 'Creative video synthesis' },
+    { id: 'auto', label: 'Auto', description: 'Backend chooses the best match' },
+    { id: 'veo-3.1', label: 'Veo 3.1', description: 'Cinematic text-to-video' },
+    { id: 'veo-3.1-fast', label: 'Veo 3.1 Fast', description: 'Faster video generation' },
+    { id: 'runway-aleph', label: 'Runway Aleph', description: 'In-context editing and camera control' },
+    { id: 'kling-3.0', label: 'Kling 3.0', description: 'High quality video generation' },
+    { id: 'wan-2.7', label: 'Wan 2.7', description: 'Fast text/image to video' },
 ];
 
 const durations = [
@@ -80,6 +81,42 @@ const moreTutorials = [
     { id: 'm4', title: 'Make consistent characters from one', duration: '01:40', thumbnail: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?w=300&h=200&fit=crop' },
 ];
 
+type VideoPromptRecipe = {
+    title: string;
+    prompt: string;
+    type: 'Text' | 'Visual';
+    duration: string;
+    aspectRatio: string;
+    hint: string;
+};
+
+const VIDEO_PROMPT_RECIPES: VideoPromptRecipe[] = [
+    {
+        title: 'Cinematic product reveal',
+        prompt: 'A cinematic product reveal of a matte black smart speaker rotating on a pedestal, dramatic studio lighting, slow camera push-in, soft reflections, premium commercial look',
+        type: 'Text',
+        duration: '5',
+        aspectRatio: '16:9',
+        hint: 'Good for launch pages, ads, and hero banners.',
+    },
+    {
+        title: 'Vertical social teaser',
+        prompt: 'A fast-paced vertical teaser for a new app launch, bold motion graphics, energetic cuts, glowing UI elements, upbeat pacing, modern social ad style',
+        type: 'Text',
+        duration: '4',
+        aspectRatio: '9:16',
+        hint: 'Good for short-form social content and story formats.',
+    },
+    {
+        title: 'Visual reference clip',
+        prompt: 'Animate the reference image into a polished short clip with subtle camera motion, natural lighting changes, and smooth object movement',
+        type: 'Visual',
+        duration: '8',
+        aspectRatio: '16:9',
+        hint: 'Good when you already have a still frame or concept image.',
+    },
+];
+
 type VideoPageState = {
     activeContentTab: string;
     selectedModel: string;
@@ -92,7 +129,6 @@ type VideoPageState = {
     endImage: string | null;
     enhancePrompt: boolean;
     motionIntensity: number;
-    selectedProvider: string;
     projectId: string | null;
     isProjectLoading: boolean;
     isProjectSaving: boolean;
@@ -111,7 +147,6 @@ type VideoPageAction =
     | { type: 'setEndImage'; endImage: string | null }
     | { type: 'toggleEnhancePrompt' }
     | { type: 'setMotionIntensity'; motionIntensity: number }
-    | { type: 'setSelectedProvider'; selectedProvider: string }
     | { type: 'setProjectId'; projectId: string | null }
     | { type: 'setProjectLoading'; isProjectLoading: boolean }
     | { type: 'setProjectSaving'; isProjectSaving: boolean }
@@ -138,7 +173,6 @@ type VideoSnapshot = {
     endImage: string | null;
     enhancePrompt: boolean;
     motionIntensity: number;
-    selectedProvider: string;
     resultVideo: string | null;
 };
 
@@ -169,7 +203,6 @@ const initialState: VideoPageState = {
     endImage: null,
     enhancePrompt: false,
     motionIntensity: 50,
-    selectedProvider: '',
     projectId: null,
     isProjectLoading: false,
     isProjectSaving: false,
@@ -192,7 +225,6 @@ const normalizeVideoSnapshot = (value: unknown): Partial<VideoSnapshot> => {
         endImage: typeof snapshot.endImage === 'string' ? snapshot.endImage : null,
         enhancePrompt: typeof snapshot.enhancePrompt === 'boolean' ? snapshot.enhancePrompt : initialState.enhancePrompt,
         motionIntensity: typeof snapshot.motionIntensity === 'number' ? snapshot.motionIntensity : initialState.motionIntensity,
-        selectedProvider: typeof snapshot.selectedProvider === 'string' ? snapshot.selectedProvider : '',
         resultVideo: typeof snapshot.resultVideo === 'string' ? snapshot.resultVideo : null,
     };
 };
@@ -221,8 +253,6 @@ function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState
             return { ...state, enhancePrompt: !state.enhancePrompt };
         case 'setMotionIntensity':
             return { ...state, motionIntensity: action.motionIntensity };
-        case 'setSelectedProvider':
-            return { ...state, selectedProvider: action.selectedProvider };
         case 'setProjectId':
             return { ...state, projectId: action.projectId };
         case 'setProjectLoading':
@@ -245,7 +275,6 @@ function reducer(state: VideoPageState, action: VideoPageAction): VideoPageState
                 endImage: action.snapshot.endImage ?? state.endImage,
                 enhancePrompt: action.snapshot.enhancePrompt ?? state.enhancePrompt,
                 motionIntensity: action.snapshot.motionIntensity ?? state.motionIntensity,
-                selectedProvider: action.snapshot.selectedProvider ?? state.selectedProvider,
                 projectId: action.projectId,
                 isProjectLoading: action.isProjectLoading,
                 projectError: action.projectError,
@@ -278,18 +307,16 @@ function VideoPageContent() {
     
     const startImageRef = useRef<HTMLInputElement>(null);
     const endImageRef = useRef<HTMLInputElement>(null);
+    const promptTextareaRef = useRef<HTMLTextAreaElement>(null);
     const resultVideo = currentGeneration?.status === 'completed' ? currentGeneration.resultUrl ?? null : null;
-    const { providers: videoProviders, isLoading: isProvidersLoading } = useGenerationProviders('video-generation');
+    const applyPromptRecipe = (recipe: VideoPromptRecipe) => {
+        dispatch({ type: 'setPrompt', prompt: recipe.prompt });
+        dispatch({ type: 'setPromptMode', promptMode: recipe.type });
+        dispatch({ type: 'setDuration', duration: recipe.duration });
+        dispatch({ type: 'setAspectRatio', aspectRatio: recipe.aspectRatio });
+        toast.success(`Applied ${recipe.title} recipe`);
+    };
 
-    useEffect(() => {
-        if (!videoProviders.length) {
-            return;
-        }
-
-        if (!state.selectedProvider || !videoProviders.some((provider) => provider.name === state.selectedProvider)) {
-            dispatch({ type: 'setSelectedProvider', selectedProvider: videoProviders[0].name });
-        }
-    }, [state.selectedProvider, videoProviders]);
 
     useEffect(() => {
         const requestedProjectId = searchParamsSnapshot.get('projectId');
@@ -395,7 +422,6 @@ function VideoPageContent() {
                 aspectRatio: state.aspectRatio,
                 startImageUrl: state.startImage || undefined,
                 endImageUrl: state.endImage || undefined,
-                provider: state.selectedProvider || undefined,
             });
         } catch (error) {
             toast.error(error instanceof Error ? error.message : 'Failed to generate video');
@@ -405,7 +431,6 @@ function VideoPageContent() {
     const handleReset = () => {
         reset();
         dispatch({ type: 'resetAll' });
-        dispatch({ type: 'setSelectedProvider', selectedProvider: videoProviders[0]?.name || '' });
     };
 
     const handleSave = () => {
@@ -424,7 +449,6 @@ function VideoPageContent() {
                 endImage: state.endImage,
                 enhancePrompt: state.enhancePrompt,
                 motionIntensity: state.motionIntensity,
-                selectedProvider: state.selectedProvider,
                 resultVideo,
             },
         };
@@ -477,7 +501,6 @@ function VideoPageContent() {
             endImage: state.endImage,
             enhancePrompt: state.enhancePrompt,
             motionIntensity: state.motionIntensity,
-            provider: state.selectedProvider,
             resultVideo,
         };
 
@@ -515,19 +538,39 @@ function VideoPageContent() {
                     <h2 className="font-semibold text-muted-foreground">Video Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6">
                     {/* Browse Templates */}
-                    <button 
-                        onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: TEMPLATES_TAB })}
-                        className="flex items-center gap-3 w-full px-3 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-accent rounded-lg transition-colors"
+                    <TemplateExplorerModal
+                        defaultCategory={TemplateTypeEnum.VIDEO_GENERATOR}
+                        title="Video templates"
+                        description="Browse live video templates from the API, search them, and reuse a prompt in one click."
+                        onSelectTemplate={(template) => {
+                            dispatch({ type: 'setPrompt', prompt: template.title });
+                            dispatch({ type: 'setPromptMode', promptMode: 'Text' });
+                            window.setTimeout(() => {
+                                promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                                promptTextareaRef.current?.focus();
+                            }, 0);
+                            toast.success(`Applied ${template.title}`);
+                        }}
                     >
-                        <Grid3X3 className="size-5" />
-                        <span>Browse templates</span>
-                    </button>
+                        <button
+                            type="button"
+                            className="flex w-full items-center justify-between rounded-xl border border-border bg-card px-4 py-3 transition-colors hover:border-border/80"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="flex size-10 items-center justify-center rounded-lg bg-gradient-to-br from-chart-3/20 to-chart-2/20">
+                                    <Grid3X3 className="size-5 text-chart-3" />
+                                </div>
+                                <span className="text-sm font-medium">Browse templates</span>
+                            </div>
+                            <span className="text-xs text-muted-foreground">Open library</span>
+                        </button>
+                    </TemplateExplorerModal>
 
                     {/* Model Selection */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Model</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Model</h4>
                         <div className="relative">
                             <button
                                 onClick={() => dispatch({ type: 'setShowModelPicker', showModelPicker: !state.showModelPicker })}
@@ -564,38 +607,13 @@ function VideoPageContent() {
                         </div>
                     </div>
 
-                    <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Provider</h4>
-                        <div className="bg-card rounded-xl border border-border px-4 py-3">
-                            <select
-                                value={state.selectedProvider}
-                                onChange={(event) => dispatch({ type: 'setSelectedProvider', selectedProvider: event.target.value })}
-                                className="w-full bg-transparent text-sm outline-none"
-                                disabled={isProvidersLoading}
-                            >
-                                {videoProviders.length > 0 ? (
-                                    videoProviders.map((provider) => (
-                                        <option key={provider.name} value={provider.name}>
-                                            {provider.name}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="">Use backend default</option>
-                                )}
-                            </select>
-                        </div>
-                        <p className="text-[10px] leading-4 text-muted-foreground">
-                            Pick a live video provider before starting the generation.
-                        </p>
-                    </div>
-
                     {/* References */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">References</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">References</h4>
                         <div className="grid grid-cols-2 gap-3">
                             <div className="flex flex-col items-center gap-2">
-                        <button
-                            type="button"
+                                <button
+                                    type="button"
                             onClick={() => startImageRef.current?.click()}
                             className="w-full aspect-square rounded-lg bg-muted border border-dashed border-border flex items-center justify-center cursor-pointer hover:border-primary/30 transition-colors overflow-hidden relative"
                         >
@@ -629,27 +647,28 @@ function VideoPageContent() {
                     {/* Prompt */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Prompt</h4>
+                            <h4 className="text-sm font-medium text-muted-foreground">Prompt</h4>
                             <div className="flex items-center gap-1 bg-muted rounded-lg p-0.5">
                                 <button onClick={() => dispatch({ type: 'setPromptMode', promptMode: 'Text' })} className={cn("px-3 py-1 text-xs rounded-md transition-colors", state.promptMode === 'Text' ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>Text</button>
                                 <button onClick={() => dispatch({ type: 'setPromptMode', promptMode: 'Visual' })} className={cn("px-3 py-1 text-xs rounded-md transition-colors", state.promptMode === 'Visual' ? "bg-accent text-accent-foreground" : "text-muted-foreground")}>Visual</button>
                             </div>
                         </div>
                         <textarea
+                            ref={promptTextareaRef}
                             value={state.prompt}
                             onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                            placeholder="Describe your video scene?"
+                            placeholder="Describe the scene, motion, pacing, and mood"
                             className="w-full h-28 px-4 py-3 bg-card border border-border rounded-xl text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring resize-none"
                         />
                     </div>
 
                     {/* Settings Row */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Settings</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Settings</h4>
                         <div className="grid grid-cols-2 gap-2">
                             {/* Duration */}
                             <div className="space-y-2">
-                                <div className="text-[9px] text-muted-foreground uppercase font-medium">Duration</div>
+                                <div className="text-[9px] text-muted-foreground font-medium">Duration</div>
                                 <div className="flex gap-1">
                                     {durations.map((d) => (
                                         <button key={d.value} onClick={() => dispatch({ type: 'setDuration', duration: d.value })} className={cn("flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all", state.duration === d.value ? "bg-accent border border-primary/20" : "bg-card border border-border")}>{d.label}</button>
@@ -658,7 +677,7 @@ function VideoPageContent() {
                             </div>
                             {/* Aspect Ratio */}
                             <div className="space-y-2">
-                                <div className="text-[9px] text-muted-foreground uppercase font-medium">Ratio</div>
+                                <div className="text-[9px] text-muted-foreground font-medium">Ratio</div>
                                 <div className="flex gap-1">
                                     {aspectRatios.map((ar) => (
                                         <button key={ar.value} onClick={() => dispatch({ type: 'setAspectRatio', aspectRatio: ar.value })} className={cn("flex-1 py-1.5 rounded-lg text-[10px] font-medium transition-all", state.aspectRatio === ar.value ? "bg-accent border border-primary/20" : "bg-card border border-border")}>{ar.label}</button>
@@ -671,7 +690,7 @@ function VideoPageContent() {
                     {/* Motion Intensity */}
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Motion Intensity</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Motion Intensity</Label>
                             <span className="text-[11px] font-mono text-foreground">{state.motionIntensity}%</span>
                         </div>
                         <Slider min={0} max={100} step={5} value={[state.motionIntensity]} onValueChange={([v]) => dispatch({ type: 'setMotionIntensity', motionIntensity: v })} />
@@ -867,39 +886,52 @@ function VideoPageContent() {
                                 {state.activeContentTab === TUTORIALS_TAB && ( // Tutorials
                                     <div className="space-y-8">
                                         <section>
-                                            <h3 className="text-lg font-semibold mb-4">Getting started</h3>
-                                            <div className="grid grid-cols-2 gap-6">
-                                                {tutorials.map((tutorial) => (
-                                                    <div key={tutorial.id} className="group cursor-pointer relative rounded-2xl overflow-hidden">
-                                                        <div className="aspect-[16/9] relative">
-                                                            <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 50vw" />
-                                                            <div className="absolute inset-0 bg-zinc-950/40" />
-                                                            <div className="absolute bottom-6 left-6">
-                                                                <div className="size-12 rounded-full bg-foreground/20 backdrop-blur-sm flex items-center justify-center group-hover:bg-foreground/30 transition-colors">
-                                                                    <Play className="size-6 text-white fill-white" />
-                                                                </div>
+                                            <div className="flex items-end justify-between gap-4 mb-4">
+                                                <div>
+                                                    <h3 className="text-lg font-semibold">Prompt recipes</h3>
+                                                    <p className="text-sm text-muted-foreground">
+                                                        Start from a production-like prompt instead of a blank tutorial card.
+                                                    </p>
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">Starter prompts</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                                {VIDEO_PROMPT_RECIPES.map((recipe) => (
+                                                    <button
+                                                        key={recipe.title}
+                                                        type="button"
+                                                        onClick={() => applyPromptRecipe(recipe)}
+                                                        className="group rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
+                                                    >
+                                                        <div className="flex items-start justify-between gap-3">
+                                                            <div>
+                                                                <h4 className="font-semibold">{recipe.title}</h4>
+                                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                                    {recipe.type} mode · {recipe.duration}s · {recipe.aspectRatio}
+                                                                </p>
                                                             </div>
-                                                            <div className="absolute bottom-6 left-20">
-                                                                <p className="text-xs text-white/60 mb-1">Tutorials</p>
-                                                                <h4 className="text-xl font-semibold text-white">{tutorial.title}</h4>
-                                                            </div>
+                                                            <span className="rounded-full border border-border px-2 py-1 text-xs text-muted-foreground group-hover:text-foreground">
+                                                                Use recipe
+                                                            </span>
                                                         </div>
-                                                    </div>
+                                                        <p className="mt-4 text-sm leading-6 text-muted-foreground">{recipe.hint}</p>
+                                                        <p className="mt-4 text-xs text-muted-foreground line-clamp-4">{recipe.prompt}</p>
+                                                    </button>
                                                 ))}
                                             </div>
                                         </section>
 
                                         <section>
                                             <div className="flex items-center justify-between mb-4">
-                                                <h3 className="text-lg font-semibold">More tutorials</h3>
+                                                <h3 className="text-lg font-semibold">Quick references</h3>
                                                 <button className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors">
-                                                    Featured
+                                                    Common formats
                                                     <ChevronDown className="size-4" />
                                                 </button>
                                             </div>
                                             <div className="grid grid-cols-4 gap-4">
                                                 {moreTutorials.map((tutorial) => (
-                                                    <div key={tutorial.id} className="group cursor-pointer">
+                                                    <button key={tutorial.id} type="button" className="group cursor-pointer text-left">
                                                         <div className="aspect-video rounded-xl overflow-hidden relative bg-muted">
                                                             <Image src={tutorial.thumbnail} alt={tutorial.title} fill className="object-cover" sizes="(max-width: 1024px) 100vw, 25vw" />
                                                             <div className="absolute inset-0 bg-zinc-950/30 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
@@ -907,14 +939,14 @@ function VideoPageContent() {
                                                                     <Play className="size-5 text-white fill-white" />
                                                                 </div>
                                                             </div>
-                                                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-[10px] text-white">
+                                                            <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-xs text-white">
                                                                 {tutorial.duration}
                                                             </div>
                                                         </div>
                                                         <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-2">
                                                             {tutorial.title}
                                                         </p>
-                                                    </div>
+                                                    </button>
                                                 ))}
                                             </div>
                                         </section>

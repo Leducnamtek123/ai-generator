@@ -150,18 +150,18 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
             </svg>
 
             {/* Main content */}
-            <div className="pointer-events-auto text-center space-y-10 max-w-4xl px-6 relative z-10">
-                <div className="space-y-3">
+            <div className="pointer-events-auto text-center space-y-10 max-w-5xl px-6 relative z-10">
+                <div className="space-y-4">
                     <h1 className="text-3xl md:text-4xl font-semibold text-foreground tracking-tight">
-                        Your workflow is ready
+                        Start with the first real step
                     </h1>
-                    <p className="text-muted-foreground text-base md:text-lg">
-                        Choose your first node and start creating
+                    <p className="mx-auto max-w-2xl text-muted-foreground text-base md:text-lg">
+                        Pick a starter that matches what you want to build, then expand the graph with the toolbar.
                     </p>
                 </div>
 
                 {/* Node Selection Grid */}
-                <div className="flex flex-wrap justify-center gap-3 md:gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 md:gap-4">
                     {QUICK_START_NODES.map((type) => {
                         const config = NODE_CONFIG[type];
                         const Icon = config.icon;
@@ -182,8 +182,7 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                                 key={type}
                                 onClick={() => onAddNode(config.type, config.label)}
                                 className={cn(
-                                    "flex h-28 w-28 flex-col items-center justify-center gap-3 md:h-32 md:w-32",
-                                    "rounded-lg border transition-all duration-200 shadow-sm",
+                                    "flex min-h-36 flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all duration-200 shadow-sm",
                                     "hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/20",
                                     "active:scale-95 group",
                                     colors.bg,
@@ -191,24 +190,31 @@ export function CanvasEmptyState({ onAddNode }: CanvasEmptyStateProps) {
                                     "hover:border-primary/20"
                                 )}
                             >
-                                <div className={cn(
-                                    "size-10 rounded-lg flex items-center justify-center transition-colors",
-                                    colors.iconBg,
-                                    "group-hover:bg-primary/10"
-                                )}>
-                                    <Icon className={cn("size-5", config.color.replace('text-white', 'text-foreground'))} />
+                                <div className="flex w-full items-start justify-between gap-3">
+                                    <div className={cn(
+                                        "size-10 rounded-lg flex items-center justify-center transition-colors shrink-0",
+                                        colors.iconBg,
+                                        "group-hover:bg-primary/10"
+                                    )}>
+                                        <Icon className={cn("size-5", config.color.replace('text-white', 'text-foreground'))} />
+                                    </div>
                                 </div>
-                                <span className="text-xs md:text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">
-                                    {config.label}
-                                </span>
+                                <div className="space-y-1">
+                                    <span className="block text-sm font-semibold text-foreground">
+                                        {config.label}
+                                    </span>
+                                    <p className="text-xs leading-5 text-muted-foreground group-hover:text-foreground/90 transition-colors">
+                                        {config.description}
+                                    </p>
+                                </div>
                             </button>
                         );
                     })}
                 </div>
 
                 {/* Keyboard shortcut hint */}
-                <p className="text-xs text-muted-foreground/40">
-                    Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-mono inline-block">+</kbd> or click the toolbar to add nodes
+                <p className="text-xs text-muted-foreground/50">
+                    Press <kbd className="px-1.5 py-0.5 bg-muted rounded text-muted-foreground font-mono inline-block">+</kbd> or use the toolbar after you choose a starter
                 </p>
             </div>
         </div>

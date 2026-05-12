@@ -112,7 +112,7 @@
       "approximateUsage": "Ước tính sử dụng",
       "freeTrial": "Dùng thử miễn phí khi đăng ký",
       "processing": "Đang xử lý...",
-      "workspacePlansNote": "Gói workspace cũng có ở đây. Chuyển sang tab Workspace khi bạn cần credit dùng chung hoặc seat tổ chức thay vì gói cá nhân.",
+      "workspacePlansNote": "Gói Workspace cũng có ở đây. Chuyển sang tab Workspace khi bạn cần credit dùng chung hoặc seat của workspace thay vì gói cá nhân.",
       "topUpCreditsTitle": "Credit nạp thêm tuỳ chọn",
       "credits": "credit",
       "buyTopUp": "Mua credit",
@@ -132,7 +132,7 @@
         },
         "team": {
           "label": "Workspace",
-          "title": "Thanh toán nhóm",
+          "title": "Thanh toán workspace",
           "description": "Credit dùng chung, seat đi kèm, và quyền kiểm soát workspace."
         }
       },

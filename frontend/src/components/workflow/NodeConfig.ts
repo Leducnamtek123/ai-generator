@@ -81,7 +81,7 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
     icon: Upload,
     category: NodeCategory.INPUT,
     description: "Upload or import files",
-    color: "text-white/80",
+    color: "text-muted-foreground",
     connections: { accepts: [], outputs: ConnectionType.MEDIA },
     defaultData: {
       label: "Media Upload",
@@ -218,7 +218,7 @@ export const NODE_CONFIG: Record<WorkflowNodeType, NodeConfig> = {
     icon: Camera,
     category: NodeCategory.MODIFICATION,
     description: "Adjust viewpoint",
-    color: "text-white/60",
+    color: "text-muted-foreground",
     connections: {
       accepts: [ConnectionType.IMAGE],
       outputs: ConnectionType.IMAGE,

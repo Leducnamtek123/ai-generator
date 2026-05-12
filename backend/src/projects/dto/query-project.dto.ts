@@ -17,7 +17,7 @@ export class FilterProjectDto {
   @ApiPropertyOptional()
   @IsOptional()
   @IsString()
-  organizationId?: string | null;
+  workspaceId?: string | null;
 }
 
 export class SortProjectDto {

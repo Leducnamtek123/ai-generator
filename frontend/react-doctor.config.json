@@ -3,8 +3,7 @@
     "overrides": [
       {
         "files": [
-          "src/app/[locale]/**/page.tsx",
-          "src/app/[locale]/(dashboard)/social/publish/view.tsx"
+          "src/app/[locale]/**/page.tsx"
         ],
         "rules": ["react-doctor/no-giant-component"]
       },

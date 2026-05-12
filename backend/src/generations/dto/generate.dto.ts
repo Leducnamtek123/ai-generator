@@ -7,7 +7,7 @@ export class GenerateImageDto {
   prompt: string;
 
   @ApiPropertyOptional({
-    enum: ['seedream', 'flux', 'imagen3', 'midjourney', 'dalle3', 'stable'],
+    enum: ['seedream', 'flux', 'imagen3', 'midjourney', 'dalle3', 'stable', '4o-image', 'flux-kontext', 'nano-banana', 'seedream-4.5'],
   })
   @IsOptional()
   @IsString()
@@ -57,7 +57,7 @@ export class GenerateVideoDto {
   @IsString()
   prompt: string;
 
-  @ApiPropertyOptional({ enum: ['runway', 'sora', 'pika', 'kling'] })
+  @ApiPropertyOptional({ enum: ['runway', 'sora', 'pika', 'kling', 'veo-3.1', 'runway-aleph', 'wan-2.7', 'veo-3.1-fast'] })
   @IsOptional()
   @IsString()
   model?: string;

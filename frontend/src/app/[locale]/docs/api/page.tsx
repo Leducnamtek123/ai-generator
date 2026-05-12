@@ -166,7 +166,7 @@ export default function ApiDocsPage() {
                 <div className="grid gap-6 xl:grid-cols-[280px_minmax(0,1fr)]">
                     <aside className="sticky top-6 hidden h-[calc(100vh-3rem)] self-start overflow-hidden rounded-3xl border border-border bg-card/80 p-4 backdrop-blur xl:flex xl:flex-col">
                         <div className="space-y-4 border-b border-border pb-4">
-                            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
+                            <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
                                 <Code className="size-3" />
                                 Developer Platform
                             </div>
@@ -194,7 +194,7 @@ export default function ApiDocsPage() {
 
                         <div className="mt-4 space-y-3 border-t border-border pt-4">
                             <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <p className="text-[11px] font-semibold text-muted-foreground">
                                     Loaded routes
                                 </p>
                                 <p className="mt-2 text-3xl font-black">{totalRoutes}</p>
@@ -204,7 +204,7 @@ export default function ApiDocsPage() {
                             </div>
 
                             <div className="rounded-2xl border border-border bg-muted/30 p-4">
-                                <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                <p className="text-[11px] font-semibold text-muted-foreground">
                                     OpenAPI source
                                 </p>
                                 <p className="mt-2 text-sm font-semibold">Backend controllers</p>
@@ -221,15 +221,15 @@ export default function ApiDocsPage() {
                             className="rounded-[2rem] border border-border bg-[radial-gradient(circle_at_top_left,rgba(47,102,255,0.12),transparent_35%),linear-gradient(180deg,rgba(255,255,255,0.02),transparent_18%)] p-6 shadow-[0_20px_80px_rgba(0,0,0,0.18)] sm:p-8"
                         >
                             <div className="flex flex-wrap items-center gap-3">
-                                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.22em] text-primary">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-bold text-primary">
                                     <Code className="size-3" />
                                     Developer Platform
                                 </div>
-                                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-[11px] font-semibold text-muted-foreground">
                                     <Server className="size-3" />
                                     {totalRoutes} endpoints
                                 </div>
-                                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                                <div className="inline-flex items-center gap-2 rounded-full border border-border bg-card/80 px-3 py-1 text-[11px] font-semibold text-muted-foreground">
                                     <ShieldCheck className="size-3" />
                                     {totalTags} tags
                                 </div>
@@ -271,7 +271,7 @@ export default function ApiDocsPage() {
 
                             <div className="mt-6 grid gap-3 sm:grid-cols-3">
                                 <div className="rounded-2xl border border-border bg-card/80 p-4">
-                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <p className="text-[11px] font-semibold text-muted-foreground">
                                         MCP
                                     </p>
                                     <p className="mt-2 text-sm font-semibold">Claude Desktop ready</p>
@@ -280,7 +280,7 @@ export default function ApiDocsPage() {
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-border bg-card/80 p-4">
-                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <p className="text-[11px] font-semibold text-muted-foreground">
                                         REST API
                                     </p>
                                     <p className="mt-2 text-sm font-semibold">{totalRoutes} documented routes</p>
@@ -289,7 +289,7 @@ export default function ApiDocsPage() {
                                     </p>
                                 </div>
                                 <div className="rounded-2xl border border-border bg-card/80 p-4">
-                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                                    <p className="text-[11px] font-semibold text-muted-foreground">
                                         Live load
                                     </p>
                                     <p className="mt-2 text-sm font-semibold">No manual loading required</p>
@@ -379,7 +379,7 @@ export default function ApiDocsPage() {
                             </div>
 
                             <div className="rounded-3xl border border-border bg-muted/30 p-5">
-                                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                <p className="text-xs font-semibold text-muted-foreground">
                                     How to call the API
                                 </p>
                                 <pre className="mt-4 overflow-x-auto rounded-2xl border border-border bg-background p-4 text-[11px] leading-6 text-foreground">
@@ -454,7 +454,7 @@ export default function ApiDocsPage() {
                                                         <div className="flex flex-wrap items-center gap-3">
                                                             <span
                                                                 className={cn(
-                                                                    'rounded-full border px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.18em]',
+                                                                    'rounded-full border px-2.5 py-1 text-[11px] font-bold',
                                                                     getMethodBadgeClass(item.method),
                                                                 )}
                                                             >

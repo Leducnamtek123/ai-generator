@@ -43,7 +43,7 @@ export class Workflow {
     type: String,
     nullable: true,
   })
-  organizationId?: string | null;
+  workspaceId?: string | null;
 
   @ApiProperty({
     type: String,

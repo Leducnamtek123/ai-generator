@@ -36,7 +36,7 @@ export function PersonalGallery() {
                 {/* This Week */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">This week</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground">This week</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[
@@ -63,7 +63,7 @@ export function PersonalGallery() {
                 {/* Previous */}
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Previous</h3>
+                        <h3 className="text-sm font-medium text-muted-foreground">Previous</h3>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {[

@@ -16,14 +16,16 @@ import {
 } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useTheme } from "next-themes";
+import { useSearchParams } from "next/navigation";
 
 import { LOCALES, type LocaleCode } from "@/constants/i18n";
 import { env } from "@/env";
 
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
+import { applyLocaleChange } from "@/lib/locale-client";
 
-import { useOrgStore } from "@/stores/org-store";
+import { useWorkspaceStore } from "@/stores/workspace-store";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -47,32 +49,33 @@ export function UserMenu() {
   const { setTheme, theme: currentTheme, resolvedTheme } = useTheme();
   const locale = useLocale();
   const t = useTranslations("UserMenu");
-  const { push, replace, refresh } = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
-  const currentOrg = useOrgStore((state) => state.currentOrg);
-  const currentOrgSlug = currentOrg?.slug ?? "";
-  const [billingLabel, setBillingLabel] = useState("Personal");
-  const isOrgRoute = /\/orgs\/[^/]+/.test(pathname);
-  const hasWorkspaceContext = Boolean(isOrgRoute && currentOrgSlug);
+  const searchParams = useSearchParams();
+  const currentWorkspace = useWorkspaceStore((state) => state.currentWorkspace);
+  const currentWorkspaceSlug = currentWorkspace?.slug ?? "";
+  const [billingLabel, setBillingLabel] = useState(t("billing.personal"));
+  const isWorkspaceRoute = /\/workspaces\/[^/]+/.test(pathname);
+  const hasWorkspaceContext = Boolean(isWorkspaceRoute && currentWorkspaceSlug);
 
   useEffect(() => {
     let active = true;
     const loadBillingLabel = async () => {
-      let nextBillingLabel = hasWorkspaceContext ? "Workspace" : "Personal";
+      let nextBillingLabel = hasWorkspaceContext ? t("billing.workspace") : t("billing.personal");
 
       try {
-        const summary = await (hasWorkspaceContext ? billingApi.get(currentOrgSlug) : billingApi.getMe());
+        const summary = await (hasWorkspaceContext ? billingApi.get(currentWorkspaceSlug) : billingApi.getMe());
         if ("wallet" in summary) {
           nextBillingLabel = hasWorkspaceContext
-            ? summary.plan?.name || (summary.wallet.totalCredits > 0 ? "Credits only" : "Workspace")
-            : summary.plan?.name || (summary.wallet.totalCredits > 0 ? "Credits only" : "Personal");
+            ? summary.plan?.name || (summary.wallet.totalCredits > 0 ? t("billing.creditsOnly") : t("billing.workspace"))
+            : summary.plan?.name || (summary.wallet.totalCredits > 0 ? t("billing.creditsOnly") : t("billing.personal"));
         } else {
           nextBillingLabel = hasWorkspaceContext
-            ? summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Workspace")
-            : summary.plan?.name || (summary.totalCredits > 0 ? "Credits only" : "Personal");
+            ? summary.plan?.name || (summary.totalCredits > 0 ? t("billing.creditsOnly") : t("billing.workspace"))
+            : summary.plan?.name || (summary.totalCredits > 0 ? t("billing.creditsOnly") : t("billing.personal"));
         }
       } catch {
-        nextBillingLabel = hasWorkspaceContext ? "Workspace" : "Personal";
+        nextBillingLabel = hasWorkspaceContext ? t("billing.workspace") : t("billing.personal");
       }
 
       if (active) {
@@ -84,20 +87,20 @@ export function UserMenu() {
     return () => {
       active = false;
     };
-  }, [currentOrgSlug, hasWorkspaceContext]);
+  }, [currentWorkspaceSlug, hasWorkspaceContext, t]);
 
   const goTo = (href: string) => {
-    push(href);
+    router.push(href);
   };
 
   const billingHref = hasWorkspaceContext
-    ? `/orgs/${currentOrgSlug}/billing`
+    ? `/workspaces/${currentWorkspaceSlug}/billing`
     : "/settings?tab=billing";
   const billingButtonLabel = hasWorkspaceContext ? t("billing.workspace") : t("billing.personal");
   const secondaryActionLabel = hasWorkspaceContext
     ? t("secondaryAction.workspace")
     : t("secondaryAction.personal");
-  const secondaryActionHref = hasWorkspaceContext ? "/settings?tab=billing" : "/orgs/new";
+  const secondaryActionHref = hasWorkspaceContext ? "/settings?tab=billing" : "/workspaces/new";
 
   const openHelpCenter = () => {
     window.open(
@@ -115,7 +118,7 @@ export function UserMenu() {
         <button className="flex items-center outline-none">
           <Avatar className="size-8 cursor-pointer rounded-full border border-border ring-border transition-all hover:ring-2">
             <AvatarImage src={user.avatar} />
-            <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground uppercase">
+            <AvatarFallback className="bg-primary text-[10px] font-bold text-primary-foreground">
               {user.username.substring(0, 1)}
             </AvatarFallback>
           </Avatar>
@@ -127,7 +130,7 @@ export function UserMenu() {
           <div className="flex items-center gap-3 p-3">
             <Avatar className="size-10 rounded-lg">
               <AvatarImage src={user.avatar} />
-              <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground uppercase">
+              <AvatarFallback className="bg-primary text-xs font-bold text-primary-foreground">
                 {user.username.substring(0, 1)}
               </AvatarFallback>
             </Avatar>
@@ -160,7 +163,7 @@ export function UserMenu() {
               className="flex cursor-pointer items-center justify-between rounded-lg px-3 py-2.5"
               onClick={() => {
                 if (hasWorkspaceContext) {
-                  goTo(`/orgs/${currentOrgSlug}/billing`);
+                  goTo(`/workspaces/${currentWorkspaceSlug}/billing`);
                   return;
                 }
                 goTo("/settings?tab=billing");
@@ -170,7 +173,7 @@ export function UserMenu() {
                 <CreditCard className="size-4" />
                 <span className="text-sm font-medium">{billingButtonLabel}</span>
               </div>
-              <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground uppercase">
+              <span className="rounded border border-border bg-muted px-1.5 py-0.5 text-[9px] font-bold text-muted-foreground">
                 {billingLabel}
               </span>
             </DropdownMenuItem>
@@ -227,8 +230,13 @@ export function UserMenu() {
                           locale === code && "bg-accent font-medium text-accent-foreground"
                         )}
                         onClick={() => {
-                          replace(pathname, { locale: code });
-                          refresh();
+                          if (locale === code) return;
+                          applyLocaleChange(code, {
+                            pathname,
+                            refresh: () => router.refresh(),
+                            replace: (href, options) => router.replace(href, options),
+                            searchParams
+                          });
                         }}
                       >
                         <Languages className="mr-2 size-4" />
@@ -262,7 +270,7 @@ export function UserMenu() {
                       currentTheme === "dark" && "bg-accent font-medium text-accent-foreground"
                     )}
                   >
-                    Dark
+                    {t("theme.dark")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setTheme("light")}
@@ -271,7 +279,7 @@ export function UserMenu() {
                       currentTheme === "light" && "bg-accent font-medium text-accent-foreground"
                     )}
                   >
-                    Light
+                    {t("theme.light")}
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => setTheme("system")}
@@ -280,7 +288,7 @@ export function UserMenu() {
                       currentTheme === "system" && "bg-accent font-medium text-accent-foreground"
                     )}
                   >
-                    System
+                    {t("theme.system")}
                   </DropdownMenuItem>
                 </DropdownMenuSubContent>
               </DropdownMenuPortal>

@@ -4,8 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MemberRepository } from '../members/infrastructure/persistence/member.repository';
-import { OrganizationRepository } from '../organizations/infrastructure/persistence/organization.repository';
-import { defineAbilityFor, OrgAction } from '../permissions/permissions';
+import { WorkspaceRepository } from '../workspaces/infrastructure/persistence/workspace.repository';
+import { defineAbilityFor, WorkspaceAction } from '../permissions/permissions';
 import { RoleEnum } from '../roles/roles.enum';
 import { BillingAccountsService } from '../billing-accounts/billing-accounts.service';
 
@@ -13,20 +13,23 @@ import { BillingAccountsService } from '../billing-accounts/billing-accounts.ser
 export class BillingService {
   constructor(
     private readonly memberRepository: MemberRepository,
-    private readonly orgRepository: OrganizationRepository,
+    private readonly workspaceRepository: WorkspaceRepository,
     private readonly billingAccountsService: BillingAccountsService,
   ) {}
 
   async getBilling(
-    orgSlug: string,
+    workspaceSlug: string,
     userId: number,
     userRole?: { id?: number | string },
   ) {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
     const isPlatformAdmin = Number(userRole?.id) === RoleEnum.admin;
-    const member = await this.memberRepository.findByUserAndOrg(userId, org.id);
+    const member = await this.memberRepository.findByUserAndWorkspace(
+      userId,
+      workspace.id,
+    );
     if (!member && !isPlatformAdmin) {
       throw new ForbiddenException('Not a member');
     }
@@ -35,20 +38,17 @@ export class BillingService {
       const ability = defineAbilityFor({
         id: userId,
         role: member.role as any,
-        ownerId: org.ownerId,
+        ownerId: workspace.ownerId,
       });
 
-      if (!ability.can(OrgAction.Read, 'Billing')) {
+      if (!ability.can(WorkspaceAction.Read, 'Billing')) {
         throw new ForbiddenException('Cannot view billing');
       }
     }
 
-    const members = await this.memberRepository.findByOrganizationId(org.id);
+    const members = await this.memberRepository.findByWorkspaceId(workspace.id);
     const billableMembers = members.filter((m) => m.role !== 'BILLING');
-    const wallet = await this.billingAccountsService.getSummary(
-      'organization',
-      org.id,
-    );
+    const wallet = await this.billingAccountsService.getSummary('workspace', workspace.id);
     const includedSeats = wallet.plan?.seatsIncluded || 1;
     const seatOverage = Math.max(0, billableMembers.length - includedSeats);
     const seatUnit = 10;
@@ -56,7 +56,7 @@ export class BillingService {
     const planTotal = wallet.plan?.priceVnd || 0;
 
     return {
-      organization: org,
+      workspace,
       plan: wallet.plan,
       wallet,
       seats: {

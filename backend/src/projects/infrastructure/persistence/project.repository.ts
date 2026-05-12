@@ -11,18 +11,18 @@ export abstract class ProjectRepository {
 
   abstract findAll(
     userId: string | number,
-    organizationId?: string | null,
+    workspaceId?: string | null,
   ): Promise<Project[]>;
 
   abstract findManyWithPagination({
     userId,
-    organizationId,
+    workspaceId,
     filterOptions,
     sortOptions,
     paginationOptions,
   }: {
     userId: string | number;
-    organizationId?: string | null;
+    workspaceId?: string | null;
     filterOptions?: FilterProjectDto | null;
     sortOptions?: SortProjectDto[] | null;
     paginationOptions: IPaginationOptions;

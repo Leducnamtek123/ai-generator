@@ -6,6 +6,7 @@ type AdminCatalogSource = {
   url: string;
   kind: string;
   visibility: string;
+  defaultType?: string;
   defaultPriceCredits: number;
   maxItems: number;
   featuredCount: number;
@@ -36,7 +37,7 @@ type AdminOverview = {
   users: number;
   templates: number;
   assets: number;
-  organizations: number;
+  workspaces: number;
   publicTemplates: number;
   communityTemplates: number;
   inactiveUsers: number;
@@ -52,11 +53,11 @@ type AdminRolesMatrix = {
     canManageUsers: boolean;
     canManageTemplates: boolean;
     canManageAssets: boolean;
-    canManageOrganizations: boolean;
+    canManageWorkspaces: boolean;
     canViewAuditLogs: boolean;
   }>;
   userStatuses: Array<{ id: number; name: string }>;
-  organizationRoles: Array<{
+  workspaceRoles: Array<{
     id: string;
     name: string;
     canManageMembers: boolean;
@@ -87,10 +88,10 @@ export type AdminUser = {
   createdAt?: string;
 };
 
-type AdminOrganizationMember = {
+type AdminWorkspaceMember = {
   id: string;
   userId: number;
-  organizationId: string;
+  workspaceId: string;
   role: string;
   createdAt?: string;
   updatedAt?: string;
@@ -102,7 +103,7 @@ type AdminOrganizationMember = {
   };
 };
 
-export type AdminOrganization = {
+export type AdminWorkspace = {
   id: string;
   name: string;
   slug: string;
@@ -116,8 +117,8 @@ export type AdminOrganization = {
   createdAt?: string;
 };
 
-type AdminOrganizationDetail = AdminOrganization & {
-  members: AdminOrganizationMember[];
+type AdminWorkspaceDetail = AdminWorkspace & {
+  members: AdminWorkspaceMember[];
 };
 
 export type AdminAsset = {
@@ -145,6 +146,36 @@ export type AdminAuditLog = {
   success: boolean;
   error?: string | null;
   createdAt: string;
+};
+
+export type AdminQueueCounts = {
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+  paused: number;
+  'waiting-children': number;
+};
+
+export type AdminQueueSnapshot = {
+  queue: string;
+  counts: AdminQueueCounts;
+};
+
+export type AdminQueueSnapshotResponse = {
+  timestamp: string;
+  queues: AdminQueueSnapshot[];
+};
+
+export type AdminDeadLetterJob = {
+  id: string | number;
+  sourceQueue: string;
+  jobId?: string | number | null;
+  jobName: string;
+  attemptsMade: number;
+  errorMessage: string;
+  failedAt: string;
 };
 
 export type AdminTemplate = {
@@ -210,7 +241,7 @@ type BulkDeleteAdminAssetsRequest = {
   ids: string[];
 };
 
-export type UpdateAdminOrganizationRequest = {
+export type UpdateAdminWorkspaceRequest = {
   name?: string;
   slug?: string;
   url?: string;
@@ -221,11 +252,11 @@ export type UpdateAdminOrganizationRequest = {
   ownerId?: number;
 };
 
-type UpdateAdminOrganizationMemberRequest = {
+type UpdateAdminWorkspaceMemberRequest = {
   role?: string;
 };
 
-type TransferAdminOrganizationOwnerRequest = {
+type TransferAdminWorkspaceOwnerRequest = {
   memberId: string;
 };
 
@@ -257,7 +288,7 @@ type AdminAssetsQuery = {
   projectId?: string;
 };
 
-type AdminOrganizationsQuery = {
+type AdminWorkspacesQuery = {
   page?: number;
   limit?: number;
   q?: string;
@@ -336,33 +367,33 @@ export const adminApi = {
       '/admin/users/bulk',
       payload,
     ),
-  getOrganizations: (query: AdminOrganizationsQuery = {}) =>
-    get<AdminPageResponse<AdminOrganization>>(`/admin/organizations?${buildQuery(query)}`),
-  exportOrganizations: (query: AdminOrganizationsQuery = {}) =>
-    api.get<string>(`/admin/organizations/export?${buildQuery(query)}`, {
+  getWorkspaces: (query: AdminWorkspacesQuery = {}) =>
+    get<AdminPageResponse<AdminWorkspace>>(`/admin/workspaces?${buildQuery(query)}`),
+  exportWorkspaces: (query: AdminWorkspacesQuery = {}) =>
+    api.get<string>(`/admin/workspaces/export?${buildQuery(query)}`, {
       responseType: 'text',
     }),
-  getOrganization: (id: string) => get<AdminOrganizationDetail>(`/admin/organizations/${id}`),
-  updateOrganization: (id: string, payload: UpdateAdminOrganizationRequest) =>
-    patch<AdminOrganization, UpdateAdminOrganizationRequest>(
-      `/admin/organizations/${id}`,
+  getWorkspace: (id: string) => get<AdminWorkspaceDetail>(`/admin/workspaces/${id}`),
+  updateWorkspace: (id: string, payload: UpdateAdminWorkspaceRequest) =>
+    patch<AdminWorkspace, UpdateAdminWorkspaceRequest>(
+      `/admin/workspaces/${id}`,
       payload,
     ),
-  transferOrganizationOwner: (id: string, payload: TransferAdminOrganizationOwnerRequest) =>
-    post<AdminOrganizationDetail, TransferAdminOrganizationOwnerRequest>(
-      `/admin/organizations/${id}/transfer-owner`,
+  transferWorkspaceOwner: (id: string, payload: TransferAdminWorkspaceOwnerRequest) =>
+    post<AdminWorkspaceDetail, TransferAdminWorkspaceOwnerRequest>(
+      `/admin/workspaces/${id}/transfer-owner`,
       payload,
     ),
-  getOrganizationMembers: (id: string) =>
-    get<AdminOrganizationDetail>(`/admin/organizations/${id}/members`),
-  updateOrganizationMember: (
+  getWorkspaceMembers: (id: string) =>
+    get<AdminWorkspaceDetail>(`/admin/workspaces/${id}/members`),
+  updateWorkspaceMember: (
     id: string,
     memberId: string,
-    payload: UpdateAdminOrganizationMemberRequest,
+    payload: UpdateAdminWorkspaceMemberRequest,
   ) =>
-    patch(`/admin/organizations/${id}/members/${memberId}`, payload),
-  deleteOrganizationMember: (id: string, memberId: string) =>
-    del<void>(`/admin/organizations/${id}/members/${memberId}`),
+    patch(`/admin/workspaces/${id}/members/${memberId}`, payload),
+  deleteWorkspaceMember: (id: string, memberId: string) =>
+    del<void>(`/admin/workspaces/${id}/members/${memberId}`),
   getAssets: (query: AdminAssetsQuery = {}) =>
     get<AdminPageResponse<AdminAsset>>(`/admin/assets?${buildQuery(query)}`),
   exportAssets: (query: AdminAssetsQuery = {}) =>
@@ -395,6 +426,12 @@ export const adminApi = {
     api.get<string>(`/admin/audit-logs/export?${buildQuery(query)}`, {
       responseType: 'text',
     }),
+  getQueues: () => get<AdminQueueSnapshotResponse>('/admin/queues'),
+  getDeadLetterJobs: () => get<AdminDeadLetterJob[]>('/admin/queues/dead-letter'),
+  requeueDeadLetterJob: (jobId: string) =>
+    post<{ recovered: boolean; deadLetterJobId: string; sourceQueue: string; sourceJobId: string; recoveredAt: string }, void>(
+      `/admin/queues/dead-letter/${jobId}/requeue`,
+    ),
   getCatalogSources: () => get<AdminCatalogSource[]>('/admin/catalog/sources'),
   importCatalog: (payload: AdminCatalogImportRequest) =>
     post<AdminCatalogImportResult, AdminCatalogImportRequest>(

@@ -39,8 +39,10 @@ import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
 import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
+import { MediaPickerModal } from '@/components/common/MediaPickerModal';
 import { uploadFileWithToast } from '@/lib/upload';
 import { projectApi } from '@/services/projectApi';
+import type { MediaItem } from '@/types/media';
 import { toast } from 'sonner';
 
 const tools = [
@@ -61,6 +63,37 @@ const aiTools = [
     { id: 'colorize', label: 'Colorize', description: 'Add color to B&W photos', icon: Palette },
     { id: 'expand', label: 'Expand Image', description: 'AI outpainting to extend', icon: Grid3X3 },
 ];
+
+const aiEditRecipes = [
+    {
+        id: 'remove-clutter',
+        label: 'Remove clutter',
+        description: 'Delete distracting objects and keep the scene natural',
+        toolId: 'remove-object',
+        prompt: 'Remove distracting objects from the image and reconstruct the scene naturally.',
+    },
+    {
+        id: 'replace-scene',
+        label: 'Replace scene',
+        description: 'Swap the background for a cleaner studio or outdoor look',
+        toolId: 'replace-bg',
+        prompt: 'Replace the background with a clean, production-ready scene that matches the subject.',
+    },
+    {
+        id: 'sharpen-output',
+        label: 'Sharpen output',
+        description: 'Make the image cleaner, crisper, and more presentation-ready',
+        toolId: 'enhance',
+        prompt: 'Enhance the image quality by sharpening details, reducing noise, and improving clarity.',
+    },
+    {
+        id: 'extend-frame',
+        label: 'Extend frame',
+        description: 'Outpaint beyond the edge for a wider composition',
+        toolId: 'expand',
+        prompt: 'Expand the image beyond the current frame with a seamless wider composition.',
+    },
+] as const;
 
 const filters = [
     { id: 'none', label: 'None' },
@@ -290,6 +323,7 @@ function ImageEditorPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
     const { startGeneration, reset } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
@@ -409,7 +443,15 @@ function ImageEditorPageContent() {
         }
     };
 
-    const handleAiTool = async (toolId: string) => {
+    const handleMediaSelect = (media: MediaItem) => {
+        pushHistory();
+        setErrorMessage(null);
+        dispatch({ type: 'setUploadedImage', uploadedImage: media.url });
+        setIsMediaPickerOpen(false);
+        toast.success('Selected image from uploads.');
+    };
+
+    const handleAiTool = async (toolId: string, prompt?: string) => {
         if (!state.uploadedImage) {
             setErrorMessage('Upload an image before using AI tools.');
             return;
@@ -421,7 +463,7 @@ function ImageEditorPageContent() {
 
         try {
             await startGeneration('/generations/image', {
-                prompt: `Apply ${toolId} to image`,
+                prompt: prompt ?? `Apply ${toolId} to image`,
                 imageUrl: state.uploadedImage,
             });
         } catch (error) {
@@ -743,19 +785,30 @@ function ImageEditorPageContent() {
                         </div>
                     )}
                     {!state.uploadedImage ? (
-                        <button
-                            type="button"
-                            onClick={() => fileInputRef.current?.click()}
-                            className="w-full max-w-lg aspect-[4/3] rounded-2xl border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 bg-background"
-                        >
-                            <div className="size-16 rounded-xl bg-accent flex items-center justify-center">
-                                <Upload className="size-7 text-muted-foreground" />
-                            </div>
-                            <div className="text-center">
-                                <p className="font-medium">Open an image to edit</p>
-                                <p className="text-sm text-muted-foreground mt-1">Drag & drop or click to browse</p>
-                            </div>
-                        </button>
+                        <div className="w-full max-w-lg space-y-3">
+                            <button
+                                type="button"
+                                onClick={() => fileInputRef.current?.click()}
+                                className="w-full aspect-[4/3] rounded-2xl border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer flex flex-col items-center justify-center gap-4 bg-background"
+                            >
+                                <div className="size-16 rounded-xl bg-accent flex items-center justify-center">
+                                    <Upload className="size-7 text-muted-foreground" />
+                                </div>
+                                <div className="text-center">
+                                    <p className="font-medium">Upload an image to start editing</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Drag & drop or click to browse, then choose an edit recipe</p>
+                                </div>
+                            </button>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                className="w-full gap-2"
+                                onClick={() => setIsMediaPickerOpen(true)}
+                            >
+                                <Folder className="size-4" />
+                                Choose from uploads
+                            </Button>
+                        </div>
                     ) : (
                         <div className="relative rounded-lg border border-border shadow-2xl overflow-hidden bg-[repeating-conic-gradient(#80808010_0%_25%,transparent_0%_50%)] bg-[length:16px_16px]">
                             <Image
@@ -769,12 +822,18 @@ function ImageEditorPageContent() {
                             {state.isProcessing && (
                                 <div className="absolute inset-0 bg-background/60 backdrop-blur-sm flex flex-col items-center justify-center gap-4 z-10">
                                     <Loader2 className="size-10 animate-spin text-primary" />
-                                    <p className="text-sm font-medium">AI is processing?</p>
+                                    <p className="text-sm font-medium">AI edit in progress</p>
                                 </div>
                             )}
                         </div>
                     )}
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                    <MediaPickerModal
+                        isOpen={isMediaPickerOpen}
+                        onClose={() => setIsMediaPickerOpen(false)}
+                        onSelect={handleMediaSelect}
+                        mediaType="image"
+                    />
                 </div>
             </div>
 
@@ -796,13 +855,13 @@ function ImageEditorPageContent() {
                     ))}
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6">
                     {state.activePanel === 'adjust' && (
                         <>
                             {adjustmentControls.map((adj) => (
                                 <div key={adj.key} className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2">
+                                        <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                                             <adj.icon className="size-3" />
                                             {adj.label}
                                         </Label>
@@ -854,23 +913,46 @@ function ImageEditorPageContent() {
                     )}
 
                     {state.activePanel === 'ai' && (
-                        <div className="space-y-2">
-                            {aiTools.map((tool) => (
-                                <button
-                                    key={tool.id}
-                                    onClick={() => handleAiTool(tool.id)}
-                                    disabled={state.isProcessing || !state.uploadedImage}
-                                    className="w-full flex items-start gap-3 px-4 py-3 bg-card rounded-xl border border-border hover:border-primary/20 transition-all text-left disabled:opacity-50"
-                                >
-                                    <div className="size-9 rounded-lg bg-accent flex items-center justify-center shrink-0 mt-0.5">
-                                        <tool.icon className="size-4 text-muted-foreground" />
-                                    </div>
-                                    <div>
-                                        <p className="text-xs font-medium">{tool.label}</p>
-                                        <p className="text-[10px] text-muted-foreground mt-0.5">{tool.description}</p>
-                                    </div>
-                                </button>
-                            ))}
+                        <div className="space-y-4">
+                            <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <p className="text-sm font-medium text-muted-foreground">Edit recipes</p>
+                                    <p className="text-[10px] text-muted-foreground">Choose a concrete starting point</p>
+                                </div>
+                                <div className="grid gap-2">
+                                    {aiEditRecipes.map((recipe) => (
+                                        <button
+                                            key={recipe.id}
+                                            onClick={() => handleAiTool(recipe.toolId, recipe.prompt)}
+                                            disabled={state.isProcessing || !state.uploadedImage}
+                                            className="w-full rounded-xl border border-border bg-background/80 px-4 py-3 text-left transition-all hover:border-primary/20 disabled:opacity-50"
+                                        >
+                                            <p className="text-xs font-medium">{recipe.label}</p>
+                                            <p className="mt-0.5 text-[10px] text-muted-foreground">{recipe.description}</p>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <p className="text-sm font-medium text-muted-foreground">AI tools</p>
+                                {aiTools.map((tool) => (
+                                    <button
+                                        key={tool.id}
+                                        onClick={() => handleAiTool(tool.id)}
+                                        disabled={state.isProcessing || !state.uploadedImage}
+                                        className="w-full flex items-start gap-3 px-4 py-3 bg-card rounded-xl border border-border hover:border-primary/20 transition-all text-left disabled:opacity-50"
+                                    >
+                                        <div className="size-9 rounded-lg bg-accent flex items-center justify-center shrink-0 mt-0.5">
+                                            <tool.icon className="size-4 text-muted-foreground" />
+                                        </div>
+                                        <div>
+                                            <p className="text-xs font-medium">{tool.label}</p>
+                                            <p className="text-[10px] text-muted-foreground mt-0.5">{tool.description}</p>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

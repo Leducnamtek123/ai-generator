@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useReducer, useEffect, useState, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useReducer, useEffect } from 'react';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
@@ -12,7 +11,6 @@ import { VoiceGeneratorView } from './view';
 import type { MediaItem } from '@/types/media';
 import { uploadFileWithToast } from '@/lib/upload';
 import { getUserFacingErrorMessage } from '@/lib/async-operation';
-import { projectApi } from '@/services/projectApi';
 
 export type VoiceGeneratorState = {
     text: string;
@@ -73,36 +71,17 @@ type VoiceUiState = {
     communityListings: VoiceListingItem[];
     isCommunityLoading: boolean;
     isAudioPickerOpen: boolean;
-    projectId: string | null;
-    isProjectLoading: boolean;
-    isProjectSaving: boolean;
-    projectError: string | null;
 };
 
 type VoiceUiAction =
     | { type: 'setCommunityListings'; communityListings: VoiceListingItem[] }
     | { type: 'setCommunityLoading'; isCommunityLoading: boolean }
-    | { type: 'setAudioPickerOpen'; isAudioPickerOpen: boolean }
-    | { type: 'setProjectId'; projectId: string | null }
-    | { type: 'setProjectLoading'; isProjectLoading: boolean }
-    | { type: 'setProjectSaving'; isProjectSaving: boolean }
-    | { type: 'setProjectError'; projectError: string | null }
-    | {
-        type: 'hydrate';
-        communityListings: VoiceListingItem[];
-        projectId: string | null;
-        isProjectLoading: boolean;
-        projectError: string | null;
-    };
+    | { type: 'setAudioPickerOpen'; isAudioPickerOpen: boolean };
 
 const initialUiState: VoiceUiState = {
     communityListings: [],
     isCommunityLoading: false,
     isAudioPickerOpen: false,
-    projectId: null,
-    isProjectLoading: false,
-    isProjectSaving: false,
-    projectError: null,
 };
 
 function uiReducer(state: VoiceUiState, action: VoiceUiAction): VoiceUiState {
@@ -113,22 +92,6 @@ function uiReducer(state: VoiceUiState, action: VoiceUiAction): VoiceUiState {
             return { ...state, isCommunityLoading: action.isCommunityLoading };
         case 'setAudioPickerOpen':
             return { ...state, isAudioPickerOpen: action.isAudioPickerOpen };
-        case 'setProjectId':
-            return { ...state, projectId: action.projectId };
-        case 'setProjectLoading':
-            return { ...state, isProjectLoading: action.isProjectLoading };
-        case 'setProjectSaving':
-            return { ...state, isProjectSaving: action.isProjectSaving };
-        case 'setProjectError':
-            return { ...state, projectError: action.projectError };
-        case 'hydrate':
-            return {
-                ...state,
-                communityListings: action.communityListings,
-                projectId: action.projectId,
-                isProjectLoading: action.isProjectLoading,
-                projectError: action.projectError,
-            };
         default:
             return state;
     }
@@ -211,10 +174,6 @@ function VoiceGeneratorPageContent() {
     const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const { generateVoice, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const { replace } = useRouter();
-    const searchParams = useSearchParams();
-    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const isProjectBusy = uiState.isProjectLoading || uiState.isProjectSaving;
 
     useEffect(() => {
         if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
@@ -238,11 +197,10 @@ function VoiceGeneratorPageContent() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
-        const requestedProjectId = searchParamsSnapshot.get('projectId');
         const draftKey = 'voice-generator:draft:v1';
         const draftRaw = localStorage.getItem(draftKey);
 
-        const applySnapshot = (snapshot: Partial<VoiceSnapshot>, projectError: string | null = null) => {
+        const applySnapshot = (snapshot: Partial<VoiceSnapshot>) => {
             dispatch({ type: 'setText', text: snapshot.text ?? '' });
             dispatch({ type: 'setSelectedVoice', selectedVoice: snapshot.selectedVoice ?? initialState.selectedVoice });
             dispatch({ type: 'setSelectedLanguage', selectedLanguage: snapshot.selectedLanguage ?? initialState.selectedLanguage });
@@ -254,67 +212,21 @@ function VoiceGeneratorPageContent() {
             dispatch({ type: 'setActiveContentTab', tab: snapshot.activeContentTab ?? initialState.activeContentTab });
             dispatch({ type: 'setSampleUrl', sampleUrl: snapshot.sampleUrl ?? null });
             dispatch({ type: 'setSampleName', sampleName: snapshot.sampleName ?? '' });
-            dispatchUi({
-                type: 'hydrate',
-                communityListings: uiState.communityListings,
-                projectId: requestedProjectId,
-                isProjectLoading: false,
-                projectError,
-            });
         };
 
-        if (!requestedProjectId) {
-            if (!draftRaw) {
-                return;
-            }
-
-            try {
-                applySnapshot(normalizeVoiceSnapshot(JSON.parse(draftRaw)));
-            } catch (error) {
-                console.error('Failed to load voice draft', error);
-            }
+        if (!draftRaw) {
             return;
         }
 
-        let cancelled = false;
-        dispatchUi({ type: 'setProjectLoading', isProjectLoading: true });
-        dispatchUi({ type: 'setProjectError', projectError: null });
-
-        void (async () => {
-            try {
-                const project = await projectApi.get(requestedProjectId);
-                if (cancelled) return;
-
-                applySnapshot(normalizeVoiceSnapshot(project.content));
-            } catch (error) {
-                console.error('Failed to load voice project', error);
-                if (!cancelled) {
-                    dispatchUi({ type: 'setProjectError', projectError: 'Loaded local draft because backend project load failed.' });
-                    if (draftRaw) {
-                        try {
-                            applySnapshot(normalizeVoiceSnapshot(JSON.parse(draftRaw)), 'Loaded local draft because backend project load failed.');
-                        } catch (fallbackError) {
-                            console.error('Failed to load voice draft', fallbackError);
-                            dispatchUi({
-                                type: 'hydrate',
-                                communityListings: uiState.communityListings,
-                                projectId: requestedProjectId,
-                                isProjectLoading: false,
-                                projectError: 'Loaded local draft because backend project load failed.',
-                            });
-                        }
-                    }
-                }
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [searchParams]);
+        try {
+            applySnapshot(normalizeVoiceSnapshot(JSON.parse(draftRaw)));
+        } catch (error) {
+            console.error('Failed to load voice draft', error);
+        }
+    }, []);
 
     const handleGenerate = async () => {
-        if (!state.text.trim() || isProjectBusy) return;
+        if (!state.text.trim() || isGenerating) return;
         try {
             await generateVoice({
                 text: state.text,
@@ -331,10 +243,9 @@ function VoiceGeneratorPageContent() {
 
     const handleReset = () => {
         dispatch({ type: 'reset' });
-        dispatchUi({ type: 'setProjectError', projectError: null });
     };
 
-    const handleSaveProject = () => {
+    const handleSaveDraft = () => {
         const payload: VoiceProjectPayload = {
             version: 1,
             savedAt: new Date().toISOString(),
@@ -354,38 +265,7 @@ function VoiceGeneratorPageContent() {
         };
 
         localStorage.setItem('voice-generator:draft:v1', JSON.stringify(payload));
-
-        const persistProject = async () => {
-            dispatchUi({ type: 'setProjectSaving', isProjectSaving: true });
-            try {
-                if (uiState.projectId) {
-                    await projectApi.update(uiState.projectId, {
-                        name: 'Voice Generator Draft',
-                        description: 'Voice generator draft',
-                        content: payload,
-                    });
-                } else {
-                    const created = await projectApi.create({
-                        name: 'Voice Generator Draft',
-                        description: 'Voice generator draft',
-                        content: payload,
-                    });
-                    dispatchUi({ type: 'setProjectId', projectId: created.project.id });
-                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
-                }
-
-                dispatchUi({ type: 'setProjectError', projectError: null });
-                toast.success('Voice saved to your projects.');
-            } catch (error) {
-                console.error('Failed to persist voice project', error);
-                dispatchUi({ type: 'setProjectError', projectError: 'Saved locally, but backend project save failed.' });
-                toast.error('Saved locally, but backend project save failed.');
-            } finally {
-                dispatchUi({ type: 'setProjectSaving', isProjectSaving: false });
-            }
-        };
-
-        void persistProject();
+        toast.success('Voice draft saved locally.');
     };
 
     const handleSampleUpload = async (file: File) => {
@@ -408,21 +288,18 @@ function VoiceGeneratorPageContent() {
                 dispatch={dispatch}
                 onGenerate={handleGenerate}
                 onReset={handleReset}
-                onSaveProject={handleSaveProject}
+                onSaveDraft={handleSaveDraft}
                 loading={{
                     isGenerating,
                     isGenerationsLoading,
                     isTemplatesLoading,
                     isCommunityLoading: uiState.isCommunityLoading,
-                    isProjectLoading: uiState.isProjectLoading,
-                    isProjectSaving: uiState.isProjectSaving,
                 }}
                 generations={generations}
                 templates={templates}
                 communityListings={uiState.communityListings}
                 sampleUrl={state.sampleUrl}
                 sampleName={state.sampleName}
-                projectError={uiState.projectError}
                 onPickSample={() => dispatchUi({ type: 'setAudioPickerOpen', isAudioPickerOpen: true })}
                 onUploadSample={handleSampleUpload}
             />

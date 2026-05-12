@@ -62,7 +62,10 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
         <div className="w-[320px] bg-popover/95 backdrop-blur-md rounded-2xl border border-border shadow-2xl overflow-hidden flex flex-col text-popover-foreground origin-top-left absolute left-14 top-0 z-[100]">
             {/* Header with Close Button */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-accent/20">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-widest">Add Node</span>
+                <div className="space-y-1">
+                    <span className="block text-xs font-semibold text-muted-foreground">Add nodes</span>
+                    <p className="text-[11px] text-muted-foreground">Pick a node to start a connected workflow.</p>
+                </div>
                 <button
                     onClick={onClose}
                     className="p-1.5 rounded-lg hover:bg-accent transition-colors text-muted-foreground hover:text-foreground"
@@ -77,7 +80,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                     <Input
                         className="w-full bg-accent/50 border-input rounded-xl py-2 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:ring-1 focus:ring-ring h-10"
-                        placeholder="Search nodes?"
+                        placeholder="Search nodes, prompts, or tools"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
@@ -87,25 +90,38 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
             {/* List */}
             <div className="overflow-y-auto max-h-[400px] p-2 custom-scrollbar">
                 {/* Main Nodes Section */}
-                <div className="px-3 py-1.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                <div className="px-3 py-1.5 text-sm font-medium text-muted-foreground">
                     Nodes
                 </div>
 
                 {Object.entries(groupedMainNodes).map(([category, nodes]) => (
                     <div key={category} className="mb-2">
+                        <div className="px-3 pb-1 text-sm font-medium text-muted-foreground/80">
+                            {category === NodeCategory.INPUT ? 'Inputs' : category === NodeCategory.GENERATION ? 'Generators' : 'Modifiers'}
+                        </div>
                         {nodes.map(node => {
                             const Icon = node.icon;
                             return (
                                 <button
                                     key={node.type}
                                     onClick={() => onSelect(node.type, node.label)}
-                                    className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors group text-left"
+                                    className="w-full flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-accent transition-colors group text-left"
                                 >
-                                    <div className={cn("p-1.5 rounded-md bg-accent/50 group-hover:bg-accent-foreground/10 transition-colors")}>
+                                    <div className={cn("p-1.5 rounded-lg bg-accent/50 group-hover:bg-accent-foreground/10 transition-colors")}>
                                         <Icon className={cn("size-4", node.color)} />
                                     </div>
-                                    <div className="text-sm font-medium text-foreground/90 group-hover:text-foreground">
-                                        {node.label}
+                                    <div className="min-w-0 flex-1">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <div className="text-sm font-medium text-foreground/90 group-hover:text-foreground">
+                                                {node.label}
+                                            </div>
+                                                <span className="text-xs text-muted-foreground">
+                                                    {category}
+                                                </span>
+                                        </div>
+                                        <p className="mt-1 text-[11px] leading-5 text-muted-foreground line-clamp-2">
+                                            {node.description}
+                                        </p>
                                     </div>
                                 </button>
                             );
@@ -116,7 +132,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                 {/* Utilities Section */}
                 {utilityNodes.length > 0 && (
                     <>
-                        <div className="px-3 py-1.5 mt-2 text-[10px] font-bold text-muted-foreground uppercase tracking-wider border-t border-border pt-3">
+                        <div className="px-3 py-1.5 mt-2 text-sm font-medium text-muted-foreground border-t border-border pt-3">
                             Utilities
                         </div>
                         <div className="space-y-0.5">
@@ -126,13 +142,23 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
                                     <button
                                         key={node.type}
                                         onClick={() => onSelect(node.type, node.label)}
-                                        className="w-full flex items-center gap-3 px-3 py-2 rounded-md hover:bg-accent transition-colors group text-left"
+                                        className="w-full flex items-start gap-3 px-3 py-2 rounded-xl hover:bg-accent transition-colors group text-left"
                                     >
-                                        <div className={cn("p-1.5 rounded-md bg-accent/50 group-hover:bg-accent-foreground/10 transition-colors")}>
+                                        <div className={cn("p-1.5 rounded-lg bg-accent/50 group-hover:bg-accent-foreground/10 transition-colors")}>
                                             <Icon className={cn("size-4", node.color)} />
                                         </div>
-                                        <div className="text-sm font-medium text-foreground/90 group-hover:text-foreground">
-                                            {node.label}
+                                        <div className="min-w-0 flex-1">
+                                            <div className="flex items-center justify-between gap-3">
+                                                <div className="text-sm font-medium text-foreground/90 group-hover:text-foreground">
+                                                    {node.label}
+                                                </div>
+                                                <span className="text-xs text-muted-foreground">
+                                                    Utility
+                                                </span>
+                                            </div>
+                                            <p className="mt-1 text-[11px] leading-5 text-muted-foreground line-clamp-2">
+                                                {node.description}
+                                            </p>
                                         </div>
                                     </button>
                                 );
@@ -143,7 +169,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
 
                 {filteredNodes.length === 0 && (
                     <div className="p-4 text-center text-xs text-muted-foreground">
-                        No nodes found
+                        No nodes match your search. Try image, video, assistant, or media.
                     </div>
                 )}
 
@@ -157,7 +183,7 @@ export function NodeSelector({ onSelect, onClose }: NodeSelectorProps) {
             {/* Footer - Keyboard Shortcut Hint */}
             <div className="p-2 border-t border-border bg-muted/20 text-center">
                 <span className="text-[10px] text-muted-foreground">
-                    Press <kbd className="px-1 py-0.5 bg-accent rounded text-foreground/50">Esc</kbd> to close
+                    Press <kbd className="px-1 py-0.5 bg-accent rounded text-foreground/50">Esc</kbd> to close or type to search
                 </span>
             </div>
         </div>

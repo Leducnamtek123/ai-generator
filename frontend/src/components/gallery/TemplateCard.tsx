@@ -58,13 +58,13 @@ export function TemplateCard({ template, className }: TemplateCardProps) {
 
                 {/* Duration Badge (Top Left) */}
                 {isMedia && (
-                    <div className="absolute top-2 left-2 px-1.5 py-0.5 rounded bg-zinc-950/50 backdrop-blur-[2px] flex items-center gap-1">
-                        <span className="text-[10px] font-medium text-white/90">02:00</span>
+                    <div className="absolute left-2 top-2 flex items-center gap-1 rounded bg-background/70 px-1.5 py-0.5 backdrop-blur-[2px]">
+                        <span className="text-[10px] font-medium text-foreground/90">02:00</span>
                     </div>
                 )}
 
                 {/* Hover Overlay */}
-                <div className="absolute inset-0 bg-zinc-950/20 opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                <div className="absolute inset-0 bg-background/20 opacity-0 transition-opacity duration-200 group-hover:opacity-100" />
 
                 {/* Use Button - Bottom Center */}
                 <div className="absolute inset-x-0 bottom-4 flex justify-center opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out z-10">

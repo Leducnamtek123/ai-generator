@@ -7,6 +7,8 @@ import {
 import { MediaItem, MediaLibraryResponse } from '@/types/media';
 
 const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK_API === 'true';
+const MOCK_PAGE_SIZE = 6;
+const LIBRARY_PAGE_SIZE = 12;
 
 const mockDelay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -31,6 +33,11 @@ function readString(record: UnknownRecord | undefined, key: string): string | un
 function readNumber(record: UnknownRecord | undefined, key: string): number | undefined {
     const value = record?.[key];
     return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function readRecord(record: UnknownRecord | undefined, key: string): UnknownRecord | undefined {
+    const value = record?.[key];
+    return isRecord(value) ? value : undefined;
 }
 
 function inferMediaType(fileNameOrUrl: string, fallbackMimeType?: string): 'image' | 'video' | 'audio' {
@@ -64,6 +71,33 @@ function inferMimeType(fileNameOrUrl: string, fallbackType?: string): string {
     if (/\.(webm)$/i.test(lower)) return 'video/webm';
 
     return 'application/octet-stream';
+}
+
+function inferAssetFolder(record: UnknownRecord | undefined): MediaLibraryResponse['folders'][number]['id'] {
+    const metadata = readRecord(record, 'metadata');
+    const source = readString(metadata, 'source');
+    const provider = readString(metadata, 'provider');
+    const generationId = readString(metadata, 'generationId');
+    const category = readString(metadata, 'category');
+    const isPublic = typeof metadata?.isPublic === 'boolean' ? metadata.isPublic : undefined;
+
+    if (source === 'file-upload') {
+        return 'uploads';
+    }
+
+    if (provider || generationId) {
+        return 'history';
+    }
+
+    if (category === 'AI Images' || category === 'Vectors' || category === 'Photos' || category === '3D') {
+        return isPublic === false ? 'downloads' : 'favorites';
+    }
+
+    if (isPublic) {
+        return 'favorites';
+    }
+
+    return 'downloads';
 }
 
 function fileNameFromUrl(url: string): string {
@@ -109,7 +143,7 @@ function normalizeMediaItem(raw: unknown, fallbackFile?: File): MediaItem {
         height: readNumber(record, 'height'),
         duration: readNumber(record, 'duration'),
         createdAt: readString(record, 'createdAt') ?? new Date().toISOString(),
-        folder: readString(record, 'folder'),
+        folder: readString(record, 'folder') ?? inferAssetFolder(record),
     };
 }
 
@@ -144,9 +178,10 @@ function normalizeLibraryResponse(raw: unknown): MediaLibraryResponse {
     };
 }
 
-const mockMediaLibrary: MediaItem[] = [
+const MOCK_MEDIA_ITEMS: MediaItem[] = [
     {
-        id: '1',
+        id: 'mock-image-1',
+        folder: 'uploads',
         url: getFileUrl('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800'),
         thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=200'),
         name: 'portrait-1.jpg',
@@ -158,7 +193,8 @@ const mockMediaLibrary: MediaItem[] = [
         createdAt: new Date().toISOString(),
     },
     {
-        id: '2',
+        id: 'mock-image-2',
+        folder: 'uploads',
         url: getFileUrl('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=800'),
         thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=200'),
         name: 'portrait-2.jpg',
@@ -170,7 +206,8 @@ const mockMediaLibrary: MediaItem[] = [
         createdAt: new Date().toISOString(),
     },
     {
-        id: '3',
+        id: 'mock-image-3',
+        folder: 'favorites',
         url: getFileUrl('https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=800'),
         thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=200'),
         name: 'portrait-3.jpg',
@@ -181,7 +218,140 @@ const mockMediaLibrary: MediaItem[] = [
         height: 1100,
         createdAt: new Date().toISOString(),
     },
+    {
+        id: 'mock-image-4',
+        folder: 'history',
+        url: getFileUrl('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=800'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1517841905240-472988babdf9?w=200'),
+        name: 'portrait-4.jpg',
+        type: 'image',
+        mimeType: 'image/jpeg',
+        size: 184000,
+        width: 800,
+        height: 1000,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-video-1',
+        folder: 'downloads',
+        url: getFileUrl('https://example.com/mock/media/video-1.mp4'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=200'),
+        name: 'brand-reveal.mp4',
+        type: 'video',
+        mimeType: 'video/mp4',
+        size: 1820000,
+        width: 1920,
+        height: 1080,
+        duration: 12,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-video-2',
+        folder: 'uploads',
+        url: getFileUrl('https://example.com/mock/media/video-2.mp4'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=200'),
+        name: 'motion-scene.mp4',
+        type: 'video',
+        mimeType: 'video/mp4',
+        size: 2450000,
+        width: 1920,
+        height: 1080,
+        duration: 24,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-video-3',
+        folder: 'history',
+        url: getFileUrl('https://example.com/mock/media/video-3.mp4'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1492691527719-9d1e07e534b4?w=200'),
+        name: 'studio-b-roll.mp4',
+        type: 'video',
+        mimeType: 'video/mp4',
+        size: 3220000,
+        width: 1920,
+        height: 1080,
+        duration: 18,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-audio-1',
+        folder: 'downloads',
+        url: getFileUrl('https://example.com/mock/media/audio-1.mp3'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=200'),
+        name: 'music-bed.mp3',
+        type: 'audio',
+        mimeType: 'audio/mpeg',
+        size: 4200000,
+        duration: 136,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-audio-2',
+        folder: 'favorites',
+        url: getFileUrl('https://example.com/mock/media/audio-2.mp3'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1487180144351-b8472da7d491?w=200'),
+        name: 'voice-note.mp3',
+        type: 'audio',
+        mimeType: 'audio/mpeg',
+        size: 1800000,
+        duration: 42,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-image-5',
+        folder: 'downloads',
+        url: getFileUrl('https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=800'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1524758631624-e2822e304c36?w=200'),
+        name: 'workspace-1.jpg',
+        type: 'image',
+        mimeType: 'image/jpeg',
+        size: 208000,
+        width: 800,
+        height: 1200,
+        createdAt: new Date().toISOString(),
+    },
+    {
+        id: 'mock-image-6',
+        folder: 'history',
+        url: getFileUrl('https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=800'),
+        thumbnailUrl: getFileUrl('https://images.unsplash.com/photo-1519389950473-47ba0277781c?w=200'),
+        name: 'workspace-2.jpg',
+        type: 'image',
+        mimeType: 'image/jpeg',
+        size: 221000,
+        width: 800,
+        height: 1200,
+        createdAt: new Date().toISOString(),
+    },
 ];
+
+function buildMockFolders(items: MediaItem[]): MediaLibraryResponse['folders'] {
+    const byFolder = new Map(DEFAULT_FOLDERS.map((folder) => [folder.id, 0]));
+    for (const item of items) {
+        if (item.folder && byFolder.has(item.folder)) {
+            byFolder.set(item.folder, (byFolder.get(item.folder) || 0) + 1);
+        }
+    }
+
+    return DEFAULT_FOLDERS.map((folder) => ({
+        ...folder,
+        count: byFolder.get(folder.id) || 0,
+    }));
+}
+
+function buildMockLibrary(folder?: string, page = 1): MediaLibraryResponse {
+    const filtered = folder ? MOCK_MEDIA_ITEMS.filter((item) => item.folder === folder) : MOCK_MEDIA_ITEMS;
+    const folders = buildMockFolders(MOCK_MEDIA_ITEMS);
+    const start = Math.max(0, (page - 1) * MOCK_PAGE_SIZE);
+    const items = filtered.slice(start, start + MOCK_PAGE_SIZE);
+
+    return {
+        items,
+        folders,
+        totalCount: filtered.length,
+        hasMore: start + MOCK_PAGE_SIZE < filtered.length,
+    };
+}
 
 function createUploadedMedia(fileRecord: StoredFileResponse['file'], sourceFile: File): MediaItem {
     const resolvedUrl = resolveDisplayFileUrl(fileRecord.path);
@@ -257,24 +427,25 @@ export const mediaApi = {
     async getMediaLibrary(folder?: string, page = 1): Promise<MediaLibraryResponse> {
         if (USE_MOCK) {
             await mockDelay(500);
-            return {
-                items: mockMediaLibrary,
-                folders: [
-                    { id: 'favorites', name: 'Favorites', icon: 'favorites', count: 12 },
-                    { id: 'history', name: 'History', icon: 'history', count: 48 },
-                    { id: 'uploads', name: 'Uploads', icon: 'uploads', count: 24 },
-                    { id: 'downloads', name: 'Downloads', icon: 'downloads', count: 16 },
-                ],
-                totalCount: mockMediaLibrary.length,
-                hasMore: false,
-            };
+            return buildMockLibrary(folder, page);
         }
 
         try {
             const response = await api.get<unknown>('/assets', {
-                params: { folder: folder || '', page },
+                params: { mode: 'public', page: 1, limit: 50 },
             });
-            return normalizeLibraryResponse(response.data);
+            const normalized = normalizeLibraryResponse(response.data);
+            const scopedItems = folder
+                ? normalized.items.filter((item) => item.folder === folder)
+                : normalized.items;
+            const start = Math.max(0, (page - 1) * LIBRARY_PAGE_SIZE);
+            const items = scopedItems.slice(start, start + LIBRARY_PAGE_SIZE);
+            return {
+                items,
+                folders: normalized.folders,
+                totalCount: scopedItems.length,
+                hasMore: start + LIBRARY_PAGE_SIZE < scopedItems.length,
+            };
         } catch {
             return { items: [], folders: DEFAULT_FOLDERS, totalCount: 0, hasMore: false };
         }

@@ -33,6 +33,7 @@ import { cn } from "@/lib/utils";
 import { ConfirmDialog } from "@/components/common/confirm-dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -409,13 +410,13 @@ function ProfileSettings({
 
       <div className="grid grid-cols-2 gap-6">
         <div className="space-y-2">
-          <Label className="text-xs tracking-wider text-muted-foreground uppercase">
+          <Label className="text-sm font-medium text-muted-foreground">
             {t("profile.firstNameLabel")}
           </Label>
           <Input value={firstName} onChange={(e) => dispatch({ type: "setFirstName", firstName: e.target.value })} placeholder={t("profile.firstNamePlaceholder")} />
         </div>
         <div className="space-y-2">
-          <Label className="text-xs tracking-wider text-muted-foreground uppercase">
+          <Label className="text-sm font-medium text-muted-foreground">
             {t("profile.lastNameLabel")}
           </Label>
           <Input
@@ -427,7 +428,7 @@ function ProfileSettings({
       </div>
 
       <div className="space-y-2">
-        <Label className="text-xs tracking-wider text-muted-foreground uppercase">
+        <Label className="text-sm font-medium text-muted-foreground">
           {t("profile.emailLabel")}
         </Label>
         <Input
@@ -779,7 +780,7 @@ function AccountSettings() {
                       {t("account.webhookConfigurationTitle")}
                     </p>
                     <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground uppercase">
+                      <Label className="text-sm font-medium text-muted-foreground">
                         {t("account.webhookUrl")}
                       </Label>
                       <div className="flex gap-2">
@@ -802,7 +803,7 @@ function AccountSettings() {
                       </div>
                     </div>
                     <div className="space-y-1">
-                      <Label className="text-[10px] text-muted-foreground uppercase">
+                      <Label className="text-sm font-medium text-muted-foreground">
                         {t("account.verifyToken")}
                       </Label>
                       <div className="flex gap-2">
@@ -1042,7 +1043,7 @@ function BillingSettings() {
         <div className="rounded-2xl border border-border bg-gradient-to-br from-primary/10 to-chart-2/10 p-6 md:col-span-2">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="mb-1 text-xs tracking-wider text-muted-foreground uppercase">
+              <p className="mb-1 text-sm font-medium text-muted-foreground">
                 {t("billing.subscriptionLabel")}
               </p>
               <p className="text-3xl font-bold">{activePlan?.name ?? t("billing.noActiveSubscription")}</p>
@@ -1061,7 +1062,7 @@ function BillingSettings() {
         </div>
 
         <div className="rounded-2xl border border-border bg-card p-6">
-          <p className="mb-1 text-xs tracking-wider text-muted-foreground uppercase">
+          <p className="mb-1 text-sm font-medium text-muted-foreground">
             {t("billing.spendableCredits")}
           </p>
           <p className="text-4xl font-bold">{remainingCredits}</p>
@@ -1075,7 +1076,7 @@ function BillingSettings() {
       <div className="space-y-4">
         <div className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <div className="text-sm font-medium text-muted-foreground">
               {t("billing.compareScope")}
             </div>
             <h3 className="mt-1 text-sm font-semibold">{segmentMeta[segment].title}</h3>
@@ -1089,7 +1090,7 @@ function BillingSettings() {
                 type="button"
                 onClick={() => dispatch({ type: "setSegment", segment: item })}
                 className={cn(
-                  "rounded-full px-4 py-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors",
+                  "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                   segment === item
                     ? "bg-background text-foreground shadow-sm"
                     : "text-muted-foreground hover:text-foreground"
@@ -1116,11 +1117,11 @@ function BillingSettings() {
                 )}
               >
                 {plan.featured && (
-                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-[10px] font-bold tracking-wider text-primary-foreground uppercase">
+                  <span className="absolute -top-2.5 left-1/2 -translate-x-1/2 rounded-full bg-primary px-3 py-0.5 text-xs font-semibold text-primary-foreground">
                     {t("billing.featured")}
                   </span>
                 )}
-                <span className="inline-flex rounded-full border border-border bg-muted/40 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                <span className="inline-flex rounded-full border border-border bg-muted/40 px-2.5 py-1 text-xs font-semibold text-muted-foreground">
                   {segmentMeta[segment].label} {t("billing.plan")}
                 </span>
                 <div className="flex items-start justify-between gap-4">
@@ -1129,7 +1130,7 @@ function BillingSettings() {
                     <p className="text-2xl font-bold">{plan.priceLabel}</p>
                   </div>
                   {wallet?.plan?.id === plan.id && (
-                    <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-[10px] font-semibold tracking-wider text-primary uppercase">
+                    <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 text-xs font-semibold text-primary">
                       {t("billing.active")}
                     </span>
                   )}
@@ -1147,7 +1148,7 @@ function BillingSettings() {
                   ))}
                 </ul>
                 <div className="rounded-xl border border-border bg-muted/40 p-3">
-                  <p className="mb-2 text-[11px] tracking-[0.24em] text-muted-foreground uppercase">
+                  <p className="mb-2 text-sm font-medium text-muted-foreground">
                     {t("billing.approximateUsage")}
                   </p>
                   <div className="space-y-1 text-sm text-foreground/80">
@@ -1230,7 +1231,7 @@ function BillingSettings() {
                   <h4 className="font-semibold">{pack.name}</h4>
                   <p className="text-2xl font-bold">{pack.priceLabel}</p>
                 </div>
-                <span className="rounded-full border border-border px-2 py-1 text-[10px] font-semibold tracking-wider text-muted-foreground uppercase">
+                <span className="rounded-full border border-border px-2 py-1 text-xs font-semibold text-muted-foreground">
                   {pack.credits} {t("billing.credits")}
                 </span>
               </div>
@@ -1438,19 +1439,19 @@ function NotificationSettings() {
 
       <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2 rounded-2xl border border-border bg-card p-6">
-          <p className="text-xs tracking-wider text-muted-foreground uppercase">{t("notifications.unread")}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t("notifications.unread")}</p>
           <p className="text-4xl font-bold">{unreadCount ?? "-"}</p>
           <p className="text-sm text-muted-foreground">{t("notifications.unreadDescription")}</p>
         </div>
         <div className="space-y-2 rounded-2xl border border-border bg-card p-6">
-          <p className="text-xs tracking-wider text-muted-foreground uppercase">{t("notifications.channels")}</p>
+          <p className="text-sm font-medium text-muted-foreground">{t("notifications.channels")}</p>
           <p className="text-4xl font-bold">
             {preferences.length || Object.keys(notificationPreferenceMeta).length}
           </p>
           <p className="text-sm text-muted-foreground">{t("notifications.channelsDescription")}</p>
         </div>
         <div className="space-y-2 rounded-2xl border border-border bg-card p-6">
-          <p className="text-xs tracking-wider text-muted-foreground uppercase">
+          <p className="text-sm font-medium text-muted-foreground">
             {t("notifications.adminAlerts")}
           </p>
           <p className="text-sm text-muted-foreground">{t("notifications.adminAlertsDescription")}</p>
@@ -1461,7 +1462,7 @@ function NotificationSettings() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="grid grid-cols-[1.2fr_repeat(3,minmax(0,0.95fr))] gap-4 border-b border-border px-5 py-4 text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+        <div className="grid grid-cols-[1.2fr_repeat(3,minmax(0,0.95fr))] gap-4 border-b border-border px-5 py-4 text-sm font-medium text-muted-foreground">
           <span>{t("notifications.table.type")}</span>
           <span>{t("notifications.table.email")}</span>
           <span>{t("notifications.table.inApp")}</span>
@@ -1482,45 +1483,39 @@ function NotificationSettings() {
                   <p className="mt-1 text-sm leading-6 text-muted-foreground">{meta.description}</p>
                 </div>
                 <label className="flex items-center gap-3 rounded-xl border border-border p-3">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-primary"
+                  <Checkbox
                     checked={preference?.emailEnabled ?? true}
-                    onChange={(event) =>
+                    onCheckedChange={(checked) =>
                       updatePreference(
                         category as NotificationCategory,
                         "emailEnabled",
-                        event.target.checked
+                        Boolean(checked)
                       )
                     }
                   />
                   <span className="text-sm">{t("notifications.actions.sendEmail")}</span>
                 </label>
                 <label className="flex items-center gap-3 rounded-xl border border-border p-3">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-primary"
+                  <Checkbox
                     checked={preference?.inAppEnabled ?? true}
-                    onChange={(event) =>
+                    onCheckedChange={(checked) =>
                       updatePreference(
                         category as NotificationCategory,
                         "inAppEnabled",
-                        event.target.checked
+                        Boolean(checked)
                       )
                     }
                   />
                   <span className="text-sm">{t("notifications.actions.showInInbox")}</span>
                 </label>
                 <label className="flex items-center gap-3 rounded-xl border border-border p-3">
-                  <input
-                    type="checkbox"
-                    className="size-4 accent-primary"
+                  <Checkbox
                     checked={preference?.adminAlertsEnabled ?? category === "moderation"}
-                    onChange={(event) =>
+                    onCheckedChange={(checked) =>
                       updatePreference(
                         category as NotificationCategory,
                         "adminAlertsEnabled",
-                        event.target.checked
+                        Boolean(checked)
                       )
                     }
                   />
@@ -1662,7 +1657,7 @@ function ApiKeySettings() {
       <div className="space-y-6 rounded-2xl border border-border bg-card p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex-1  gap-y-2">
-            <Label className="text-xs tracking-wider text-muted-foreground uppercase">
+            <Label className="text-sm font-medium text-muted-foreground">
               {t("apiKeys.newKeyName")}
             </Label>
             <Input

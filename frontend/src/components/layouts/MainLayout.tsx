@@ -5,6 +5,7 @@ import { usePathname } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { Share2, Sparkles, Plus, Copy, Edit, ChevronDown, Menu, Bell } from 'lucide-react';
 import { Link } from '@/i18n/navigation';
+import { useTranslations } from 'next-intl';
 import { Button } from '@/ui/button';
 import { WORKSPACE_ROOT } from './navigation-data';
 import { UserMenu } from './header/UserMenu';
@@ -12,6 +13,7 @@ import { useAuth } from '@/providers';
 import { useRouter } from '@/i18n/navigation';
 import { useWorkflowStore } from '@/stores/workflow-store';
 import { useNotificationStore } from '@/stores/notification-store';
+import { Skeleton } from '@/ui/skeleton';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -34,6 +36,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
     const isWorkflow = pathname === '/creator/workflow-editor';
     const { user, isLoading } = useAuth();
     const { push } = useRouter();
+    const t = useTranslations('Layout');
     const { workflow, createWorkflow, duplicateWorkflow, updateWorkflow } = useWorkflowStore();
 
     const [isRenameOpen, setIsRenameOpen] = React.useState(false);
@@ -47,14 +50,49 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         pathname === '/sign-up';
     const isCreatorWorkspace = pathname.startsWith('/creator/') && pathname !== '/creator';
 
-    if (isLoading) return <div className="h-screen w-full bg-background flex items-center justify-center"><Sparkles className="size-8 animate-pulse text-primary" /></div>;
+    if (isLoading) {
+        return (
+            <div className="flex h-full w-full bg-background text-foreground">
+                <div className="hidden w-64 shrink-0 border-r border-border bg-background/80 p-4 lg:block">
+                    <div className="space-y-4">
+                        <Skeleton className="h-7 w-28 rounded-full" />
+                        <div className="space-y-3">
+                            <Skeleton className="h-4 w-5/6" />
+                            <Skeleton className="h-4 w-4/6" />
+                            <Skeleton className="h-4 w-3/6" />
+                        </div>
+                    </div>
+                </div>
+                <div className="flex min-w-0 flex-1 flex-col">
+                    <div className="flex h-14 items-center border-b border-border px-4 md:px-6">
+                        <Skeleton className="h-4 w-48 rounded-full" />
+                        <div className="ml-auto flex items-center gap-2">
+                            <Skeleton className="hidden h-8 w-20 rounded-full sm:block" />
+                            <Skeleton className="size-8 rounded-full" />
+                            <Skeleton className="size-8 rounded-full" />
+                        </div>
+                    </div>
+                    <div className="flex min-h-0 flex-1 items-center justify-center p-6">
+                        <div className="w-full max-w-5xl space-y-6">
+                            <div className="grid gap-4 md:grid-cols-3">
+                                <Skeleton className="h-24 rounded-2xl" />
+                                <Skeleton className="h-24 rounded-2xl" />
+                                <Skeleton className="h-24 rounded-2xl" />
+                            </div>
+                            <Skeleton className="h-[60vh] rounded-3xl" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
 
     if (!user && isPublicRoute) {
         return <div className="w-full bg-background">{children}</div>;
     }
 
     const handleCreateNew = () => {
-        createWorkflow({ name: 'Untitled Studio' }).then(id => {
+        createWorkflow({ name: t('workspace.untitledStudio') }).then(id => {
             if (id) push(`/creator/workflow-editor?workflowId=${id}`);
         });
     };
@@ -83,15 +121,15 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         if (isWorkflow) {
             return (
                 <div className="flex items-center gap-2">
-                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.personal')}</Link>
                     <span className="text-muted-foreground">/</span>
-                    <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
+                    <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.creator')}</Link>
                     <span className="text-muted-foreground">/</span>
                     <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                             <button className="flex items-center gap-2 hover:bg-accent px-2 py-1 rounded-md transition-colors outline-none">
                                 <span className="text-foreground font-medium text-xs">
-                                    {workflow?.name || 'Untitled Studio'}
+                                    {workflow?.name || t('workspace.untitledStudio')}
                                 </span>
                                 <ChevronDown className="size-3 text-muted-foreground" />
                             </button>
@@ -99,16 +137,16 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                         <DropdownMenuContent align="start" className="w-56">
                             <DropdownMenuItem onClick={handleCreateNew}>
                                 <Plus className="size-4 mr-2" />
-                                <span>New Space</span>
+                                <span>{t('actions.newSpace')}</span>
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onClick={handleDuplicate}>
                                 <Copy className="size-4 mr-2" />
-                                <span>Duplicate space</span>
+                                <span>{t('actions.duplicateSpace')}</span>
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={handleRenameOpen}>
                                 <Edit className="size-4 mr-2" />
-                                <span>Rename</span>
+                                <span>{t('actions.rename')}</span>
                             </DropdownMenuItem>
                         </DropdownMenuContent>
                     </DropdownMenu>
@@ -131,9 +169,9 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             };
             return (
                 <div className="flex items-center gap-2 text-xs">
-                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.personal')}</Link>
                     <span className="text-muted-foreground">/</span>
-                    <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">Creator</Link>
+                    <Link href="/creator" className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.creator')}</Link>
                     <span className="text-muted-foreground">/</span>
                     <span className="text-foreground font-medium">{formatName(toolName)}</span>
                 </div>
@@ -144,9 +182,9 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         if (pathname === '/creator') {
             return (
                 <div className="flex items-center gap-2 text-xs">
-                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.personal')}</Link>
                     <span className="text-muted-foreground">/</span>
-                    <span className="text-foreground font-medium">Creator</span>
+                    <span className="text-foreground font-medium">{t('workspace.creator')}</span>
                 </div>
             );
         }
@@ -156,18 +194,18 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
             const parts = pathname.split('/').filter(Boolean);
             return (
                 <div className="flex items-center gap-2 text-xs">
-                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
+                    <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.personal')}</Link>
                     <span className="text-muted-foreground">/</span>
                     <Link href="/visual-flow" className={cn(
                         'transition-colors',
                         parts.length === 1 ? 'text-foreground font-medium' : 'text-muted-foreground hover:text-foreground'
                     )}>
-                        VisualFlow Studio
+                        {t('workspace.visualFlowStudio')}
                     </Link>
                     {parts.length > 2 && (
                         <>
                             <span className="text-muted-foreground">/</span>
-                            <span className="text-foreground font-medium">Project</span>
+                            <span className="text-foreground font-medium">{t('workspace.project')}</span>
                         </>
                     )}
                 </div>
@@ -177,7 +215,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
         // Default / Dashboard
         return (
             <div className="flex items-center gap-2 text-xs">
-                <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{WORKSPACE_ROOT.label}</Link>
+                <Link href={WORKSPACE_ROOT.href} className="text-muted-foreground hover:text-foreground transition-colors">{t('workspace.personal')}</Link>
                 {pathname !== '/dashboard' && pathname !== '/' && (
                     <>
                         <span className="text-muted-foreground">/</span>
@@ -210,7 +248,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
                     <div className="ml-auto flex items-center gap-2">
                         <Button variant="secondary" size="sm" className="hidden sm:flex h-8 gap-2">
                             <Share2 className="size-3.5" />
-                            Share
+                            {t('actions.share')}
                         </Button>
                         <div className="hidden sm:block h-4 w-px bg-border mx-1" />
 
@@ -244,6 +282,7 @@ export function MainLayout({ children, onMenuClick }: { children: React.ReactNod
 
 function NotificationsMenu() {
     const { push } = useRouter();
+    const t = useTranslations('Layout');
     const { notifications, unreadCount, fetchNotifications, fetchUnreadCount, markAsRead, markAllAsRead } = useNotificationStore();
     const [isOpen, setIsOpen] = React.useState(false);
 
@@ -267,20 +306,20 @@ function NotificationsMenu() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80 p-0">
                 <div className="p-3 border-b border-border flex items-center justify-between">
-                    <h3 className="font-semibold text-sm">Notifications</h3>
+                    <h3 className="font-semibold text-sm">{t('notifications.title')}</h3>
                     <button
                         onClick={() => markAllAsRead()}
                         className="text-xs text-muted-foreground hover:text-foreground"
                     >
-                        Mark all as read
+                        {t('notifications.markAllAsRead')}
                     </button>
                 </div>
                 <div className="max-h-[300px] overflow-y-auto">
                     {notifications.length === 0 ? (
                         <div className="p-8 text-center text-muted-foreground text-xs space-y-3">
-                            <p>No notifications yet</p>
+                            <p>{t('notifications.emptyTitle')}</p>
                             <p className="leading-5">
-                                Activity, billing, moderation, and admin alerts will appear here in a single inbox.
+                                {t('notifications.emptyBody')}
                             </p>
                         </div>
                     ) : (
@@ -321,7 +360,7 @@ function NotificationsMenu() {
                         className="w-full text-xs h-8"
                         onClick={() => push('/notifications')}
                     >
-                        View all notifications
+                        {t('notifications.viewAll')}
                     </Button>
                 </div>
             </DropdownMenuContent>
@@ -346,17 +385,18 @@ function RenameSpaceDialog({
     onNewNameChange: (value: string) => void;
     onConfirm: () => void;
 }) {
+    const t = useTranslations('Layout');
     if (!workflowId) {
         return null;
     }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-md">
+                <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                    <DialogTitle>Rename Space</DialogTitle>
+                    <DialogTitle>{t('dialogs.renameSpace')}</DialogTitle>
                     <DialogDescription>
-                        Enter a new name for your space.
+                        {t('dialogs.renameDescription')}
                     </DialogDescription>
                 </DialogHeader>
                 <div className="flex items-center gap-x-2">
@@ -365,16 +405,16 @@ function RenameSpaceDialog({
                             id="link"
                             value={newName}
                             onChange={(e) => onNewNameChange(e.target.value)}
-                            placeholder={workflowName ?? 'Untitled Studio'}
+                            placeholder={workflowName ?? t('workspace.untitledStudio')}
                         />
                     </div>
                 </div>
                 <DialogFooter className="sm:justify-end">
                     <Button type="button" variant="secondary" onClick={() => onOpenChange(false)}>
-                        Cancel
+                        {t('dialogs.cancel')}
                     </Button>
                     <Button type="button" onClick={onConfirm}>
-                        Rename
+                        {t('actions.rename')}
                     </Button>
                 </DialogFooter>
             </DialogContent>

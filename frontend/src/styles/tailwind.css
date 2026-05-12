@@ -151,17 +151,17 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(100, 116, 139, 0.35);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
+  background: rgba(100, 116, 139, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:active {
-  background: rgba(255, 255, 255, 0.35);
+  background: rgba(100, 116, 139, 0.65);
 }
 
 ::-webkit-scrollbar-corner {
@@ -171,6 +171,10 @@
 /* Firefox */
 * {
   scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+.dark * {
   scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
 }
 
@@ -191,26 +195,34 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(100, 116, 139, 0.28);
   border-radius: 2px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.42);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .scrollbar-thin::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.2);
 }
 
 /* ============================================ */
 
 @utility glass {
-  background: rgba(15, 19, 26, 0.84);
+  background: color-mix(in srgb, var(--card) 84%, transparent);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
 }
 
 @utility glass-morphism {
-  background: rgba(12, 15, 20, 0.85);
+  background: color-mix(in srgb, var(--card) 78%, transparent);
   backdrop-filter: blur(12px);
-  border: 1px solid rgba(148, 163, 184, 0.12);
+  border: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
 }
 

@@ -84,7 +84,7 @@ export function FloatingToolbar({
         <>
             <div className="absolute left-5 top-5 z-50 flex flex-col gap-3">
                 {/* Main Toolbar */}
-                <div className="flex w-14 flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-[#0b0e13]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+                <div className="flex w-14 flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-card/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl">
                     <ToolbarButton
                         icon={<MousePointer2 className="size-5" />}
                         label="Select (V)"
@@ -128,7 +128,7 @@ export function FloatingToolbar({
                         }}
                         tooltipEnabled={richTooltips}
                     />
-                    <ToolbarButton icon={<Sparkles className="size-5 text-blue-400" />} label="Open Reviews" onClick={onOpenComments} tooltipEnabled={richTooltips} />
+                    <ToolbarButton icon={<Sparkles className="size-5 text-blue-500" />} label="Open Reviews" onClick={onOpenComments} tooltipEnabled={richTooltips} />
 
                     <div className="w-6 h-px bg-border my-1" />
 
@@ -141,7 +141,7 @@ export function FloatingToolbar({
                 </div>
 
                 {/* Zoom Controls */}
-                <div className="flex w-14 flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-[#0b0e13]/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.42)] backdrop-blur-xl">
+                <div className="flex w-14 flex-col items-center gap-1.5 rounded-lg border border-border/70 bg-card/95 p-2 shadow-[0_18px_50px_rgba(0,0,0,0.24)] backdrop-blur-xl">
                     <ToolbarButton icon={<ZoomIn className="size-5" />} label="Zoom In (Ctrl+)" onClick={onZoomIn} tooltipEnabled={richTooltips} />
                     <ToolbarButton icon={<ZoomOut className="size-5" />} label="Zoom Out (Ctrl-)" onClick={onZoomOut} tooltipEnabled={richTooltips} />
                     <ToolbarButton icon={<Maximize2 className="size-5" />} label="Fit View (Ctrl+0)" onClick={onFitView} tooltipEnabled={richTooltips} />

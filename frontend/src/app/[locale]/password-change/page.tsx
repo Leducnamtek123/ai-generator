@@ -9,20 +9,15 @@ import { z } from 'zod';
 import { Link } from '@/i18n/navigation';
 import { Loader2, Lock, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import AuthLayout from '@/components/auth/AuthLayout';
+import { Input } from '@/components/ui/input';
 import { authApi } from '@/services/authApi';
 
-const passwordChangeSchema = z
-    .object({
-        password: z.string().min(8, 'Password must be at least 8 characters'),
-        confirmPassword: z.string().min(8, 'Confirm your new password'),
-    })
-    .refine((values) => values.password === values.confirmPassword, {
-        message: 'Passwords do not match',
-        path: ['confirmPassword'],
-    });
-
-type PasswordChangeValues = z.infer<typeof passwordChangeSchema>;
+type PasswordChangeValues = {
+    password: string;
+    confirmPassword: string;
+};
 
 export default function PasswordChangePage() {
     return (
@@ -35,11 +30,23 @@ export default function PasswordChangePage() {
 function PasswordChangePageContent() {
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
+    const t = useTranslations('Auth');
+    const tForms = useTranslations('Forms');
     const hash = searchParamsSnapshot.get('hash') ?? '';
     const [completed, setCompleted] = useState(false);
 
     const expires = searchParamsSnapshot.get('expires');
     const hasValidHash = hash.length > 0;
+
+    const passwordChangeSchema = z
+        .object({
+            password: z.string().min(8, tForms('passwordMin8')),
+            confirmPassword: z.string().min(8, tForms('passwordMin8')),
+        })
+        .refine((values) => values.password === values.confirmPassword, {
+            message: tForms('passwordsDoNotMatch'),
+            path: ['confirmPassword'],
+        });
 
     const form = useForm<PasswordChangeValues>({
         resolver: zodResolver(passwordChangeSchema),
@@ -48,8 +55,8 @@ function PasswordChangePageContent() {
 
     const onSubmit = async (values: PasswordChangeValues) => {
         if (!hasValidHash) {
-            toast.error('Invalid reset link', {
-                description: 'Request a new password reset email.',
+            toast.error(t('messages.invalidResetLink'), {
+                description: t('messages.invalidResetLinkDescription'),
             });
             return;
         }
@@ -57,12 +64,12 @@ function PasswordChangePageContent() {
         try {
             await authApi.resetPassword({ hash, password: values.password });
             setCompleted(true);
-            toast.success('Password updated', {
-                description: 'You can now sign in with your new password.',
+            toast.success(t('messages.passwordUpdated'), {
+                description: t('messages.passwordUpdatedDescription'),
             });
         } catch {
-            toast.error('Unable to update password', {
-                description: 'The reset link may be invalid or expired.',
+            toast.error(t('messages.unableToUpdatePassword'), {
+                description: t('messages.unableToUpdatePasswordDescription'),
             });
         }
     };
@@ -76,7 +83,7 @@ function PasswordChangePageContent() {
                     </div>
                     <div>
                         <h1 className="auth-card__title">PaintAI</h1>
-                        <p className="auth-card__tagline">Choose a new password</p>
+                        <p className="auth-card__tagline">{t('titles.chooseNewPassword')}</p>
                     </div>
                 </div>
 
@@ -85,53 +92,53 @@ function PasswordChangePageContent() {
                         <div className="flex items-start gap-3">
                             <ShieldAlert className="mt-0.5 size-5 text-amber-300" />
                             <div>
-                                <h2 className="text-lg font-semibold text-white">Reset link missing</h2>
-                                <p className="mt-2 text-sm text-white/60">
-                                    This page needs a valid reset token. Request a new password reset email.
+                                <h2 className="text-lg font-semibold text-foreground">{t('messages.resetLinkMissing')}</h2>
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                    {t('messages.resetLinkMissingDescription')}
                                 </p>
                             </div>
                         </div>
                         <div className="mt-4">
                             <Link href="/forgot-password" className="auth-field__link">
-                                Request a new link
+                                {t('actions.requestNewLink')}
                             </Link>
                         </div>
                     </div>
                 ) : completed ? (
-                    <div className="rounded-3xl border border-white/10 bg-white/[0.03] p-5">
-                        <h2 className="text-lg font-semibold text-white">Password changed</h2>
-                        <p className="mt-2 text-sm text-white/60">
-                            Your password has been updated successfully. You can sign in now.
+                    <div className="rounded-3xl border border-border bg-card p-5">
+                        <h2 className="text-lg font-semibold text-foreground">{t('messages.passwordChanged')}</h2>
+                        <p className="mt-2 text-sm text-muted-foreground">
+                            {t('messages.passwordChangedDescription')}
                         </p>
                         <div className="mt-4 flex items-center justify-between">
                             <Link href="/sign-in" className="auth-field__link">
-                                Go to sign in
+                                {t('actions.goToSignIn')}
                             </Link>
                             <div className="auth-footer__secured">
                                 <Lock size={12} aria-hidden="true" />
-                                <span>Secured by PaintAI</span>
+                                <span>{t('brand.securedBy')}</span>
                             </div>
                         </div>
                     </div>
                 ) : (
                     <form onSubmit={form.handleSubmit(onSubmit)}>
-                        <div className="mb-4 rounded-2xl border border-white/10 bg-white/[0.03] p-4 text-xs text-white/55">
-                            <p>Reset token status</p>
-                            <p className="mt-1 break-all font-mono text-[11px] text-white/40">
-                                {expires ? `expires=${expires}` : 'No expiry metadata provided'}
+                        <div className="mb-4 rounded-2xl border border-border bg-muted/20 p-4 text-xs text-muted-foreground">
+                            <p>{t('messages.tokenStatus')}</p>
+                            <p className="mt-1 break-all font-mono text-[11px] text-muted-foreground/70">
+                                {expires ? `${t('messages.tokenExpiryPrefix')}${expires}` : t('messages.tokenNoExpiry')}
                             </p>
                         </div>
 
                         <div className="auth-field">
                             <label className="auth-field__label" htmlFor="password-change-password">
-                                New password
+                                {t('fields.password')}
                             </label>
-                            <input
+                            <Input
                                 id="password-change-password"
                                 {...form.register('password')}
                                 className="auth-field__input"
                                 type="password"
-                                placeholder="Enter your new password"
+                                placeholder={t('placeholders.newPassword')}
                                 autoComplete="new-password"
                             />
                             {form.formState.errors.password && (
@@ -141,14 +148,14 @@ function PasswordChangePageContent() {
 
                         <div className="auth-field">
                             <label className="auth-field__label" htmlFor="password-change-confirm">
-                                Confirm password
+                                {t('fields.confirmPassword')}
                             </label>
-                            <input
+                            <Input
                                 id="password-change-confirm"
                                 {...form.register('confirmPassword')}
                                 className="auth-field__input"
                                 type="password"
-                                placeholder="Confirm your password"
+                                placeholder={t('placeholders.confirmPassword')}
                                 autoComplete="new-password"
                             />
                             {form.formState.errors.confirmPassword && (
@@ -157,18 +164,18 @@ function PasswordChangePageContent() {
                         </div>
 
                         <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
-                            {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Update password'}
+                            {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : t('actions.updatePassword')}
                         </button>
                     </form>
                 )}
 
                 <div className="auth-footer">
                     <p className="auth-footer__text">
-                        Need another link? <Link href="/forgot-password">Reset password</Link>
+                        {t('actions.needAnotherLink')} <Link href="/forgot-password">{t('actions.resetPassword')}</Link>
                     </p>
                     <div className="auth-footer__secured">
                         <Lock size={12} aria-hidden="true" />
-                        <span>Secured by PaintAI</span>
+                        <span>{t('brand.securedBy')}</span>
                     </div>
                 </div>
             </div>

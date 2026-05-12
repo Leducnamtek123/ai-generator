@@ -19,36 +19,36 @@ export function CommentsPanel({ isOpen, onClose, onAddFirstComment }: CommentsPa
     if (!isOpen) return null;
 
     return (
-        <div className="absolute top-0 right-0 w-80 h-full bg-[#1A1B1F] border-l border-white/10 shadow-2xl z-50 flex flex-col animate-in slide-in-from-right duration-300">
+        <div className="absolute top-0 right-0 z-50 flex h-full w-80 flex-col border-l border-border bg-card shadow-2xl animate-in slide-in-from-right duration-300">
             {/* Header */}
-            <div className="h-14 px-4 flex items-center justify-between border-b border-white/5 bg-[#0F1014]">
+            <div className="flex h-14 items-center justify-between border-b border-border bg-background/60 px-4">
                 <div className="flex items-center gap-2">
-                    <MessageSquare className="size-4 text-white/60" />
-                    <h2 className="text-sm font-semibold text-white">Comments</h2>
+                    <MessageSquare className="size-4 text-muted-foreground" />
+                    <h2 className="text-sm font-semibold text-foreground">Comments</h2>
                 </div>
                 <button
                     onClick={onClose}
-                    className="p-1 hover:bg-white/5 rounded-lg text-white/40 hover:text-white transition-colors"
+                    className="rounded-lg p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
                 >
                     <X className="size-4" />
                 </button>
             </div>
 
             {/* Search */}
-            <div className="p-4 border-b border-white/5">
+            <div className="border-b border-border p-4">
                 <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-3.5 text-white/20" />
+                    <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground/50" />
                     <Input
                         placeholder="Search comments?"
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="bg-zinc-950/20 border-white/5 pl-9 h-9 text-xs placeholder:text-white/20"
+                        className="h-9 border-border bg-background pl-9 text-xs placeholder:text-muted-foreground/50"
                     />
                 </div>
             </div>
 
             {/* Tabs */}
-            <div className="px-4 py-2 flex items-center gap-1 border-b border-white/5 bg-zinc-950/10">
+            <div className="flex items-center gap-1 border-b border-border bg-muted/30 px-4 py-2">
                 <TabButton
                     label="All"
                     active={activeTab === 'all'}
@@ -67,17 +67,17 @@ export function CommentsPanel({ isOpen, onClose, onAddFirstComment }: CommentsPa
             </div>
 
             {/* Content */}
-            <div className="flex-1 overflow-y-auto bg-[#151619]/50 flex flex-col items-center justify-center p-8 text-center">
-                <div className="size-12 rounded-full bg-white/5 flex items-center justify-center mb-4">
-                    <MessageSquare className="size-6 text-white/20" />
+            <div className="flex flex-1 flex-col items-center justify-center overflow-y-auto bg-background/40 p-8 text-center">
+                <div className="mb-4 flex size-12 items-center justify-center rounded-full bg-muted">
+                    <MessageSquare className="size-6 text-muted-foreground/40" />
                 </div>
-                <h3 className="text-sm font-medium text-white/80">No comments yet</h3>
-                <p className="text-xs text-white/40 mt-1 max-w-[200px]">
+                <h3 className="text-sm font-medium text-foreground/80">No comments yet</h3>
+                <p className="mt-1 max-w-[200px] text-xs text-muted-foreground">
                     Click anywhere on the canvas or an element to leave a comment.
                 </p>
                 <Button
                     variant="outline"
-                    className="mt-6 border-white/10 text-xs h-8 hover:bg-white/5"
+                    className="mt-6 h-8 border-border text-xs hover:bg-accent"
                     onClick={onAddFirstComment}
                 >
                     Add first comment
@@ -85,7 +85,7 @@ export function CommentsPanel({ isOpen, onClose, onAddFirstComment }: CommentsPa
             </div>
 
             {/* Footer */}
-            <div className="p-4 border-t border-white/5 bg-zinc-950/10 text-[10px] text-white/30 text-center">
+            <div className="border-t border-border bg-muted/30 p-4 text-center text-[10px] text-muted-foreground">
                 Review all feedback in one place
             </div>
         </div>
@@ -99,8 +99,8 @@ function TabButton({ label, active, onClick }: { label: string, active: boolean,
             className={cn(
                 "px-3 py-1 rounded-full text-[11px] font-medium transition-colors",
                 active
-                    ? "bg-white/10 text-white"
-                    : "text-white/40 hover:text-white/60"
+                    ? "bg-primary/10 text-foreground"
+                    : "text-muted-foreground hover:text-foreground"
             )}
         >
             {label}

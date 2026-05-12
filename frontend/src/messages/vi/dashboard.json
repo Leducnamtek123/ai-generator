@@ -1,0 +1,28 @@
+{
+  "Dashboard": {
+    "heroTitle": "Hôm nay bạn muốn tạo gì?",
+    "allTools": "Tất cả công cụ",
+    "recentCreations": "Sáng tạo gần đây",
+    "viewAll": "Xem tất cả",
+    "noRecentCreations": "Chưa có sáng tạo gần đây",
+    "startFirstSpace": "Bắt đầu không gian đầu tiên",
+    "inspired": "Lấy cảm hứng",
+    "exploreTemplates": "Khám phá toàn bộ mẫu",
+    "availableToolRoutes": "Các tuyến công cụ khả dụng trong workspace",
+    "publishingInboxCalendarDashboard": "Đăng bài, inbox, lịch, dashboard",
+    "featuredShortcuts": "Lối tắt nổi bật trên dashboard",
+    "openHubOverview": "Mở tổng quan hub",
+    "openPage": "Mở trang",
+    "openTool": "Mở công cụ",
+    "tools": {
+      "findAssets": "Tìm tài nguyên",
+      "workflowEditor": "Workflow Editor",
+      "imageGen": "Tạo ảnh",
+      "videoGen": "Tạo video",
+      "editor": "Trình chỉnh sửa",
+      "upscaler": "Phóng to",
+      "models": "Mẫu 3D",
+      "audio": "Âm thanh"
+    }
+  }
+}

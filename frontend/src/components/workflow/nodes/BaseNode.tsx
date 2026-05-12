@@ -43,7 +43,7 @@ export const BaseNode = memo(({
     return (
         <div className="relative isolate group">
             {!isPreview && (
-                <div className="absolute -top-8 left-3 z-20 flex items-center gap-2 rounded-full border border-border/70 bg-[#0b0e13]/92 px-2.5 py-1 backdrop-blur-xl shadow-[0_10px_24px_rgba(0,0,0,0.32)]">
+                <div className="absolute -top-8 left-3 z-20 flex items-center gap-2 rounded-full border border-border/70 bg-card/92 px-2.5 py-1 shadow-[0_10px_24px_rgba(0,0,0,0.18)] backdrop-blur-xl">
                     {isEditing ? (
                         <input
                             ref={inputRef}
@@ -57,7 +57,7 @@ export const BaseNode = memo(({
                         <span
                             onDoubleClick={handleStartEditing}
                             className={cn(
-                                "cursor-text select-none text-[10px] font-semibold uppercase tracking-[0.08em] transition-colors",
+                                "cursor-text select-none text-[10px] font-semibold transition-colors",
                                 selected ? "text-primary" : "text-muted-foreground group-hover:text-foreground"
                             )}
                         >
@@ -69,7 +69,7 @@ export const BaseNode = memo(({
 
             {selected && !isPreview && headerActions && (
                 <div className="absolute -top-12 left-1/2 z-[60] -translate-x-1/2">
-                    <div className="flex items-center gap-0.5 rounded-lg border border-border/70 bg-[#0b0e13]/95 px-1.5 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.38)] backdrop-blur-xl">
+                    <div className="flex items-center gap-0.5 rounded-lg border border-border/70 bg-card/95 px-1.5 py-1 shadow-[0_16px_40px_rgba(0,0,0,0.2)] backdrop-blur-xl">
                         {headerActions}
                     </div>
                 </div>
@@ -84,14 +84,14 @@ export const BaseNode = memo(({
             <Card
                 className={cn(
                     "relative overflow-visible rounded-xl border transition-all duration-200",
-                    "bg-[#0b0e13] shadow-[0_18px_60px_rgba(0,0,0,0.35)] ring-1 ring-white/[0.03]",
+                    "bg-card shadow-[0_18px_60px_rgba(0,0,0,0.18)] ring-1 ring-border/40",
                     selected && !isPreview
                         ? "border-primary/70 shadow-[0_0_0_1px_rgba(47,102,255,0.28),0_24px_60px_rgba(0,0,0,0.45)]"
                         : "border-border/55 hover:border-border/80",
                     !isPreview && "hover:shadow-[0_22px_70px_rgba(0,0,0,0.42)]"
                 )}
             >
-                <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-white/[0.04] to-transparent" />
+                <div className="pointer-events-none absolute inset-x-0 top-0 h-10 bg-gradient-to-b from-foreground/[0.04] to-transparent" />
                 <div className="relative">
                     {children}
                 </div>

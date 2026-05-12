@@ -1,4 +1,31 @@
 {
+    "UserMenu": {
+        "billing": {
+            "personal": "Cá nhân",
+            "workspace": "Không gian làm việc",
+            "creditsOnly": "Chỉ credits"
+        },
+        "secondaryAction": {
+            "personal": "Nâng cấp gói",
+            "workspace": "Tạo workspace mới"
+        },
+        "items": {
+            "settings": "Cài đặt",
+            "profile": "Hồ sơ",
+            "collections": "Bộ sưu tập",
+            "language": "Ngôn ngữ",
+            "theme": "Giao diện",
+            "developer": "Nhà phát triển",
+            "docs": "Tài liệu",
+            "help": "Trợ giúp",
+            "logout": "Đăng xuất"
+        },
+        "theme": {
+            "dark": "Tối",
+            "light": "Sáng",
+            "system": "Hệ thống"
+        }
+    },
     "UserList": {
         "title": "Danh sách người dùng",
         "description": "Danh sách người dùng",

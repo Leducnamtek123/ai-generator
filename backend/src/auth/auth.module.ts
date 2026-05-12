@@ -10,7 +10,7 @@ import { JwtRefreshStrategy } from './strategies/jwt-refresh.strategy';
 import { MailModule } from '../mail/mail.module';
 import { SessionModule } from '../session/session.module';
 import { ProjectsModule } from '../projects/projects.module';
-import { OrganizationsModule } from '../organizations/organizations.module';
+import { WorkspacesModule } from '../workspaces/workspaces.module';
 import { AuthTokenService } from './services/auth-token.service';
 import { SocialAuthService } from './services/social-auth.service';
 import { AuthProvisioningService } from './services/auth-provisioning.service';
@@ -25,7 +25,7 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
     PassportModule,
     MailModule,
     ProjectsModule,
-    OrganizationsModule,
+    WorkspacesModule,
     ApiKeysModule,
     JwtModule.register({}),
   ],

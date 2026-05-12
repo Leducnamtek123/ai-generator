@@ -402,9 +402,9 @@ function VideoUpscalerPageContent() {
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Source Video</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Source Video</h4>
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -413,7 +413,7 @@ function VideoUpscalerPageContent() {
                             {state.videoFile ? (
                                 <>
                                     <video src={state.videoFile} className="w-full h-full object-cover" muted />
-                                    <div className="absolute bottom-2 left-2 right-2 px-2 py-1 bg-background/80 backdrop-blur-sm rounded-lg text-[10px] font-medium truncate">
+                                    <div className="absolute bottom-2 left-2 right-2 px-2 py-1 bg-background/80 backdrop-blur-sm rounded-lg text-xs font-medium truncate">
                                         {state.videoName}
                                     </div>
                                 </>
@@ -424,7 +424,7 @@ function VideoUpscalerPageContent() {
                                     </div>
                                     <div className="text-center">
                                         <p className="text-xs font-medium">Upload Video</p>
-                                        <p className="text-[10px] text-muted-foreground mt-1">MP4, MOV, WebM up to 500MB</p>
+                                        <p className="text-xs text-muted-foreground mt-1">MP4, MOV, WebM up to 500MB</p>
                                     </div>
                                 </>
                             )}
@@ -433,7 +433,7 @@ function VideoUpscalerPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Target Resolution</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Target Resolution</h4>
                         <div className="grid grid-cols-2 gap-1.5">
                             {resolutions.map((resolution) => (
                                 <button
@@ -444,15 +444,15 @@ function VideoUpscalerPageContent() {
                                         state.targetResolution === resolution.id ? 'bg-accent border-primary/20' : 'bg-card border-border',
                                     )}
                                 >
-                                    <p className="text-[11px] font-bold">{resolution.label}</p>
-                                    <p className="text-[9px] text-muted-foreground">{resolution.description}</p>
+                                    <p className="text-xs font-bold">{resolution.label}</p>
+                                    <p className="text-xs text-muted-foreground">{resolution.description}</p>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Processing Mode</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Processing Mode</h4>
                         <Select value={state.model} onValueChange={(value) => dispatch({ type: 'setModel', model: value })}>
                             <SelectTrigger>
                                 <SelectValue placeholder="Choose mode" />
@@ -470,16 +470,16 @@ function VideoUpscalerPageContent() {
                     <div className="space-y-5">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Denoise</Label>
-                                <span className="text-[11px] font-mono">{state.denoise}%</span>
+                                <Label className="text-sm font-medium text-muted-foreground">Denoise</Label>
+                                <span className="text-xs font-mono">{state.denoise}%</span>
                             </div>
                             <Slider min={0} max={100} step={5} value={[state.denoise]} onValueChange={([value]) => dispatch({ type: 'setDenoise', denoise: value })} />
                         </div>
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Sharpen</Label>
-                                <span className="text-[11px] font-mono">{state.sharpen}%</span>
+                                <Label className="text-sm font-medium text-muted-foreground">Sharpen</Label>
+                                <span className="text-xs font-mono">{state.sharpen}%</span>
                             </div>
                             <Slider min={0} max={100} step={5} value={[state.sharpen]} onValueChange={([value]) => dispatch({ type: 'setSharpen', sharpen: value })} />
                         </div>

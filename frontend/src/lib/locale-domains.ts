@@ -28,12 +28,14 @@ export function getLocaleSiteUrls(): Record<LocaleCode, string> {
 }
 
 export function getLocaleDomains() {
-  const domains: Array<{
-    domain: string;
-    defaultLocale: LocaleCode;
-    locales: LocaleCode[];
-  }> = [];
-  const seenDomains = new Set<string>();
+  const domainsByHost = new Map<
+    string,
+    {
+      domain: string;
+      defaultLocale: LocaleCode;
+      locales: LocaleCode[];
+    }
+  >();
 
   for (const locale of Object.keys(LOCALES) as LocaleCode[]) {
     const siteUrl = getLocaleSiteUrl(locale);
@@ -41,10 +43,15 @@ export function getLocaleDomains() {
 
     try {
       const domain = new URL(siteUrl).host;
-      if (seenDomains.has(domain)) continue;
+      const existing = domainsByHost.get(domain);
+      if (existing) {
+        if (!existing.locales.includes(locale)) {
+          existing.locales.push(locale);
+        }
+        continue;
+      }
 
-      seenDomains.add(domain);
-      domains.push({
+      domainsByHost.set(domain, {
         domain,
         defaultLocale: locale,
         locales: [locale]
@@ -54,21 +61,5 @@ export function getLocaleDomains() {
     }
   }
 
-  return domains;
-}
-
-function resolveLocaleUrl(locale: LocaleCode, currentUrl?: string | URL): string {
-  const targetBase = new URL(getLocaleSiteUrl(locale));
-
-  if (!currentUrl) {
-    return targetBase.toString();
-  }
-
-  const sourceUrl = typeof currentUrl === "string" ? new URL(currentUrl, targetBase) : currentUrl;
-
-  targetBase.pathname = sourceUrl.pathname;
-  targetBase.search = sourceUrl.search;
-  targetBase.hash = sourceUrl.hash;
-
-  return targetBase.toString();
+  return Array.from(domainsByHost.values());
 }

@@ -2,22 +2,22 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ProjectsService } from './projects.service';
 
 describe('ProjectsService', () => {
-  it('should reject project creation for organizations the user does not belong to', async () => {
+  it('should reject project creation for workspaces the user does not belong to', async () => {
     const projectRepository = {
       create: jest.fn(),
     };
-    const orgRepository = {
+    const workspaceRepository = {
       findById: jest.fn().mockResolvedValue({
         id: 'org-1',
       }),
     };
     const memberRepository = {
-      findByUserAndOrg: jest.fn().mockResolvedValue(null),
+      findByUserAndWorkspace: jest.fn().mockResolvedValue(null),
     };
 
     const service = new ProjectsService(
       projectRepository as any,
-      orgRepository as any,
+      workspaceRepository as any,
       memberRepository as any,
     );
 
@@ -34,26 +34,26 @@ describe('ProjectsService', () => {
     expect(projectRepository.create).not.toHaveBeenCalled();
   });
 
-  it('should allow project creation for a member of the organization', async () => {
+  it('should allow project creation for a member of the workspace', async () => {
     const projectRepository = {
       create: jest.fn().mockResolvedValue({
         id: 'project-1',
       }),
     };
-    const orgRepository = {
+    const workspaceRepository = {
       findById: jest.fn().mockResolvedValue({
         id: 'org-1',
       }),
     };
     const memberRepository = {
-      findByUserAndOrg: jest.fn().mockResolvedValue({
+      findByUserAndWorkspace: jest.fn().mockResolvedValue({
         id: 'member-1',
       }),
     };
 
     const service = new ProjectsService(
       projectRepository as any,
-      orgRepository as any,
+      workspaceRepository as any,
       memberRepository as any,
     );
 
@@ -71,26 +71,26 @@ describe('ProjectsService', () => {
 
     expect(projectRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        organizationId: 'org-1',
+        workspaceId: 'org-1',
         userId: '7',
       }),
     );
   });
 
-  it('should throw not found when the organization does not exist', async () => {
+  it('should throw not found when the workspace does not exist', async () => {
     const projectRepository = {
       create: jest.fn(),
     };
-    const orgRepository = {
+    const workspaceRepository = {
       findById: jest.fn().mockResolvedValue(null),
     };
     const memberRepository = {
-      findByUserAndOrg: jest.fn(),
+      findByUserAndWorkspace: jest.fn(),
     };
 
     const service = new ProjectsService(
       projectRepository as any,
-      orgRepository as any,
+      workspaceRepository as any,
       memberRepository as any,
     );
 

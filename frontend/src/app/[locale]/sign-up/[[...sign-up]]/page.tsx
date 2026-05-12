@@ -9,19 +9,19 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { post } from '@/lib/api';
 import { signIn } from 'next-auth/react';
 import AuthLayout from '@/components/auth/AuthLayout';
+import { Input } from '@/components/ui/input';
 import { sanitizeAppPath } from '@/lib/auth-redirect';
 
-const registerSchema = z.object({
-    firstName: z.string().min(2, "First name is too short"),
-    lastName: z.string().min(2, "Last name is too short"),
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(8, "Must be at least 8 characters"),
-});
-
-type RegisterValues = z.infer<typeof registerSchema>;
+type RegisterValues = {
+    firstName: string;
+    lastName: string;
+    email: string;
+    password: string;
+};
 
 export default function SignUpPage() {
     return (
@@ -33,6 +33,8 @@ export default function SignUpPage() {
 
 function SignUpPageContent() {
     const { replace } = useRouter();
+    const t = useTranslations('Auth');
+    const tForms = useTranslations('Forms');
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const nextPath = sanitizeAppPath(searchParamsSnapshot.get('next'));
@@ -40,68 +42,70 @@ function SignUpPageContent() {
         ? '/sign-in'
         : `/sign-in?next=${encodeURIComponent(nextPath)}`;
 
+    const registerSchema = z.object({
+        firstName: z.string().min(2, tForms('firstNameMin')),
+        lastName: z.string().min(2, tForms('lastNameMin')),
+        email: z.string().email(tForms('email')),
+        password: z.string().min(8, tForms('passwordMin8')),
+    });
+
     const form = useForm<RegisterValues>({
         resolver: zodResolver(registerSchema),
-        defaultValues: { firstName: "", lastName: "", email: "", password: "" }
+        defaultValues: { firstName: '', lastName: '', email: '', password: '' }
     });
 
     useEffect(() => {
         const error = searchParamsSnapshot.get('error');
         if (error) {
             if (error === 'OAuthAccountNotLinked') {
-                toast.error("Account exists", {
-                    description: "An account with this email already exists with a different login method."
+                toast.error(t('messages.accountExists'), {
+                    description: t('messages.accountExistsDescription')
                 });
             } else {
-                toast.error("Authentication failed", {
-                    description: "Something went wrong during social login. Please try again."
+                toast.error(t('messages.authFailed'), {
+                    description: t('messages.authFailedDescription')
                 });
             }
         }
-    }, [searchParamsSnapshot]);
+    }, [searchParamsSnapshot, t]);
 
     const onSubmit = async (data: RegisterValues) => {
         try {
             await post('/auth/email/register', data);
 
-            toast.success("Account created!", {
-                description: "Please check your email to confirm your account."
+            toast.success(t('messages.accountCreated'), {
+                description: t('messages.accountCreatedDescription')
             });
             replace(`/sign-in?next=${encodeURIComponent(nextPath)}&email=${encodeURIComponent(data.email)}`);
         } catch (error: unknown) {
             const response = error && typeof error === 'object'
                 ? (error as { response?: { data?: { errors?: { email?: string }; message?: string } } })
                 : null;
-            console.error("Signup error:", response?.response?.data);
-            
-            let description = "Please check your details and try again.";
+
+            let description = t('messages.registrationFailedDescription');
             if (response?.response?.data?.errors?.email === 'emailAlreadyExists') {
-                description = "An account with this email already exists. Please sign in instead.";
+                description = t('messages.emailAlreadyExistsDescription');
             } else if (response?.response?.data?.message) {
                 description = response.response.data.message;
             }
 
-            toast.error("Registration failed", {
-                description
-            });
+            toast.error(t('messages.registrationFailed'), { description });
         }
     };
 
     return (
         <AuthLayout variant="sign-up">
             <div className="auth-card">
-                {/* Logo */}
                 <div className="auth-card__logo">
                     <div className="auth-card__logo-icon">
                         <Image src="/logo.svg" alt="PaintAI" width={32} height={32} />
                     </div>
                     <div>
                         <h1 className="auth-card__title">PaintAI</h1>
-                        <p className="auth-card__tagline">Your paint, your choice</p>
+                        <p className="auth-card__tagline">{t('brand.tagline')}</p>
                     </div>
                 </div>
 
-                {/* Google OAuth */}
                 <button
                     type="button"
                     onClick={() => signIn('google', { callbackUrl: nextPath })}
@@ -113,26 +117,24 @@ function SignUpPageContent() {
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
-                    Sign up with Google
+                    {t('actions.googleSignUp')}
                 </button>
 
-                {/* Divider */}
                 <div className="auth-divider">
                     <hr className="auth-divider__line" />
-                    <span className="auth-divider__label">or</span>
+                    <span className="auth-divider__label">{t('actions.or')}</span>
                 </div>
 
-                {/* Registration form */}
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <div className="auth-field">
                         <div className="auth-field__row">
                             <div>
-                                <label className="auth-field__label" htmlFor="signup-firstname">First name</label>
-                                <input
+                                <label className="auth-field__label" htmlFor="signup-firstname">{t('fields.firstName')}</label>
+                                <Input
                                     id="signup-firstname"
-                                    {...form.register("firstName")}
+                                    {...form.register('firstName')}
                                     className="auth-field__input auth-field__input--accent"
-                                    placeholder="John"
+                                    placeholder={t('placeholders.firstName')}
                                     autoComplete="given-name"
                                 />
                                 {form.formState.errors.firstName && (
@@ -140,12 +142,12 @@ function SignUpPageContent() {
                                 )}
                             </div>
                             <div>
-                                <label className="auth-field__label" htmlFor="signup-lastname">Last name</label>
-                                <input
+                                <label className="auth-field__label" htmlFor="signup-lastname">{t('fields.lastName')}</label>
+                                <Input
                                     id="signup-lastname"
-                                    {...form.register("lastName")}
+                                    {...form.register('lastName')}
                                     className="auth-field__input auth-field__input--accent"
-                                    placeholder="Doe"
+                                    placeholder={t('placeholders.lastName')}
                                     autoComplete="family-name"
                                 />
                                 {form.formState.errors.lastName && (
@@ -156,12 +158,12 @@ function SignUpPageContent() {
                     </div>
 
                     <div className="auth-field">
-                        <label className="auth-field__label" htmlFor="signup-email">Email address</label>
-                        <input
+                        <label className="auth-field__label" htmlFor="signup-email">{t('fields.email')}</label>
+                        <Input
                             id="signup-email"
-                            {...form.register("email")}
+                            {...form.register('email')}
                             className="auth-field__input auth-field__input--accent"
-                            placeholder="Enter your email"
+                            placeholder={t('placeholders.email')}
                             autoComplete="email"
                         />
                         {form.formState.errors.email && (
@@ -170,13 +172,13 @@ function SignUpPageContent() {
                     </div>
 
                     <div className="auth-field">
-                        <label className="auth-field__label" htmlFor="signup-password">Password</label>
-                        <input
+                        <label className="auth-field__label" htmlFor="signup-password">{t('fields.password')}</label>
+                        <Input
                             id="signup-password"
-                            {...form.register("password")}
+                            {...form.register('password')}
                             type="password"
                             className="auth-field__input auth-field__input--accent"
-                            placeholder="••••••••"
+                            placeholder={t('placeholders.password')}
                             autoComplete="new-password"
                         />
                         {form.formState.errors.password && (
@@ -185,19 +187,18 @@ function SignUpPageContent() {
                     </div>
 
                     <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
-                        {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
+                        {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : t('actions.continue')}
                     </button>
                 </form>
 
-                {/* Footer */}
                 <div className="auth-footer">
                     <p className="auth-footer__text">
-                        Already have an account?{' '}
-                        <Link href={signInHref}>Sign in</Link>
+                        {t('links.alreadyHaveAccount')}{' '}
+                        <Link href={signInHref}>{t('actions.signIn')}</Link>
                     </p>
                     <div className="auth-footer__secured">
                         <Lock size={12} aria-hidden="true" />
-                        <span>Secured by PaintAI</span>
+                        <span>{t('brand.securedBy')}</span>
                     </div>
                 </div>
             </div>

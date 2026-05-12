@@ -5,6 +5,7 @@ import { Node } from '@xyflow/react';
 import { X, Settings2, Sparkles, Image as ImageIcon, Type, Scan, Upload, Video, Wand2 } from 'lucide-react';
 import { useGeneration } from '@/hooks/useGeneration';
 import { Button } from '@/ui/button';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { getGenerationProviders, type GenerationProviderInfo } from '@/lib/api/generations';
 import { WorkflowNodeType } from './types';
 import {
@@ -76,7 +77,7 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
             case WorkflowNodeType.ASSISTANT: return <Sparkles className="size-4 text-emerald-400" />;
             case WorkflowNodeType.UPSCALE: return <Scan className="size-4 text-violet-400" />;
             case WorkflowNodeType.TOOL: return <Wand2 className="size-4 text-fuchsia-400" />;
-            default: return <Settings2 className="size-4 text-white/60" />;
+            default: return <Settings2 className="size-4 text-muted-foreground" />;
         }
     };
 
@@ -120,19 +121,22 @@ export function PropertiesPanel({ selectedNode, onChange, onClose }: PropertiesP
                     selectedNode.type === WorkflowNodeType.TOOL) && (
                     <div className="mb-4 space-y-2">
                         <div className="text-xs font-medium text-muted-foreground">Preferred Provider</div>
-                        <select
-                            value={(nodeData.provider as string) || ''}
-                            onChange={(e) => handleNodeDataChange('provider', e.target.value)}
-                            className="w-full h-11 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 appearance-none"
+                        <Select
+                            value={(nodeData.provider as string) || '__default__'}
+                            onValueChange={(value) => handleNodeDataChange('provider', value === '__default__' ? '' : value)}
                         >
-                            <option value="">Auto / Default</option>
-                            {providers.map((provider) => (
-                                <option key={provider.name} value={provider.name}>
-                                    {provider.name}
-                                    {provider.capabilities.length ? ` · ${provider.capabilities.join(', ')}` : ''}
-                                </option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="w-full h-11 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50">
+                                <SelectValue placeholder="Auto / Default" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="__default__">Auto / Default</SelectItem>
+                                {providers.map((provider) => (
+                                    <SelectItem key={provider.name} value={provider.name}>
+                                        {provider.name}
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 )}
                 <PropertiesContent
@@ -210,9 +214,9 @@ function PropertiesContent({
         default:
             return (
                 <div className="flex flex-col items-center justify-center py-8 text-center">
-                    <Settings2 className="size-8 text-white/20 mb-3" />
-                    <p className="text-sm text-white/40">No properties available</p>
-                    <p className="text-xs text-white/20 mt-1">Select a different node</p>
+                    <Settings2 className="mb-3 size-8 text-muted-foreground/30" />
+                    <p className="text-sm text-muted-foreground">No properties available</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60">Select a different node</p>
                 </div>
             );
     }

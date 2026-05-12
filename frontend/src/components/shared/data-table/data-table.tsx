@@ -13,6 +13,7 @@ import {
     TableHeader,
     TableRow,
 } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 interface DataTableProps<TData, TValue> {
     columns: ColumnDef<TData, TValue>[];
@@ -112,18 +113,24 @@ export function DataTable<TData, TValue>({
                         Next
                     </button>
                 </div>
-                <select
-                    className="rounded border bg-background px-2 py-1"
-                    value={currentPageSize}
-                    onChange={(e) => {
-                        setCurrentPageSize(Number(e.target.value));
+                <Select
+                    value={String(currentPageSize)}
+                    onValueChange={(value) => {
+                        setCurrentPageSize(Number(value));
                         setPageIndex(0);
                     }}
                 >
-                    {[10, 20, 30, 40, 50].map((size) => (
-                        <option key={size} value={size}>{size}</option>
-                    ))}
-                </select>
+                    <SelectTrigger className="w-[110px] rounded border bg-background px-2 py-1">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        {[10, 20, 30, 40, 50].map((size) => (
+                            <SelectItem key={size} value={String(size)}>
+                                {size}
+                            </SelectItem>
+                        ))}
+                    </SelectContent>
+                </Select>
             </div>
         </div>
     );

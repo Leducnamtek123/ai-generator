@@ -26,14 +26,14 @@ import { UpdateAdminUserDto } from './dto/update-admin-user.dto';
 import { QueryAdminUsersDto } from './dto/query-admin-users.dto';
 import { QueryAdminTemplatesDto } from './dto/query-admin-templates.dto';
 import { QueryAdminAssetsDto } from './dto/query-admin-assets.dto';
-import { QueryAdminOrganizationsDto } from './dto/query-admin-organizations.dto';
+import { QueryAdminWorkspacesDto } from './dto/query-admin-workspaces.dto';
 import { QueryAdminAuditLogsDto } from './dto/query-admin-audit-logs.dto';
 import { BulkUpdateAdminUsersDto } from './dto/bulk-update-admin-users.dto';
 import { BulkUpdateAdminTemplatesDto } from './dto/bulk-update-admin-templates.dto';
 import { BulkDeleteAdminAssetsDto } from './dto/bulk-delete-admin-assets.dto';
-import { UpdateAdminOrganizationDto } from './dto/update-admin-organization.dto';
-import { UpdateAdminOrganizationMemberDto } from './dto/update-admin-organization-member.dto';
-import { TransferAdminOrganizationDto } from './dto/transfer-admin-organization.dto';
+import { UpdateAdminWorkspaceDto } from './dto/update-admin-workspace.dto';
+import { UpdateAdminWorkspaceMemberDto } from './dto/update-admin-workspace-member.dto';
+import { TransferAdminWorkspaceDto } from './dto/transfer-admin-workspace.dto';
 import { QuerySiteConfigsDto } from '../site-config/dto/query-site-configs.dto';
 import { UpsertSiteConfigDto } from '../site-config/dto/upsert-site-config.dto';
 import { SiteConfigService } from '../site-config/site-config.service';
@@ -71,8 +71,8 @@ export class AdminController {
   @ApiOkResponse({ description: 'Admin notification feed and alert summary.' })
   @Get('notifications')
   @HttpCode(HttpStatus.OK)
-  getNotifications() {
-    return this.adminCatalogService.getNotifications();
+  getNotifications(@Query() query: { q?: string; severity?: string; category?: string }) {
+    return this.adminCatalogService.getNotifications(query as any);
   }
 
   @ApiOkResponse({ description: 'Role matrix and admin guardrails.' })
@@ -113,61 +113,61 @@ export class AdminController {
     return this.adminCatalogService.bulkUpdateUsers(dto, toActor(req));
   }
 
-  @ApiOkResponse({ description: 'Admin organization directory.' })
-  @Get('organizations')
+  @ApiOkResponse({ description: 'Admin workspace directory.' })
+  @Get('workspaces')
   @HttpCode(HttpStatus.OK)
-  getOrganizations(@Query() query: QueryAdminOrganizationsDto) {
-    return this.adminCatalogService.getOrganizations(query);
+  getWorkspaces(@Query() query: QueryAdminWorkspacesDto) {
+    return this.adminCatalogService.getWorkspaces(query);
   }
 
-  @Get('organizations/export')
+  @Get('workspaces/export')
   @Header('Content-Type', 'text/csv')
   @HttpCode(HttpStatus.OK)
-  async exportOrganizations(@Query() query: QueryAdminOrganizationsDto) {
-    return this.adminCatalogService.exportOrganizationsCsv(query);
+  async exportWorkspaces(@Query() query: QueryAdminWorkspacesDto) {
+    return this.adminCatalogService.exportWorkspacesCsv(query);
   }
 
-  @Get('organizations/:id')
+  @Get('workspaces/:id')
   @HttpCode(HttpStatus.OK)
-  getOrganization(@Param('id') id: string) {
-    return this.adminCatalogService.getOrganizationDetail(id);
+  getWorkspace(@Param('id') id: string) {
+    return this.adminCatalogService.getWorkspaceDetail(id);
   }
 
-  @Patch('organizations/:id')
+  @Patch('workspaces/:id')
   @HttpCode(HttpStatus.OK)
-  updateOrganization(
+  updateWorkspace(
     @Request() req: any,
     @Param('id') id: string,
-    @Body() dto: UpdateAdminOrganizationDto,
+    @Body() dto: UpdateAdminWorkspaceDto,
   ) {
-    return this.adminCatalogService.updateOrganization(id, dto, toActor(req));
+    return this.adminCatalogService.updateWorkspace(id, dto, toActor(req));
   }
 
-  @Post('organizations/:id/transfer-owner')
+  @Post('workspaces/:id/transfer-owner')
   @HttpCode(HttpStatus.OK)
-  transferOrganizationOwner(
+  transferWorkspaceOwner(
     @Request() req: any,
     @Param('id') id: string,
-    @Body() dto: TransferAdminOrganizationDto,
+    @Body() dto: TransferAdminWorkspaceDto,
   ) {
-    return this.adminCatalogService.updateOrganizationOwner(id, dto.memberId, toActor(req));
+    return this.adminCatalogService.updateWorkspaceOwner(id, dto.memberId, toActor(req));
   }
 
-  @Get('organizations/:id/members')
+  @Get('workspaces/:id/members')
   @HttpCode(HttpStatus.OK)
-  getOrganizationMembers(@Param('id') id: string) {
-    return this.adminCatalogService.getOrganizationMembers(id);
+  getWorkspaceMembers(@Param('id') id: string) {
+    return this.adminCatalogService.getWorkspaceMembers(id);
   }
 
-  @Patch('organizations/:id/members/:memberId')
+  @Patch('workspaces/:id/members/:memberId')
   @HttpCode(HttpStatus.OK)
-  updateOrganizationMember(
+  updateWorkspaceMember(
     @Request() req: any,
     @Param('id') id: string,
     @Param('memberId') memberId: string,
-    @Body() dto: UpdateAdminOrganizationMemberDto,
+    @Body() dto: UpdateAdminWorkspaceMemberDto,
   ) {
-    return this.adminCatalogService.updateOrganizationMemberRole(
+    return this.adminCatalogService.updateWorkspaceMemberRole(
       id,
       memberId,
       dto,
@@ -175,14 +175,14 @@ export class AdminController {
     );
   }
 
-  @Delete('organizations/:id/members/:memberId')
+  @Delete('workspaces/:id/members/:memberId')
   @HttpCode(HttpStatus.NO_CONTENT)
-  removeOrganizationMember(
+  removeWorkspaceMember(
     @Request() req: any,
     @Param('id') id: string,
     @Param('memberId') memberId: string,
   ) {
-    return this.adminCatalogService.removeOrganizationMember(id, memberId, toActor(req));
+    return this.adminCatalogService.removeWorkspaceMember(id, memberId, toActor(req));
   }
 
   @ApiOkResponse({ description: 'Admin asset directory.' })
@@ -304,6 +304,13 @@ export class AdminController {
   @HttpCode(HttpStatus.OK)
   async exportAuditLogs(@Query() query: QueryAdminAuditLogsDto) {
     return this.adminCatalogService.exportAuditLogs(query);
+  }
+
+  @ApiOkResponse({ description: 'Admin queue snapshot.' })
+  @Get('queues')
+  @HttpCode(HttpStatus.OK)
+  getQueues() {
+    return this.adminQueueService.getQueueSnapshot();
   }
 
   @ApiOkResponse({ description: 'Dead-letter queue job summaries.' })

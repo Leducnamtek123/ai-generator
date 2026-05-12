@@ -463,9 +463,9 @@ function SketchToImagePageContent() {
                     </div>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Drawing Tools</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Drawing Tools</h4>
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => dispatch({ type: 'setTool', tool: 'pen' })}
@@ -507,14 +507,14 @@ function SketchToImagePageContent() {
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Brush Size</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Brush Size</Label>
                             <span className="text-[11px] font-mono text-foreground">{state.brushSize}px</span>
                         </div>
                         <Slider min={1} max={30} step={1} value={[state.brushSize]} onValueChange={([value]) => dispatch({ type: 'setBrushSize', brushSize: value })} />
                     </div>
 
                     <div className="space-y-3">
-                        <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Color</Label>
+                        <Label className="text-sm font-medium text-muted-foreground">Color</Label>
                         <div className="flex flex-wrap gap-2">
                             {brushColors.map((color) => (
                                 <button
@@ -531,7 +531,7 @@ function SketchToImagePageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Output Style</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Output Style</h4>
                         <div className="grid grid-cols-2 gap-2">
                             {styles.map((style) => (
                                 <button
@@ -551,7 +551,7 @@ function SketchToImagePageContent() {
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Sketch Influence</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Sketch Influence</Label>
                             <span className="text-[11px] font-mono text-foreground">{state.strength}%</span>
                         </div>
                         <Slider min={10} max={100} step={5} value={[state.strength]} onValueChange={([value]) => dispatch({ type: 'setStrength', strength: value })} />
@@ -559,7 +559,7 @@ function SketchToImagePageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Prompt</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Prompt</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
@@ -616,7 +616,7 @@ function SketchToImagePageContent() {
                 <div className="flex-1 flex overflow-hidden">
                     <div className="flex-1 flex items-center justify-center p-8 bg-muted/30">
                         <div className="flex flex-col items-center gap-2">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">Your Sketch</p>
+                            <p className="text-[10px] font-bold text-muted-foreground mb-2">Your sketch</p>
                             <canvas
                                 ref={canvasRef}
                                 className="rounded-xl border border-border shadow-lg bg-white cursor-crosshair max-w-full max-h-[65vh]"
@@ -631,7 +631,7 @@ function SketchToImagePageContent() {
 
                     <div className="flex-1 flex items-center justify-center p-8 border-l border-border bg-muted/10">
                         <div className="flex flex-col items-center gap-2">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">AI Result</p>
+                            <p className="text-[10px] font-bold text-muted-foreground mb-2">Result</p>
                             {isGenerating ? (
                                 <div className="w-full max-w-[768px] aspect-[3/2] rounded-xl border border-border bg-card flex flex-col items-center justify-center gap-4">
                                     <div className="relative">

@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Video, Play, Loader2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConnectionInfo } from './ConnectionInfo';
 import { NodePanelProps } from '../NodePanels';
 import { VideoModel, AspectRatio, VideoDuration } from '../types';
@@ -11,7 +12,7 @@ import { VideoModel, AspectRatio, VideoDuration } from '../types';
 export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }: NodePanelProps) {
     return (
         <div className="space-y-4">
-            <div className="p-3 bg-purple-500/10 border border-purple-500/20 rounded-lg">
+            <div className="rounded-lg border border-purple-500/20 bg-purple-500/10 p-3">
                 <div className="flex items-start gap-2">
                     <Video className="size-4 text-purple-400 shrink-0 mt-0.5" />
                     <div>
@@ -22,21 +23,22 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                    <div className="text-xs font-medium text-white/60">Video Model</div>
-                <select
-                    value={(nodeData.model as string) || VideoModel.RUNWAY}
-                    onChange={(e) => onChange('model', e.target.value)}
-                    className="w-full h-11 bg-zinc-950/20 border border-white/10 rounded-lg px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-purple-500/50 appearance-none"
-                >
-                    <option value={VideoModel.RUNWAY} className="bg-[#1A1B1F]">Runway Gen-3 ⭐</option>
-                    <option value={VideoModel.SORA} className="bg-[#1A1B1F]">OpenAI Sora</option>
-                    <option value={VideoModel.PIKA} className="bg-[#1A1B1F]">Pika Labs</option>
-                    <option value={VideoModel.KLING} className="bg-[#1A1B1F]">Kling AI</option>
-                </select>
+                    <div className="text-xs font-medium text-muted-foreground">Video Model</div>
+                <Select value={(nodeData.model as string) || VideoModel.RUNWAY} onValueChange={(value) => onChange('model', value)}>
+                    <SelectTrigger className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-purple-500/50">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={VideoModel.RUNWAY}>Runway Gen-3 ⭐</SelectItem>
+                        <SelectItem value={VideoModel.SORA}>OpenAI Sora</SelectItem>
+                        <SelectItem value={VideoModel.PIKA}>Pika Labs</SelectItem>
+                        <SelectItem value={VideoModel.KLING}>Kling AI</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="space-y-2">
-                    <div className="text-xs font-medium text-white/60">Duration</div>
+                    <div className="text-xs font-medium text-muted-foreground">Duration</div>
                 <div className="grid grid-cols-4 gap-2">
                     {[VideoDuration.FOUR_S, VideoDuration.EIGHT_S, VideoDuration.SIXTEEN_S, VideoDuration.TWENTY_FOUR_S].map((duration) => (
                         <Button
@@ -45,7 +47,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
                             onClick={() => onChange('duration', duration)}
                             className={cn(
                                 "h-9 text-xs font-medium",
-                                (nodeData.duration || VideoDuration.EIGHT_S) === duration ? "bg-purple-600 hover:bg-purple-500 border-none" : "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                (nodeData.duration || VideoDuration.EIGHT_S) === duration ? "bg-purple-600 hover:bg-purple-500 border-none" : "bg-background/60 border-border hover:bg-accent text-muted-foreground"
                             )}
                         >
                             {duration}
@@ -55,7 +57,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             </div>
 
             <div className="space-y-2">
-                    <div className="text-xs font-medium text-white/60">Aspect Ratio</div>
+                    <div className="text-xs font-medium text-muted-foreground">Aspect Ratio</div>
                 <div className="grid grid-cols-3 gap-2">
                     {[AspectRatio.WIDESCREEN, AspectRatio.PORTRAIT_WIDE, AspectRatio.SQUARE].map((ratio) => (
                         <Button
@@ -64,7 +66,7 @@ export function VideoGenNodePanel({ nodeData, onChange, isGenerating, handlers }
                             onClick={() => onChange('aspectRatio', ratio)}
                             className={cn(
                                 "h-9 text-xs font-medium",
-                                (nodeData.aspectRatio || AspectRatio.WIDESCREEN) === ratio ? "bg-purple-600 hover:bg-purple-500 border-none" : "bg-white/5 border-white/10 hover:bg-white/10 text-white/60"
+                                (nodeData.aspectRatio || AspectRatio.WIDESCREEN) === ratio ? "bg-purple-600 hover:bg-purple-500 border-none" : "bg-background/60 border-border hover:bg-accent text-muted-foreground"
                             )}
                         >
                             {ratio}

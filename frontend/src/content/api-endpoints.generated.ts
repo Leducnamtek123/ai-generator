@@ -50,38 +50,17 @@ export const apiEndpointGroups = [
       },
       {
         "method": "GET",
-        "path": "/api/v1/admin/organizations",
-        "summary": "GET /api/v1/admin/organizations",
-        "source": "backend/src/admin/admin.controller.ts",
-        "operation": "getOrganizations"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/admin/organizations/:id",
-        "summary": "GET /api/v1/admin/organizations/:id",
-        "source": "backend/src/admin/admin.controller.ts",
-        "operation": "getOrganization"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/admin/organizations/:id/members",
-        "summary": "GET /api/v1/admin/organizations/:id/members",
-        "source": "backend/src/admin/admin.controller.ts",
-        "operation": "getOrganizationMembers"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/admin/organizations/export",
-        "summary": "GET /api/v1/admin/organizations/export",
-        "source": "backend/src/admin/admin.controller.ts",
-        "operation": "exportOrganizations"
-      },
-      {
-        "method": "GET",
         "path": "/api/v1/admin/overview",
         "summary": "GET /api/v1/admin/overview",
         "source": "backend/src/admin/admin.controller.ts",
         "operation": "getOverview"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/queues/dead-letter",
+        "summary": "GET /api/v1/admin/queues/dead-letter",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "listDeadLetterJobs"
       },
       {
         "method": "GET",
@@ -126,6 +105,34 @@ export const apiEndpointGroups = [
         "operation": "exportUsers"
       },
       {
+        "method": "GET",
+        "path": "/api/v1/admin/workspaces",
+        "summary": "GET /api/v1/admin/workspaces",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "getWorkspaces"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/workspaces/:id",
+        "summary": "GET /api/v1/admin/workspaces/:id",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "getWorkspace"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/workspaces/:id/members",
+        "summary": "GET /api/v1/admin/workspaces/:id/members",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "getWorkspaceMembers"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/admin/workspaces/export",
+        "summary": "GET /api/v1/admin/workspaces/export",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "exportWorkspaces"
+      },
+      {
         "method": "POST",
         "path": "/api/v1/admin/assets/bulk-delete",
         "summary": "POST /api/v1/admin/assets/bulk-delete",
@@ -141,10 +148,10 @@ export const apiEndpointGroups = [
       },
       {
         "method": "POST",
-        "path": "/api/v1/admin/organizations/:id/transfer-owner",
-        "summary": "POST /api/v1/admin/organizations/:id/transfer-owner",
+        "path": "/api/v1/admin/queues/dead-letter/:jobId/requeue",
+        "summary": "POST /api/v1/admin/queues/dead-letter/:jobId/requeue",
         "source": "backend/src/admin/admin.controller.ts",
-        "operation": "transferOrganizationOwner"
+        "operation": "recoverDeadLetterJob"
       },
       {
         "method": "POST",
@@ -161,18 +168,11 @@ export const apiEndpointGroups = [
         "operation": "bulkUpdateUsers"
       },
       {
-        "method": "PATCH",
-        "path": "/api/v1/admin/organizations/:id",
-        "summary": "PATCH /api/v1/admin/organizations/:id",
+        "method": "POST",
+        "path": "/api/v1/admin/workspaces/:id/transfer-owner",
+        "summary": "POST /api/v1/admin/workspaces/:id/transfer-owner",
         "source": "backend/src/admin/admin.controller.ts",
-        "operation": "updateOrganization"
-      },
-      {
-        "method": "PATCH",
-        "path": "/api/v1/admin/organizations/:id/members/:memberId",
-        "summary": "PATCH /api/v1/admin/organizations/:id/members/:memberId",
-        "source": "backend/src/admin/admin.controller.ts",
-        "operation": "updateOrganizationMember"
+        "operation": "transferWorkspaceOwner"
       },
       {
         "method": "PATCH",
@@ -196,6 +196,20 @@ export const apiEndpointGroups = [
         "operation": "updateUser"
       },
       {
+        "method": "PATCH",
+        "path": "/api/v1/admin/workspaces/:id",
+        "summary": "PATCH /api/v1/admin/workspaces/:id",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "updateWorkspace"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/admin/workspaces/:id/members/:memberId",
+        "summary": "PATCH /api/v1/admin/workspaces/:id/members/:memberId",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "updateWorkspaceMember"
+      },
+      {
         "method": "DELETE",
         "path": "/api/v1/admin/assets/:id",
         "summary": "DELETE /api/v1/admin/assets/:id",
@@ -204,17 +218,17 @@ export const apiEndpointGroups = [
       },
       {
         "method": "DELETE",
-        "path": "/api/v1/admin/organizations/:id/members/:memberId",
-        "summary": "DELETE /api/v1/admin/organizations/:id/members/:memberId",
-        "source": "backend/src/admin/admin.controller.ts",
-        "operation": "removeOrganizationMember"
-      },
-      {
-        "method": "DELETE",
         "path": "/api/v1/admin/templates/:id",
         "summary": "DELETE /api/v1/admin/templates/:id",
         "source": "backend/src/admin/admin.controller.ts",
         "operation": "removeTemplate"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/admin/workspaces/:id/members/:memberId",
+        "summary": "DELETE /api/v1/admin/workspaces/:id/members/:memberId",
+        "source": "backend/src/admin/admin.controller.ts",
+        "operation": "removeWorkspaceMember"
       }
     ]
   },
@@ -396,8 +410,8 @@ export const apiEndpointGroups = [
       },
       {
         "method": "GET",
-        "path": "/api/v1/orgs/:orgSlug/billing",
-        "summary": "GET /api/v1/orgs/:orgSlug/billing",
+        "path": "/api/v1/workspaces/:workspaceSlug/billing",
+        "summary": "GET /api/v1/workspaces/:workspaceSlug/billing",
         "source": "backend/src/billing/billing.controller.ts",
         "operation": "getBilling"
       }
@@ -758,6 +772,13 @@ export const apiEndpointGroups = [
         "summary": "GET /api/health",
         "source": "backend/src/health/health.controller.ts",
         "operation": "check"
+      },
+      {
+        "method": "GET",
+        "path": "/api/health/queues",
+        "summary": "GET /api/health/queues",
+        "source": "backend/src/health/health.controller.ts",
+        "operation": "queues"
       }
     ]
   },
@@ -787,8 +808,8 @@ export const apiEndpointGroups = [
       },
       {
         "method": "GET",
-        "path": "/api/v1/orgs/:orgSlug/invites",
-        "summary": "GET /api/v1/orgs/:orgSlug/invites",
+        "path": "/api/v1/workspaces/:workspaceSlug/invites",
+        "summary": "GET /api/v1/workspaces/:workspaceSlug/invites",
         "source": "backend/src/invites/invites.controller.ts",
         "operation": "findByOrg"
       },
@@ -808,15 +829,15 @@ export const apiEndpointGroups = [
       },
       {
         "method": "POST",
-        "path": "/api/v1/orgs/:orgSlug/invites",
-        "summary": "POST /api/v1/orgs/:orgSlug/invites",
+        "path": "/api/v1/workspaces/:workspaceSlug/invites",
+        "summary": "POST /api/v1/workspaces/:workspaceSlug/invites",
         "source": "backend/src/invites/invites.controller.ts",
         "operation": "create"
       },
       {
         "method": "DELETE",
-        "path": "/api/v1/orgs/:orgSlug/invites/:inviteId",
-        "summary": "DELETE /api/v1/orgs/:orgSlug/invites/:inviteId",
+        "path": "/api/v1/workspaces/:workspaceSlug/invites/:inviteId",
+        "summary": "DELETE /api/v1/workspaces/:workspaceSlug/invites/:inviteId",
         "source": "backend/src/invites/invites.controller.ts",
         "operation": "revoke"
       }
@@ -828,22 +849,22 @@ export const apiEndpointGroups = [
     "items": [
       {
         "method": "GET",
-        "path": "/api/v1/orgs/:orgSlug/members",
-        "summary": "GET /api/v1/orgs/:orgSlug/members",
+        "path": "/api/v1/workspaces/:workspaceSlug/members",
+        "summary": "GET /api/v1/workspaces/:workspaceSlug/members",
         "source": "backend/src/members/members.controller.ts",
         "operation": "findAll"
       },
       {
         "method": "PATCH",
-        "path": "/api/v1/orgs/:orgSlug/members/:memberId",
-        "summary": "PATCH /api/v1/orgs/:orgSlug/members/:memberId",
+        "path": "/api/v1/workspaces/:workspaceSlug/members/:memberId",
+        "summary": "PATCH /api/v1/workspaces/:workspaceSlug/members/:memberId",
         "source": "backend/src/members/members.controller.ts",
         "operation": "updateRole"
       },
       {
         "method": "DELETE",
-        "path": "/api/v1/orgs/:orgSlug/members/:memberId",
-        "summary": "DELETE /api/v1/orgs/:orgSlug/members/:memberId",
+        "path": "/api/v1/workspaces/:workspaceSlug/members/:memberId",
+        "summary": "DELETE /api/v1/workspaces/:workspaceSlug/members/:memberId",
         "source": "backend/src/members/members.controller.ts",
         "operation": "remove"
       }
@@ -894,61 +915,6 @@ export const apiEndpointGroups = [
         "summary": "PATCH /api/v1/notifications/preferences",
         "source": "backend/src/notifications/notifications.controller.ts",
         "operation": "updatePreferences"
-      }
-    ]
-  },
-  {
-    "tag": "Organizations",
-    "description": "",
-    "items": [
-      {
-        "method": "GET",
-        "path": "/api/v1/orgs",
-        "summary": "GET /api/v1/orgs",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "findAll"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/orgs/:orgSlug",
-        "summary": "GET /api/v1/orgs/:orgSlug",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "findBySlug"
-      },
-      {
-        "method": "GET",
-        "path": "/api/v1/orgs/:orgSlug/membership",
-        "summary": "GET /api/v1/orgs/:orgSlug/membership",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "getMembership"
-      },
-      {
-        "method": "POST",
-        "path": "/api/v1/orgs",
-        "summary": "POST /api/v1/orgs",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "create"
-      },
-      {
-        "method": "PATCH",
-        "path": "/api/v1/orgs/:orgSlug",
-        "summary": "PATCH /api/v1/orgs/:orgSlug",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "update"
-      },
-      {
-        "method": "PATCH",
-        "path": "/api/v1/orgs/:orgSlug/transfer",
-        "summary": "PATCH /api/v1/orgs/:orgSlug/transfer",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "transferOwnership"
-      },
-      {
-        "method": "DELETE",
-        "path": "/api/v1/orgs/:orgSlug",
-        "summary": "DELETE /api/v1/orgs/:orgSlug",
-        "source": "backend/src/organizations/organizations.controller.ts",
-        "operation": "shutdown"
       }
     ]
   },
@@ -1121,6 +1087,13 @@ export const apiEndpointGroups = [
       },
       {
         "method": "GET",
+        "path": "/api/v1/social-hub/channels/facebook/pending",
+        "summary": "List pending Facebook page connections",
+        "source": "backend/src/social-hub/social-hub.controller.ts",
+        "operation": "findPendingFacebookConnections"
+      },
+      {
+        "method": "GET",
         "path": "/api/v1/social-hub/inbox",
         "summary": "Get unified inbox feed across all channels",
         "source": "backend/src/social-hub/social-hub.controller.ts",
@@ -1170,6 +1143,13 @@ export const apiEndpointGroups = [
       },
       {
         "method": "POST",
+        "path": "/api/v1/social-hub/channels/facebook/pending/:id/confirm",
+        "summary": "List pending Facebook page connections",
+        "source": "backend/src/social-hub/social-hub.controller.ts",
+        "operation": "confirmPendingFacebookConnection"
+      },
+      {
+        "method": "POST",
         "path": "/api/v1/social-hub/inbox/reply",
         "summary": "Get unified inbox feed across all channels",
         "source": "backend/src/social-hub/social-hub.controller.ts",
@@ -1191,6 +1171,13 @@ export const apiEndpointGroups = [
       },
       {
         "method": "PATCH",
+        "path": "/api/v1/social-hub/inbox/:accountId/:interactionId/triage",
+        "summary": "Update inbox assignment, labels, and follow-up state",
+        "source": "backend/src/social-hub/social-hub.controller.ts",
+        "operation": "updateInboxInteractionTriage"
+      },
+      {
+        "method": "PATCH",
         "path": "/api/v1/social-hub/posts/:id",
         "summary": "Create a new post (draft or scheduled)",
         "source": "backend/src/social-hub/social-hub.controller.ts",
@@ -1209,6 +1196,13 @@ export const apiEndpointGroups = [
         "summary": "Disconnect a social channel",
         "source": "backend/src/social-hub/social-hub.controller.ts",
         "operation": "disconnectChannel"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/social-hub/channels/facebook/pending/:id",
+        "summary": "Discard pending Facebook page connection",
+        "source": "backend/src/social-hub/social-hub.controller.ts",
+        "operation": "discardPendingFacebookConnection"
       },
       {
         "method": "DELETE",
@@ -1363,7 +1357,7 @@ export const apiEndpointGroups = [
       {
         "method": "GET",
         "path": "/api/v1/visual-flow/projects",
-        "summary": "Create a new visual story project with characters",
+        "summary": "List all visual projects for the current user",
         "source": "backend/src/visual-flow/visual-flow.controller.ts",
         "operation": "findAllProjects"
       },
@@ -1496,7 +1490,7 @@ export const apiEndpointGroups = [
       {
         "method": "POST",
         "path": "/api/v1/visual-flow/post-process/add-narration",
-        "summary": "Concatenate multiple videos into one",
+        "summary": "Overlay narration audio on video (ducking SFX)",
         "source": "backend/src/visual-flow/visual-flow.controller.ts",
         "operation": "addNarration"
       },
@@ -1678,7 +1672,7 @@ export const apiEndpointGroups = [
       {
         "method": "PATCH",
         "path": "/api/v1/visual-flow/scenes/:sceneId",
-        "summary": "Get all scenes in a video (ordered)",
+        "summary": "Update scene prompt, videoPrompt, or characterNames",
         "source": "backend/src/visual-flow/visual-flow.controller.ts",
         "operation": "updateScene"
       },
@@ -1793,11 +1787,73 @@ export const apiEndpointGroups = [
     "description": "",
     "items": [
       {
+        "method": "GET",
+        "path": "/api/v1/workflows/:id/executions",
+        "summary": "List workflow execution snapshots",
+        "source": "backend/src/workflows/workflows.execution.controller.ts",
+        "operation": "getExecutions"
+      },
+      {
         "method": "POST",
         "path": "/api/v1/workflows/:id/execute",
         "summary": "Execute a workflow",
         "source": "backend/src/workflows/workflows.execution.controller.ts",
         "operation": "execute"
+      }
+    ]
+  },
+  {
+    "tag": "Workspaces",
+    "description": "",
+    "items": [
+      {
+        "method": "GET",
+        "path": "/api/v1/workspaces",
+        "summary": "GET /api/v1/workspaces",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "findAll"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/workspaces/:workspaceSlug",
+        "summary": "GET /api/v1/workspaces/:workspaceSlug",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "findBySlug"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/workspaces/:workspaceSlug/membership",
+        "summary": "GET /api/v1/workspaces/:workspaceSlug/membership",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "getMembership"
+      },
+      {
+        "method": "POST",
+        "path": "/api/v1/workspaces",
+        "summary": "POST /api/v1/workspaces",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "create"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/workspaces/:workspaceSlug",
+        "summary": "PATCH /api/v1/workspaces/:workspaceSlug",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "update"
+      },
+      {
+        "method": "PATCH",
+        "path": "/api/v1/workspaces/:workspaceSlug/transfer",
+        "summary": "PATCH /api/v1/workspaces/:workspaceSlug/transfer",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "transferOwnership"
+      },
+      {
+        "method": "DELETE",
+        "path": "/api/v1/workspaces/:workspaceSlug",
+        "summary": "DELETE /api/v1/workspaces/:workspaceSlug",
+        "source": "backend/src/workspaces/workspaces.controller.ts",
+        "operation": "shutdown"
       }
     ]
   }

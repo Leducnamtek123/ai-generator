@@ -2,8 +2,7 @@
 
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
-import { Suspense, useEffect, useMemo, useReducer, useRef } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useReducer, useRef } from 'react';
 import { toast } from 'sonner';
 import {
     Upload,
@@ -46,7 +45,6 @@ import type { MediaItem } from '@/types/media';
 import { MUSIC_CONTENT_TABS } from '@/components/layouts/navigation-data';
 import { TemplateTypeEnum } from '@/lib/api/templates';
 import { getUserFacingErrorMessage } from '@/lib/async-operation';
-import { projectApi } from '@/services/projectApi';
 
 const genres = [
     { id: 'pop', name: 'Pop', icon: Music2 },
@@ -125,10 +123,6 @@ type CommunityMusicListing = {
 type MusicGeneratorState = MusicSnapshot & {
     communityListings: CommunityMusicListing[];
     isCommunityLoading: boolean;
-    projectId: string | null;
-    isProjectLoading: boolean;
-    isProjectSaving: boolean;
-    projectError: string | null;
     playingTrackId: string | null;
     isAudioPickerOpen: boolean;
 };
@@ -137,10 +131,6 @@ type MusicGeneratorAction =
     | { type: 'set-content-tab'; tab: string }
     | { type: 'set-community-listings'; listings: CommunityMusicListing[] }
     | { type: 'set-community-loading'; value: boolean }
-    | { type: 'set-project-id'; value: string | null }
-    | { type: 'set-project-loading'; value: boolean }
-    | { type: 'set-project-saving'; value: boolean }
-    | { type: 'set-project-error'; value: string | null }
     | { type: 'apply-snapshot'; snapshot: Partial<MusicSnapshot> }
     | { type: 'set-selected-genre'; value: string | null }
     | { type: 'toggle-mood'; id: string }
@@ -157,10 +147,6 @@ const initialMusicGeneratorState: MusicGeneratorState = {
     activeContentTab: MUSIC_CONTENT_TABS[0],
     communityListings: [],
     isCommunityLoading: false,
-    projectId: null,
-    isProjectLoading: false,
-    isProjectSaving: false,
-    projectError: null,
     selectedGenre: null,
     selectedMoods: [],
     selectedInstruments: [],
@@ -181,14 +167,6 @@ const musicGeneratorReducer = (state: MusicGeneratorState, action: MusicGenerato
             return { ...state, communityListings: action.listings };
         case 'set-community-loading':
             return { ...state, isCommunityLoading: action.value };
-        case 'set-project-id':
-            return { ...state, projectId: action.value };
-        case 'set-project-loading':
-            return { ...state, isProjectLoading: action.value };
-        case 'set-project-saving':
-            return { ...state, isProjectSaving: action.value };
-        case 'set-project-error':
-            return { ...state, projectError: action.value };
         case 'apply-snapshot':
             return {
                 ...state,
@@ -202,7 +180,6 @@ const musicGeneratorReducer = (state: MusicGeneratorState, action: MusicGenerato
                 referenceTrackUrl: action.snapshot.referenceTrackUrl ?? null,
                 referenceTrackName: action.snapshot.referenceTrackName ?? '',
                 playingTrackId: null,
-                projectError: null,
             };
         case 'set-selected-genre':
             return { ...state, selectedGenre: action.value };
@@ -245,7 +222,6 @@ const musicGeneratorReducer = (state: MusicGeneratorState, action: MusicGenerato
                 referenceTrackUrl: null,
                 referenceTrackName: '',
                 isAudioPickerOpen: false,
-                projectError: null,
             };
         default:
             return state;
@@ -286,12 +262,8 @@ function MusicGeneratorPageContent() {
         isLoading: isGenerationsLoading
     } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const { replace } = useRouter();
-    const searchParams = useSearchParams();
-    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [state, dispatch] = useReducer(musicGeneratorReducer, initialMusicGeneratorState);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const isProjectBusy = state.isProjectLoading || state.isProjectSaving;
 
     useEffect(() => {
         if (state.activeContentTab === MUSIC_CONTENT_TABS[0]) {
@@ -315,9 +287,6 @@ function MusicGeneratorPageContent() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
-        const requestedProjectId = searchParamsSnapshot.get('projectId');
-        dispatch({ type: 'set-project-id', value: requestedProjectId });
-
         const applySnapshot = (snapshot: Partial<MusicSnapshot>) => {
             dispatch({ type: 'apply-snapshot', snapshot });
         };
@@ -333,37 +302,8 @@ function MusicGeneratorPageContent() {
             }
         };
 
-        if (!requestedProjectId) {
-            loadDraft();
-            return;
-        }
-
-        let cancelled = false;
-        dispatch({ type: 'set-project-loading', value: true });
-
-        void (async () => {
-            try {
-                const project = await projectApi.get(requestedProjectId);
-                if (cancelled) return;
-
-                applySnapshot(normalizeMusicSnapshot(project.content));
-            } catch (error) {
-                console.error('Failed to load music project', error);
-                if (!cancelled) {
-                    dispatch({ type: 'set-project-error', value: 'Loaded local draft because backend project load failed.' });
-                    loadDraft();
-                }
-            } finally {
-                if (!cancelled) {
-                    dispatch({ type: 'set-project-loading', value: false });
-                }
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [searchParamsSnapshot]);
+        loadDraft();
+    }, []);
 
     const toggleMood = (id: string) => {
         dispatch({ type: 'toggle-mood', id });
@@ -374,7 +314,7 @@ function MusicGeneratorPageContent() {
     };
 
     const handleGenerate = async () => {
-        if (!state.prompt.trim() || isProjectBusy) return;
+        if (!state.prompt.trim()) return;
 
         try {
             await generateMusic({
@@ -422,7 +362,7 @@ function MusicGeneratorPageContent() {
         });
     }, [state.playingTrackId, generations]);
 
-    const handleSaveProject = () => {
+    const handleSaveDraft = () => {
         const payload: MusicProjectPayload = {
             version: 1,
             savedAt: new Date().toISOString(),
@@ -440,38 +380,7 @@ function MusicGeneratorPageContent() {
         };
 
         localStorage.setItem('music-generator:draft:v1', JSON.stringify(payload));
-
-        const persistProject = async () => {
-            dispatch({ type: 'set-project-saving', value: true });
-            try {
-                if (state.projectId) {
-                    await projectApi.update(state.projectId, {
-                        name: 'Music Generator Draft',
-                        description: 'Music generator draft',
-                        content: payload,
-                    });
-                } else {
-                    const created = await projectApi.create({
-                        name: 'Music Generator Draft',
-                        description: 'Music generator draft',
-                        content: payload,
-                    });
-                    dispatch({ type: 'set-project-id', value: created.project.id });
-                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
-                }
-
-                dispatch({ type: 'set-project-error', value: null });
-                toast.success('Music saved to your projects.');
-            } catch (error) {
-                console.error('Failed to persist music project', error);
-                dispatch({ type: 'set-project-error', value: 'Saved locally, but backend project save failed.' });
-                toast.error('Saved locally, but backend project save failed.');
-            } finally {
-                dispatch({ type: 'set-project-saving', value: false });
-            }
-        };
-
-        void persistProject();
+        toast.success('Music draft saved locally.');
     };
 
     const handleReferenceUpload = async (file: File) => {
@@ -553,7 +462,7 @@ function MusicGeneratorPageContent() {
                     <h2 className="font-semibold text-muted-foreground">Music Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-4 gap-y-6">
+                <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6">
                     <button
                         onClick={() => dispatch({ type: 'set-content-tab', tab: MUSIC_CONTENT_TABS[2] })}
                         className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
@@ -568,7 +477,7 @@ function MusicGeneratorPageContent() {
                     </button>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Genre</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Genre</h4>
                         <div className="grid grid-cols-4 gap-1.5">
                             {genres.map((genre) => (
                                 <button
@@ -589,7 +498,7 @@ function MusicGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Mood</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Mood</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {moods.map((mood) => (
                                 <button
@@ -610,7 +519,7 @@ function MusicGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Instruments</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Instruments</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {instruments.map((inst) => (
                                 <button
@@ -630,7 +539,7 @@ function MusicGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Duration</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Duration</h4>
                         <div className="flex items-center gap-1.5">
                             {['15', '30', '60', '120', '180'].map((duration) => (
                                 <button
@@ -651,7 +560,7 @@ function MusicGeneratorPageContent() {
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Tempo</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Tempo</Label>
                             <span className="text-[11px] font-mono text-foreground">{state.tempo} BPM</span>
                         </div>
                         <Slider
@@ -664,7 +573,7 @@ function MusicGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Description</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Description</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
@@ -676,7 +585,7 @@ function MusicGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Reference (Optional)</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Reference (Optional)</h4>
                         <button
                             type="button"
                             onClick={() => dispatch({ type: 'set-audio-picker-open', value: true })}
@@ -734,20 +643,19 @@ function MusicGeneratorPageContent() {
                         <span className="font-medium text-foreground">{parseInt(state.duration) <= 30 ? '2' : parseInt(state.duration) <= 60 ? '4' : '8'} Credits</span>
                     </div>
                     <div className="flex gap-2">
-                        <Button
-                            variant="outline"
-                            onClick={handleReset}
-                            disabled={isProjectBusy}
-                            className="h-12 flex-1 font-bold rounded-xl gap-2"
-                        >
+                    <Button
+                        variant="outline"
+                        onClick={handleReset}
+                        className="h-12 flex-1 font-bold rounded-xl gap-2"
+                    >
                             <Folder className="size-5" />
                             Reset
                         </Button>
-                        <Button
-                            onClick={handleGenerate}
-                            disabled={isGenerating || isProjectBusy || !state.prompt.trim()}
-                            className="h-12 flex-[2] font-bold rounded-xl gap-2"
-                        >
+                    <Button
+                        onClick={handleGenerate}
+                        disabled={isGenerating || !state.prompt.trim()}
+                        className="h-12 flex-[2] font-bold rounded-xl gap-2"
+                    >
                             {isGenerating ? (
                                 <><Loader2 className="size-5 animate-spin" /> Composing?</>
                             ) : (
@@ -795,16 +703,15 @@ function MusicGeneratorPageContent() {
                         ))}
                     </div>
                     <div className="flex items-center gap-3">
-                        {state.projectError && <span className="text-xs text-destructive">{state.projectError}</span>}
                         <Button
                             variant="outline"
                             size="sm"
-                            onClick={handleSaveProject}
-                            disabled={isProjectBusy || isGenerating}
+                            onClick={handleSaveDraft}
+                            disabled={isGenerating}
                             className="gap-2"
                         >
-                            {state.isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
-                            Save project
+                            <Folder className="size-4" />
+                            Save asset
                         </Button>
                     </div>
                 </div>

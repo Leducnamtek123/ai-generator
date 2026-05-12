@@ -10,6 +10,7 @@ import { LeonardoAdapter } from './adapters/leonardo.adapter';
 import { RunwayAdapter } from './adapters/runway.adapter';
 import { ElevenLabsAdapter } from './adapters/elevenlabs.adapter';
 import { FalAdapter } from './adapters/fal.adapter';
+import { KieAdapter } from './adapters/kie.adapter';
 
 /**
  * Provider Registry - Smart factory for selecting the right AI provider
@@ -30,6 +31,7 @@ export class ProviderRegistry {
     private readonly runwayAdapter: RunwayAdapter,
     private readonly elevenlabsAdapter: ElevenLabsAdapter,
     private readonly falAdapter: FalAdapter,
+    private readonly kieAdapter: KieAdapter,
   ) {
     this.providers.set('replicate', replicateAdapter);
     this.providers.set('stability', stabilityAdapter);
@@ -39,6 +41,7 @@ export class ProviderRegistry {
     this.providers.set('runway', runwayAdapter);
     this.providers.set('elevenlabs', elevenlabsAdapter);
     this.providers.set('fal', falAdapter);
+    this.providers.set('kie', kieAdapter);
 
     this.logger.log(`Registered ${this.providers.size} AI providers: ${this.listProviders().join(', ')}`);
   }

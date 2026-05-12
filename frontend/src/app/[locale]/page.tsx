@@ -18,7 +18,7 @@ import {
   Zap,
 } from "lucide-react";
 import { m, useScroll, useSpring } from "framer-motion";
-import { useLocale, useMessages } from "next-intl";
+import { useLocale, useMessages, useTranslations } from "next-intl";
 
 import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { cn } from "@/lib/utils";
@@ -312,6 +312,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
   const pathname = usePathname();
   const messages = useMessages() as { Landing?: typeof LANDING_COPY.en };
   const locale = useLocale() as keyof typeof LANDING_COPY;
+  const tLayout = useTranslations("Layout");
   const copy = messages.Landing ?? LANDING_COPY[locale] ?? LANDING_COPY.en;
   const landingConfig = useSiteConfig("landing", locale);
   const landingContent = mergeDeep(
@@ -416,11 +417,11 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               />
             </div>
             <div className="leading-none">
-              <div className="text-lg font-black tracking-[-0.04em] uppercase sm:text-xl">
+              <div className="text-lg font-black tracking-[-0.04em] sm:text-xl">
                 PaintAI
               </div>
-              <div className="text-[10px] font-semibold tracking-[0.32em] text-white/40 uppercase">
-                Your paint, your choice
+              <div className="text-[10px] font-semibold text-white/40">
+                {tLayout("brandTagline")}
               </div>
             </div>
           </Link>
@@ -430,7 +431,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <a
                 key={link.label}
                 href={link.href}
-                className="text-xs font-semibold tracking-[0.28em] text-white/48 uppercase transition-colors hover:text-white"
+                className="text-xs font-semibold text-white/48 transition-colors hover:text-white"
               >
                 {link.label}
               </a>
@@ -467,7 +468,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
           <div className="grid items-start gap-10 lg:grid-cols-[0.92fr_1.08fr]">
             <div className="space-y-7 pt-2">
               <div className="space-y-4">
-                <h1 className="max-w-[10ch] text-[clamp(3.2rem,6vw,7rem)] leading-[0.86] font-semibold tracking-[-0.08em] text-balance uppercase sm:max-w-[9ch]">
+                <h1 className="max-w-[10ch] text-[clamp(3.2rem,6vw,7rem)] leading-[0.86] font-semibold tracking-[-0.08em] text-balance sm:max-w-[9ch]">
                   {copy.hero.title[0]}
                   <span className="block text-white">{copy.hero.title[1]}</span>
                   <span className="block text-sky-300">
@@ -528,7 +529,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               <div className="relative overflow-hidden rounded-[2rem] border border-white/10 bg-[#0c0f14] shadow-[0_40px_120px_rgba(0,0,0,0.55)]">
                 <div className="flex flex-col gap-3 border-b border-white/8 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <div className="text-[10px] font-semibold tracking-[0.34em] text-white/38 uppercase">
+                    <div className="text-[10px] font-semibold text-white/38">
                       {copy.workspace.creative}
                     </div>
                     <div className="mt-1 max-w-[22ch] text-sm font-semibold text-white/88 sm:max-w-none">
@@ -548,7 +549,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
                       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
                         <div className="min-w-0 flex-1">
-                          <div className="text-[10px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                          <div className="text-[10px] font-semibold text-white/38">
                             {copy.workspace.prompt}
                           </div>
                           <p className="mt-2 max-w-[28ch] text-sm leading-6 text-white/80">
@@ -565,7 +566,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     </div>
 
                     <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.03] p-4">
-                      <div className="text-[10px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                      <div className="text-[10px] font-semibold text-white/38">
                         {copy.workspace.selected}
                       </div>
                       <div className="mt-3 flex flex-wrap gap-2">
@@ -591,7 +592,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                           key={stat.label}
                           className="min-w-0 rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-3 sm:p-4"
                         >
-                          <div className="text-[10px] font-semibold tracking-[0.22em] text-white/36 uppercase">
+                          <div className="text-[10px] font-semibold text-white/36">
                             {stat.label}
                           </div>
                           <div className="mt-2 text-lg leading-none font-black tracking-[-0.04em] sm:text-xl">
@@ -615,7 +616,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                       <div className="absolute inset-0 bg-gradient-to-t from-black/72 via-black/18 to-transparent" />
                       <div className="absolute right-4 bottom-4 left-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-4">
                         <div className="min-w-0">
-                          <div className="text-[10px] font-semibold tracking-[0.28em] text-white/46 uppercase">
+                          <div className="text-[10px] font-semibold text-white/46">
                             {copy.workspace.generated}
                           </div>
                           <div className="mt-1 max-w-[16ch] text-lg leading-tight font-bold tracking-[-0.03em]">
@@ -633,7 +634,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
 
                     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                       <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4">
-                        <div className="text-[10px] font-semibold tracking-[0.28em] text-white/36 uppercase">
+                        <div className="text-[10px] font-semibold text-white/36">
                           {copy.workspace.queue}
                         </div>
                         <div className="mt-2 flex items-center gap-2 text-sm text-white/72">
@@ -642,7 +643,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                         </div>
                       </div>
                       <div className="rounded-[1.35rem] border border-white/10 bg-white/[0.03] p-4">
-                        <div className="text-[10px] font-semibold tracking-[0.28em] text-white/36 uppercase">
+                        <div className="text-[10px] font-semibold text-white/36">
                           {copy.workspace.nextAction}
                         </div>
                         <div className="mt-2 text-sm text-white/72">
@@ -660,7 +661,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 lg:py-10">
           <div className="grid gap-4 rounded-[2rem] border border-white/8 bg-white/[0.03] p-5 sm:p-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div className="rounded-[1.35rem] border border-white/6 bg-black/20 p-5">
-              <div className="text-[10px] font-semibold tracking-[0.34em] text-white/34 uppercase">
+              <div className="text-[10px] font-semibold text-white/34">
                 Trusted by teams at
               </div>
               <div className="mt-4 grid gap-3 rounded-[1.6rem] border border-white/8 bg-white/[0.03] p-3 sm:grid-cols-2 lg:grid-cols-5">
@@ -672,7 +673,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   >
                     <span
                       className={cn(
-                        "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black tracking-[0.08em] text-white uppercase ring-1 ring-white/10",
+                        "flex h-8 w-8 items-center justify-center rounded-full text-[11px] font-black tracking-[0.08em] text-white ring-1 ring-white/10",
                         index === 0 && "bg-sky-500/35",
                         index === 1 && "bg-emerald-500/35",
                         index === 2 && "bg-rose-500/35",
@@ -714,10 +715,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         >
           <div className="mb-10 flex items-end justify-between gap-6">
             <div>
-              <div className="text-[11px] font-semibold tracking-[0.34em] text-sky-300/80 uppercase">
-                Your creativity
-              </div>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
                 Supercharged.
               </h2>
             </div>
@@ -741,7 +739,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   <div className="flex size-12 items-center justify-center rounded-2xl border border-white/10 bg-white/6 text-sky-200">
                     <StepIcon className="size-5" />
                   </div>
-                  <div className="mt-5 text-[11px] font-semibold tracking-[0.28em] text-white/34 uppercase">
+                  <div className="mt-5 text-sm font-medium text-white/48">
                     Step {String(index + 1).padStart(2, "0")}
                   </div>
                   <h3 className="mt-3 text-2xl font-semibold tracking-[-0.04em]">
@@ -762,10 +760,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         >
           <div className="mb-10 flex items-end justify-between gap-6">
             <div>
-              <div className="text-[11px] font-semibold tracking-[0.34em] text-amber-300/80 uppercase">
-                Powerful tools
-              </div>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
                 Limitless potential.
               </h2>
             </div>
@@ -824,10 +819,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="mb-10 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
             <div>
-              <div className="text-[11px] font-semibold tracking-[0.34em] text-cyan-300/80 uppercase">
-                Inspire
-              </div>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
                 Create. Repeat.
               </h2>
             </div>
@@ -839,7 +831,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   type="button"
                   onClick={() => setSelectedGalleryTab(tab)}
                   className={cn(
-                    "rounded-full border px-4 py-2 text-xs font-semibold tracking-[0.28em] uppercase transition-colors",
+                    "rounded-full border px-4 py-2 text-xs font-semibold transition-colors",
                     selectedGalleryTab === tab
                       ? "border-white/20 bg-white text-black"
                       : "border-white/8 bg-white/[0.03] text-white/58 hover:bg-white/8 hover:text-white",
@@ -869,7 +861,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/78 via-black/16 to-transparent" />
                 <div className="absolute inset-x-0 bottom-0 p-5">
-                  <div className="text-[10px] font-semibold tracking-[0.28em] text-white/42 uppercase">
+                  <div className="text-[10px] font-semibold text-white/42">
                     {item.tag}
                   </div>
                   <h3 className="mt-2 text-lg font-semibold tracking-[-0.03em]">
@@ -887,10 +879,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         >
           <div className="mb-10 flex items-end justify-between gap-6">
             <div>
-              <div className="text-[11px] font-semibold tracking-[0.34em] text-violet-300/80 uppercase">
-                Pricing
-              </div>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
                 Choose the subscription plan that fits you.
               </h2>
             </div>
@@ -903,10 +892,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
           <div className="space-y-10">
             <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <div className="text-[11px] font-semibold tracking-[0.34em] text-white/42 uppercase">
-                  Plan type
-                </div>
-                <h3 className="mt-2 text-2xl font-semibold tracking-[-0.05em] uppercase">
+                <h3 className="text-2xl font-semibold tracking-[-0.05em]">
                   Choose the right billing scope
                 </h3>
                 <p className="mt-3 max-w-2xl text-sm leading-7 text-white/56">
@@ -919,8 +905,8 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 <button
                   type="button"
                   onClick={() => setSelectedPricingSegment("individual")}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors",
+                    className={cn(
+                    "rounded-full px-4 py-2 text-xs font-semibold transition-colors",
                     selectedPricingSegment === "individual"
                       ? "bg-white text-black"
                       : "text-white/60 hover:text-white",
@@ -931,8 +917,8 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 <button
                   type="button"
                   onClick={() => setSelectedPricingSegment("team")}
-                  className={cn(
-                    "rounded-full px-4 py-2 text-xs font-semibold tracking-[0.22em] uppercase transition-colors",
+                    className={cn(
+                    "rounded-full px-4 py-2 text-xs font-semibold transition-colors",
                     selectedPricingSegment === "team"
                       ? "bg-white text-black"
                       : "text-white/60 hover:text-white",
@@ -949,7 +935,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   ? "Personal billing: one seat, one wallet, one owner."
                   : "Workspace billing: shared credits, seats, and workspace admin controls."}
               </span>
-              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold tracking-[0.28em] uppercase text-white/50">
+              <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[10px] font-semibold text-white/50">
                 {visiblePricingPlans.length} plans
               </span>
             </div>
@@ -977,7 +963,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                   {plan.featured && (
                     <div
                       className={cn(
-                        "absolute top-5 right-5 rounded-full border px-3 py-1 text-[10px] font-semibold tracking-[0.28em] uppercase",
+                        "absolute top-5 right-5 rounded-full border px-3 py-1 text-sm font-medium",
                         selectedPricingSegment === "individual"
                           ? "border-sky-400/30 bg-sky-400/10 text-sky-200"
                           : "border-violet-400/30 bg-violet-400/10 text-violet-200",
@@ -988,12 +974,12 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                         : "Workspace favorite"}
                     </div>
                   )}
-                  <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[10px] font-semibold tracking-[0.24em] text-white/52 uppercase">
+                  <div className="mb-3 inline-flex rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-sm font-medium text-white/52">
                     {selectedPricingSegment === "individual"
                       ? "Personal plan"
                       : "Workspace plan"}
                   </div>
-                  <div className="text-[11px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                  <div className="text-sm font-medium text-white/52">
                     {plan.name}
                   </div>
                   <div className="mt-3 flex items-end gap-1">
@@ -1008,7 +994,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     {plan.summary}
                   </p>
                   <div className="mt-5 rounded-2xl border border-white/8 bg-black/20 p-4">
-                    <div className="text-[10px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                    <div className="text-sm font-medium text-white/52">
                       Included credits
                     </div>
                     <div className="mt-2 text-lg font-bold">
@@ -1032,7 +1018,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     ))}
                   </ul>
                   <div className="mt-6 rounded-2xl border border-white/8 bg-black/20 p-4">
-                    <div className="text-[10px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                    <div className="text-sm font-medium text-white/52">
                       Approximate usage
                     </div>
                     <div className="mt-3 space-y-2 text-sm text-white/72">
@@ -1063,7 +1049,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 key={pack.id}
                 className="rounded-[1.8rem] border border-white/8 bg-white/[0.03] p-5"
               >
-                <div className="text-[11px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                <div className="text-[11px] font-semibold text-white/38">
                   {pack.name}
                 </div>
                 <div className="mt-3 flex items-end gap-2">
@@ -1110,12 +1096,9 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         <section className="mx-auto max-w-7xl px-4 py-24 sm:px-6 lg:px-8">
           <div className="mb-10 flex items-end justify-between gap-6">
             <div>
-              <div className="text-[11px] font-semibold tracking-[0.34em] text-emerald-300/80 uppercase">
-                Loved by teams
-              </div>
-              <h2 className="mt-3 text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
-                Shipping every week.
-              </h2>
+                <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
+                  Shipping every week.
+                </h2>
             </div>
           </div>
 
@@ -1140,7 +1123,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                     <div className="text-sm font-semibold">
                       {testimonial.name}
                     </div>
-                    <div className="text-xs tracking-[0.24em] text-white/38 uppercase">
+                    <div className="text-sm font-medium text-white/52">
                       {testimonial.role}
                     </div>
                   </div>
@@ -1156,10 +1139,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
         >
           <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div className="space-y-6">
-              <div className="text-[11px] font-semibold tracking-[0.34em] text-amber-200/80 uppercase">
-                FAQ
-              </div>
-              <h2 className="text-3xl font-semibold tracking-[-0.05em] uppercase sm:text-4xl">
+              <h2 className="text-3xl font-semibold tracking-[-0.05em] sm:text-4xl">
                 Everything you need to know.
               </h2>
               <p className="max-w-xl text-sm leading-7 text-white/56">
@@ -1192,12 +1172,9 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.08),transparent_40%)]" />
             <div className="relative grid gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
               <div className="space-y-6">
-                <div className="text-[11px] font-semibold tracking-[0.34em] text-white/42 uppercase">
-                  Final CTA
-                </div>
-                <h2 className="max-w-[12ch] text-4xl font-semibold tracking-[-0.06em] uppercase sm:text-5xl lg:text-6xl">
-                  Ready to create something incredible?
-                </h2>
+              <h2 className="max-w-[12ch] text-4xl font-semibold tracking-[-0.06em] sm:text-5xl lg:text-6xl">
+                Ready to create something incredible?
+              </h2>
                 <p className="max-w-2xl text-sm leading-7 text-white/68 sm:text-base">
                   The page now closes with the same kind of punchy conversion
                   block shown in the reference.
@@ -1260,11 +1237,11 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
                 />
               </div>
               <div className="leading-none">
-                <div className="text-lg font-black tracking-[-0.04em] uppercase">
+                <div className="text-lg font-black tracking-[-0.04em]">
                   PaintAI
                 </div>
-                <div className="text-[10px] font-semibold tracking-[0.32em] text-white/40 uppercase">
-                  Your paint, your choice
+                <div className="text-[10px] font-semibold text-white/40">
+                  {tLayout("brandTagline")}
                 </div>
               </div>
             </Link>
@@ -1305,7 +1282,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
               },
             ].map((group) => (
               <div key={group.title}>
-                <div className="text-[11px] font-semibold tracking-[0.28em] text-white/38 uppercase">
+                <div className="text-[11px] font-semibold text-white/38">
                   {group.title}
                 </div>
                 <ul className="mt-4 space-y-3">
@@ -1325,7 +1302,7 @@ export default function LandingPage({ initialSectionId }: LandingPageProps) {
           </div>
         </div>
 
-        <div className="border-t border-white/6 px-4 py-5 text-center text-[11px] font-semibold tracking-[0.28em] text-white/34 uppercase sm:px-6">
+        <div className="border-t border-white/6 px-4 py-5 text-center text-[11px] font-semibold text-white/34 sm:px-6">
           © 2026 PaintAI. Built for modern creative teams.
         </div>
       </footer>

@@ -71,7 +71,7 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
                 }}
             >
                 <div
-                    className="absolute bottom-0 right-0 size-[15%] bg-zinc-950/10"
+                    className="absolute bottom-0 right-0 size-[15%] bg-background/10"
                     style={{
                         clipPath: 'polygon(0% 0%, 100% 100%, 0% 100%)'
                     }}
@@ -85,7 +85,7 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
 
                 {!data.isPreview && (
                     <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="flex bg-zinc-950/10 rounded-full p-1 backdrop-blur-sm">
+                        <div className="flex rounded-full bg-background/10 p-1 backdrop-blur-sm">
                             {Object.values(NoteColor).map((noteColor) => (
                                 <button
                                     key={noteColor}
@@ -95,9 +95,9 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
                                         handleColorChange(noteColor);
                                     }}
                                     className={cn(
-                                        "size-3 rounded-full mx-0.5 border border-black/10",
+                                        "mx-0.5 size-3 rounded-full border border-border/40",
                                         COLORS[noteColor].split(' ')[0],
-                                        color === noteColor && "ring-1 ring-black/50 scale-125"
+                                        color === noteColor && "scale-125 ring-1 ring-foreground/30"
                                     )}
                                 />
                             ))}
@@ -113,7 +113,7 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
                     onClick={() => setIsEditing(true)}
                     placeholder="Add a note?"
                     className={cn(
-                        "w-full h-full bg-transparent border-none resize-none focus:outline-none placeholder:text-black/30 font-handwriting",
+                        "h-full w-full resize-none border-none bg-transparent font-handwriting focus:outline-none placeholder:text-foreground/40",
                         data.isPreview ? "text-[8px] pointer-events-none" : "text-lg leading-relaxed"
                     )}
                     style={{ fontFamily: '"Comic Sans MS", "Chalkboard SE", "Marker Felt", sans-serif' }}
@@ -121,7 +121,7 @@ export function StickyNoteNode({ id, data, selected }: StickyNoteNodeProps) {
                 />
 
                 {!data.isPreview && (
-                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] text-black/40 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 text-[10px] text-foreground/40 opacity-0 transition-opacity group-hover:opacity-100">
                         <Palette className="size-3" />
                         Sticky note
                     </div>

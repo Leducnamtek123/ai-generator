@@ -36,29 +36,29 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-[100vw] w-screen h-screen m-0 p-0 bg-zinc-950/95 border-none flex flex-col gap-0 z-[100]">
-                <DialogHeader className="h-14 px-6 flex flex-row items-center justify-between border-b border-white/5 bg-[#0F1014]  gap-y-0">
-                    <DialogTitle className="text-sm font-medium text-white">Image Editor</DialogTitle>
+            <DialogContent className="z-[100] m-0 flex h-screen w-screen max-w-[100vw] flex-col gap-0 border-none bg-background/95 p-0">
+                <DialogHeader className="flex h-14 flex-row items-center justify-between border-b border-border bg-card/80 px-6 gap-y-0">
+                    <DialogTitle className="text-sm font-medium text-foreground">Image Editor</DialogTitle>
                 </DialogHeader>
 
                 {/* Main Canvas */}
-                <div className="flex-1 relative flex items-center justify-center p-8 overflow-hidden bg-[#050505]">
+                <div className="relative flex flex-1 items-center justify-center overflow-hidden bg-background p-8">
                     {/* Image Container */}
                     <div className="relative w-full max-w-5xl h-[80vh] shadow-2xl">
                         <Image
                             src={imageUrl}
                             alt="Editing"
                             fill
-                            className="object-contain rounded-lg border border-white/5"
+                            className="object-contain rounded-lg border border-border"
                             sizes="100vw"
                         />
 
                         {/* Processing Overlay */}
                         {isProcessing && (
-                            <div className="absolute inset-0 bg-zinc-950/50 backdrop-blur-sm flex items-center justify-center rounded-lg">
+                            <div className="absolute inset-0 flex items-center justify-center rounded-lg bg-background/70 backdrop-blur-sm">
                                 <div className="flex flex-col items-center gap-3">
                                     <Wand2 className="size-8 text-blue-500 animate-pulse" />
-                                    <span className="text-sm text-white font-medium">Generating details?</span>
+                                    <span className="text-sm font-medium text-foreground">Generating details?</span>
                                 </div>
                             </div>
                         )}
@@ -66,14 +66,14 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
 
                     {/* Bottom Floating Bar (Freepik style) */}
                     <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-full max-w-xl">
-                        <div className="bg-[#1A1B1F] border border-white/10 rounded-2xl shadow-2xl p-3 flex flex-col gap-3 backdrop-blur-xl">
+                        <div className="flex flex-col gap-3 rounded-2xl border border-border bg-card/90 p-3 shadow-2xl backdrop-blur-xl">
                             {/* Prompt Input */}
                             <div className="relative">
                                 <Input
                                     placeholder="What do you want to change?"
                                     value={prompt}
                                     onChange={(e) => setPrompt(e.target.value)}
-                                    className="w-full bg-zinc-950/30 border border-white/5 rounded-xl pl-4 pr-12 py-6 text-sm text-white focus:ring-1 focus:ring-blue-500/50 placeholder:text-white/30 h-auto"
+                                    className="h-auto w-full rounded-xl border border-border bg-background/60 py-6 pl-4 pr-12 text-sm text-foreground placeholder:text-muted-foreground/60 focus:ring-1 focus:ring-blue-500/50"
                                     onKeyDown={(e) => e.key === 'Enter' && handleEdit()}
                                 />
                                 <Button
@@ -93,7 +93,7 @@ export function ImageEditorModal({ isOpen, onClose, imageUrl, onSave }: ImageEdi
                                     <ToolButton icon={Eraser} label="Remove" />
                                     <ToolButton icon={Crop} label="Crop" />
                                 </div>
-                                <div className="w-px h-4 bg-white/10 mx-2" />
+                                <div className="mx-2 h-4 w-px bg-border" />
                                 <div className="flex items-center gap-1">
                                     <ToolButton icon={Maximize2} label="Upscale" />
                                     <ToolButton icon={MoreHorizontal} />
@@ -113,7 +113,7 @@ function ToolButton({ icon: Icon, label, active, onClick }: { icon: React.Compon
             onClick={onClick}
             className={cn(
                 "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors",
-                active ? "bg-blue-500/10 text-blue-400" : "hover:bg-white/5 text-white/60 hover:text-white"
+                active ? "bg-blue-500/10 text-blue-500" : "hover:bg-accent text-muted-foreground hover:text-foreground"
             )}
         >
             <Icon className="size-3.5" />

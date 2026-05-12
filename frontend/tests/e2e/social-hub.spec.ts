@@ -9,33 +9,27 @@ async function signIn(page: Page) {
 }
 
 test.describe('Social Hub', () => {
-    test('should open the overview, publish composer, and inbox after sign-in', async ({ page }) => {
+    test('should open the three social hub surfaces after sign-in', async ({ page }) => {
         await signIn(page);
 
         await page.goto('/social');
-        await expect(page.getByRole('heading', { name: 'Facebook-first multichannel workspace' })).toBeVisible();
-        await expect(page.getByRole('link', { name: 'Open Publish' }).first()).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Choose a workspace surface' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open Dashboard' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open Channels' })).toBeVisible();
+        await expect(page.getByRole('link', { name: 'Open Calendar' })).toBeVisible();
 
-        await page.goto('/social/publish');
-        await expect(page.getByRole('heading', { name: 'Create Post' })).toBeVisible();
-        await expect(page.getByText('Publishing checklist')).toBeVisible();
-
-        await page.goto('/social/inbox');
-        await expect(page.getByRole('heading', { name: 'Social Inbox' })).toBeVisible();
-        await expect(page.getByText('Unified inbox: filter, reply, mark follow-up, and close the loop.')).toBeVisible();
-    });
-
-    test('should open channels and calendar after sign-in', async ({ page }) => {
-        await signIn(page);
+        await page.goto('/social/dashboard');
+        await expect(page.getByRole('heading', { name: 'Dashboard' })).toBeVisible();
+        await expect(page.getByText('Engagement overview')).toBeVisible();
+        await expect(page.getByRole('button', { name: '7 Days' })).toBeVisible();
 
         await page.goto('/social/channels');
-        await expect(page.getByRole('heading', { name: 'Social Channels' })).toBeVisible();
-        await expect(page.getByText('Facebook-first onboarding')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Channels' })).toBeVisible();
+        await expect(page.getByText('Pick a provider and connect it here')).toBeVisible();
         await expect(page.getByRole('button', { name: 'Connect Account' }).first()).toBeVisible();
 
         await page.goto('/social/calendar');
-        await expect(page.getByRole('heading', { name: 'Social Calendar' })).toBeVisible();
-        await expect(page.getByText('Planner snapshot')).toBeVisible();
+        await expect(page.getByRole('heading', { name: 'Calendar' })).toBeVisible();
         await expect(page.getByRole('button', { name: 'New Post' })).toBeVisible();
     });
 });

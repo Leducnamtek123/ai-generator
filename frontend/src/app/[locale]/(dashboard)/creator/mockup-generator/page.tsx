@@ -33,6 +33,39 @@ const scenes = [
     { id: 'hand', label: 'Hand-held', description: 'Person holding device' },
 ];
 
+const mockupStarterPresets = [
+    {
+        id: 'mobile-product',
+        label: 'Mobile product',
+        description: 'iPhone in a clean minimal scene for app store or landing page visuals.',
+        category: 'phone',
+        device: 'iPhone 15 Pro',
+        scene: 'minimal',
+        angle: 0,
+        shadow: 55,
+    },
+    {
+        id: 'desktop-dashboard',
+        label: 'Desktop dashboard',
+        description: 'Laptop mockup on an office desk for B2B or SaaS product screenshots.',
+        category: 'laptop',
+        device: 'MacBook Pro 16"',
+        scene: 'office',
+        angle: -5,
+        shadow: 45,
+    },
+    {
+        id: 'premium-watch',
+        label: 'Premium watch',
+        description: 'Watch mockup with a dark premium mood for wearables and fitness apps.',
+        category: 'watch',
+        device: 'Apple Watch',
+        scene: 'dark',
+        angle: 8,
+        shadow: 60,
+    },
+] as const;
+
 type MockupState = {
     uploadedImage: string | null;
     selectedCategory: string;
@@ -189,6 +222,19 @@ function MockupGeneratorPageContent() {
         } finally {
             dispatch({ type: 'setGenerating', isGenerating: false });
         }
+    };
+
+    const handleLoadStarterPreset = (presetId: string) => {
+        const preset = mockupStarterPresets.find((item) => item.id === presetId);
+        if (!preset) {
+            return;
+        }
+
+        dispatch({ type: 'setCategory', selectedCategory: preset.category, selectedDevice: preset.device });
+        dispatch({ type: 'setScene', selectedScene: preset.scene });
+        dispatch({ type: 'setAngle', angle: preset.angle });
+        dispatch({ type: 'setShadow', shadow: preset.shadow });
+        dispatch({ type: 'clearResults' });
     };
 
     const handleReset = () => {
@@ -373,9 +419,9 @@ function MockupGeneratorPageContent() {
                     <h2 className="font-semibold text-muted-foreground">Mockup Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Your Screenshot</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Your Screenshot</h4>
                         <button
                             type="button"
                             onClick={() => fileInputRef.current?.click()}
@@ -389,8 +435,8 @@ function MockupGeneratorPageContent() {
                                         <Upload className="size-5 text-muted-foreground" />
                                     </div>
                                     <div className="text-center">
-                                        <p className="text-xs font-medium">Upload Screenshot</p>
-                                        <p className="text-[10px] text-muted-foreground mt-1">App or website screenshot</p>
+                                        <p className="text-xs font-medium">Upload product screenshot</p>
+                                        <p className="text-[10px] text-muted-foreground mt-1">Use an app, website, or dashboard image</p>
                                     </div>
                                 </>
                             )}
@@ -399,7 +445,31 @@ function MockupGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Device</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Starter Setups</h4>
+                        <div className="space-y-2">
+                            {mockupStarterPresets.map((preset) => (
+                                <button
+                                    key={preset.id}
+                                    type="button"
+                                    onClick={() => handleLoadStarterPreset(preset.id)}
+                                    className="w-full rounded-xl border border-border bg-card p-3 text-left transition-all hover:border-primary/30 hover:bg-accent/60"
+                                >
+                                    <div className="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p className="text-sm font-medium">{preset.label}</p>
+                                            <p className="mt-1 text-[10px] text-muted-foreground">{preset.description}</p>
+                                        </div>
+                                        <span className="rounded-full bg-muted px-2 py-1 text-[8px] font-semibold text-muted-foreground">
+                                            {preset.category}
+                                        </span>
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Device</h4>
                         <div className="grid grid-cols-5 gap-1.5">
                             {mockupCategories.map((category) => (
                                 <button
@@ -433,7 +503,7 @@ function MockupGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Scene</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Scene</h4>
                         <div className="grid grid-cols-2 gap-1.5">
                             {scenes.map((scene) => (
                                 <button
@@ -454,7 +524,7 @@ function MockupGeneratorPageContent() {
                     <div className="space-y-5">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Rotation Angle</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Rotation Angle</Label>
                                 <span className="text-[11px] font-mono">{state.angle}°</span>
                             </div>
                             <Slider min={-45} max={45} step={5} value={[state.angle]} onValueChange={([v]) => dispatch({ type: 'setAngle', angle: v })} />
@@ -462,7 +532,7 @@ function MockupGeneratorPageContent() {
 
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Shadow</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Shadow</Label>
                                 <span className="text-[11px] font-mono">{state.shadow}%</span>
                             </div>
                             <Slider min={0} max={100} step={5} value={[state.shadow]} onValueChange={([v]) => dispatch({ type: 'setShadow', shadow: v })} />
@@ -487,7 +557,7 @@ function MockupGeneratorPageContent() {
                         {state.isGenerating ? (
                             <>
                                 <Loader2 className="size-5 animate-spin" />
-                                Generating?
+                                Generating mockups...
                             </>
                         ) : (
                             <>
@@ -517,7 +587,7 @@ function MockupGeneratorPageContent() {
                                 <div className="size-16 rounded-full border-4 border-muted border-t-primary animate-spin" />
                                 <Box className="size-6 text-muted-foreground absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
                             </div>
-                            <p className="text-sm text-muted-foreground animate-pulse">Generating mockups?</p>
+                            <p className="text-sm text-muted-foreground animate-pulse">Generating mockups...</p>
                         </div>
                     ) : state.results.length > 0 ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl mx-auto">
@@ -538,8 +608,8 @@ function MockupGeneratorPageContent() {
                                 <Box className="size-8 text-muted-foreground" />
                             </div>
                             <div>
-                                <h3 className="font-semibold">Create Product Mockups</h3>
-                                <p className="text-sm text-muted-foreground mt-1">Upload a screenshot and choose a device to create professional mockups</p>
+                                <h3 className="font-semibold">Start from a mockup setup</h3>
+                                <p className="text-sm text-muted-foreground mt-1">Upload a screenshot, choose a starter, and generate a product-ready mockup</p>
                             </div>
                         </div>
                     )}

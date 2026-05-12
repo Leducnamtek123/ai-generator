@@ -30,7 +30,7 @@ const TOOL_OPTIONS: Array<{ value: ToolType; label: string; description: string 
 export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
     return (
         <div className="space-y-4">
-            <div className="p-3 bg-fuchsia-500/10 border border-fuchsia-500/20 rounded-lg">
+            <div className="rounded-lg border border-fuchsia-500/20 bg-fuchsia-500/10 p-3">
                 <div className="flex items-start gap-2">
                     <Wand2 className="size-4 text-fuchsia-300 shrink-0 mt-0.5" />
                     <div>
@@ -43,7 +43,7 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Tool Type</div>
+                <div className="text-xs font-medium text-muted-foreground">Tool Type</div>
                 <div className="grid grid-cols-2 gap-2">
                     {TOOL_OPTIONS.map((tool) => (
                         <Button
@@ -54,7 +54,7 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
                                 'h-auto py-2 px-3 text-left flex flex-col items-start gap-1',
                                 (nodeData.toolType as string) === tool.value
                                     ? 'bg-fuchsia-600 hover:bg-fuchsia-500 border-none'
-                                    : 'bg-white/5 border-white/10 hover:bg-white/10 text-white/70',
+                                    : 'bg-background/60 border-border hover:bg-accent text-muted-foreground',
                             )}
                         >
                             <span className="text-xs font-medium">{tool.label}</span>
@@ -65,43 +65,43 @@ export function ToolNodePanel({ nodeData, onChange }: NodePanelProps) {
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Prompt / Text</div>
+                <div className="text-xs font-medium text-muted-foreground">Prompt / Text</div>
                 <textarea
                     value={(nodeData.prompt as string) || ''}
                     onChange={(e) => onChange('prompt', e.target.value)}
-                    className="w-full min-h-[92px] rounded-lg bg-zinc-950/20 border border-white/10 p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 resize-none"
+                    className="min-h-[92px] w-full resize-none rounded-lg border border-border bg-background/60 p-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                     placeholder="Describe what you want to create?"
                 />
             </div>
 
             <div className="grid grid-cols-1 gap-2">
                 <div className="space-y-2">
-                    <div className="text-xs font-medium text-white/60">Primary URL</div>
+                    <div className="text-xs font-medium text-muted-foreground">Primary URL</div>
                     <input
                         value={(nodeData.primaryUrl as string) || ''}
                         onChange={(e) => onChange('primaryUrl', e.target.value)}
-                        className="w-full h-11 rounded-lg bg-zinc-950/20 border border-white/10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
+                        className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                         placeholder="Image / video / design / audio URL"
                     />
                 </div>
 
                 <div className="space-y-2">
-                    <div className="text-xs font-medium text-white/60">Secondary URL</div>
+                    <div className="text-xs font-medium text-muted-foreground">Secondary URL</div>
                     <input
                         value={(nodeData.secondaryUrl as string) || ''}
                         onChange={(e) => onChange('secondaryUrl', e.target.value)}
-                        className="w-full h-11 rounded-lg bg-zinc-950/20 border border-white/10 px-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
+                        className="h-11 w-full rounded-lg border border-border bg-background/60 px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                         placeholder="Audio / end frame / extra input URL"
                     />
                 </div>
             </div>
 
             <div className="space-y-2">
-                <div className="text-xs font-medium text-white/60">Advanced Params JSON</div>
+                <div className="text-xs font-medium text-muted-foreground">Advanced Params JSON</div>
                 <textarea
                     value={(nodeData.advancedParams as string) || '{}'}
                     onChange={(e) => onChange('advancedParams', e.target.value)}
-                    className="w-full min-h-[120px] rounded-lg bg-zinc-950/20 border border-white/10 p-3 font-mono text-[11px] text-white focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50 resize-none"
+                    className="min-h-[120px] w-full resize-none rounded-lg border border-border bg-background/60 p-3 font-mono text-[11px] text-foreground focus:outline-none focus:ring-1 focus:ring-fuchsia-500/50"
                     placeholder='{"model":"seedream"}'
                 />
             </div>

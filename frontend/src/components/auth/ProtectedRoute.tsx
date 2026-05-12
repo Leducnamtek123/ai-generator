@@ -29,7 +29,11 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     }, [typedSession, status, hasAccessToken, hasAuthError]);
 
     if (loading) {
-        return <div className="flex items-center justify-center min-h-screen bg-[#0B0C0E]"><div className="animate-spin size-6 border-2 border-primary border-t-transparent rounded-full" /></div>;
+        return (
+            <div className="flex min-h-screen items-center justify-center bg-background">
+                <div className="size-6 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            </div>
+        );
     }
 
     if (!typedSession || !hasAccessToken || hasAuthError) {

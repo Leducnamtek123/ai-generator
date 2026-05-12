@@ -27,5 +27,12 @@ export type AdminNotificationFeed = {
 };
 
 export const adminNotificationApi = {
-  getNotifications: () => get<AdminNotificationFeed>('/admin/notifications'),
+  getNotifications: (params?: { q?: string; severity?: AdminNotificationSeverity | 'all'; category?: string | 'all' }) => {
+    const query = new URLSearchParams();
+    if (params?.q) query.set('q', params.q);
+    if (params?.severity && params.severity !== 'all') query.set('severity', params.severity);
+    if (params?.category && params.category !== 'all') query.set('category', params.category);
+    const suffix = query.toString() ? `?${query.toString()}` : '';
+    return get<AdminNotificationFeed>(`/admin/notifications${suffix}`);
+  },
 };

@@ -14,6 +14,7 @@ import { get as apiGet, del as apiDel } from '@/lib/api';
 import { toast } from 'sonner';
 import { Generation } from '@/stores/generation-store';
 import { AsyncStateSurface } from '@/components/common/AsyncStateSurface';
+import { HistorySkeleton } from '@/components/common/loading-skeletons';
 
 type FilterType = 'all' | 'image' | 'video' | 'audio' | 'upscale';
 
@@ -268,12 +269,7 @@ export default function HistoryPage() {
 
                 {/* Content */}
                 {state.isLoading && state.generations.length === 0 ? (
-                    <AsyncStateSurface
-                        status="loading"
-                        title="Loading history"
-                        message="Fetching your recent generations."
-                        compact
-                    />
+                    <HistorySkeleton />
                 ) : state.fetchError && state.generations.length === 0 ? (
                     <AsyncStateSurface
                         status="error"
@@ -327,10 +323,10 @@ export default function HistoryPage() {
                                                 {/* Info */}
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex items-center gap-2 mb-1">
-                                                        <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider border border-border px-1.5 py-0.5 rounded">
+                                                        <span className="text-xs font-medium text-muted-foreground border border-border px-1.5 py-0.5 rounded">
                                                             {gen.type}
                                                         </span>
-                                                        <span className={cn("text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded", getStatusColor(gen.status))}>
+                                                        <span className={cn("text-xs font-medium px-1.5 py-0.5 rounded", getStatusColor(gen.status))}>
                                                             {gen.status}
                                                         </span>
                                                     </div>

@@ -5,6 +5,7 @@ import { MoreHorizontal, Folder, ExternalLink } from "lucide-react";
 import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -33,6 +34,16 @@ export const columns: ColumnDef<Project>[] = [
                         >
                             {project.name}
                         </Link>
+                        <span
+                            className={cn(
+                                "mt-1 inline-flex w-fit items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold",
+                                project.workspaceId
+                                    ? "border-primary/20 bg-primary/10 text-primary"
+                                    : "border-border bg-muted text-muted-foreground"
+                            )}
+                        >
+                            {project.workspaceId ? "Workspace" : "Personal"}
+                        </span>
                     </div>
                 </div>
             );

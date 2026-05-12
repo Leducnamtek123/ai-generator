@@ -4,30 +4,30 @@ export interface UpdateMemberData {
   role: "ADMIN" | "MEMBER" | "BILLING";
 }
 
-// Matches: Controller path 'orgs/:orgSlug/members', version '1'
+// Matches: Controller path 'workspaces/:workspaceSlug/members', version '1'
 export const memberApi = {
-  // GET /orgs/:orgSlug/members
-  list: async (orgSlug: string) => {
-    const res = await api.get(`/orgs/${orgSlug}/members`);
+  // GET /workspaces/:workspaceSlug/members
+  list: async (workspaceSlug: string) => {
+    const res = await api.get(`/workspaces/${workspaceSlug}/members`);
     return res.data;
   },
 
-  // PATCH /orgs/:orgSlug/members/:memberId
+  // PATCH /workspaces/:workspaceSlug/members/:memberId
   updateRole: async (
-    orgSlug: string,
+    workspaceSlug: string,
     memberId: string,
     data: UpdateMemberData
   ) => {
     const res = await api.patch(
-      `/orgs/${orgSlug}/members/${memberId}`,
+      `/workspaces/${workspaceSlug}/members/${memberId}`,
       data
     );
     return res.data;
   },
 
-  // DELETE /orgs/:orgSlug/members/:memberId
-  remove: async (orgSlug: string, memberId: string) => {
-    const res = await api.delete(`/orgs/${orgSlug}/members/${memberId}`);
+  // DELETE /workspaces/:workspaceSlug/members/:memberId
+  remove: async (workspaceSlug: string, memberId: string) => {
+    const res = await api.delete(`/workspaces/${workspaceSlug}/members/${memberId}`);
     return res.data;
   },
 };

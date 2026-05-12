@@ -1,0 +1,49 @@
+{
+  "Notifications": {
+    "title": "Thông báo",
+    "notificationCenter": "Trung tâm thông báo",
+    "headline": "Một hộp thư cho cập nhật sản phẩm và cảnh báo quản trị",
+    "description": "Giữ thông báo thanh toán, workflow, kiểm duyệt và nền tảng trong cùng một luồng. Đây là mẫu SaaS phổ biến: một badge unread ở header và một inbox riêng cho toàn bộ lịch sử.",
+    "refresh": "Làm mới",
+    "markAllAsRead": "Đánh dấu tất cả đã đọc",
+    "unread": "Chưa đọc",
+    "success": "Thành công",
+    "warnings": "Cảnh báo",
+    "info": "Thông tin",
+    "error": "Lỗi",
+    "emptyTitle": "Chưa có thông báo",
+    "emptyBody": "Các sản phẩm SaaS thường dùng màn hình này như một inbox: sự kiện sản phẩm, cập nhật thanh toán, thay đổi kiểm duyệt và cảnh báo quản trị đều tập trung tại đây.",
+    "openSettings": "Mở cài đặt thông báo",
+    "openAdmin": "Mở bảng quản trị",
+    "cards": {
+      "activityFeed": "Luồng hoạt động",
+      "activityFeedNote": "Cập nhật issue, lần chạy publish, sự kiện workflow.",
+      "billingAccount": "Thanh toán & tài khoản",
+      "billingAccountNote": "Thanh toán, credits, thay đổi quyền truy cập.",
+      "adminAlerts": "Cảnh báo quản trị",
+      "adminAlertsNote": "Lỗi, kiểm duyệt, nhập dữ liệu hoặc sự kiện phê duyệt."
+    },
+    "categories": {
+      "payment": "Thanh toán",
+      "workflow": "Workflow",
+      "social": "Social",
+      "moderation": "Kiểm duyệt",
+      "system": "Hệ thống"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "unread": "Chưa đọc",
+      "success": "Thành công",
+      "info": "Thông tin",
+      "warning": "Cảnh báo",
+      "error": "Lỗi"
+    },
+    "actions": {
+      "markAsRead": "Đánh dấu đã đọc"
+    },
+    "time": {
+      "minutesAgo": "{count} phút trước",
+      "hoursAgo": "{count} giờ trước"
+    }
+  }
+}

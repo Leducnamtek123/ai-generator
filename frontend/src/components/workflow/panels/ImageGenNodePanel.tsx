@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import { Button } from "@/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import { NodePanelProps } from "../NodePanels";
 import { AspectRatio, ImageModel, ImageQuality } from "../types";
@@ -20,7 +21,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
         <div className="flex items-start gap-2">
           <ImageIcon className="mt-0.5 size-4 shrink-0 text-blue-400" />
           <div>
-            <p className="text-xs font-medium text-blue-300">Image Generator</p>
+            <p className="text-xs font-medium text-blue-300">Image generator</p>
             <p className="mt-1 text-[10px] text-blue-300/60">
               Generate high-quality images from text prompts.
             </p>
@@ -29,23 +30,24 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-medium text-muted-foreground">AI Model</div>
-        <select
-          value={(nodeData.model as string) || "seedream"}
-          onChange={(e) => onChange("model", e.target.value)}
-          className="h-11 w-full appearance-none rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:ring-1 focus:ring-blue-500/50 focus:outline-none"
-        >
-          <option value="seedream">Seedream 4 4K ⭐</option>
-          <option value="flux">Flux Schnell</option>
-          <option value="imagen3">Google Imagen 3</option>
-          <option value="midjourney">Midjourney v6</option>
-          <option value="dalle3">DALL-E 3</option>
-          <option value="stable">Stable Diffusion XL</option>
-        </select>
+        <div className="text-xs font-medium text-muted-foreground">Model</div>
+        <Select value={(nodeData.model as string) || ImageModel.SEEDREAM} onValueChange={(value) => onChange("model", value)}>
+          <SelectTrigger className="h-11 w-full rounded-lg border border-input bg-background px-3 text-sm text-foreground focus:ring-1 focus:ring-blue-500/50 focus:outline-none">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ImageModel.SEEDREAM}>Seedream 4 4K ⭐</SelectItem>
+            <SelectItem value={ImageModel.FLUX}>Flux Schnell</SelectItem>
+            <SelectItem value={ImageModel.IMAGEN3}>Google Imagen 3</SelectItem>
+            <SelectItem value={ImageModel.MIDJOURNEY}>Midjourney v6</SelectItem>
+            <SelectItem value={ImageModel.DALLE3}>DALL-E 3</SelectItem>
+            <SelectItem value={ImageModel.STABLE}>Stable Diffusion XL</SelectItem>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-medium text-muted-foreground">Aspect Ratio</div>
+        <div className="text-xs font-medium text-muted-foreground">Ratio</div>
         <div className="grid grid-cols-4 gap-2">
           {["1:1", "4:3", "16:9", "9:16"].map((ratio) => (
             <Button
@@ -72,7 +74,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
             <button
               key={quality}
               onClick={() => onChange("quality", quality)}
-              className={`rounded-lg p-2 text-xs font-medium uppercase transition-all ${(nodeData.quality || "hd") === quality ? "bg-blue-600 text-white" : "bg-background text-muted-foreground hover:bg-accent"}`}
+              className={`rounded-lg p-2 text-xs font-medium transition-all ${(nodeData.quality || "hd") === quality ? "bg-blue-600 text-white" : "bg-background text-muted-foreground hover:bg-accent"}`}
             >
               {quality}
             </button>
@@ -81,7 +83,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
       </div>
 
       <div className="space-y-2">
-        <div className="text-xs font-medium text-muted-foreground">Negative Prompt (Optional)</div>
+        <div className="text-xs font-medium text-muted-foreground">Negative prompt (optional)</div>
         <textarea
           value={(nodeData.negativePrompt as string) || ""}
           onChange={(e) => onChange("negativePrompt", e.target.value)}
@@ -134,7 +136,7 @@ export function ImageGenNodePanel({ nodeData, onChange, isGenerating, handlers }
 
       {(nodeData.usedPrompt as string) && (
         <div className="space-y-2">
-          <div className="text-xs font-medium text-muted-foreground">Last Used Prompt</div>
+          <div className="text-xs font-medium text-muted-foreground">Last prompt</div>
           <div className="max-h-20 overflow-y-auto rounded-lg bg-muted/30 p-3 text-xs text-muted-foreground">
             {nodeData.usedPrompt as string}
           </div>

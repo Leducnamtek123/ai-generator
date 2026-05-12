@@ -71,13 +71,13 @@ bound to real application state.
 - `backend/src/social-hub/social-hub.controller.ts` exposes the live analytics, channels, inbox, reply, handled, and reschedule routes.
 - `backend/src/social-hub/services/social-analytics.service.ts` computes dashboard stats and channel analytics from stored data and accepts a `days` window.
 - `frontend/src/services/socialHubApi.ts` mirrors those endpoints, including the analytics day-range query and inbox/reschedule actions.
-- `frontend/src/app/[locale]/(dashboard)/social/dashboard/page.tsx`, `frontend/src/app/[locale]/(dashboard)/social/channels/page.tsx`, `frontend/src/app/[locale]/(dashboard)/social/inbox/page.tsx`, and `frontend/src/app/[locale]/(dashboard)/social/calendar/page.tsx` are already wired to the live contract.
-- `frontend/src/app/[locale]/(dashboard)/social/page.tsx` now acts as the Social Hub entry point, and `frontend/src/app/[locale]/(dashboard)/social/dashboard/page.tsx` now shows a real operating snapshot with connected accounts, inbox load, publishing queue, and next scheduled post data.
-- `frontend/src/app/[locale]/(dashboard)/social/channels/page.tsx` now includes a Facebook-first operating snapshot, workspace shortcuts, and a page-review onboarding flow that matches the page-first product contract.
-- `frontend/src/app/[locale]/(dashboard)/social/publish/page.tsx` and `frontend/src/app/[locale]/(dashboard)/social/publish/view.tsx` now persist draft state locally, save backend drafts, and surface a publish snapshot with selected targets, scheduling mode, and autosave status.
+- `frontend/src/app/[locale]/(dashboard)/social/dashboard/page.tsx`, `frontend/src/app/[locale]/(dashboard)/social/channels/page.tsx`, and `frontend/src/app/[locale]/(dashboard)/social/calendar/page.tsx` are already wired to the live contract.
+- `frontend/src/app/[locale]/(dashboard)/social/page.tsx` now acts as a lightweight entry point that only exposes the three core surfaces: dashboard, channels, and calendar.
+- `frontend/src/app/[locale]/(dashboard)/social/dashboard/page.tsx` now shows a chart-first analytics view with summary statistics and channel health instead of inbox or publishing side panels.
+- `frontend/src/app/[locale]/(dashboard)/social/channels/page.tsx` now puts provider connect cards above the fold and keeps the Facebook page selection/manage flow directly on the same screen.
 - `frontend/src/app/[locale]/(dashboard)/social/inbox/page.tsx` now adds an operational inbox snapshot, backend follow-up/assignment/label triage, and saved-reply shortcuts on top of the live interaction stream.
-- `frontend/src/app/[locale]/(dashboard)/social/calendar/page.tsx` now shows a planner snapshot with status counts, next scheduled post context, and a direct hub shortcut on top of the live month/week/day views and reschedule actions.
-- `frontend/src/app/[locale]/(dashboard)/social/publish/view.tsx` now includes a publishing checklist and target summary so the composer reads like a real queue gate instead of a bare form.
+- `frontend/src/app/[locale]/(dashboard)/social/calendar/page.tsx` now keeps the live month/week/day views and post actions while trimming the extra planner copy and hub shortcut.
+- `frontend/src/app/[locale]/(dashboard)/social/publish/page.tsx` has been retired so the workspace keeps a single scheduling surface in `social/calendar` and no longer exposes a separate composer entry point.
 - `frontend/src/app/[locale]/(dashboard)/social/inbox/page.tsx` now includes backend assignment cycling, label tagging, and follow-up persistence alongside the operational inbox snapshot so triage reads more like a real unified inbox.
 - `backend/src/social-hub/services/publishing.service.ts` now distinguishes backend draft saves from immediate publish requests, queueing immediate posts without forcing them into draft state.
 - `backend/src/social-hub/services/channels.service.ts` and `backend/src/social-hub/social-hub.controller.ts` now persist inbox triage updates to account metadata and expose a dedicated triage endpoint.
@@ -85,4 +85,4 @@ bound to real application state.
 - Frontend typecheck passed after the Social Hub publish/inbox persistence slice.
 - Frontend production build passed in this sweep.
 - Backend Social Hub controller/service unit tests passed for publish draft/immediate handling and inbox triage persistence.
-- Frontend Playwright coverage passed for the Social Hub overview, publish composer, inbox, channels, and calendar flows after sign-in.
+- Frontend Playwright coverage passed for the Social Hub overview, inbox, channels, and calendar flows after sign-in.

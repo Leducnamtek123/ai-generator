@@ -1,8 +1,8 @@
 import { SetMetadata } from '@nestjs/common';
-import { OrgAction } from './permissions';
+import { WorkspaceAction } from './permissions';
 
 export interface RequiredPermission {
-  action: OrgAction;
+  action: WorkspaceAction;
   subject: string;
 }
 

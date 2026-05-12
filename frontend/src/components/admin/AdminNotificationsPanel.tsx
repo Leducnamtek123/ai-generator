@@ -2,10 +2,11 @@
 
 import * as React from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, CheckCircle2, Clock3, RefreshCw, ShieldAlert, Sparkles } from 'lucide-react';
+import { AlertCircle, CheckCircle2, Clock3, RefreshCw, Search, ShieldAlert, Sparkles } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { useRouter } from '@/i18n/navigation';
@@ -26,6 +27,13 @@ const severityMeta: Record<
 };
 
 const filterOptions: Array<'all' | AdminNotificationSeverity> = ['all', 'critical', 'warning', 'info', 'success'];
+const categoryOptions: Array<'all' | AdminNotification['category']> = [
+  'all',
+  'security',
+  'moderation',
+  'operations',
+  'system',
+];
 
 const formatRelativeTime = (value: string) => {
   const date = new Date(value);
@@ -64,10 +72,10 @@ const NotificationRow = ({
         <div className="min-w-0 space-y-1">
           <div className="flex flex-wrap items-center gap-2">
             <p className="text-sm font-semibold">{item.title}</p>
-            <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]', meta.className)}>
+            <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', meta.className)}>
               {meta.label}
             </span>
-            <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            <span className="rounded-full border border-border bg-muted/40 px-2 py-0.5 text-xs font-medium text-muted-foreground">
               {item.category}
             </span>
           </div>
@@ -96,17 +104,25 @@ const NotificationRow = ({
 
 export function AdminNotificationsPanel() {
   const { push } = useRouter();
+  const [search, setSearch] = React.useState('');
   const [severityFilter, setSeverityFilter] = React.useState<'all' | AdminNotificationSeverity>('all');
+  const [categoryFilter, setCategoryFilter] = React.useState<'all' | AdminNotification['category']>('all');
+  const [showResolved, setShowResolved] = React.useState(true);
 
   const query = useQuery({
-    queryKey: ['admin', 'notifications'],
-    queryFn: adminNotificationApi.getNotifications,
+    queryKey: ['admin', 'notifications', search, severityFilter, categoryFilter],
+    queryFn: () =>
+      adminNotificationApi.getNotifications({
+        q: search || undefined,
+        severity: severityFilter,
+        category: categoryFilter,
+      }),
     staleTime: 30_000,
   });
 
   const feed = query.data?.data ?? [];
   const summary = query.data?.summary;
-  const visibleFeed = severityFilter === 'all' ? feed : feed.filter((item) => item.severity === severityFilter);
+  const visibleFeed = showResolved ? feed : feed.filter((item) => item.severity !== 'success');
 
   return (
     <Card className="rounded-lg border-border">
@@ -128,6 +144,49 @@ export function AdminNotificationsPanel() {
             </Button>
           </div>
         </div>
+        <div className="grid gap-3 md:grid-cols-[1.4fr_1fr]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              placeholder="Search title, message, action, or metadata"
+              className="pl-10"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            {categoryOptions.map((item) => {
+              const active = categoryFilter === item;
+              return (
+                <button
+                  key={item}
+                  type="button"
+                  onClick={() => setCategoryFilter(item)}
+                  className={cn(
+                    'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+                    active ? 'border-primary bg-primary/10 text-primary' : 'border-border bg-background text-muted-foreground',
+                  )}
+                >
+                  {item === 'all' ? 'All categories' : item}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => setShowResolved((value) => !value)}
+            className={cn(
+              'rounded-full border px-3 py-1.5 text-xs font-medium transition-colors',
+              showResolved
+                ? 'border-primary bg-primary/10 text-primary'
+                : 'border-border bg-background text-muted-foreground',
+            )}
+          >
+            {showResolved ? 'Show resolved' : 'Hide resolved'}
+          </button>
+        </div>
         <div className="grid gap-3 md:grid-cols-5">
           {filterOptions.map((item) => {
             const active = severityFilter === item;
@@ -143,7 +202,7 @@ export function AdminNotificationsPanel() {
                   active ? 'border-primary bg-primary/10' : 'border-border bg-background hover:bg-muted/50',
                 )}
               >
-                <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">{label}</div>
+                <div className="text-sm font-medium text-muted-foreground">{label}</div>
                 <div className="mt-1 text-lg font-semibold">
                   {item === 'all' ? summary?.total ?? feed.length : summary?.[item] ?? 0}
                 </div>
@@ -155,9 +214,16 @@ export function AdminNotificationsPanel() {
       <CardContent className="space-y-4 p-4">
         {query.isLoading && (
           <div className="space-y-3">
-            <Skeleton className="h-24 rounded-2xl" />
-            <Skeleton className="h-24 rounded-2xl" />
-            <Skeleton className="h-24 rounded-2xl" />
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={`notification-skeleton-${index}`} className="flex gap-3 rounded-2xl border border-border/70 p-4">
+                <Skeleton className="size-8 shrink-0 rounded-full" />
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Skeleton className="h-4 w-2/3" />
+                  <Skeleton className="h-3 w-full" />
+                  <Skeleton className="h-3 w-24" />
+                </div>
+              </div>
+            ))}
           </div>
         )}
 
@@ -168,7 +234,7 @@ export function AdminNotificationsPanel() {
             </div>
             <h3 className="mt-4 text-base font-semibold">No alerts in this view</h3>
             <p className="mx-auto mt-2 max-w-lg text-sm text-muted-foreground">
-              When moderation, catalog, or security events happen, they will show up here with a clear severity and action.
+              When moderation, catalog, security, or operational events happen, they will show up here with a clear severity and action.
             </p>
           </div>
         )}
@@ -181,15 +247,15 @@ export function AdminNotificationsPanel() {
         {summary && (
           <div className="grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 md:grid-cols-3">
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Unresolved</p>
+              <p className="text-sm font-medium text-muted-foreground">Unresolved</p>
               <p className="mt-1 text-2xl font-semibold">{summary.unresolved}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Critical</p>
+              <p className="text-sm font-medium text-muted-foreground">Critical</p>
               <p className="mt-1 text-2xl font-semibold text-red-500">{summary.critical}</p>
             </div>
             <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Warnings</p>
+              <p className="text-sm font-medium text-muted-foreground">Warnings</p>
               <p className="mt-1 text-2xl font-semibold text-amber-500">{summary.warning}</p>
             </div>
           </div>

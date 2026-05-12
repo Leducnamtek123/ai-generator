@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Sparkles, Wand2, Loader2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { ConnectionInfo } from './ConnectionInfo';
 import { NodePanelProps } from '../NodePanels';
@@ -24,17 +25,18 @@ export function AssistantNodePanel({ nodeData, onChange, isGenerating, handlers 
 
             <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Enhancement Mode</div>
-                <select
-                    value={(nodeData.mode as string) || AssistantMode.ENHANCE}
-                    onChange={(e) => onChange('mode', e.target.value)}
-                    className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground focus:outline-none focus:border-emerald-500/50"
-                >
-                    <option value={AssistantMode.ENHANCE}>Enhance - Improve clarity & detail</option>
-                    <option value={AssistantMode.EXPAND}>Expand - Add creative details</option>
-                    <option value={AssistantMode.CREATIVE}>Creative - Artistic interpretation</option>
-                    <option value={AssistantMode.PROFESSIONAL}>Professional - Commercial quality</option>
-                    <option value={AssistantMode.CINEMATIC}>Cinematic - Film-like descriptions</option>
-                </select>
+                <Select value={(nodeData.mode as string) || AssistantMode.ENHANCE} onValueChange={(value) => onChange('mode', value)}>
+                    <SelectTrigger className="w-full bg-background border border-input rounded-lg p-3 text-sm text-foreground focus:outline-none focus:border-emerald-500/50">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value={AssistantMode.ENHANCE}>Enhance - Improve clarity & detail</SelectItem>
+                        <SelectItem value={AssistantMode.EXPAND}>Expand - Add creative details</SelectItem>
+                        <SelectItem value={AssistantMode.CREATIVE}>Creative - Artistic interpretation</SelectItem>
+                        <SelectItem value={AssistantMode.PROFESSIONAL}>Professional - Commercial quality</SelectItem>
+                        <SelectItem value={AssistantMode.CINEMATIC}>Cinematic - Film-like descriptions</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
 
             <div className="space-y-2">

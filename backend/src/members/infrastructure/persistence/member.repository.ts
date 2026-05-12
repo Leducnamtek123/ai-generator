@@ -7,11 +7,11 @@ export abstract class MemberRepository {
   ): Promise<Member>;
 
   abstract findById(id: string): Promise<NullableType<Member>>;
-  abstract findByUserAndOrg(
+  abstract findByUserAndWorkspace(
     userId: number,
-    organizationId: string,
+    workspaceId: string,
   ): Promise<NullableType<Member>>;
-  abstract findByOrganizationId(organizationId: string): Promise<Member[]>;
+  abstract findByWorkspaceId(workspaceId: string): Promise<Member[]>;
 
   abstract update(
     id: string,

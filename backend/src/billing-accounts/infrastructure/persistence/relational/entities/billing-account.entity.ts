@@ -8,7 +8,7 @@ import {
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
 
-export type BillingAccountScopeType = 'user' | 'organization';
+export type BillingAccountScopeType = 'user' | 'workspace';
 export type BillingAccountStatus = 'trialing' | 'active' | 'past_due' | 'canceled' | 'free';
 export type BillingPlanType = 'trial' | 'starter' | 'pro' | 'team' | 'enterprise';
 

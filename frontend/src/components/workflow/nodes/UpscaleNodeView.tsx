@@ -2,10 +2,11 @@
 
 import Image from 'next/image';
 import { Handle, Position } from '@xyflow/react';
-import { Loader2, Download, Maximize2, Wand2, Crown, ChevronDown, Info } from 'lucide-react';
+import { Loader2, Download, Maximize2, Wand2, Crown, Info } from 'lucide-react';
 import { BaseNode } from './BaseNode';
 import { NodeToolbar } from '../NodeToolbar';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
     ExecutionMode,
     NodeStatus,
@@ -109,7 +110,7 @@ export function UpscaleNodeView({
                                 onSettingChange('enhanceMode', UpscaleMode.CREATIVE);
                             }}
                             className={cn(
-                                'flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wider',
+                                'flex-1 py-1.5 text-xs font-medium rounded-md transition-all',
                                 activeTab === UpscaleMode.CREATIVE
                                     ? 'bg-accent text-accent-foreground'
                                     : 'text-muted-foreground hover:text-foreground',
@@ -123,7 +124,7 @@ export function UpscaleNodeView({
                                 onSettingChange('enhanceMode', UpscaleMode.PRECISION);
                             }}
                             className={cn(
-                                'flex-1 py-1.5 text-[10px] font-bold rounded-md transition-all uppercase tracking-wider',
+                                'flex-1 py-1.5 text-xs font-medium rounded-md transition-all',
                                 activeTab === UpscaleMode.PRECISION
                                     ? 'bg-accent text-accent-foreground'
                                     : 'text-muted-foreground hover:text-foreground',
@@ -135,7 +136,7 @@ export function UpscaleNodeView({
 
                     <div className="w-full bg-background flex items-center justify-center overflow-hidden relative group min-h-[160px]">
                         {isProcessing && (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-zinc-950/60 backdrop-blur-md z-10 transition-all">
+                            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/80 backdrop-blur-md transition-all">
                                 <div className="relative">
                                     <div className="size-16 border-4 border-yellow-500/20 rounded-full" />
                                     <div className="absolute inset-0 size-16 border-4 border-transparent border-t-yellow-500 rounded-full animate-spin" />
@@ -143,7 +144,7 @@ export function UpscaleNodeView({
                                         <Crown className="size-6 animate-pulse" />
                                     </div>
                                 </div>
-                                <span className="mt-4 text-[10px] text-yellow-400 font-bold uppercase tracking-widest animate-pulse">
+                                <span className="mt-4 text-xs text-yellow-400 font-medium animate-pulse">
                                     {data.status === NodeStatus.QUEUED ? 'In Queue' : `Upscaling to ${scale}x`}
                                 </span>
                             </div>
@@ -162,22 +163,22 @@ export function UpscaleNodeView({
                                     />
                                 </div>
 
-                                <div className="absolute inset-0 bg-zinc-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                                <div className="absolute inset-0 flex items-center justify-center gap-3 bg-background/70 opacity-0 transition-opacity group-hover:opacity-100">
                                     <button
                                         onClick={() => data.onOpenImageEditor?.(data.previewUrl)}
-                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                                        className="rounded-full bg-muted/40 p-3 text-foreground transition-colors hover:bg-muted/70"
                                     >
                                         <Wand2 className="size-5" />
                                     </button>
                                     <button
                                         onClick={onDownload}
-                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                                        className="rounded-full bg-muted/40 p-3 text-foreground transition-colors hover:bg-muted/70"
                                     >
                                         <Download className="size-5" />
                                     </button>
                                     <button
                                         onClick={() => onSetFullscreen(true)}
-                                        className="p-3 bg-white/10 hover:bg-white/20 rounded-full text-white transition-colors"
+                                        className="rounded-full bg-muted/40 p-3 text-foreground transition-colors hover:bg-muted/70"
                                     >
                                         <Maximize2 className="size-5" />
                                     </button>
@@ -188,7 +189,7 @@ export function UpscaleNodeView({
                                     {scale}x Upscaled
                                 </div>
 
-                                <div className="absolute bottom-2 right-2 px-1.5 py-0.5 bg-zinc-950/60 rounded text-[9px] text-white/70 backdrop-blur-sm uppercase">
+                                <div className="absolute bottom-2 right-2 rounded bg-background/80 px-1.5 py-0.5 text-[9px] text-foreground backdrop-blur-sm">
                                     {mediaDimensions ? `${mediaDimensions.width}x${mediaDimensions.height}` : 'Finished'}
                                 </div>
                             </>
@@ -197,14 +198,14 @@ export function UpscaleNodeView({
                                 <FreepikPlaceholder />
                                 {!data.inputUrl ? (
                                     <div className="text-center space-y-1">
-                                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Image Upscaler</p>
-                                        <p className="text-[9px] text-white/10 italic">Waiting for input?</p>
+                                        <p className="text-[10px] font-medium text-muted-foreground">Image upscaler</p>
+                                        <p className="text-[9px] italic text-muted-foreground/40">Waiting for input?</p>
                                     </div>
                                 ) : (
                                     <div className="text-center space-y-1">
-                                        <p className="text-[10px] font-bold text-yellow-400 uppercase tracking-widest">Input connected</p>
+                                        <p className="text-[10px] font-medium text-yellow-400">Input connected</p>
                                         {data.connectedImageSource && (
-                                            <p className="text-[9px] text-white/40 italic">
+                                            <p className="text-[9px] italic text-muted-foreground">
                                                 From {data.connectedImageSource}
                                             </p>
                                         )}
@@ -219,61 +220,55 @@ export function UpscaleNodeView({
                             <>
                                 <div className="space-y-2">
                                     <div className="flex items-center gap-1.5">
-                                        <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Model</p>
+                                        <p className="text-[10px] text-muted-foreground font-medium">Model</p>
                                         <Info className="size-3 text-muted-foreground/50" />
                                     </div>
-                                    <div className="relative">
-                                        <select
-                                            value={model}
-                                            onChange={(e) => onSetModel(e.target.value as UpscaleModel)}
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none appearance-none hover:bg-accent/50 transition-colors"
-                                        >
+                                    <Select value={model} onValueChange={(value) => onSetModel(value as UpscaleModel)}>
+                                        <SelectTrigger className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none hover:bg-accent/50 transition-colors">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
                                             {MODELS.map((m) => (
-                                                <option key={m.id} value={m.id}>
+                                                <SelectItem key={m.id} value={m.id}>
                                                     {m.name}
-                                                </option>
+                                                </SelectItem>
                                             ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-white/40 pointer-events-none" />
-                                    </div>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Presets</p>
-                                    <div className="relative">
-                                        <select
-                                            value={preset}
-                                            onChange={(e) => onSetPreset(e.target.value as UpscalePreset)}
-                                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none appearance-none hover:bg-accent/50 transition-colors"
-                                        >
+                                    <p className="text-[10px] text-muted-foreground font-medium">Presets</p>
+                                    <Select value={preset} onValueChange={(value) => onSetPreset(value as UpscalePreset)}>
+                                        <SelectTrigger className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none hover:bg-accent/50 transition-colors">
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
                                             {PRESETS.map((p) => (
-                                                <option key={p.id} value={p.id}>
+                                                <SelectItem key={p.id} value={p.id}>
                                                     {p.name}
-                                                </option>
+                                                </SelectItem>
                                             ))}
-                                        </select>
-                                        <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-white/40 pointer-events-none" />
-                                    </div>
+                                        </SelectContent>
+                                    </Select>
                                 </div>
                             </>
                         )}
 
                         <div className="space-y-2">
-                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Scale Factor</p>
-                            <div className="relative">
-                                <select
-                                    value={scale}
-                                    onChange={(e) => onSetScale(Number(e.target.value) as UpscaleFactor)}
-                                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none appearance-none hover:bg-accent/50 transition-colors"
-                                >
+                            <p className="text-[10px] text-muted-foreground font-medium">Scale factor</p>
+                            <Select value={String(scale)} onValueChange={(value) => onSetScale(Number(value) as UpscaleFactor)}>
+                                <SelectTrigger className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs text-foreground outline-none hover:bg-accent/50 transition-colors">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
                                     {SCALE_FACTORS.map((s) => (
-                                        <option key={s.id} value={s.id}>
+                                        <SelectItem key={s.id} value={String(s.id)}>
                                             {s.name}
-                                        </option>
+                                        </SelectItem>
                                     ))}
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 size-3.5 text-white/40 pointer-events-none" />
-                            </div>
+                                </SelectContent>
+                            </Select>
                         </div>
 
                         {activeTab === UpscaleMode.PRECISION && (
@@ -281,7 +276,7 @@ export function UpscaleNodeView({
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Sharpness</p>
+                                            <p className="text-[10px] text-muted-foreground font-medium">Sharpness</p>
                                             <Info className="size-3 text-muted-foreground/50" />
                                         </div>
                                         <span className="text-[10px] font-mono text-muted-foreground">{sharpness}%</span>
@@ -299,7 +294,7 @@ export function UpscaleNodeView({
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
                                         <div className="flex items-center gap-1.5">
-                                            <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-wider">Grain</p>
+                                            <p className="text-[10px] text-muted-foreground font-medium">Grain</p>
                                             <Info className="size-3 text-muted-foreground/50" />
                                         </div>
                                         <span className="text-[10px] font-mono text-muted-foreground">{grain}%</span>
@@ -338,7 +333,7 @@ export function UpscaleNodeView({
                                 )}
                             </button>
                             {finalWidth > 0 && (
-                                <p className="text-[10px] text-white/20 text-center font-mono uppercase tracking-tighter">
+                                <p className="text-center font-mono text-[10px] text-muted-foreground">
                                     Final size: {finalWidth} × {finalHeight}
                                 </p>
                             )}
@@ -366,7 +361,7 @@ export function UpscaleNodeView({
                 <button
                     type="button"
                     aria-label="Close fullscreen preview"
-                    className="fixed inset-0 z-[100] bg-zinc-950/90 flex items-center justify-center p-12"
+                    className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 p-12"
                     onClick={() => onSetFullscreen(false)}
                 >
                     <div className="relative h-full w-full max-w-6xl max-h-[90vh]">
@@ -400,8 +395,8 @@ const SCALE_FACTORS = [
 
 function FreepikPlaceholder() {
     return (
-        <div className="size-20 bg-gradient-to-br from-blue-600 to-blue-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-blue-500/30 border border-white/20 rotate-3 animate-in fade-in zoom-in duration-500">
-            <svg viewBox="0 0 24 24" className="size-10 text-white fill-current -rotate-3">
+        <div className="flex size-20 items-center justify-center rounded-3xl border border-border bg-gradient-to-br from-blue-600 to-blue-400 shadow-2xl shadow-blue-500/30 rotate-3 animate-in fade-in zoom-in duration-500">
+            <svg viewBox="0 0 24 24" className="size-10 fill-current text-white -rotate-3">
                 <path d="M12 2l2.4 7.2h7.6l-6.1 4.5 2.3 7.3-6.2-4.5-6.2 4.5 2.3-7.3-6.1-4.5h7.6z" />
             </svg>
         </div>

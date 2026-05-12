@@ -10,7 +10,7 @@ type CheckoutResponse = {
   purchaseType: PaymentPurchaseType;
   planId: BillingPlanId | null;
   topUpPackageId: TopUpPackageId | null;
-  scopeType: "user" | "organization";
+  scopeType: "user" | "workspace";
   scopeId: string | null;
   amountVnd: number;
   credits: number;
@@ -26,7 +26,7 @@ type PaymentOrder = {
   orderCode: string;
   planId: BillingPlanId | null;
   topUpPackageId: TopUpPackageId | null;
-  scopeType: "user" | "organization";
+  scopeType: "user" | "workspace";
   scopeId: string | null;
   credits: number;
   amountVnd: number;
@@ -42,7 +42,7 @@ export const paymentApi = {
     planId?: BillingPlanId;
     topUpPackageId?: TopUpPackageId;
     packageId?: TopUpPackageId;
-    scopeType?: "user" | "organization";
+    scopeType?: "user" | "workspace";
     scopeId?: string;
     returnUri?: string;
   }) => post<CheckoutResponse, typeof payload>("/payments/checkout", payload),

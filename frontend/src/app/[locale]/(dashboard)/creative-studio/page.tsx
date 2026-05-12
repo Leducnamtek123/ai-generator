@@ -216,27 +216,48 @@ export default function CreativeStudioPage() {
     };
 
     return (
-        <div className="min-h-screen bg-background text-foreground p-6">
-            <div className="relative w-full h-48 bg-card rounded-3xl border border-border overflow-hidden mb-8 flex items-center">
-                <div className="relative z-10 p-10 flex flex-col justify-center h-full max-w-xl">
-                    <h1 className="text-2xl font-semibold mb-2">Start from scratch</h1>
-                    <p className="text-muted-foreground mb-6 text-sm">Create a new studio and start collaborating</p>
-                    <Button onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: true })} className="rounded-full px-6 py-2 w-fit font-medium flex items-center gap-2">
-                        <Plus className="size-4" />
+        <div className="min-h-screen bg-background p-6 space-y-8 text-foreground">
+            <div className="relative flex min-h-[180px] w-full items-center justify-between overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-sky-500/10 via-background to-cyan-500/10 p-8">
+                <div className="absolute inset-0 overflow-hidden pointer-events-none">
+                    <div className="absolute -top-20 -left-20 size-80 rounded-full bg-blue-600/20 blur-[80px]" />
+                    <div className="absolute -bottom-20 right-20 size-60 rounded-full bg-cyan-600/20 blur-[60px]" />
+                </div>
+
+                <div className="relative z-10 max-w-xl">
+                    <div className="flex items-center gap-2 mb-3">
+                        <div className="p-2 rounded-xl bg-blue-600/20 border border-blue-500/30">
+                            <LayoutGrid className="size-5 text-blue-400" />
+                        </div>
+                        <span className="text-xs font-medium text-blue-400">Creative studio</span>
+                    </div>
+                    <h1 className="mb-2 text-3xl font-semibold text-foreground">Start from scratch</h1>
+                    <p className="max-w-md text-sm text-muted-foreground">Create a new studio and start collaborating.</p>
+                    <Button
+                        onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: true })}
+                        className="mt-5 bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500 text-white border-0 rounded-full px-6"
+                    >
+                        <Plus className="size-4 mr-2" />
                         New studio
                     </Button>
                 </div>
 
-                <div className="absolute right-0 top-0 bottom-0 w-1/2 flex items-center justify-end pr-12">
-                    <div className="text-right">
-                        <h2 className="text-4xl font-semibold text-muted-foreground/30 tracking-tighter">Creative Studio</h2>
-                        <p className="text-muted-foreground/50 text-sm tracking-widest uppercase mt-1">Infinite creativity</p>
-                    </div>
+                <div className="relative z-10 hidden lg:flex flex-col gap-2.5">
+                    {[
+                        'Studio templates',
+                        'Shared workspaces',
+                        'Fast creation flow',
+                        'Blue-first visual system',
+                    ].map((label) => (
+                        <div key={label} className="flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
+                            <LayoutGrid className="size-4 text-blue-400" />
+                            {label}
+                        </div>
+                    ))}
                 </div>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center bg-muted p-1 rounded-full border border-border w-fit">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex w-fit items-center rounded-full border border-border bg-muted/30 p-1">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
@@ -253,8 +274,8 @@ export default function CreativeStudioPage() {
                 </div>
 
                 <div className="relative w-full md:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-                    <Input placeholder="Search spaces?" className="rounded-full pl-10 h-10 text-sm" />
+                    <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                    <Input placeholder="Search spaces?" className="h-10 rounded-full border-border bg-background pl-10 text-sm text-foreground placeholder:text-muted-foreground" />
                 </div>
             </div>
 
@@ -269,12 +290,12 @@ export default function CreativeStudioPage() {
                             }
                         }}
                         onClick={() => dispatch({ type: 'setShowCreateModal', showCreateModal: true })}
-                        className="aspect-[4/3] rounded-xl border border-dashed border-border bg-transparent hover:bg-accent/50 cursor-pointer flex flex-col items-center justify-center gap-3 group transition-colors"
+                        className="group flex aspect-[4/3] cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border border-dashed border-border bg-transparent transition-colors hover:bg-accent/30"
                     >
-                        <div className="size-12 rounded-full bg-muted flex items-center justify-center group-hover:bg-accent transition-colors">
-                            <Plus className="size-5 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        <div className="size-12 rounded-full bg-blue-600/10 border border-blue-500/20 flex items-center justify-center group-hover:bg-blue-600/20 transition-colors">
+                            <Plus className="size-5 text-blue-400 transition-colors" />
                         </div>
-                        <span className="text-sm font-medium text-muted-foreground group-hover:text-foreground transition-colors">Create new studio</span>
+                        <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">Create new studio</span>
                     </div>
                 )}
 
@@ -323,7 +344,7 @@ export default function CreativeStudioPage() {
                     <div className="relative w-full max-w-md bg-card rounded-2xl border border-border p-6 shadow-2xl animate-in zoom-in-95">
                         <h2 className="text-xl font-semibold mb-4">Create New Studio</h2>
                         <div className="mb-6">
-                            <label htmlFor="studioName" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                            <label htmlFor="studioName" className="block text-xs font-medium text-muted-foreground mb-2">
                                 Studio Name
                             </label>
                             <Input

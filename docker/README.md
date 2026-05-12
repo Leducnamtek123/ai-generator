@@ -4,8 +4,8 @@ This folder contains the source-of-truth Docker layout for the repository.
 
 ## What is here
 
-- `docker-compose-template.yaml`: layered compose template
-- `docker-compose.yaml`: generated main compose snapshot
+- `docker-compose-template.yaml`: layered compose template for the default full stack
+- `docker-compose.yaml`: generated main compose snapshot used by `docker compose up -d`
 - `docker-compose.middleware.yaml`: middleware-only stack
 - `.env.example`: full environment variables
 - `middleware.env.example`: middleware-only environment variables

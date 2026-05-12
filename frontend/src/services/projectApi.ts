@@ -8,7 +8,7 @@ export interface Project {
   description?: string;
   content?: unknown;
   ownerId?: number;
-  organizationId?: string;
+  workspaceId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -18,7 +18,7 @@ export interface CreateProjectData {
   url?: string;
   description?: string;
   content?: unknown;
-  organizationId?: string;
+  workspaceId?: string;
 }
 
 export interface UpdateProjectData {
@@ -26,10 +26,11 @@ export interface UpdateProjectData {
   url?: string;
   description?: string;
   content?: unknown;
+  workspaceId?: string | null;
 }
 
 // Matches: Controller path 'projects', version '1'
-// Note: Backend projects are NOT org-scoped in the URL,
+// Note: Backend projects are NOT workspace-scoped in the URL,
 // but use pagination and user-scoped access
 export const projectApi = {
   // POST /projects

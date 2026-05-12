@@ -2,10 +2,12 @@
 
 import { Languages } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
+import { usePathname, useRouter } from "@/i18n/navigation";
+import { useSearchParams } from "next/navigation";
 
 import { LOCALES, type LocaleCode } from "@/constants/i18n";
 
-import { usePathname, useRouter } from "@/i18n/navigation";
+import { applyLocaleChange } from "@/lib/locale-client";
 
 import {
   Button,
@@ -18,15 +20,20 @@ import {
 export function LocaleSwitcher() {
   const currentLocale = useLocale() as LocaleCode;
   const t = useTranslations("LocaleSwitcher");
-  const { replace, refresh } = useRouter();
+  const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const locales = Object.keys(LOCALES) as LocaleCode[];
 
   if (locales.length <= 1) return null;
 
   const switchLocale = (locale: LocaleCode) => {
-    replace(pathname, { locale });
-    refresh();
+    applyLocaleChange(locale, {
+      pathname,
+      refresh: () => router.refresh(),
+      replace: (href, options) => router.replace(href, options),
+      searchParams
+    });
   };
 
   return (
@@ -36,7 +43,7 @@ export function LocaleSwitcher() {
           type="button"
           variant="ghost"
           size="icon"
-          className="size-11 rounded-full border border-white/10 bg-white/5 text-white hover:bg-white/10"
+          className="size-11 rounded-full border border-border bg-background text-foreground hover:bg-accent"
           aria-label={t("ariaLabel")}
         >
           <Languages className="size-4" />
@@ -48,8 +55,7 @@ export function LocaleSwitcher() {
           <DropdownMenuItem
             key={code}
             disabled={code === currentLocale}
-            onSelect={(event) => {
-              event.preventDefault();
+            onClick={() => {
               if (code === currentLocale) return;
               switchLocale(code);
             }}

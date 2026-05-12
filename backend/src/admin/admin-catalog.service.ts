@@ -3,8 +3,8 @@ import { DataSource, In, Repository } from 'typeorm';
 import { AssetEntity } from '../assets/infrastructure/persistence/relational/entities/asset.entity';
 import { TemplateEntity } from '../templates/infrastructure/persistence/relational/entities/template.entity';
 import { UserEntity } from '../users/infrastructure/persistence/relational/entities/user.entity';
-import { OrganizationEntity } from '../organizations/infrastructure/persistence/relational/entities/organization.entity';
-import { MemberEntity, OrgRoleEnum } from '../members/infrastructure/persistence/relational/entities/member.entity';
+import { WorkspaceEntity } from '../workspaces/infrastructure/persistence/relational/entities/workspace.entity';
+import { MemberEntity, WorkspaceRoleEnum } from '../members/infrastructure/persistence/relational/entities/member.entity';
 import { RoleEntity } from '../roles/infrastructure/persistence/relational/entities/role.entity';
 import { StatusEntity } from '../statuses/infrastructure/persistence/relational/entities/status.entity';
 import { AdminAuditLogEntity } from './entities/admin-audit-log.entity';
@@ -26,16 +26,21 @@ import { BulkDeleteAdminAssetsDto } from './dto/bulk-delete-admin-assets.dto';
 import { QueryAdminUsersDto } from './dto/query-admin-users.dto';
 import { QueryAdminTemplatesDto } from './dto/query-admin-templates.dto';
 import { QueryAdminAssetsDto } from './dto/query-admin-assets.dto';
-import { QueryAdminOrganizationsDto } from './dto/query-admin-organizations.dto';
+import { QueryAdminWorkspacesDto } from './dto/query-admin-workspaces.dto';
 import { QueryAdminAuditLogsDto } from './dto/query-admin-audit-logs.dto';
-import { UpdateAdminOrganizationDto } from './dto/update-admin-organization.dto';
-import { UpdateAdminOrganizationMemberDto } from './dto/update-admin-organization-member.dto';
+import { UpdateAdminWorkspaceDto } from './dto/update-admin-workspace.dto';
+import { UpdateAdminWorkspaceMemberDto } from './dto/update-admin-workspace-member.dto';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory } from '../notifications/notifications.types';
 import { NotificationType } from '../notifications/infrastructure/persistence/relational/entities/notification.entity';
 
 type AdminNotificationSeverity = 'critical' | 'warning' | 'info' | 'success';
 type AdminNotificationCategory = 'security' | 'moderation' | 'operations' | 'system';
+type AdminNotificationFilters = {
+  q?: string;
+  severity?: AdminNotificationSeverity;
+  category?: AdminNotificationCategory;
+};
 
 export type AdminNotificationItem = {
   id: string;
@@ -96,10 +101,10 @@ const describeAction = (action: string) => {
   const labels: Record<string, string> = {
     'admin.user.update': 'User updated',
     'admin.users.bulk_update': 'Bulk user update',
-    'admin.organization.update': 'Organization updated',
-    'admin.organization.transfer_owner': 'Organization owner transferred',
-    'admin.organization.member_update': 'Member role updated',
-    'admin.organization.member_remove': 'Member removed',
+    'admin.workspace.update': 'Workspace updated',
+    'admin.workspace.transfer_owner': 'Workspace owner transferred',
+    'admin.workspace.member_update': 'Workspace member role updated',
+    'admin.workspace.member_remove': 'Workspace member removed',
     'admin.asset.delete': 'Asset deleted',
     'admin.assets.bulk_delete': 'Assets deleted in bulk',
     'admin.template.update': 'Template updated',
@@ -139,14 +144,14 @@ export class AdminCatalogService {
     const userRepository = this.dataSource.getRepository(UserEntity);
     const templateRepository = this.dataSource.getRepository(TemplateEntity);
     const assetRepository = this.dataSource.getRepository(AssetEntity);
-    const orgRepository = this.dataSource.getRepository(OrganizationEntity);
+    const workspaceRepository = this.dataSource.getRepository(WorkspaceEntity);
     const auditRepository = this.dataSource.getRepository(AdminAuditLogEntity);
 
     const [
       users,
       templates,
       assets,
-      organizations,
+      workspaces,
       publicTemplates,
       communityTemplates,
       inactiveUsers,
@@ -155,7 +160,7 @@ export class AdminCatalogService {
       userRepository.count(),
       templateRepository.count(),
       assetRepository.count(),
-      orgRepository.count(),
+      workspaceRepository.count(),
       templateRepository.count({ where: { visibility: 'public' } }),
       templateRepository.count({ where: { visibility: 'community' } }),
       userRepository.count({ where: { status: { id: 2 } } }),
@@ -166,7 +171,7 @@ export class AdminCatalogService {
       users,
       templates,
       assets,
-      organizations,
+      workspaces,
       publicTemplates,
       communityTemplates,
       inactiveUsers,
@@ -175,7 +180,7 @@ export class AdminCatalogService {
     };
   }
 
-  async getNotifications(): Promise<AdminNotificationFeed> {
+  async getNotifications(filters: AdminNotificationFilters = {}): Promise<AdminNotificationFeed> {
     const overview = await this.getOverview();
     const auditRepository = this.dataSource.getRepository(AdminAuditLogEntity);
     const recentAuditLogs = await auditRepository
@@ -222,10 +227,10 @@ export class AdminCatalogService {
     const importantActions = new Set([
       'admin.user.update',
       'admin.users.bulk_update',
-      'admin.organization.update',
-      'admin.organization.transfer_owner',
-      'admin.organization.member_update',
-      'admin.organization.member_remove',
+      'admin.workspace.update',
+      'admin.workspace.transfer_owner',
+      'admin.workspace.member_update',
+      'admin.workspace.member_remove',
       'admin.asset.delete',
       'admin.assets.bulk_delete',
       'admin.template.update',
@@ -271,9 +276,38 @@ export class AdminCatalogService {
       });
     }
 
-    alerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    const normalizedQuery = filters.q?.trim().toLowerCase();
+    const filteredAlerts = alerts.filter((item) => {
+      if (filters.severity && item.severity !== filters.severity) {
+        return false;
+      }
 
-    const summary = alerts.reduce(
+      if (filters.category && item.category !== filters.category) {
+        return false;
+      }
+
+      if (!normalizedQuery) {
+        return true;
+      }
+
+      const haystack = [
+        item.title,
+        item.message,
+        item.category,
+        item.severity,
+        item.actionLabel ?? '',
+        item.actionHref ?? '',
+        JSON.stringify(item.meta ?? {}),
+      ]
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(normalizedQuery);
+    });
+
+    filteredAlerts.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    const summary = filteredAlerts.reduce(
       (acc, item) => {
         acc.total += 1;
         acc[item.severity] += 1;
@@ -294,7 +328,7 @@ export class AdminCatalogService {
 
     return {
       summary,
-      data: alerts,
+      data: filteredAlerts,
     };
   }
 
@@ -308,7 +342,7 @@ export class AdminCatalogService {
           canManageUsers: true,
           canManageTemplates: true,
           canManageAssets: true,
-          canManageOrganizations: true,
+          canManageWorkspaces: true,
           canViewAuditLogs: true,
         },
         {
@@ -318,7 +352,7 @@ export class AdminCatalogService {
           canManageUsers: false,
           canManageTemplates: false,
           canManageAssets: false,
-          canManageOrganizations: false,
+          canManageWorkspaces: false,
           canViewAuditLogs: false,
         },
       ],
@@ -326,10 +360,10 @@ export class AdminCatalogService {
         { id: 1, name: 'Active' },
         { id: 2, name: 'Inactive' },
       ],
-      organizationRoles: [
-        { id: OrgRoleEnum.ADMIN, name: 'Admin', canManageMembers: true, canTransferOwnership: true, canBill: true },
-        { id: OrgRoleEnum.MEMBER, name: 'Member', canManageMembers: false, canTransferOwnership: false, canBill: false },
-        { id: OrgRoleEnum.BILLING, name: 'Billing', canManageMembers: false, canTransferOwnership: false, canBill: true },
+      workspaceRoles: [
+        { id: WorkspaceRoleEnum.ADMIN, name: 'Admin', canManageMembers: true, canTransferOwnership: true, canBill: true },
+        { id: WorkspaceRoleEnum.MEMBER, name: 'Member', canManageMembers: false, canTransferOwnership: false, canBill: false },
+        { id: WorkspaceRoleEnum.BILLING, name: 'Billing', canManageMembers: false, canTransferOwnership: false, canBill: true },
       ],
       templateVisibility: ['public', 'community', 'private'],
       moderationActions: [
@@ -374,8 +408,8 @@ export class AdminCatalogService {
     return this.dataSource.getRepository(AssetEntity);
   }
 
-  private getOrgRepo(): Repository<OrganizationEntity> {
-    return this.dataSource.getRepository(OrganizationEntity);
+  private getOrgRepo(): Repository<WorkspaceEntity> {
+    return this.dataSource.getRepository(WorkspaceEntity);
   }
 
   private getMemberRepo(): Repository<MemberEntity> {
@@ -550,33 +584,33 @@ export class AdminCatalogService {
     return { updated: results.length, ids: dto.ids };
   }
 
-  async getOrganizations(
-    filters: QueryAdminOrganizationsDto = {},
-  ): Promise<AdminPageResponse<OrganizationEntity & { memberCount: number }>> {
+  async getWorkspaces(
+    filters: QueryAdminWorkspacesDto = {},
+  ): Promise<AdminPageResponse<WorkspaceEntity & { memberCount: number }>> {
     const page = safePage(filters.page);
     const limit = safeLimit(filters.limit);
     const qb = this.getOrgRepo()
-      .createQueryBuilder('organization')
-      .loadRelationCountAndMap('organization.memberCount', 'organization.members')
-      .orderBy('organization.createdAt', 'DESC')
+      .createQueryBuilder('workspace')
+      .loadRelationCountAndMap('workspace.memberCount', 'workspace.members')
+      .orderBy('workspace.createdAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 
     if (filters.ownerId !== undefined) {
-      qb.andWhere('organization.ownerId = :ownerId', { ownerId: filters.ownerId });
+      qb.andWhere('workspace.ownerId = :ownerId', { ownerId: filters.ownerId });
     }
 
     if (filters.slug?.trim()) {
-      qb.andWhere('organization.slug ILIKE :slug', { slug: toSearch(filters.slug) });
+      qb.andWhere('workspace.slug ILIKE :slug', { slug: toSearch(filters.slug) });
     }
 
     if (filters.domain?.trim()) {
-      qb.andWhere('organization.domain ILIKE :domain', { domain: toSearch(filters.domain) });
+      qb.andWhere('workspace.domain ILIKE :domain', { domain: toSearch(filters.domain) });
     }
 
     if (filters.q?.trim()) {
       qb.andWhere(
-        '(organization.name ILIKE :query OR organization.slug ILIKE :query OR COALESCE(organization.domain, \'\') ILIKE :query OR COALESCE(organization.description, \'\') ILIKE :query)',
+        '(workspace.name ILIKE :query OR workspace.slug ILIKE :query OR COALESCE(workspace.domain, \'\') ILIKE :query OR COALESCE(workspace.description, \'\') ILIKE :query)',
         { query: toSearch(filters.q) },
       );
     }
@@ -585,26 +619,26 @@ export class AdminCatalogService {
     return { data: data as any, total, page, limit, hasNextPage: page * limit < total };
   }
 
-  async exportOrganizations(filters: QueryAdminOrganizationsDto = {}) {
-    const { data } = await this.getOrganizations({ ...filters, page: 1, limit: 100 });
+  async exportWorkspaces(filters: QueryAdminWorkspacesDto = {}) {
+    const { data } = await this.getWorkspaces({ ...filters, page: 1, limit: 100 });
     return buildCsv(
       ['id', 'name', 'slug', 'domain', 'ownerId', 'memberCount', 'createdAt'],
-      data.map((org: any) => [
-        org.id,
-        org.name,
-        org.slug,
-        org.domain ?? '',
-        org.ownerId,
-        org.memberCount ?? 0,
-        org.createdAt?.toISOString?.() ?? '',
+      data.map((workspace: any) => [
+        workspace.id,
+        workspace.name,
+        workspace.slug,
+        workspace.domain ?? '',
+        workspace.ownerId,
+        workspace.memberCount ?? 0,
+        workspace.createdAt?.toISOString?.() ?? '',
       ]),
     );
   }
 
-  async getOrganizationDetail(orgId: string) {
-    const org = await this.getOrgRepo().findOne({ where: { id: orgId } });
-    if (!org) {
-      throw new NotFoundException('Organization not found');
+  async getWorkspaceDetail(workspaceId: string) {
+    const workspace = await this.getOrgRepo().findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
     }
 
     const members = await this.getMemberRepo()
@@ -613,7 +647,7 @@ export class AdminCatalogService {
       .select([
         'member.id AS id',
         'member.userId AS "userId"',
-        'member.organizationId AS "organizationId"',
+        'member.workspaceId AS "workspaceId"',
         'member.role AS role',
         'member.createdAt AS "createdAt"',
         'member.updatedAt AS "updatedAt"',
@@ -622,17 +656,17 @@ export class AdminCatalogService {
         'user.firstName AS "userFirstName"',
         'user.lastName AS "userLastName"',
       ])
-      .where('member.organizationId = :orgId', { orgId })
+      .where('member.workspaceId = :workspaceId', { workspaceId })
       .orderBy('member.createdAt', 'DESC')
       .getRawMany();
 
     return {
-      ...org,
+      ...workspace,
       memberCount: members.length,
       members: members.map((row) => ({
         id: row.id,
         userId: Number(row.userId),
-        organizationId: row.organizationId,
+        workspaceId: row.workspaceId,
         role: row.role,
         createdAt: row.createdAt,
         updatedAt: row.updatedAt,
@@ -646,43 +680,43 @@ export class AdminCatalogService {
     };
   }
 
-  async updateOrganization(
-    orgId: string,
-    dto: UpdateAdminOrganizationDto,
+  async updateWorkspace(
+    workspaceId: string,
+    dto: UpdateAdminWorkspaceDto,
     actor?: AdminAuditActor,
   ) {
-    const orgRepository = this.getOrgRepo();
-    const org = await orgRepository.findOne({ where: { id: orgId } });
-    if (!org) {
-      throw new NotFoundException('Organization not found');
+    const workspaceRepository = this.getOrgRepo();
+    const workspace = await workspaceRepository.findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
     }
 
     const before = {
-      name: org.name,
-      slug: org.slug,
-      domain: org.domain,
-      ownerId: org.ownerId,
-      shouldAttachUsersByDomain: org.shouldAttachUsersByDomain,
+      name: workspace.name,
+      slug: workspace.slug,
+      domain: workspace.domain,
+      ownerId: workspace.ownerId,
+      shouldAttachUsersByDomain: workspace.shouldAttachUsersByDomain,
     };
 
-    Object.assign(org, {
-      name: dto.name ?? org.name,
-      slug: dto.slug ?? org.slug,
-      url: dto.url ?? org.url,
-      description: dto.description ?? org.description,
-      domain: dto.domain === undefined ? org.domain : dto.domain,
+    Object.assign(workspace, {
+      name: dto.name ?? workspace.name,
+      slug: dto.slug ?? workspace.slug,
+      url: dto.url ?? workspace.url,
+      description: dto.description ?? workspace.description,
+      domain: dto.domain === undefined ? workspace.domain : dto.domain,
       shouldAttachUsersByDomain:
-        dto.shouldAttachUsersByDomain ?? org.shouldAttachUsersByDomain,
-      avatarUrl: dto.avatarUrl ?? org.avatarUrl,
-      ownerId: dto.ownerId ?? org.ownerId,
+        dto.shouldAttachUsersByDomain ?? workspace.shouldAttachUsersByDomain,
+      avatarUrl: dto.avatarUrl ?? workspace.avatarUrl,
+      ownerId: dto.ownerId ?? workspace.ownerId,
     });
 
-    const saved = await orgRepository.save(org);
+    const saved = await workspaceRepository.save(workspace);
 
     if (actor) {
       await this.log(actor, {
-        action: 'admin.organization.update',
-        entityType: 'organization',
+        action: 'admin.workspace.update',
+        entityType: 'workspace',
         entityId: saved.id,
         entityName: saved.name,
         before,
@@ -700,62 +734,62 @@ export class AdminCatalogService {
     return saved;
   }
 
-  async transferOrganizationOwnership(
-    orgId: string,
+  async updateWorkspaceOwner(
+    workspaceId: string,
     memberId: string,
     actor: AdminAuditActor,
   ) {
-    const org = await this.getOrgRepo().findOne({ where: { id: orgId } });
-    if (!org) {
-      throw new NotFoundException('Organization not found');
+    const workspace = await this.getOrgRepo().findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
     }
 
     const memberRepo = this.getMemberRepo();
     const targetMember = await memberRepo.findOne({ where: { id: memberId } });
-    if (!targetMember || targetMember.organizationId !== org.id) {
-      throw new NotFoundException('Target member not found in this organization');
+    if (!targetMember || targetMember.workspaceId !== workspace.id) {
+      throw new NotFoundException('Target member not found in this workspace');
     }
 
-    const before = { ownerId: org.ownerId };
-    org.ownerId = targetMember.userId;
-    await this.getOrgRepo().save(org);
+    const before = { ownerId: workspace.ownerId };
+    workspace.ownerId = targetMember.userId;
+    await this.getOrgRepo().save(workspace);
 
-    if (targetMember.role !== OrgRoleEnum.ADMIN) {
-      targetMember.role = OrgRoleEnum.ADMIN;
+    if (targetMember.role !== WorkspaceRoleEnum.ADMIN) {
+      targetMember.role = WorkspaceRoleEnum.ADMIN;
       await memberRepo.save(targetMember);
     }
 
     await this.log(actor, {
-      action: 'admin.organization.transfer_owner',
-      entityType: 'organization',
-      entityId: org.id,
-      entityName: org.name,
+      action: 'admin.workspace.transfer_owner',
+      entityType: 'workspace',
+      entityId: workspace.id,
+      entityName: workspace.name,
       before,
-      after: { ownerId: org.ownerId },
+      after: { ownerId: workspace.ownerId },
       meta: { memberId, targetUserId: targetMember.userId },
     });
 
-    return this.getOrganizationDetail(org.id);
+    return this.getWorkspaceDetail(workspace.id);
   }
 
-  async updateOrganizationMember(
-    orgId: string,
+  async updateWorkspaceMember(
+    workspaceId: string,
     memberId: string,
-    dto: UpdateAdminOrganizationMemberDto,
+    dto: UpdateAdminWorkspaceMemberDto,
     actor: AdminAuditActor,
   ) {
-    const org = await this.getOrgRepo().findOne({ where: { id: orgId } });
-    if (!org) {
-      throw new NotFoundException('Organization not found');
+    const workspace = await this.getOrgRepo().findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
     }
 
     const memberRepo = this.getMemberRepo();
     const member = await memberRepo.findOne({ where: { id: memberId } });
-    if (!member || member.organizationId !== org.id) {
+    if (!member || member.workspaceId !== workspace.id) {
       throw new NotFoundException('Member not found');
     }
 
-    if (member.userId === org.ownerId) {
+    if (member.userId === workspace.ownerId) {
       throw new BadRequestException('Cannot change the owner member role');
     }
 
@@ -764,45 +798,45 @@ export class AdminCatalogService {
     const saved = await memberRepo.save(member);
 
     await this.log(actor, {
-      action: 'admin.organization.member_update',
+      action: 'admin.workspace.member_update',
       entityType: 'member',
       entityId: saved.id,
       entityName: `${saved.userId}`,
       before,
       after: { role: saved.role },
-      meta: { organizationId: org.id },
+      meta: { workspaceId: workspace.id },
     });
 
     return saved;
   }
 
-  async deleteOrganizationMemberInternal(
-    orgId: string,
+  async deleteWorkspaceMemberInternal(
+    workspaceId: string,
     memberId: string,
     actor: AdminAuditActor,
   ) {
-    const org = await this.getOrgRepo().findOne({ where: { id: orgId } });
-    if (!org) {
-      throw new NotFoundException('Organization not found');
+    const workspace = await this.getOrgRepo().findOne({ where: { id: workspaceId } });
+    if (!workspace) {
+      throw new NotFoundException('Workspace not found');
     }
 
     const memberRepo = this.getMemberRepo();
     const member = await memberRepo.findOne({ where: { id: memberId } });
-    if (!member || member.organizationId !== org.id) {
+    if (!member || member.workspaceId !== workspace.id) {
       throw new NotFoundException('Member not found');
     }
 
-    if (member.userId === org.ownerId) {
-      throw new BadRequestException('Cannot remove the organization owner');
+    if (member.userId === workspace.ownerId) {
+      throw new BadRequestException('Cannot remove the workspace owner');
     }
 
     await memberRepo.delete(memberId);
     await this.log(actor, {
-      action: 'admin.organization.member_remove',
+      action: 'admin.workspace.member_remove',
       entityType: 'member',
       entityId: memberId,
       entityName: `${member.userId}`,
-      meta: { organizationId: org.id },
+      meta: { workspaceId: workspace.id },
     });
     return { success: true };
   }
@@ -1222,6 +1256,7 @@ export class AdminCatalogService {
           sources: options.sources,
           maxItems: options.maxItems,
           dryRun: options.dryRun,
+          force: options.force,
           result,
         },
       });
@@ -1242,36 +1277,36 @@ export class AdminCatalogService {
     return this.exportAssets(filters);
   }
 
-  async exportOrganizationsCsv(filters: QueryAdminOrganizationsDto = {}) {
-    return this.exportOrganizations(filters);
+  async exportWorkspacesCsv(filters: QueryAdminWorkspacesDto = {}) {
+    return this.exportWorkspaces(filters);
   }
 
-  async getOrganizationMembers(orgId: string) {
-    return this.getOrganizationDetail(orgId);
+  async getWorkspaceMembers(workspaceId: string) {
+    return this.getWorkspaceDetail(workspaceId);
   }
 
-  async updateOrganizationOwner(
-    orgId: string,
+  async updateWorkspaceOwnerRole(
+    workspaceId: string,
     memberId: string,
     actor: AdminAuditActor,
   ) {
-    return this.transferOrganizationOwnership(orgId, memberId, actor);
+    return this.updateWorkspaceOwner(workspaceId, memberId, actor);
   }
 
-  async updateOrganizationMemberRole(
-    orgId: string,
+  async updateWorkspaceMemberRole(
+    workspaceId: string,
     memberId: string,
-    dto: UpdateAdminOrganizationMemberDto,
+    dto: UpdateAdminWorkspaceMemberDto,
     actor: AdminAuditActor,
   ) {
-    return this.updateOrganizationMember(orgId, memberId, dto, actor);
+    return this.updateWorkspaceMember(workspaceId, memberId, dto, actor);
   }
 
-  async removeOrganizationMember(
-    orgId: string,
+  async removeWorkspaceMember(
+    workspaceId: string,
     memberId: string,
     actor: AdminAuditActor,
   ) {
-    return this.deleteOrganizationMemberInternal(orgId, memberId, actor);
+    return this.deleteWorkspaceMemberInternal(workspaceId, memberId, actor);
   }
 }

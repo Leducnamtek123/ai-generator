@@ -113,7 +113,7 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
             />
             {!data.isPreview && (
               <div className="absolute right-2 bottom-2 flex items-center gap-2">
-                <span className="text-[10px] text-white/30">{localText.length} chars</span>
+                <span className="text-[10px] text-muted-foreground">{localText.length} chars</span>
               </div>
             )}
           </div>
@@ -142,7 +142,7 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
                 <button
                   onClick={handleCopy}
                   disabled={!localText.trim()}
-                  className="rounded-lg bg-white/5 p-2 text-white/60 transition-all hover:bg-white/10 hover:text-white disabled:opacity-50"
+                  className="rounded-lg bg-muted/30 p-2 text-muted-foreground transition-all hover:bg-accent hover:text-foreground disabled:opacity-50"
                   title="Copy to clipboard"
                 >
                   <Copy className="size-4" />
@@ -150,8 +150,8 @@ export function TextNode({ id, data, selected }: TextNodeProps) {
               </div>
 
               {/* Quick Templates */}
-              <div className="mt-3 border-t border-white/5 pt-3">
-                <p className="mb-2 text-[10px] text-white/30">Quick Templates:</p>
+              <div className="mt-3 border-t border-border pt-3">
+                <p className="mb-2 text-[10px] text-muted-foreground">Quick Templates:</p>
                 <div className="flex flex-wrap gap-1">
                   {["Portrait", "Landscape", "Abstract", "Product", "Character"].map((template) => (
                     <button

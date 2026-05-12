@@ -48,7 +48,7 @@ Keeps shared platform concerns for now:
 
 - auth/session bootstrapping
 - dashboard aggregation
-- organizations / members / invites
+- workspaces / members / invites
 - social hub
 - other shared domain routes
 

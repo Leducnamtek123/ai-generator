@@ -9,6 +9,7 @@ import { LeonardoAdapter } from './adapters/leonardo.adapter';
 import { RunwayAdapter } from './adapters/runway.adapter';
 import { ElevenLabsAdapter } from './adapters/elevenlabs.adapter';
 import { FalAdapter } from './adapters/fal.adapter';
+import { KieAdapter } from './adapters/kie.adapter';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { FalAdapter } from './adapters/fal.adapter';
     RunwayAdapter,
     ElevenLabsAdapter,
     FalAdapter,
+    KieAdapter,
   ],
   exports: [ProviderRegistry],
 })

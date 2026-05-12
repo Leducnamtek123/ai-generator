@@ -31,7 +31,9 @@ import {
 import { Button } from '@/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConfirmDialog } from '@/components/common/confirm-dialog';
+import { VisualFlowProjectSkeletonGrid } from '@/components/common/loading-skeletons';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -299,17 +301,17 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-xl bg-zinc-900 border-white/10 text-white">
+      <DialogContent className="max-w-xl border-border bg-background text-foreground">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Clapperboard className="size-5 text-violet-400" />
             New VisualFlow Project
-            <span className="ml-auto text-xs text-white/40">Step {state.step} / 2</span>
+            <span className="ml-auto text-xs text-muted-foreground">Step {state.step} / 2</span>
           </DialogTitle>
         </DialogHeader>
 
         {/* Progress bar */}
-        <div className="w-full h-1 bg-white/10 rounded-full overflow-hidden">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-muted">
           <div
             className="h-full bg-gradient-to-r from-violet-500 to-pink-500 transition-all duration-500"
             style={{ width: `${(state.step / 2) * 100}%` }}
@@ -319,31 +321,31 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
         {state.step === 1 && (
           <div className="space-y-4 py-2">
             <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-widest">Project Name *</div>
+              <div className="text-sm font-medium text-muted-foreground">Project Name *</div>
               <Input
                 value={state.form.name}
                 onChange={(e: React.ChangeEvent<HTMLInputElement>) => dispatch({ type: 'setForm', form: { name: e.target.value } })}
                 placeholder="e.g. Dragon Chronicles Episode 1"
-                className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30"
+                className="mt-1.5 border-border bg-muted/20 text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-widest">Story / Synopsis</div>
+              <div className="text-sm font-medium text-muted-foreground">Story / Synopsis</div>
               <Textarea
                 value={state.form.story}
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => dispatch({ type: 'setForm', form: { story: e.target.value } })}
                 placeholder="Describe your full story here. The AI will use this to maintain consistency across all scenes?"
                 rows={5}
-                className="mt-1.5 bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none"
+                className="mt-1.5 resize-none border-border bg-muted/20 text-foreground placeholder:text-muted-foreground"
               />
             </div>
             <div>
-              <div className="text-xs font-medium text-white/50 uppercase tracking-widest">Language</div>
+              <div className="text-sm font-medium text-muted-foreground">Language</div>
               <Input
                 value={state.form.language}
                 onChange={(e) => dispatch({ type: 'setForm', form: { language: e.target.value } })}
                 placeholder="en"
-                className="mt-1.5 bg-white/5 border-white/10 text-white w-24"
+                className="mt-1.5 w-24 border-border bg-muted/20 text-foreground"
               />
             </div>
           </div>
@@ -351,7 +353,7 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
 
         {state.step === 2 && (
           <div className="space-y-4 py-2">
-            <p className="text-sm text-white/50">
+            <p className="text-sm text-muted-foreground">
               Add visual entities (characters, locations, props). Each gets a reference image to stay consistent across all scenes.
             </p>
             {/* Existing chars */}
@@ -361,10 +363,10 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                   const EntityIcon = ENTITY_TYPE_ICONS[c.entityType] ?? Clapperboard;
 
                   return (
-                    <div key={`${c.entityType}-${c.name}-${c.description}`} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/5 text-sm">
+                    <div key={`${c.entityType}-${c.name}-${c.description}`} className="flex items-center gap-3 rounded-lg bg-muted/20 p-2.5 text-sm">
                       <EntityIcon className="size-4" />
                       <span className="font-medium">{c.name}</span>
-                      <span className="text-white/40 truncate flex-1">{c.description}</span>
+                      <span className="flex-1 truncate text-muted-foreground">{c.description}</span>
                       <button
                         onClick={() =>
                           dispatch({
@@ -382,23 +384,27 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
               </div>
             )}
             {/* Add new char */}
-            <div className="p-3 rounded-xl border border-dashed border-white/10 space-y-2">
+            <div className="space-y-2 rounded-xl border border-dashed border-border p-3">
               <div className="flex gap-2">
-                <select
+                <Select
                   value={state.newChar.entityType}
-                  onChange={(e) => dispatch({ type: 'setNewChar', newChar: { entityType: e.target.value as EntityType } })}
-                  className="bg-white/5 border border-white/10 rounded-lg px-2 py-1.5 text-sm text-white"
+                  onValueChange={(value) => dispatch({ type: 'setNewChar', newChar: { entityType: value as EntityType } })}
                 >
-                  <option value="character">Character</option>
-                  <option value="location">Location</option>
-                  <option value="creature">Creature</option>
-                  <option value="visual_asset">Visual Asset</option>
-                </select>
+                  <SelectTrigger className="rounded-lg border border-border bg-muted/20 px-2 py-1.5 text-sm text-foreground">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="character">Character</SelectItem>
+                    <SelectItem value="location">Location</SelectItem>
+                    <SelectItem value="creature">Creature</SelectItem>
+                    <SelectItem value="visual_asset">Visual Asset</SelectItem>
+                  </SelectContent>
+                </Select>
                 <Input
                   value={state.newChar.name}
                   onChange={(e) => dispatch({ type: 'setNewChar', newChar: { name: e.target.value } })}
                   placeholder="Name (used in scene prompts)"
-                  className="flex-1 bg-white/5 border-white/10 text-white placeholder:text-white/30 h-9"
+                  className="h-9 flex-1 border-border bg-muted/20 text-foreground placeholder:text-muted-foreground"
                 />
               </div>
               <Textarea
@@ -406,20 +412,20 @@ function CreateProjectWizard({ open, onClose, onCreated }: CreateProjectWizardPr
                 onChange={(e) => dispatch({ type: 'setNewChar', newChar: { description: e.target.value } })}
                 placeholder='Appearance only: "Chubby orange cat, blue apron, straw hat, Pixar 3D style"'
                 rows={2}
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 resize-none text-sm"
+                className="resize-none border-border bg-muted/20 text-sm text-foreground placeholder:text-muted-foreground"
               />
               <Input
                 value={state.newChar.voiceDescription}
                 onChange={(e) => dispatch({ type: 'setNewChar', newChar: { voiceDescription: e.target.value } })}
                 placeholder="Voice (optional): 'Soft curious childlike voice'"
-                className="bg-white/5 border-white/10 text-white placeholder:text-white/30 h-8 text-xs"
+                className="h-8 border-border bg-muted/20 text-xs text-foreground placeholder:text-muted-foreground"
               />
               <Button
                 size="sm"
                 variant="outline"
                 onClick={handleAddChar}
                 disabled={!state.newChar.name.trim()}
-                className="w-full border-white/10 text-white/70 hover:bg-white/10"
+                className="w-full border-border text-foreground hover:bg-accent"
               >
                 <Plus className="size-3.5 mr-1" /> Add Entity
               </Button>
@@ -540,8 +546,8 @@ function ProjectCard({ project, onClick, onDelete }: { project: VisualProject; o
         {/* Ref progress bar */}
         {chars.length > 0 && (
           <div className="mt-3">
-            <div className="flex justify-between text-[10px] text-white/30 mb-1">
-              <span>Reference images</span>
+            <div className="flex justify-between text-xs text-white/30 mb-1">
+              <span>References</span>
               <span>{completedRefs}/{chars.length}</span>
             </div>
             <div className="h-1 bg-white/10 rounded-full overflow-hidden">
@@ -640,9 +646,9 @@ export default function VisualFlowPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0a0f] text-white p-6 space-y-8">
+    <div className="min-h-screen bg-background p-6 space-y-8 text-foreground">
       {/* Hero Banner */}
-      <div className="relative w-full rounded-3xl overflow-hidden border border-white/10 bg-gradient-to-br from-violet-950/80 via-[#0a0a0f] to-pink-950/50 p-8 flex items-center justify-between min-h-[180px]">
+      <div className="relative flex min-h-[180px] w-full items-center justify-between overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-violet-500/10 via-background to-pink-500/10 p-8">
         {/* Animated background orbs */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute -top-20 -left-20 size-80 rounded-full bg-violet-600/20 blur-[80px]" />
@@ -653,12 +659,12 @@ export default function VisualFlowPage() {
             <div className="p-2 rounded-xl bg-violet-600/20 border border-violet-500/30">
               <Clapperboard className="size-5 text-violet-400" />
             </div>
-            <span className="text-xs font-medium text-violet-400 uppercase tracking-widest">VisualFlow Studio</span>
+            <span className="text-sm font-medium text-violet-300">VisualFlow Studio</span>
           </div>
-          <h1 className="text-3xl font-semibold mb-2 text-white/90">
+          <h1 className="mb-2 text-3xl font-semibold text-foreground">
             AI Video Pipeline
           </h1>
-          <p className="text-sm text-white/50 max-w-md">
+          <p className="max-w-md text-sm text-muted-foreground">
             Build consistent, multi-scene AI videos. Reference images keep your characters and locations identical across every frame.
           </p>
           <Button
@@ -678,7 +684,7 @@ export default function VisualFlowPage() {
             { icon: <Video className="size-4 text-blue-400" />, label: 'Dual Orientation (9:16 + 16:9)' },
             { icon: <Wand2 className="size-4 text-emerald-400" />, label: 'Auto Pipeline Generation' },
           ].map((f) => (
-            <div key={f.label} className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-xs text-white/60">
+            <div key={f.label} className="flex items-center gap-2 rounded-full border border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
               {f.icon} {f.label}
             </div>
           ))}
@@ -688,36 +694,34 @@ export default function VisualFlowPage() {
       {/* Controls */}
       <div className="flex items-center gap-4">
         <div className="relative flex-1 max-w-xs">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-white/30" />
+          <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
             onChange={(e) => dispatch({ type: 'setSearch', search: e.target.value })}
             placeholder="Search projects?"
-            className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-white/30 rounded-full"
+            className="rounded-full border-border bg-background pl-10 text-foreground placeholder:text-muted-foreground"
           />
         </div>
-        <span className="text-sm text-white/30">
+        <span className="text-sm text-muted-foreground">
           {filtered.length} project{filtered.length !== 1 ? 's' : ''}
         </span>
       </div>
 
       {/* Project Grid */}
       {loading ? (
-        <div className="flex items-center justify-center h-48">
-          <Loader2 className="size-6 text-violet-400 animate-spin" />
-        </div>
+        <VisualFlowProjectSkeletonGrid count={8} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
           {/* New project ghost card */}
           <button
             type="button"
             onClick={() => dispatch({ type: 'setShowWizard', showWizard: true })}
-            className="group cursor-pointer rounded-2xl border border-dashed border-white/10 bg-transparent hover:bg-white/[0.03] hover:border-violet-500/40 transition-all duration-300 flex flex-col items-center justify-center gap-3 min-h-[260px]"
+            className="group flex min-h-[260px] cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border bg-transparent transition-all duration-300 hover:border-violet-500/40 hover:bg-accent/30"
           >
             <div className="size-14 rounded-2xl bg-violet-600/10 border border-violet-500/20 flex items-center justify-center group-hover:bg-violet-600/20 transition-colors">
               <Plus className="size-6 text-violet-400" />
             </div>
-            <span className="text-sm font-medium text-white/30 group-hover:text-white/60 transition-colors">
+            <span className="text-sm font-medium text-muted-foreground transition-colors group-hover:text-foreground">
               New Project
             </span>
           </button>
@@ -734,13 +738,13 @@ export default function VisualFlowPage() {
       )}
 
       {!loading && filtered.length === 0 && projects.length > 0 && (
-        <div className="flex flex-col items-center justify-center h-32 text-white/30">
+        <div className="flex h-32 flex-col items-center justify-center text-muted-foreground">
           <p>No projects match your search.</p>
         </div>
       )}
 
       {!loading && projects.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-48 gap-3 text-white/30">
+        <div className="flex h-48 flex-col items-center justify-center gap-3 text-muted-foreground">
           <Clapperboard className="size-10" />
           <p className="text-sm">No projects yet. Create your first VisualFlow project!</p>
         </div>

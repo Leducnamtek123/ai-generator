@@ -116,7 +116,7 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
 
                     {/* Input Preview */}
                     <div className="p-3 border-b border-border">
-                        <p className="text-[10px] text-muted-foreground mb-1 uppercase tracking-wider">Input</p>
+                        <p className="text-[10px] text-muted-foreground mb-1">Input</p>
                         <div className="bg-muted/50 rounded-lg p-2 text-xs text-muted-foreground min-h-[40px] max-h-[60px] overflow-y-auto">
                             {data.inputText || 'Connect a Text node...'}
                         </div>
@@ -125,7 +125,7 @@ export function AssistantNode({ id, data, selected }: AssistantNodeProps) {
                     {/* Output */}
                     <div className="p-3">
                         <div className="flex items-center justify-between mb-1">
-                            <p className="text-[10px] text-muted-foreground uppercase tracking-wider">Output</p>
+                            <p className="text-[10px] text-muted-foreground">Output</p>
                             {data.enhancedText && (
                                 <button
                                     onClick={handleCopy}

@@ -95,8 +95,8 @@ export function CharacterPanel({
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <h3 className="text-sm font-medium text-foreground">
           Entities ({characters.length})
         </h3>
         <div className="flex gap-1">
@@ -108,7 +108,7 @@ export function CharacterPanel({
                   variant="ghost"
                   onClick={() => onGenerateRefs()}
                   disabled={isGenerating}
-                  className="text-violet-400 hover:text-violet-300 hover:bg-violet-500/10"
+                  className="text-violet-500 hover:bg-violet-500/10 hover:text-violet-400"
                 >
                   {isGenerating ? (
                     <Loader2 className="size-3.5 animate-spin" />
@@ -126,7 +126,7 @@ export function CharacterPanel({
                 size="icon-xs"
                 variant="ghost"
                 onClick={() => setShowForm(!showForm)}
-                className="text-white/40 hover:text-white hover:bg-white/10"
+                className="text-muted-foreground hover:bg-accent hover:text-foreground"
               >
                 {showForm ? <X className="size-3.5" /> : <Plus className="size-3.5" />}
               </Button>
@@ -138,12 +138,12 @@ export function CharacterPanel({
 
       {/* Add form */}
       {showForm && (
-        <div className="px-4 py-3 border-b border-white/[0.06] bg-white/[0.02] space-y-2.5 animate-in slide-in-from-top-2 duration-200">
+        <div className="space-y-2.5 border-b border-border bg-muted/20 px-4 py-3 animate-in slide-in-from-top-2 duration-200">
           <Input
             value={form.name}
             onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))}
             placeholder="Entity name?"
-            className="h-8 bg-white/5 border-white/10 text-white text-sm placeholder:text-white/20"
+            className="h-8 border-border bg-background text-sm text-foreground placeholder:text-muted-foreground"
             onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
           />
           <div className="flex gap-1.5">
@@ -156,8 +156,8 @@ export function CharacterPanel({
                   className={cn(
                     'flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] capitalize border transition-all',
                     form.entityType === type
-                      ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
-                      : 'bg-white/[0.02] border-white/[0.06] text-white/30 hover:border-white/15'
+                      ? 'border-violet-500/40 bg-violet-500/20 text-violet-300'
+                      : 'border-border bg-muted/20 text-muted-foreground hover:border-border/80'
                   )}
                 >
                   <Icon className="size-3" />
@@ -171,13 +171,13 @@ export function CharacterPanel({
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setForm((p) => ({ ...p, description: e.target.value }))}
             placeholder="Visual description (for AI reference generation)?"
             rows={2}
-            className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
+            className="resize-none border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
           />
           <Button
             onClick={handleAdd}
             disabled={adding || !form.name.trim()}
             size="sm"
-            className="w-full bg-violet-600 hover:bg-violet-500 text-white text-xs h-7"
+            className="h-7 w-full bg-violet-600 text-xs text-white hover:bg-violet-500"
           >
             {adding ? <Loader2 className="size-3 animate-spin mr-1" /> : <Plus className="size-3 mr-1" />}
             Add
@@ -194,7 +194,7 @@ export function CharacterPanel({
           return (
             <div
               key={char.id}
-              className="group flex items-center gap-2.5 p-2 rounded-lg hover:bg-white/[0.04] transition-colors"
+              className="group flex items-center gap-2.5 rounded-lg p-2 transition-colors hover:bg-accent/40"
             >
               {/* Avatar */}
               <div className="relative size-9 shrink-0">
@@ -209,15 +209,15 @@ export function CharacterPanel({
                   />
                 ) : (
                   <div className={cn(
-                    'size-9 rounded-lg flex items-center justify-center ring-1',
+                    'flex size-9 items-center justify-center rounded-lg ring-1',
                     statusStyle.bg, statusStyle.ring
                   )}>
-                    <Icon className="size-4 text-white/40" />
+                    <Icon className="size-4 text-muted-foreground" />
                   </div>
                 )}
                 {/* Status indicator */}
                 <div className={cn(
-                  'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-[#0a0a0f]',
+                  'absolute -bottom-0.5 -right-0.5 size-2.5 rounded-full border-2 border-background',
                   char.refStatus === 'COMPLETED' ? 'bg-emerald-400' :
                   char.refStatus === 'PROCESSING' ? 'bg-blue-400 animate-pulse' :
                   char.refStatus === 'FAILED' ? 'bg-red-400' : 'bg-amber-400'
@@ -226,14 +226,14 @@ export function CharacterPanel({
 
               {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-xs font-medium text-white/80 truncate">{char.name}</p>
-                <p className="text-[10px] text-white/25 capitalize">{char.entityType.replace('_', ' ')}</p>
+                <p className="truncate text-xs font-medium text-foreground">{char.name}</p>
+                <p className="text-[10px] capitalize text-muted-foreground">{char.entityType.replace('_', ' ')}</p>
               </div>
 
               {/* Delete */}
               <button
                 onClick={() => onDelete(char.id)}
-                className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/10 rounded transition-all"
+                className="rounded p-1 opacity-0 transition-all group-hover:opacity-100 hover:bg-red-500/10"
               >
                 <Trash2 className="size-3 text-red-400/60" />
               </button>
@@ -244,7 +244,7 @@ export function CharacterPanel({
         {characters.length === 0 && !showForm && (
           <button
             onClick={() => setShowForm(true)}
-            className="w-full flex flex-col items-center justify-center py-8 text-white/15 hover:text-white/30 transition-colors"
+            className="flex w-full flex-col items-center justify-center py-8 text-muted-foreground/30 transition-colors hover:text-muted-foreground"
           >
             <Plus className="size-6 mb-1" />
             <span className="text-[10px]">Add your first entity</span>

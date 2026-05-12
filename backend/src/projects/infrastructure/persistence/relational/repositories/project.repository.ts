@@ -31,14 +31,14 @@ export class ProjectsRelationalRepository implements ProjectRepository {
 
   async findAll(
     userId: string | number,
-    organizationId?: string | null,
+    workspaceId?: string | null,
   ): Promise<Project[]> {
     const where: FindOptionsWhere<ProjectEntity> = {
       userId: String(userId),
     };
 
-    if (organizationId) {
-      where.organizationId = organizationId;
+    if (workspaceId) {
+      where.workspaceId = workspaceId;
     }
 
     const entities = await this.projectsRepository.find({
@@ -49,13 +49,13 @@ export class ProjectsRelationalRepository implements ProjectRepository {
 
   async findManyWithPagination({
     userId,
-    organizationId,
+    workspaceId,
     filterOptions,
     sortOptions,
     paginationOptions,
   }: {
     userId: string | number;
-    organizationId?: string | null;
+    workspaceId?: string | null;
     filterOptions?: FilterProjectDto | null;
     sortOptions?: SortProjectDto[] | null;
     paginationOptions: IPaginationOptions;
@@ -64,12 +64,12 @@ export class ProjectsRelationalRepository implements ProjectRepository {
       userId: String(userId),
     };
 
-    if (organizationId) {
-      where.organizationId = organizationId;
+    if (workspaceId) {
+      where.workspaceId = workspaceId;
     }
 
-    if (filterOptions?.organizationId) {
-      where.organizationId = filterOptions.organizationId;
+    if (filterOptions?.workspaceId) {
+      where.workspaceId = filterOptions.workspaceId;
     }
 
     if (filterOptions?.name) {

@@ -18,14 +18,14 @@ function GlobalLoader({ className, size = "md", text, ref, ...props }: GlobalLoa
         <div
             ref={ref}
             className={cn(
-                "flex flex-col items-center justify-center p-6 text-center text-white/50",
+                "flex flex-col items-center justify-center p-6 text-center text-muted-foreground",
                 className
             )}
             {...props}
         >
             <div
                 className={cn(
-                    "animate-spin rounded-full border-blue-500",
+                    "animate-spin rounded-full border-primary",
                     sizeClasses[size]
                 )}
             />

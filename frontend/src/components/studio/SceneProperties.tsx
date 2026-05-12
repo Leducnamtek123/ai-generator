@@ -72,7 +72,7 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
   };
 
   return (
-    <div className="relative rounded-lg overflow-hidden bg-[#0a0a0f] group">
+    <div className="relative overflow-hidden rounded-lg bg-background/95 group">
       <video
         ref={videoRef}
         src={src}
@@ -81,12 +81,12 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
         playsInline
       />
       {/* Controls overlay */}
-      <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-[#0a0a0f]/80 to-transparent p-3 opacity-0 group-hover:opacity-100 transition-opacity">
+      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-3 opacity-0 transition-opacity group-hover:opacity-100">
         {/* Progress bar */}
         <button
           type="button"
           aria-label="Seek video position"
-          className="block w-full h-1 bg-white/20 rounded-full mb-2 cursor-pointer"
+          className="mb-2 block h-1 w-full cursor-pointer rounded-full bg-muted/60"
           onClick={(e) => {
             const rect = e.currentTarget.getBoundingClientRect();
             const pctClicked = (e.clientX - rect.left) / rect.width;
@@ -99,19 +99,19 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
             }
           }}
         >
-          <div className="h-full bg-violet-500 rounded-full transition-all" style={{ width: `${pct}%` }} />
+          <div className="h-full rounded-full bg-violet-500 transition-all" style={{ width: `${pct}%` }} />
         </button>
         <div className="flex items-center gap-2">
-          <button onClick={togglePlay} className="text-white/80 hover:text-white transition">
+          <button onClick={togglePlay} className="text-muted-foreground transition hover:text-foreground">
             {playerState.isPlaying ? <Pause className="size-4" /> : <Play className="size-4" />}
           </button>
-          <span className="text-[10px] text-white/50 font-mono">
+          <span className="font-mono text-[10px] text-muted-foreground">
             {formatTime(playerState.progress)} / {formatTime(playerState.duration)}
           </span>
           <div className="flex-1" />
           <button
             onClick={() => videoRef.current?.requestFullscreen?.()}
-            className="text-white/40 hover:text-white transition"
+            className="text-muted-foreground transition hover:text-foreground"
           >
             <Maximize2 className="size-3.5" />
           </button>
@@ -121,10 +121,10 @@ function VideoPlayer({ src, poster }: { src: string; poster?: string }) {
       {!playerState.isPlaying && (
         <button
           onClick={togglePlay}
-          className="absolute inset-0 flex items-center justify-center bg-[#0a0a0f]/20"
+          className="absolute inset-0 flex items-center justify-center bg-background/20"
         >
-          <div className="size-12 rounded-full bg-[#0a0a0f]/50 backdrop-blur-sm flex items-center justify-center ring-1 ring-white/20 hover:bg-[#0a0a0f]/70 transition">
-            <Play className="size-5 text-white ml-0.5" />
+          <div className="flex size-12 items-center justify-center rounded-full bg-background/70 backdrop-blur-sm ring-1 ring-border/70 transition hover:bg-background/90">
+            <Play className="ml-0.5 size-5 text-foreground" />
           </div>
         </button>
       )}
@@ -181,8 +181,8 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/[0.06]">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50">
+      <div className="border-b border-border px-4 py-3">
+        <h3 className="text-sm font-medium text-foreground">
           Scene Properties
         </h3>
       </div>
@@ -194,12 +194,12 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {previewVideo ? (
             <VideoPlayer src={previewVideo} poster={previewImage} />
           ) : previewImage ? (
-            <div className="relative aspect-[9/16] max-h-[250px] rounded-lg overflow-hidden bg-[#0a0a0f]">
+            <div className="relative max-h-[250px] overflow-hidden rounded-lg bg-background">
               <Image src={previewImage} alt="Preview" fill className="object-contain" sizes="300px" unoptimized />
             </div>
           ) : (
-            <div className="aspect-video rounded-lg bg-white/[0.02] border border-white/[0.06] flex items-center justify-center">
-              <ImageIcon className="size-8 text-white/[0.06]" />
+            <div className="flex aspect-video items-center justify-center rounded-lg border border-border bg-muted/20">
+              <ImageIcon className="size-8 text-muted-foreground/20" />
             </div>
           )}
 
@@ -207,25 +207,25 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {(scene.verticalImageUrl || scene.horizontalImageUrl) && (
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1">
-                <span className="text-[9px] text-white/20 font-mono">9:16 Vertical</span>
-                <div className="relative aspect-[9/16] rounded-md overflow-hidden bg-white/[0.02] border border-white/[0.04]">
+                <span className="text-xs font-medium text-muted-foreground">9:16 Vertical</span>
+                <div className="relative aspect-[9/16] overflow-hidden rounded-md border border-border bg-muted/20">
                   {scene.verticalImageUrl ? (
                     <Image src={scene.verticalImageUrl} alt="V" fill className="object-cover" sizes="150px" unoptimized />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="size-4 text-white/[0.06]" />
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImageIcon className="size-4 text-muted-foreground/20" />
                     </div>
                   )}
                 </div>
               </div>
               <div className="space-y-1">
-                <span className="text-[9px] text-white/20 font-mono">16:9 Horizontal</span>
-                <div className="relative aspect-video rounded-md overflow-hidden bg-white/[0.02] border border-white/[0.04]">
+                <span className="text-xs font-medium text-muted-foreground">16:9 Horizontal</span>
+                <div className="relative aspect-video overflow-hidden rounded-md border border-border bg-muted/20">
                   {scene.horizontalImageUrl ? (
                     <Image src={scene.horizontalImageUrl} alt="H" fill className="object-cover" sizes="150px" unoptimized />
                   ) : (
-                    <div className="w-full h-full flex items-center justify-center">
-                      <ImageIcon className="size-4 text-white/[0.06]" />
+                    <div className="flex h-full w-full items-center justify-center">
+                      <ImageIcon className="size-4 text-muted-foreground/20" />
                     </div>
                   )}
                 </div>
@@ -236,10 +236,10 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
           {/* Scene Prompt */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Image Prompt</div>
+              <div className="text-sm font-medium text-muted-foreground">Prompt</div>
               <button
                 onClick={() => draft.editingField === 'prompt' ? savePrompt() : setDraft((current) => ({ ...current, editingField: 'prompt' }))}
-                className="text-white/20 hover:text-white/50 transition"
+                className="text-muted-foreground/60 transition hover:text-foreground"
               >
                 <Edit3 className="size-3" />
               </button>
@@ -250,25 +250,25 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                   value={draft.prompt}
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraft((current) => ({ ...current, prompt: e.target.value }))}
                   rows={4}
-                  className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
+                  className="resize-none border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
                 />
                 <div className="flex gap-1">
-                  <Button size="xs" onClick={savePrompt} className="bg-violet-600 text-white text-[10px] h-5 px-2">Save</Button>
-                  <Button size="xs" variant="ghost" onClick={() => setDraft((current) => ({ ...current, editingField: null, prompt: scene.prompt }))} className="text-white/30 text-[10px] h-5 px-2">Cancel</Button>
+                  <Button size="xs" onClick={savePrompt} className="h-5 bg-violet-600 px-2 text-[10px] text-white">Save</Button>
+                  <Button size="xs" variant="ghost" onClick={() => setDraft((current) => ({ ...current, editingField: null, prompt: scene.prompt }))} className="h-5 px-2 text-[10px] text-muted-foreground">Cancel</Button>
                 </div>
               </div>
             ) : (
-              <p className="text-[11px] text-white/40 leading-relaxed">{scene.prompt || 'No prompt'}</p>
+              <p className="text-[11px] leading-relaxed text-muted-foreground">{scene.prompt || 'No prompt'}</p>
             )}
           </div>
 
           {/* Video Prompt */}
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider">Video Motion Prompt</div>
+              <div className="text-[10px] font-medium text-muted-foreground">Motion prompt</div>
               <button
                 onClick={() => draft.editingField === 'videoPrompt' ? saveVideoPrompt() : setDraft((current) => ({ ...current, editingField: 'videoPrompt' }))}
-                className="text-white/20 hover:text-white/50 transition"
+                className="text-muted-foreground/60 transition hover:text-foreground"
               >
                 <Edit3 className="size-3" />
               </button>
@@ -280,15 +280,15 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                   onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setDraft((current) => ({ ...current, videoPrompt: e.target.value }))}
                   rows={3}
                   placeholder="e.g. 0-3s: wide crane down. 3-6s: tracking shot."
-                  className="bg-white/5 border-white/10 text-white text-xs placeholder:text-white/20 resize-none"
+                  className="resize-none border-border bg-background text-xs text-foreground placeholder:text-muted-foreground"
                 />
                 <div className="flex gap-1">
-                  <Button size="xs" onClick={saveVideoPrompt} className="bg-violet-600 text-white text-[10px] h-5 px-2">Save</Button>
-                  <Button size="xs" variant="ghost" onClick={() => setDraft((current) => ({ ...current, editingField: null, videoPrompt: scene.videoPrompt ?? '' }))} className="text-white/30 text-[10px] h-5 px-2">Cancel</Button>
+                  <Button size="xs" onClick={saveVideoPrompt} className="h-5 bg-violet-600 px-2 text-[10px] text-white">Save</Button>
+                  <Button size="xs" variant="ghost" onClick={() => setDraft((current) => ({ ...current, editingField: null, videoPrompt: scene.videoPrompt ?? '' }))} className="h-5 px-2 text-[10px] text-muted-foreground">Cancel</Button>
                 </div>
               </div>
             ) : (
-              <p className="text-[11px] text-white/30 leading-relaxed italic">
+              <p className="text-[11px] leading-relaxed italic text-muted-foreground">
                 {scene.videoPrompt || 'Not set , will use image prompt for motion'}
               </p>
             )}
@@ -296,8 +296,8 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
 
           {/* Characters */}
           <div>
-            <div className="text-[10px] font-medium text-white/30 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-              <Users className="size-3" /> Characters in Scene
+            <div className="mb-1.5 flex items-center gap-1.5 text-[10px] font-medium text-muted-foreground">
+              <Users className="size-3" /> Characters
             </div>
             <div className="flex flex-wrap gap-1.5 mt-1.5">
               {availableCharacters.map((name) => {
@@ -310,7 +310,7 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                       'px-2.5 py-1 rounded-full text-[10px] border transition-all',
                       isActive
                         ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
-                        : 'bg-white/[0.02] border-white/[0.06] text-white/25 hover:border-white/15'
+                        : 'border-border bg-muted/20 text-muted-foreground hover:border-border/80'
                     )}
                   >
                     {name}
@@ -318,16 +318,16 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                 );
               })}
               {availableCharacters.length === 0 && (
-                <span className="text-[10px] text-white/15">No characters in project</span>
+                <span className="text-[10px] text-muted-foreground/50">No characters in project</span>
               )}
             </div>
           </div>
 
           {/* Chain info */}
-          <div className="pt-2 border-t border-white/[0.04]">
+          <div className="border-t border-border pt-2">
             <div className="grid grid-cols-2 gap-2 text-[10px]">
               <div>
-                <span className="text-white/20">Chain Type</span>
+                <span className="text-muted-foreground">Chain</span>
                 <p className={cn(
                   'font-medium mt-0.5',
                   scene.chainType === 'ROOT' ? 'text-violet-400' :
@@ -337,13 +337,13 @@ export function SceneProperties({ scene, onUpdate, availableCharacters }: SceneP
                 </p>
               </div>
               <div>
-                <span className="text-white/20">Display Order</span>
-                <p className="text-white/50 font-mono mt-0.5">{scene.displayOrder}</p>
+                <span className="text-muted-foreground">Order</span>
+                <p className="mt-0.5 font-mono text-muted-foreground">{scene.displayOrder}</p>
               </div>
               {scene.duration && (
                 <div>
-                  <span className="text-white/20">Duration</span>
-                  <p className="text-white/50 font-mono mt-0.5">{scene.duration}s</p>
+                  <span className="text-muted-foreground">Duration</span>
+                  <p className="mt-0.5 font-mono text-muted-foreground">{scene.duration}s</p>
                 </div>
               )}
             </div>

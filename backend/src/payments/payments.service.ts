@@ -951,20 +951,20 @@ export class PaymentsService {
 
   private ensurePlanScope(
     plan: BillingPlanCatalogItem | null,
-    scopeType: "user" | "organization",
+    scopeType: "user" | "workspace",
   ) {
     if (!plan) return;
 
-    const expectedScope: Record<BillingPlanSegment, "user" | "organization"> = {
+    const expectedScope: Record<BillingPlanSegment, "user" | "workspace"> = {
       individual: "user",
-      team: "organization",
+      team: "workspace",
     };
 
     const allowedScope = expectedScope[plan.segment];
     if (scopeType !== allowedScope) {
       throw new BadRequestException(
         plan.segment === "team"
-          ? "Team plans require organization billing"
+          ? "Workspace plans require workspace billing"
           : "Individual plans require user billing",
       );
     }

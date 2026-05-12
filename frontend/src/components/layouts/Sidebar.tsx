@@ -2,14 +2,14 @@
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { Link, usePathname } from "@/i18n/navigation";
 import { useAuth } from "@/providers";
-import { useOrgStore } from "@/stores/org-store";
+import { useWorkspaceStore } from "@/stores/workspace-store";
 import {
   Image as ImageIcon,
+  Coins,
   Video,
-  Sparkles,
   LayoutGrid,
   Clock,
   PanelLeft,
@@ -17,12 +17,13 @@ import {
   Mic,
   Pin,
   Search,
-  Wallet,
+  Globe,
+  Upload,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { canAccessAdmin } from "@/lib/access-control";
 import { Button } from "@/ui/button";
-import { OrgSwitcher } from "@/components/saas/OrgSwitcher";
+import { WorkspaceSwitcher } from "@/components/saas/WorkspaceSwitcher";
 import {
   Tooltip,
   TooltipContent,
@@ -34,7 +35,6 @@ import {
   HoverCardContent,
   HoverCardTrigger,
 } from "@/components/ui/hover-card";
-import { CreditBadge } from "@/components/common/CreditBadge";
 import { billingApi, type BillingWalletSummary } from "@/services/billingApi";
 import { useNotificationStore } from "@/stores/notification-store";
 import {
@@ -46,6 +46,7 @@ import {
 } from "./navigation-data";
 import type { SidebarItem } from "./navigation-data";
 import { useSiteConfig } from "@/hooks/queries/useSiteConfig";
+import { translateLayoutLabel } from "./i18n-helpers";
 
 const stockMenuData = {
   image: [
@@ -73,6 +74,29 @@ const stockMenuData = {
   ],
 };
 
+const communityMenuData = {
+  routes: [
+    {
+      label: "Marketplace",
+      description: "Open the reusable template market.",
+      href: "/community/marketplace",
+      icon: LayoutGrid,
+    },
+    {
+      label: "Publish",
+      description: "Create a new community listing.",
+      href: "/community/publish",
+      icon: Upload,
+    },
+    {
+      label: "My listings",
+      description: "Review your drafts and live items.",
+      href: "/community/my-listings",
+      icon: Globe,
+    },
+  ],
+};
+
 const BREAKPOINTS = {
   sm: 640,
   md: 768,
@@ -88,35 +112,23 @@ const subscribeToViewport = (onStoreChange: () => void) => {
   return () => window.removeEventListener("resize", onStoreChange);
 };
 
-const formatBillingStatus = (status: BillingWalletSummary["status"]) => {
-  switch (status) {
-    case "active":
-      return "Active";
-    case "trialing":
-      return "Trial";
-    case "past_due":
-      return "Past due";
-    case "canceled":
-      return "Canceled";
-    case "free":
-      return "Free";
-    default:
-      return status;
-  }
-};
-
 const creditCountFormatter = new Intl.NumberFormat("en-US");
 
 const formatCreditCount = (value: number) => creditCountFormatter.format(value);
 
-const StockHoverContent = () => (
+type BillingSummaryCard = {
+  scopeLabel: string;
+  remainingCredits: number;
+};
+
+const StockHoverContent = ({ t }: { t: (key: string) => string }) => (
   <div className="w-[600px] p-6 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl">
-    <h3 className="text-lg font-semibold mb-4">Stock</h3>
+    <h3 className="text-lg font-semibold mb-4">{t("stock.title")}</h3>
     <div className="grid grid-cols-4 gap-6">
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <ImageIcon className="size-4" />
-          IMAGE
+          {t("stock.sections.image")}
         </div>
         {stockMenuData.image.map((tool) => (
           <Link
@@ -124,14 +136,14 @@ const StockHoverContent = () => (
             href={tool.href}
             className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            {tool.label}
+            {translateLayoutLabel(t, tool.label)}
           </Link>
         ))}
       </div>
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <Video className="size-4" />
-          VIDEO
+          {t("stock.sections.video")}
         </div>
         {stockMenuData.video.map((tool) => (
           <Link
@@ -139,14 +151,14 @@ const StockHoverContent = () => (
             href={tool.href}
             className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            {tool.label}
+            {translateLayoutLabel(t, tool.label)}
           </Link>
         ))}
       </div>
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <Mic className="size-4" />
-          AUDIO
+          {t("stock.sections.audio")}
         </div>
         {stockMenuData.audio.map((tool) => (
           <Link
@@ -154,14 +166,14 @@ const StockHoverContent = () => (
             href={tool.href}
             className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            {tool.label}
+            {translateLayoutLabel(t, tool.label)}
           </Link>
         ))}
       </div>
       <div className="space-y-2">
-        <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground uppercase tracking-wider mb-3">
+        <div className="mb-3 flex items-center gap-2 text-sm font-medium text-muted-foreground">
           <LayoutGrid className="size-4" />
-          DESIGN
+          {t("stock.sections.design")}
         </div>
         {stockMenuData.design.map((tool) => (
           <Link
@@ -169,7 +181,7 @@ const StockHoverContent = () => (
             href={tool.href}
             className="block text-sm text-muted-foreground hover:text-foreground transition-colors py-1"
           >
-            {tool.label}
+            {translateLayoutLabel(t, tool.label)}
           </Link>
         ))}
       </div>
@@ -180,15 +192,47 @@ const StockHoverContent = () => (
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <LayoutGrid className="size-4" />
-        My Collections
+        {t("stock.collections")}
       </Link>
       <Link
         href="/stock?view=downloads"
         className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
       >
         <Clock className="size-4" />
-        Downloads
+        {t("stock.downloads")}
       </Link>
+    </div>
+  </div>
+);
+
+const CommunityHoverContent = () => (
+  <div className="w-[520px] p-6 bg-popover border border-border text-popover-foreground rounded-xl shadow-2xl">
+    <div className="mb-4">
+      <h3 className="text-lg font-semibold">Open the route you need</h3>
+    </div>
+
+    <div className="grid gap-2">
+      {communityMenuData.routes.map((item) => {
+        const Icon = item.icon;
+
+        return (
+          <Link
+            key={item.label}
+            href={item.href}
+            className="group flex items-center gap-3 rounded-xl border border-border/70 bg-card/60 px-4 py-3 transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <div className="rounded-lg border border-border/70 bg-background p-2 text-muted-foreground transition-colors group-hover:text-foreground">
+              <Icon className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-medium text-foreground">{item.label}</p>
+              <p className="mt-0.5 text-xs leading-5 text-muted-foreground line-clamp-1">
+                {item.description}
+              </p>
+            </div>
+          </Link>
+        );
+      })}
     </div>
   </div>
 );
@@ -197,6 +241,7 @@ interface SidebarNavItemProps {
   item: SidebarItem;
   pathname: string;
   isCollapsed: boolean;
+  t: (key: string) => string;
   badge?: number;
 }
 
@@ -204,14 +249,17 @@ const SidebarNavItem = ({
   item,
   pathname,
   isCollapsed,
+  t,
   badge,
 }: SidebarNavItemProps) => {
   const content = (
     <Link
-      href={item.href}
+      href={item.label === "Community" ? "/community" : item.href}
       className={cn(
         "relative flex items-center w-full px-3 py-2.5 text-sm text-muted-foreground rounded-lg transition-all duration-200 hover:text-foreground hover:bg-accent",
-        pathname === item.href && "text-foreground bg-accent font-medium",
+        (item.label === "Community"
+          ? pathname.startsWith("/community")
+          : pathname === item.href) && "text-foreground bg-accent font-medium",
         isCollapsed ? "justify-center px-2" : "justify-between",
       )}
     >
@@ -222,18 +270,13 @@ const SidebarNavItem = ({
         )}
       >
         <item.icon className="size-5 shrink-0" />
-        {!isCollapsed && <span>{item.label}</span>}
+        {!isCollapsed && <span>{translateLayoutLabel(t, item.label)}</span>}
       </div>
       {!isCollapsed && (
         <div className="flex items-center gap-1.5">
           {badge !== undefined && badge > 0 && (
             <span className="min-w-5 rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold text-primary-foreground text-center">
               {badge > 99 ? "99+" : badge}
-            </span>
-          )}
-          {item.isNew && (
-            <span className="px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded">
-              New
             </span>
           )}
         </div>
@@ -245,9 +288,6 @@ const SidebarNavItem = ({
               className="size-2 rounded-full bg-primary"
               aria-label={`${badge} unread notifications`}
             />
-          )}
-          {item.isNew && (
-            <div className="size-1.5 bg-primary rounded-full" />
           )}
         </div>
       )}
@@ -263,7 +303,22 @@ const SidebarNavItem = ({
           align="start"
           className="p-0 bg-transparent border-none shadow-none w-auto ml-2"
         >
-          <StockHoverContent />
+          <StockHoverContent t={t} />
+        </HoverCardContent>
+      </HoverCard>
+    );
+  }
+
+  if (item.label === "Community" && !isCollapsed) {
+    return (
+      <HoverCard openDelay={0} closeDelay={100}>
+        <HoverCardTrigger asChild>{content}</HoverCardTrigger>
+        <HoverCardContent
+          side="right"
+          align="start"
+          className="p-0 bg-transparent border-none shadow-none w-auto ml-2"
+        >
+          <CommunityHoverContent />
         </HoverCardContent>
       </HoverCard>
     );
@@ -276,7 +331,7 @@ const SidebarNavItem = ({
         {isCollapsed && (
           <TooltipContent side="right">
             <div className="flex items-center gap-2">
-              {item.label}
+              {translateLayoutLabel(t, item.label)}
               {badge !== undefined && badge > 0 && (
                 <span className="px-1 py-0.5 text-[9px] font-bold text-primary bg-primary/10 rounded">
                   {badge > 99 ? "99+" : badge}
@@ -284,7 +339,7 @@ const SidebarNavItem = ({
               )}
               {item.isNew && (
                 <span className="px-1 py-0.5 text-[9px] font-bold text-primary bg-primary/10 rounded">
-                  New
+                  {t("badges.new")}
                 </span>
               )}
             </div>
@@ -300,6 +355,7 @@ interface AllToolsMenuItemProps {
   pinnedIds: string[];
   onTogglePin: (e: React.MouseEvent, id: string) => void;
   allToolsList: SidebarItem[];
+  t: (key: string) => string;
 }
 
 const AllToolsMenuItem = ({
@@ -307,6 +363,7 @@ const AllToolsMenuItem = ({
   pinnedIds,
   onTogglePin,
   allToolsList,
+  t,
 }: AllToolsMenuItemProps) => {
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -343,7 +400,7 @@ const AllToolsMenuItem = ({
             )}
           >
             <Grid3X3 className="size-5 shrink-0" />
-            {!isCollapsed && <span>All tools</span>}
+            {!isCollapsed && <span>{t("toolsMenu.title")}</span>}
           </div>
         </button>
       </HoverCardTrigger>
@@ -354,14 +411,14 @@ const AllToolsMenuItem = ({
       >
         <div className="p-6">
           <div className="flex items-center justify-between gap-4 mb-6">
-            <h3 className="text-xl font-semibold">All tools</h3>
+            <h3 className="text-xl font-semibold">{t("toolsMenu.title")}</h3>
             <div className="relative">
               <Search className="size-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search tools?"
+                placeholder={t("search.tools")}
                 className="bg-muted border border-border rounded-full py-1.5 pl-9 pr-4 text-sm focus:outline-none focus:ring-1 ring-ring w-64"
               />
             </div>
@@ -373,9 +430,9 @@ const AllToolsMenuItem = ({
 
               return (
                 <div key={cat.id} className="space-y-4">
-                  <div className="flex items-center gap-2 text-[10px] font-bold text-muted-foreground uppercase tracking-[0.2em]">
+                  <div className="mb-1 flex items-center gap-2 text-sm font-medium text-muted-foreground">
                     <cat.icon className="size-3.5" />
-                    {cat.label}
+                    {translateLayoutLabel(t, cat.label)}
                   </div>
                   <div className="space-y-1">
                     {categoryTools.length > 0 ? (
@@ -398,11 +455,6 @@ const AllToolsMenuItem = ({
                             >
                               {tool.label}
                             </span>
-                            {tool.isNew && (
-                              <span className="text-[9px] font-bold text-primary bg-primary/10 px-1 rounded">
-                                New
-                              </span>
-                            )}
                           </Link>
                           <button
                             type="button"
@@ -424,7 +476,7 @@ const AllToolsMenuItem = ({
                       ))
                     ) : (
                       <p className="p-2 text-sm text-muted-foreground">
-                        No tools match this search.
+                        {t("search.noResults")}
                       </p>
                     )}
                   </div>
@@ -439,7 +491,7 @@ const AllToolsMenuItem = ({
             href="/creator"
             className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
-            View all tools in a single list
+            {t("toolsMenu.viewAll")}
           </Link>
         </div>
       </HoverCardContent>
@@ -450,13 +502,15 @@ const AllToolsMenuItem = ({
 export function Sidebar() {
   const pathname = usePathname();
   const { user } = useAuth();
-  const currentOrg = useOrgStore((state) => state.currentOrg);
+  const currentWorkspace = useWorkspaceStore((state) => state.currentWorkspace);
   const locale = useLocale();
+  const t = useTranslations("Layout");
   const userId = user?.id;
   const navigationConfig = useSiteConfig("navigation", locale);
   const navigationData = mergeNavigationData(
     navigationConfig.data?.value as NavigationConfig | undefined,
   );
+  const isWorkspaceRoute = pathname.startsWith("/workspaces/");
   const viewportWidth = useSyncExternalStore(
     subscribeToViewport,
     getViewportWidth,
@@ -468,10 +522,8 @@ export function Sidebar() {
     (state) => state.fetchUnreadCount,
   );
   const [billingSummary, setBillingSummary] = useState<{
-    planName: string | null;
-    status: BillingWalletSummary["status"] | null;
-    remainingCredits: number;
-    managementHref: string;
+    personal: BillingSummaryCard | null;
+    workspace: BillingSummaryCard | null;
   } | null>(null);
   const viewportCollapsed = viewportWidth < BREAKPOINTS.lg;
   const isCollapsed = manualCollapsed ?? viewportCollapsed;
@@ -505,8 +557,6 @@ export function Sidebar() {
     }
   }, [pinnedIds]);
 
-  const isOrgRoute = /\/orgs\/[^/]+/.test(pathname);
-
   useEffect(() => {
     let active = true;
 
@@ -517,41 +567,39 @@ export function Sidebar() {
     }
 
     const loadBillingSummary = async () => {
-      let nextSummary: {
-        planName: string | null;
-        status: BillingWalletSummary["status"] | null;
-        remainingCredits: number;
-        managementHref: string;
-      } | null = null;
+      let personalSummary: BillingSummaryCard | null = null;
+      let workspaceSummary: BillingSummaryCard | null = null;
 
       try {
-        if (isOrgRoute && currentOrg?.slug) {
-          const billing = await billingApi.get(currentOrg.slug);
-          if (!active) return;
+        const [personalResult, workspaceResult] = await Promise.allSettled([
+          billingApi.getMe(),
+          currentWorkspace?.slug ? billingApi.get(currentWorkspace.slug) : Promise.resolve(null),
+        ]);
 
-          nextSummary = {
-            planName: billing.plan?.name ?? null,
-            status: billing.wallet.status,
-            remainingCredits: billing.wallet.totalCredits,
-            managementHref: `/orgs/${currentOrg.slug}/billing`,
-          };
-        } else {
-          const wallet = await billingApi.getMe();
-          if (!active) return;
+        if (!active) return;
 
-          nextSummary = {
-            planName: wallet.plan?.name ?? null,
-            status: wallet.status,
+        if (personalResult.status === "fulfilled") {
+          const wallet = personalResult.value;
+          personalSummary = {
+            scopeLabel: t("billing.personal"),
             remainingCredits: wallet.totalCredits,
-            managementHref: "/settings?tab=billing",
+          };
+        }
+
+        if (workspaceResult.status === "fulfilled" && workspaceResult.value) {
+          const billing = workspaceResult.value;
+          workspaceSummary = {
+            scopeLabel: t("billing.workspace"),
+            remainingCredits: billing.wallet.totalCredits,
           };
         }
       } catch {
-        nextSummary = null;
+        personalSummary = null;
+        workspaceSummary = null;
       }
 
       if (active) {
-        setBillingSummary(nextSummary);
+        setBillingSummary({ personal: personalSummary, workspace: workspaceSummary });
       }
     };
 
@@ -560,7 +608,7 @@ export function Sidebar() {
     return () => {
       active = false;
     };
-  }, [currentOrg?.name, currentOrg?.slug, isOrgRoute, pathname, user]);
+  }, [currentWorkspace?.slug, t, user]);
 
   useEffect(() => {
     if (!userId) {
@@ -571,6 +619,11 @@ export function Sidebar() {
   }, [fetchUnreadCount, userId]);
 
   if (!user) return null;
+
+  const isWorkspaceContext = isWorkspaceRoute && Boolean(currentWorkspace?.slug);
+  const activeBillingSummary = isWorkspaceContext
+    ? billingSummary?.workspace ?? billingSummary?.personal ?? null
+    : billingSummary?.personal ?? billingSummary?.workspace ?? null;
 
   const togglePin = (e: React.MouseEvent, id: string) => {
     e.preventDefault();
@@ -587,18 +640,6 @@ export function Sidebar() {
     (item) => item.href !== "/admin" || canAccessAdmin(user),
   );
   const notificationBadge = unreadCount > 0 ? unreadCount : undefined;
-  const hasSubscription = Boolean(billingSummary?.planName);
-  const hasCreditsOnly =
-    !hasSubscription && (billingSummary?.remainingCredits ?? 0) > 0;
-  const billingScopeLabel = isOrgRoute ? "Workspace plan" : "Personal plan";
-  const billingActionLabel = hasSubscription
-    ? "Manage billing"
-    : hasCreditsOnly
-      ? "Choose plan"
-      : "Upgrade plan";
-  const billingCardDescription = isOrgRoute
-    ? "Shared credits and seats for the active workspace."
-    : "Your personal subscription and credit wallet.";
 
   return (
     <>
@@ -632,7 +673,7 @@ export function Sidebar() {
                     PaintAI
                   </span>
                   <span className="text-[9px] text-sidebar-foreground/50 font-medium">
-                    Your paint, your choice
+                    {t("brandTagline")}
                   </span>
                 </div>
               </div>
@@ -680,7 +721,7 @@ export function Sidebar() {
             isCollapsed ? "py-2 px-1" : "px-3 py-3",
           )}
         >
-          <OrgSwitcher isCollapsed={isCollapsed} />
+          <WorkspaceSwitcher isCollapsed={isCollapsed} />
         </div>
 
         <div className="flex-1 overflow-y-auto overflow-x-hidden py-3 px-2  gap-y-1 scrollbar-hide">
@@ -692,6 +733,7 @@ export function Sidebar() {
                 item={item}
                 pathname={pathname}
                 isCollapsed={isCollapsed}
+                t={t}
               />
             ))}
           </div>
@@ -701,8 +743,8 @@ export function Sidebar() {
             <div className="h-px w-8 bg-sidebar-border mx-auto my-3" />
           ) : (
             <div className="p-3">
-              <h3 className="text-[10px] font-medium text-sidebar-foreground/30 uppercase tracking-wider">
-                Social Hub
+              <h3 className="text-sm font-medium text-sidebar-foreground/45">
+                {t("sections.socialHub")}
               </h3>
             </div>
           )}
@@ -714,6 +756,7 @@ export function Sidebar() {
                 item={item}
                 pathname={pathname}
                 isCollapsed={isCollapsed}
+                t={t}
               />
             ))}
           </div>
@@ -723,8 +766,8 @@ export function Sidebar() {
             <div className="h-px w-8 bg-sidebar-border mx-auto my-3" />
           ) : (
             <div className="p-3">
-              <h3 className="text-[10px] font-medium text-sidebar-foreground/30 uppercase tracking-wider">
-                Pinned
+              <h3 className="text-sm font-medium text-sidebar-foreground/45">
+                {t("sections.pinned")}
               </h3>
             </div>
           )}
@@ -737,6 +780,7 @@ export function Sidebar() {
                 item={item}
                 pathname={pathname}
                 isCollapsed={isCollapsed}
+                t={t}
               />
             ))}
             <AllToolsMenuItem
@@ -744,6 +788,7 @@ export function Sidebar() {
               pinnedIds={pinnedIds}
               onTogglePin={togglePin}
               allToolsList={navigationData.allToolsList}
+              t={t}
             />
           </div>
 
@@ -762,6 +807,7 @@ export function Sidebar() {
                 item={item}
                 pathname={pathname}
                 isCollapsed={isCollapsed}
+                t={t}
                 badge={
                   item.href === "/notifications" ? notificationBadge : undefined
                 }
@@ -777,59 +823,17 @@ export function Sidebar() {
             isCollapsed ? "p-2" : "p-3",
           )}
         >
-          {!isCollapsed && (
-            <div className="mb-3">
-              {isOrgRoute && billingSummary ? (
-                <div className="flex items-center justify-between gap-3 rounded-lg bg-pricing/10 border border-pricing/20 px-3 py-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Wallet className="size-4 text-pricing shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-[10px] font-medium uppercase tracking-[0.24em] text-pricing/70">
-                        Org credits
-                      </p>
-                      <p className="text-sm font-semibold text-pricing">
-                        {formatCreditCount(billingSummary.remainingCredits)}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-pricing/70">
-                    Shared wallet
-                  </span>
-                </div>
-              ) : (
-                <CreditBadge className="w-full justify-center" />
-              )}
-            </div>
-          )}
-
           {!isCollapsed ? (
-            <div className="rounded-xl bg-pricing/10 p-4 border border-pricing/20 space-y-2">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-0.5">
-                  <h4 className="text-sm font-semibold text-pricing">
-                    {billingSummary?.planName ??
-                      (hasCreditsOnly
-                        ? "No active subscription"
-                        : "Upgrade plan")}
-                  </h4>
-                </div>
-                {billingSummary?.status && (
-                  <span className="shrink-0 rounded-full border border-pricing/30 bg-background/60 px-2 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-pricing">
-                    {formatBillingStatus(billingSummary.status)}
-                  </span>
-                )}
-              </div>
-              <p className="text-[11px] text-credits font-medium">
-                {billingSummary
-                  ? `${formatCreditCount(billingSummary.remainingCredits)} credits remaining`
-                  : "Unlock more credits and workspace features"}
-              </p>
-              <Link
-                href={billingSummary?.managementHref ?? "/settings?tab=billing"}
-                className="inline-flex items-center justify-center rounded-lg bg-pricing px-3 py-2 text-[11px] font-semibold text-pricing-foreground transition-colors hover:bg-pricing/90"
+            <div className="flex justify-center">
+              <div
+                className="inline-flex min-w-[108px] items-center justify-center gap-2 rounded-full border border-amber-500/20 bg-[linear-gradient(180deg,rgba(255,193,7,0.15),rgba(255,193,7,0.06))] px-3.5 py-2 shadow-[inset_0_1px_0_rgba(255,255,255,0.04),0_10px_24px_rgba(0,0,0,0.18)]"
+                aria-label={t("billing.creditsRemaining", { count: activeBillingSummary?.remainingCredits ?? 0 })}
               >
-                {billingActionLabel}
-              </Link>
+                <Coins className="size-4 shrink-0 text-amber-300" />
+                <span className="text-base font-semibold leading-none tracking-tight text-amber-300">
+                  {formatCreditCount(activeBillingSummary?.remainingCredits ?? 0)}
+                </span>
+              </div>
             </div>
           ) : (
             <div className="flex justify-center">
@@ -839,15 +843,13 @@ export function Sidebar() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="size-10 text-pricing bg-pricing/10 rounded-xl hover:bg-pricing/20"
+                      className="size-10 rounded-xl border border-amber-500/20 bg-amber-500/10 text-amber-300 hover:bg-amber-500/15"
                     >
-                      <Sparkles className="size-5" />
+                      <Coins className="size-5" />
                     </Button>
                   </TooltipTrigger>
                   <TooltipContent side="right">
-                    {billingSummary?.planName
-                      ? `${billingSummary.planName} plan`
-                      : "Buy Credits"}
+                    {t("billing.creditsRemaining", { count: activeBillingSummary?.remainingCredits ?? 0 })}
                   </TooltipContent>
                 </Tooltip>
               </TooltipProvider>

@@ -10,7 +10,7 @@ export class WorkflowMapper {
     domainEntity.nodes = raw.nodes;
     domainEntity.edges = raw.edges;
     domainEntity.projectId = raw.projectId;
-    domainEntity.organizationId = raw.organizationId;
+    domainEntity.workspaceId = raw.workspaceId;
     domainEntity.visibility = raw.visibility;
     domainEntity.previewUrl = raw.previewUrl;
     domainEntity.lastExecution = raw.lastExecution;
@@ -33,7 +33,7 @@ export class WorkflowMapper {
     persistenceEntity.nodes = domainEntity.nodes || [];
     persistenceEntity.edges = domainEntity.edges || [];
     persistenceEntity.projectId = domainEntity.projectId;
-    persistenceEntity.organizationId = domainEntity.organizationId || '';
+    persistenceEntity.workspaceId = domainEntity.workspaceId || '';
     persistenceEntity.visibility = domainEntity.visibility;
     persistenceEntity.previewUrl = domainEntity.previewUrl || undefined;
     persistenceEntity.lastExecution = domainEntity.lastExecution || null;

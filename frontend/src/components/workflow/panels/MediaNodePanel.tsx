@@ -4,6 +4,7 @@ import * as React from 'react';
 import { Upload, X, ExternalLink, Download } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ConnectionInfo } from './ConnectionInfo';
 import { NodePanelProps } from '../NodePanels';
 import { FileMediaType } from '../types';
@@ -89,16 +90,17 @@ export function MediaNodePanel({ nodeData, onChange }: NodePanelProps) {
             
             <div className="space-y-2">
                 <div className="text-xs font-medium text-muted-foreground">Max File Size</div>
-                <select
-                    value={(nodeData.maxSize as string) || '10mb'}
-                    onChange={(e) => onChange('maxSize', e.target.value)}
-                    className="w-full h-10 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50 appearance-none"
-                >
-                    <option value="5mb">5 MB</option>
-                    <option value="10mb">10 MB</option>
-                    <option value="25mb">25 MB</option>
-                    <option value="50mb">50 MB</option>
-                </select>
+                <Select value={(nodeData.maxSize as string) || '10mb'} onValueChange={(value) => onChange('maxSize', value)}>
+                    <SelectTrigger className="w-full h-10 bg-background border border-input rounded-lg px-3 text-sm text-foreground focus:outline-none focus:ring-1 focus:ring-cyan-500/50">
+                        <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                        <SelectItem value="5mb">5 MB</SelectItem>
+                        <SelectItem value="10mb">10 MB</SelectItem>
+                        <SelectItem value="25mb">25 MB</SelectItem>
+                        <SelectItem value="50mb">50 MB</SelectItem>
+                    </SelectContent>
+                </Select>
             </div>
         </div>
     );

@@ -26,6 +26,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ import { PipelineControl } from '@/components/studio/PipelineControl';
 import { SceneProperties } from '@/components/studio/SceneProperties';
 import { ExportPanel } from '@/components/studio/ExportPanel';
 import { useVisualFlowSSE } from '@/hooks/useVisualFlowSSE';
+import { VisualFlowStudioSkeleton } from '@/components/common/loading-skeletons';
 
 // ─────────────────────────────────────────────
 // Add Scene Dialog
@@ -172,7 +174,7 @@ function AddSceneDialog({
         <div className="space-y-4 py-2">
           {/* Chain Type */}
           <div>
-            <label htmlFor="scene-chain-type" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Chain Type</label>
+            <label htmlFor="scene-chain-type" className="text-sm font-medium text-white/40">Chain Type</label>
             <div className="flex gap-2 mt-1.5">
               {(['ROOT', 'CONTINUATION'] as ChainType[]).map((t) => (
                 <button
@@ -194,24 +196,24 @@ function AddSceneDialog({
           {/* Parent scene selector */}
           {form.chainType === 'CONTINUATION' && scenes.length > 0 && (
             <div>
-              <label htmlFor="scene-parent" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Continues from</label>
-              <select
-                id="scene-parent"
-                value={form.parentSceneId}
-                onChange={(e) => setForm((p) => ({ ...p, parentSceneId: e.target.value }))}
-                className="mt-1.5 w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white"
-              >
-                <option value="">Select parent scene?</option>
-                {scenes.map((s, i) => (
-                  <option key={s.id} value={s.id}>Scene {i + 1} ({s.chainType})</option>
-                ))}
-              </select>
+              <label htmlFor="scene-parent" className="text-sm font-medium text-white/40">Continues from</label>
+              <Select value={form.parentSceneId || '__root__'} onValueChange={(value) => setForm((p) => ({ ...p, parentSceneId: value === '__root__' ? '' : value }))}>
+                <SelectTrigger id="scene-parent" className="mt-1.5 w-full bg-white/5 border border-white/[0.08] rounded-lg px-3 py-2 text-sm text-white">
+                  <SelectValue placeholder="Select parent scene?" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__root__">Select parent scene?</SelectItem>
+                  {scenes.map((s, i) => (
+                    <SelectItem key={s.id} value={s.id}>Scene {i + 1} ({s.chainType})</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           )}
 
           {/* Image Prompt */}
           <div>
-            <label htmlFor="scene-image-prompt" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Image Prompt *</label>
+            <label htmlFor="scene-image-prompt" className="text-sm font-medium text-white/40">Image Prompt *</label>
             <Textarea
               id="scene-image-prompt"
               value={form.prompt}
@@ -224,7 +226,7 @@ function AddSceneDialog({
 
           {/* Video Prompt */}
           <div>
-            <label htmlFor="scene-video-prompt" className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Video Motion Prompt</label>
+            <label htmlFor="scene-video-prompt" className="text-sm font-medium text-white/40">Video Motion Prompt</label>
             <Textarea
               id="scene-video-prompt"
               value={form.videoPrompt}
@@ -238,14 +240,14 @@ function AddSceneDialog({
           {/* Characters */}
           {characterNames.length > 0 && (
             <div>
-              <p className="text-[10px] text-white/30 uppercase tracking-widest font-medium">Characters</p>
+              <p className="text-sm font-medium text-white/40">Characters</p>
               <div className="flex flex-wrap gap-1.5 mt-1.5">
                 {characterNames.map((name) => (
                   <button
                     key={name}
                     onClick={() => toggleChar(name)}
                     className={cn(
-                      'px-2.5 py-1 rounded-full text-[11px] border transition-all',
+                      'px-2.5 py-1 rounded-full text-xs border transition-all',
                       form.selectedChars.includes(name)
                         ? 'bg-violet-500/20 border-violet-500/40 text-violet-300'
                         : 'bg-white/[0.03] border-white/[0.06] text-white/30 hover:border-white/15'
@@ -429,14 +431,7 @@ export default function VisualProjectDetailPage() {
 
   // ── Loading state ─────────────────────────
   if (isLoading && !isInitialized) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Loader2 className="size-8 text-violet-400 animate-spin" />
-          <p className="text-xs text-white/20">Loading studio?</p>
-        </div>
-      </div>
-    );
+    return <VisualFlowStudioSkeleton />;
   }
 
   if (!project) {
@@ -461,7 +456,7 @@ export default function VisualProjectDetailPage() {
         <div className="flex items-center gap-2 min-w-0 flex-1">
           <h1 className="text-sm font-semibold truncate">{project.name}</h1>
           {project.story && (
-            <span className="hidden sm:block text-[10px] text-white/15 truncate max-w-[200px]">
+            <span className="hidden sm:block text-xs text-white/15 truncate max-w-[200px]">
               , {project.story}
             </span>
           )}
@@ -470,7 +465,7 @@ export default function VisualProjectDetailPage() {
           <Tooltip>
             <TooltipTrigger asChild>
               <div className={cn(
-                "flex items-center gap-1.5 ml-3 px-2 py-1 rounded-full text-[10px] font-medium border transition-colors",
+                "flex items-center gap-1.5 ml-3 px-2 py-1 rounded-full text-xs font-medium border transition-colors",
                 sseConnected 
                   ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400" 
                   : "bg-red-500/10 border-red-500/20 text-red-400"
@@ -549,7 +544,7 @@ export default function VisualProjectDetailPage() {
           {/* Videos section */}
           <div className="shrink-0 max-h-[40%] flex flex-col overflow-hidden">
             <div className="flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
-              <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50">
+              <h3 className="text-sm font-medium text-white/60">
                 Videos ({videos.length})
               </h3>
               <Tooltip>
@@ -587,7 +582,7 @@ export default function VisualProjectDetailPage() {
                   className="w-full flex flex-col items-center py-6 text-white/15 hover:text-white/30 transition"
                 >
                   <Film className="size-5 mb-1" />
-                  <span className="text-[10px]">Create first video</span>
+                  <span className="text-xs">Add video</span>
                 </button>
               )}
             </div>
@@ -603,7 +598,7 @@ export default function VisualProjectDetailPage() {
               </div>
               <div className="text-center">
                 <p className="text-sm text-white/25">Create a video to start</p>
-                <p className="text-[11px] text-white/10 mt-1">Each video is an episode with its own scenes</p>
+                <p className="text-xs text-white/10 mt-1">Each video keeps its own scenes</p>
               </div>
               <Button
                 onClick={() => setShowAddVideo(true)}
@@ -631,7 +626,7 @@ export default function VisualProjectDetailPage() {
                 {/* Scene Timeline */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50 flex items-center gap-2">
+                    <h3 className="text-sm font-medium text-white/60 flex items-center gap-2">
                       <Layers className="size-3.5" />
                       Scenes ({scenes.length})
                     </h3>

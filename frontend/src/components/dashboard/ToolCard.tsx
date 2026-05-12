@@ -15,10 +15,6 @@ interface ToolCardProps {
 export function ToolCard({ icon: Icon, label, href, description, isNew, color = "text-foreground" }: ToolCardProps) {
     return (
         <Link href={href} className="group relative flex flex-col p-5 rounded-2xl bg-card border border-border hover:border-border/80 transition-all hover:-translate-y-1 hover:shadow-xl overflow-hidden">
-            {isNew && (
-                <span className="absolute top-3 right-3 px-2 py-0.5 text-[10px] font-bold text-primary-foreground bg-primary rounded-full">New</span>
-            )}
-
             <div className={cn("p-3 rounded-xl bg-muted w-fit mb-4 transition-colors group-hover:bg-accent", color)}>
                 <Icon className="size-6" />
             </div>

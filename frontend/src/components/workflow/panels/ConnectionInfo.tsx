@@ -6,7 +6,7 @@ import { ArrowRight } from 'lucide-react';
 export function ConnectionInfo({ accepts, outputs }: { accepts: string[], outputs: string }) {
     return (
         <div className="p-3 bg-muted/30 border border-border rounded-lg space-y-2">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Connections</p>
+            <p className="text-xs font-medium text-muted-foreground">Connections</p>
             <div className="flex items-center gap-2 text-xs">
                 <div className="flex-1">
                     <p className="text-muted-foreground text-[10px] mb-1">Accepts</p>

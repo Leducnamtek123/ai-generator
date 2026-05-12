@@ -382,7 +382,7 @@ function CameraChangePageContent() {
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Camera Change</h2>
-                    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[10px] font-bold">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold">
                         <Sparkles className="size-2.5" /> New
                     </div>
                     <span className="ml-2 text-xs text-muted-foreground">
@@ -390,7 +390,7 @@ function CameraChangePageContent() {
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     <button
                         type="button"
                         onClick={() => fileInputRef.current?.click()}
@@ -408,7 +408,7 @@ function CameraChangePageContent() {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-sm font-medium">Upload Image</p>
-                                    <p className="text-[10px] text-muted-foreground mt-1">Upload the image to change perspective</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Upload an image to change perspective</p>
                                 </div>
                             </>
                         )}
@@ -416,7 +416,7 @@ function CameraChangePageContent() {
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Camera Angle</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Camera Angle</h4>
                         <div className="grid grid-cols-3 gap-1.5">
                             {cameraAngles.map((angle) => (
                                 <button
@@ -430,21 +430,21 @@ function CameraChangePageContent() {
                                     )}
                                 >
                                     <angle.icon className="size-4" />
-                                    <span className="text-[9px] font-medium truncate w-full text-center">{angle.label}</span>
+                                    <span className="text-xs font-medium truncate w-full text-center">{angle.label}</span>
                                 </button>
                             ))}
                         </div>
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Focal Length</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Focal Length</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {focalLengths.map((fl) => (
                                 <button
                                     key={fl.value}
                                     onClick={() => dispatch({ type: 'setFocalLength', focalLength: fl.value })}
                                     className={cn(
-                                        'px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all',
+                                        'px-3 py-1.5 rounded-lg text-xs font-medium transition-all',
                                         state.focalLength === fl.value
                                             ? 'bg-accent border border-primary/20 text-foreground'
                                             : 'bg-card border border-border text-muted-foreground',
@@ -459,7 +459,7 @@ function CameraChangePageContent() {
                     <div className="space-y-5">
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Rotation</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Rotation</Label>
                                 <span className="text-[11px] font-mono text-foreground">{state.rotation}Â°</span>
                             </div>
                             <Slider
@@ -472,7 +472,7 @@ function CameraChangePageContent() {
                         </div>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Tilt</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Tilt</Label>
                                 <span className="text-[11px] font-mono text-foreground">{state.tilt}Â°</span>
                             </div>
                             <Slider
@@ -485,7 +485,7 @@ function CameraChangePageContent() {
                         </div>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Zoom</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Zoom</Label>
                                 <span className="text-[11px] font-mono text-foreground">{state.zoom}%</span>
                             </div>
                             <Slider
@@ -498,7 +498,7 @@ function CameraChangePageContent() {
                         </div>
                         <div className="space-y-3">
                             <div className="flex items-center justify-between">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Depth of Field</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Depth of Field</Label>
                                 <span className="text-[11px] font-mono text-foreground">{state.dof}</span>
                             </div>
                             <Slider
@@ -551,7 +551,7 @@ function CameraChangePageContent() {
                     <div className="flex-1 flex items-center justify-center p-6 bg-muted/10">
                         {state.uploadedImage ? (
                             <div className="flex flex-col items-center gap-2">
-                                <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Original</p>
+                                <p className="text-xs font-bold text-muted-foreground">Before</p>
                                 <div className="relative h-[65vh] w-full max-w-4xl rounded-xl border border-border shadow-lg overflow-hidden">
                                     <Image src={state.uploadedImage} alt="Original" fill className="object-contain" sizes="100vw" />
                                 </div>
@@ -571,7 +571,7 @@ function CameraChangePageContent() {
 
                     <div className="flex-1 flex items-center justify-center p-6 border-l border-border bg-muted/5">
                         <div className="flex flex-col items-center gap-2">
-                            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Result</p>
+                            <p className="text-xs font-bold text-muted-foreground">After</p>
                             {isProcessing ? (
                                 <div className="w-full max-w-md aspect-[4/3] rounded-xl border border-border bg-card flex flex-col items-center justify-center gap-4">
                                     <div className="relative">

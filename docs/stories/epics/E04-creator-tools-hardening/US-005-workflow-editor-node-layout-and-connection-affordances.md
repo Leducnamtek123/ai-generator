@@ -72,6 +72,8 @@ behavior instead of only changing appearance.
 - Workflow connection wiring was restored by aligning handle ids and wiring click-to-connect affordances across the workflow node set.
 - Connection snapshot aliases now mirror connected prompt/image/video/reference values into the workflow node data used by the property panels and local execution path.
 - Reference-style nodes and legacy `input` / `process` / `output` nodes now participate in execution instead of being silently dropped.
+- The workflow empty state now presents clearer starter intent cards with node descriptions, so the first-step choice is explicit instead of a bare icon grid.
+- The add-node menu now behaves more like a node library: search copy is clearer, node descriptions are visible in the menu, and utility nodes read like actionable workflow tools instead of unlabeled buttons.
 - Image Generator now renders an actual prompt textarea on the canvas, and Text/Image prompt inputs opt out of canvas pan/drag so they remain editable while the hand tool is active.
 - Workflow canvas unload persistence now uses `sendBeacon` with a fetch fallback so pending graph changes still have a reliable save path when the page closes.
 - Media and generated image previews now use browser-native media rendering for arbitrary uploaded/provider URLs instead of being blocked by `next/image` host restrictions.

@@ -108,7 +108,7 @@ function StockPageContent() {
 
             setResults(newResults);
         } catch {
-            toast.error('Failed to search stock library');
+            toast.error('Failed to search stock collection');
         }
         setIsSearching(false);
     };
@@ -129,7 +129,7 @@ function StockPageContent() {
                                 Free & Premium stock content made for creators
                             </h1>
                             <p className="text-lg text-muted-foreground">
-                                Your all-in-one library of images, vectors, illustrations, videos, and more.
+                                Your all-in-one collection of images, vectors, illustrations, videos, and more.
                             </p>
                         </>
                     )}

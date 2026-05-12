@@ -54,7 +54,7 @@ type Props = {
     dispatch: React.Dispatch<VoiceGeneratorAction>;
     onGenerate: () => void;
     onReset: () => void;
-    onSaveProject: () => void;
+    onSaveDraft: () => void;
     onPickSample: () => void;
     onUploadSample: (file: File) => Promise<void>;
     loading: {
@@ -62,15 +62,12 @@ type Props = {
         isGenerationsLoading: boolean;
         isTemplatesLoading: boolean;
         isCommunityLoading: boolean;
-        isProjectLoading: boolean;
-        isProjectSaving: boolean;
     };
     generations: VoiceGenerationItem[];
     templates: VoiceTemplateItem[];
     communityListings: VoiceListingItem[];
     sampleUrl: string | null;
     sampleName: string;
-    projectError: string | null;
 };
 
 export function VoiceGeneratorView({ 
@@ -78,7 +75,7 @@ export function VoiceGeneratorView({
     dispatch,
     onGenerate,
     onReset,
-    onSaveProject,
+    onSaveDraft,
     onPickSample,
     onUploadSample,
     loading,
@@ -87,10 +84,7 @@ export function VoiceGeneratorView({
     communityListings,
     sampleUrl,
     sampleName,
-    projectError,
 }: Props) {
-    const isProjectBusy = loading.isProjectLoading || loading.isProjectSaving;
-
     return (
         <CreatorWorkspaceShell>
             <div className="w-[340px] border-r border-border flex flex-col shrink-0 bg-background">
@@ -102,7 +96,7 @@ export function VoiceGeneratorView({
                         <button
                             onClick={() => dispatch({ type: 'setActiveTab', activeTab: 'tts' })}
                             className={cn(
-                                'py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all',
+                                'py-2 text-xs font-medium rounded-lg transition-all',
                                 state.activeTab === 'tts'
                                     ? 'bg-background text-foreground shadow-lg border border-border'
                                     : 'text-muted-foreground hover:text-foreground',
@@ -113,7 +107,7 @@ export function VoiceGeneratorView({
                         <button
                             onClick={() => dispatch({ type: 'setActiveTab', activeTab: 'clone' })}
                             className={cn(
-                                'py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all',
+                                'py-2 text-xs font-medium rounded-lg transition-all',
                                 state.activeTab === 'clone'
                                     ? 'bg-background text-foreground shadow-lg border border-border'
                                     : 'text-muted-foreground hover:text-foreground',
@@ -123,13 +117,13 @@ export function VoiceGeneratorView({
                         </button>
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-4  gap-y-6 text-left">
+                <div className="flex-1 overflow-y-auto p-4 pt-6 space-y-6 text-left">
                     {state.activeTab === 'tts' ? (
                         <>
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Text</h4>
-                                    <span className="text-[10px] text-muted-foreground">{state.text.length}/5000</span>
+                                    <h4 className="text-sm font-medium text-muted-foreground">Text</h4>
+                                    <span className="text-xs text-muted-foreground">{state.text.length}/5000</span>
                                 </div>
                                 <div className="bg-card rounded-xl border border-border p-2">
                                     <textarea
@@ -143,14 +137,14 @@ export function VoiceGeneratorView({
                             </div>
 
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Language</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Language</h4>
                                 <div className="grid grid-cols-4 gap-1.5">
                                     {languages.map((lang) => (
                                         <button
                                             key={lang.id}
                                             onClick={() => dispatch({ type: 'setSelectedLanguage', selectedLanguage: lang.id })}
                                             className={cn(
-                                                'flex flex-col items-center gap-1 p-2 rounded-lg text-[10px] transition-all',
+                                                'flex flex-col items-center gap-1 p-2 rounded-lg text-xs transition-all',
                                                 state.selectedLanguage === lang.id ? 'bg-accent border border-primary/20' : 'bg-card border border-border text-muted-foreground',
                                             )}
                                         >
@@ -171,7 +165,7 @@ export function VoiceGeneratorView({
                                 <Upload className="size-6 text-muted-foreground/50" />
                                 <div className="text-center">
                                     <p className="text-xs font-medium">{sampleName || 'Upload Sample'}</p>
-                                    <p className="text-[10px] text-muted-foreground">MP3, WAV</p>
+                                    <p className="text-xs text-muted-foreground">MP3, WAV</p>
                                 </div>
                             </button>
                             <div className="flex gap-2">
@@ -208,15 +202,15 @@ export function VoiceGeneratorView({
                 </div>
                 <div className="p-4 border-t border-border bg-background space-y-3">
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={onReset} disabled={isProjectBusy} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                        <Button variant="outline" onClick={onReset} className="h-12 flex-1 font-bold rounded-xl gap-2">
                             <Folder className="size-5" />
                             Reset
                         </Button>
-                        <Button variant="outline" onClick={onSaveProject} disabled={isProjectBusy || loading.isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
-                            {loading.isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
-                            Save
+                        <Button variant="outline" onClick={onSaveDraft} disabled={loading.isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                            <Folder className="size-5" />
+                            Save asset
                         </Button>
-                        <Button onClick={onGenerate} disabled={loading.isGenerating || isProjectBusy || !state.text.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
+                        <Button onClick={onGenerate} disabled={loading.isGenerating || !state.text.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
                             {loading.isGenerating ? <Loader2 className="size-5 animate-spin" /> : <Volume2 className="size-5" />}
                             {loading.isGenerating ? 'Generating...' : 'Generate Voice'}
                         </Button>
@@ -243,11 +237,6 @@ export function VoiceGeneratorView({
                 </div>
 
                 <div className="flex-1 overflow-y-auto p-6">
-                    {projectError && (
-                        <div className="mb-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                            {projectError}
-                        </div>
-                    )}
                     {state.activeContentTab === CONTENT_TABS[0] && ( // Personal
                         <section className="space-y-6">
                             <h2 className="text-lg font-semibold text-left">Your Generations</h2>
@@ -421,7 +410,7 @@ function VoiceCard({ voice, onClick }: { voice: VoiceListingItem; onClick?: () =
                 </div>
                 <div>
                     <p className="text-sm font-medium group-hover:text-primary transition-colors">{voice.title || voice.name}</p>
-                    <p className="text-[10px] text-muted-foreground">{voice.description || 'Professional Voice'}</p>
+                    <p className="text-xs text-muted-foreground">{voice.description || 'Professional Voice'}</p>
                 </div>
             </div>
             <Button variant="outline" size="sm" className="w-full gap-2 text-xs" onClick={onClick}>

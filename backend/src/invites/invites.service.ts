@@ -6,44 +6,47 @@ import {
 } from '@nestjs/common';
 import { InviteRepository } from './infrastructure/persistence/invite.repository';
 import { MemberRepository } from '../members/infrastructure/persistence/member.repository';
-import { OrganizationRepository } from '../organizations/infrastructure/persistence/organization.repository';
+import { WorkspaceRepository } from '../workspaces/infrastructure/persistence/workspace.repository';
 import { Invite } from './domain/invite';
-import { OrgRole } from '../members/domain/member';
+import { WorkspaceRole } from '../members/domain/member';
 import { CreateInviteDto } from '../members/dto/member.dto';
-import { defineAbilityFor, OrgAction } from '../permissions/permissions';
+import { defineAbilityFor, WorkspaceAction } from '../permissions/permissions';
 
 @Injectable()
 export class InvitesService {
   constructor(
     private readonly inviteRepository: InviteRepository,
     private readonly memberRepository: MemberRepository,
-    private readonly orgRepository: OrganizationRepository,
+    private readonly workspaceRepository: WorkspaceRepository,
   ) {}
 
   async create(
-    orgSlug: string,
+    workspaceSlug: string,
     userId: number,
     dto: CreateInviteDto,
   ): Promise<Invite> {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const member = await this.memberRepository.findByUserAndOrg(userId, org.id);
+    const member = await this.memberRepository.findByUserAndWorkspace(
+      userId,
+      workspace.id,
+    );
     if (!member) throw new ForbiddenException('Not a member');
 
     const ability = defineAbilityFor({
       id: userId,
       role: member.role as any,
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
-    if (!ability.can(OrgAction.Create, 'Invite')) {
+    if (!ability.can(WorkspaceAction.Create, 'Invite')) {
       throw new ForbiddenException('Cannot create invites');
     }
 
     // Check if already invited
-    const existing = await this.inviteRepository.findByOrgAndEmail(
-      org.id,
+    const existing = await this.inviteRepository.findByWorkspaceAndEmail(
+      workspace.id,
       dto.email,
     );
     if (existing) {
@@ -52,33 +55,36 @@ export class InvitesService {
 
     return this.inviteRepository.create({
       authorId: userId,
-      organizationId: org.id,
+      workspaceId: workspace.id,
       email: dto.email,
-      role: dto.role || OrgRole.MEMBER,
+      role: dto.role || WorkspaceRole.MEMBER,
     } as any);
   }
 
-  async findByOrganization(
-    orgSlug: string,
+  async findByWorkspace(
+    workspaceSlug: string,
     userId: number,
   ): Promise<Invite[]> {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const member = await this.memberRepository.findByUserAndOrg(userId, org.id);
+    const member = await this.memberRepository.findByUserAndWorkspace(
+      userId,
+      workspace.id,
+    );
     if (!member) throw new ForbiddenException('Not a member');
 
     const ability = defineAbilityFor({
       id: userId,
       role: member.role as any,
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
-    if (!ability.can(OrgAction.Read, 'Invite')) {
+    if (!ability.can(WorkspaceAction.Read, 'Invite')) {
       throw new ForbiddenException('Cannot view invites');
     }
 
-    return this.inviteRepository.findByOrganizationId(org.id);
+    return this.inviteRepository.findByWorkspaceId(workspace.id);
   }
 
   async findPendingForUser(email: string): Promise<Invite[]> {
@@ -94,9 +100,9 @@ export class InvitesService {
     }
 
     // Check if already a member
-    const existingMember = await this.memberRepository.findByUserAndOrg(
+    const existingMember = await this.memberRepository.findByUserAndWorkspace(
       userId,
-      invite.organizationId,
+      invite.workspaceId,
     );
     if (existingMember) {
       // Already a member, just remove the invite
@@ -107,8 +113,8 @@ export class InvitesService {
     // Create membership
     await this.memberRepository.create({
       userId,
-      organizationId: invite.organizationId,
-      role: invite.role || OrgRole.MEMBER,
+      workspaceId: invite.workspaceId,
+      role: invite.role || WorkspaceRole.MEMBER,
     } as any);
 
     // Remove invite
@@ -128,27 +134,30 @@ export class InvitesService {
 
   async revoke(
     inviteId: string,
-    orgSlug: string,
+    workspaceSlug: string,
     userId: number,
   ): Promise<void> {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const member = await this.memberRepository.findByUserAndOrg(userId, org.id);
+    const member = await this.memberRepository.findByUserAndWorkspace(
+      userId,
+      workspace.id,
+    );
     if (!member) throw new ForbiddenException('Not a member');
 
     const ability = defineAbilityFor({
       id: userId,
       role: member.role as any,
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
-    if (!ability.can(OrgAction.Delete, 'Invite')) {
+    if (!ability.can(WorkspaceAction.Delete, 'Invite')) {
       throw new ForbiddenException('Cannot revoke invites');
     }
 
     const invite = await this.inviteRepository.findById(inviteId);
-    if (!invite || invite.organizationId !== org.id) {
+    if (!invite || invite.workspaceId !== workspace.id) {
       throw new NotFoundException('Invite not found');
     }
 

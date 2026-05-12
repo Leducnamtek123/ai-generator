@@ -8,20 +8,19 @@ services:
     env_file:
       - ./.env
     environment:
-      - DATABASE_HOST=${DATABASE_HOST:-postgres}
-      - DATABASE_PORT=${DATABASE_PORT:-5432}
-      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
-      - DATABASE_NAME=${DATABASE_NAME:-paintai}
-      - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
       - APP_MODE=api
+      - ACCESS_KEY_ID=${ACCESS_KEY_ID:-minioadmin}
+      - SECRET_ACCESS_KEY=${SECRET_ACCESS_KEY:-minioadmin}
     depends_on:
       - postgres
       - redis
       - minio
+      - comfyui
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./comfyui-workflows:/workspace/comfyui-workflows:ro
+
 
   worker:
     container_name: ai-generator-worker
@@ -32,20 +31,16 @@ services:
     env_file:
       - ./.env
     environment:
-      - DATABASE_HOST=${DATABASE_HOST:-postgres}
-      - DATABASE_PORT=${DATABASE_PORT:-5432}
-      - DATABASE_USERNAME=${DATABASE_USERNAME:-postgres}
-      - DATABASE_PASSWORD=${DATABASE_PASSWORD:-postgres}
-      - DATABASE_NAME=${DATABASE_NAME:-paintai}
-      - WORKER_HOST=${WORKER_HOST:-redis://redis:6379/1}
-      - REDIS_HOST=${REDIS_HOST:-redis}
-      - REDIS_PORT=${REDIS_PORT:-6379}
-      - AWS_S3_ENDPOINT=${AWS_S3_ENDPOINT:-http://minio:9000}
       - APP_MODE=worker
+      - ACCESS_KEY_ID=${ACCESS_KEY_ID:-minioadmin}
+      - SECRET_ACCESS_KEY=${SECRET_ACCESS_KEY:-minioadmin}
     depends_on:
       - postgres
       - redis
       - minio
+      - comfyui
+    volumes:
+      - ./comfyui-workflows:/workspace/comfyui-workflows:ro
 
   worker_beat:
     container_name: ai-generator-worker-beat
@@ -74,9 +69,15 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_GITHUB_URL=${NEXT_PUBLIC_GITHUB_URL:-https://github.com/omergulcicek/nizam}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     restart: unless-stopped
     env_file:
-      - ../frontend/.env
+      - ./.env
     environment:
       - AUTH_SECRET=${AUTH_SECRET}
       - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL:-http://localhost}
@@ -94,59 +95,69 @@ services:
     build:
       context: ../frontend
       dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+        - NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}
+        - NEXT_PUBLIC_GITHUB_URL=${NEXT_PUBLIC_GITHUB_URL:-https://github.com/omergulcicek/nizam}
+        - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+        - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
     restart: unless-stopped
 
-  nginx:
-    container_name: ai-generator-nginx
-    image: nginx:1.27-alpine
+  mcp:
+    container_name: ai-generator-mcp
+    build:
+      context: ../mcp-server
+      dockerfile: Dockerfile
     restart: unless-stopped
-    ports:
-      - "${NGINX_HTTP_PORT:-80}:80"
-      - "${NGINX_HTTPS_PORT:-443}:443"
-    volumes:
-      - ./nginx:/etc/nginx/templates:ro
+    tty: true
+    stdin_open: true
+    environment:
+      - API_BASE_URL=http://api:8000/api/v1
+      - API_KEY=${MCP_API_KEY}
     depends_on:
       - api
-      - web
-      - billing-service
-      - generation-service
 
-  postgres:
-    container_name: ai-generator-postgres
-    image: postgres:17-alpine
+  comfyui:
+    container_name: ai-generator-comfyui
+    image: ghcr.io/lecode-official/comfyui-docker:latest
     restart: unless-stopped
-    # ports:
-    #   - "${POSTGRES_PORT:-5432}:5432"
-    volumes:
-      - postgres-data:/var/lib/postgresql/data
+    env_file:
+      - ./.env
     environment:
-      POSTGRES_USER: ${DATABASE_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DATABASE_PASSWORD:-postgres}
-      POSTGRES_DB: ${DATABASE_NAME:-paintai}
+      - USER_ID=${USER_ID:-1000}
+      - GROUP_ID=${GROUP_ID:-1000}
+      - COMFYUI_PORT_HOST=8188
+      - COMFYUI_ARGS=--listen --port 8188
+    ports:
+      - "8188:8188"
+    gpus: all
+    volumes:
+      - ./comfyui/models:/opt/comfyui/models
+      - ./comfyui/custom_nodes:/opt/comfyui/custom_nodes
+      - ./comfyui/manager:/opt/comfyui-manager
+      - ./comfyui/output:/opt/comfyui/output
 
-  redis:
-    container_name: ai-generator-redis
-    image: redis:7-alpine
+  maildev:
+    container_name: ai-generator-maildev
+    image: maildev/maildev:latest
     restart: unless-stopped
-    # ports:
-    #   - "${REDIS_PORT:-6379}:6379"
+    ports:
+      - "1025:1025"
+      - "1080:1080"
 
   sandbox:
     container_name: ai-generator-sandbox
     image: alpine:3.20
     command: ["sh", "-c", "sleep infinity"]
-    profiles: ["sandbox"]
 
   ssrf_proxy:
     container_name: ai-generator-ssrf-proxy
-    image: alpine/squid:latest
-    profiles: ["sandbox"]
+    image: ubuntu/squid:6.6-24.04_edge
 
   plugin_daemon:
     container_name: ai-generator-plugin-daemon
     image: alpine:3.20
     command: ["sh", "-c", "sleep infinity"]
-    profiles: ["plugins"]
 
   billing-service:
     container_name: ai-generator-billing-service
@@ -200,34 +211,62 @@ services:
       - redis
       - billing-service
 
+  postgres:
+    container_name: ai-generator-postgres
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=${DATABASE_USERNAME:-postgres}
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD:-postgres}
+      - POSTGRES_DB=${DATABASE_NAME:-paintai}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  redis:
+    container_name: ai-generator-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+
   minio:
     container_name: ai-generator-minio
     image: minio/minio:latest
     restart: unless-stopped
+    environment:
+      - MINIO_ROOT_USER=${AWS_ACCESS_KEY_ID:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${AWS_SECRET_ACCESS_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    command: server /data --console-address ":9001"
     ports:
       - "9000:9000"
       - "9001:9001"
-    volumes:
-      - minio-data:/data
-    environment:
-      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
-    command: server /data --console-address ":9001"
 
   minio-init:
+    image: minio/mc
     container_name: ai-generator-minio-init
-    image: minio/mc:latest
     depends_on:
       - minio
     entrypoint: >
       /bin/sh -c "
-      sleep 3;
-      mc alias set myminio http://minio:9000 ${AWS_ACCESS_KEY_ID:-minioadmin} ${AWS_SECRET_ACCESS_KEY:-minioadmin};
-      mc mb myminio/${AWS_S3_BUCKET:-ai-generator} --ignore-existing;
-      mc anonymous set public myminio/${AWS_S3_BUCKET:-ai-generator};
+      /usr/bin/mc alias set myminio http://minio:9000 ${AWS_ACCESS_KEY_ID:-minioadmin} ${AWS_SECRET_ACCESS_KEY:-minioadmin};
+      /usr/bin/mc mb myminio/${AWS_S3_BUCKET:-ai-generator} || true;
+      /usr/bin/mc anonymous set public myminio/${AWS_S3_BUCKET:-ai-generator};
       exit 0;
       "
 
+  nginx:
+    container_name: ai-generator-nginx
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template
+    depends_on:
+      - api
+      - web
+
 volumes:
-  postgres-data:
-  minio-data:
+  postgres_data:
+  minio_data:

@@ -1,15 +1,16 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo, useCallback } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
+    ChevronDown,
     Sparkles,
     Bookmark,
     Grid3X3,
     Search,
     Loader2,
-    Folder
+    Upload
 } from 'lucide-react';
 import { useInView } from 'react-intersection-observer';
 import { Button } from '@/ui/button';
@@ -17,13 +18,14 @@ import { Input } from '@/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
+import { MediaPickerModal } from '@/components/common/MediaPickerModal';
+import { TemplateExplorerModal } from '@/components/gallery/TemplateExplorerModal';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useCreditStore } from '@/stores/credit-store';
-import { formatCredits } from '@/lib/format-credits';
 import { CONTENT_TABS } from '@/components/layouts/navigation-data';
 import { TemplateTypeEnum } from '@/lib/api/templates';
 import { useInfiniteTemplates } from '@/hooks/useTemplates';
-import { useGenerationProviders } from '@/hooks/useGenerationProviders';
+import type { MediaItem } from '@/types/media';
 import { mediaApi } from '@/services/mediaApi';
 import { projectApi } from '@/services/projectApi';
 import { toast } from 'sonner';
@@ -51,11 +53,14 @@ type ImageSnapshot = {
     selectedModel: string;
     selectedAspectRatio: string;
     selectedQuality: 'standard' | 'hd' | '4k';
-    selectedProvider: string;
     prompt: string;
     negativePrompt: string;
     seed: string;
     referenceImageUrl: string;
+    referenceImageError: string | null;
+    isReferenceImageUploading: boolean;
+    referenceImageUploadError: string | null;
+    referenceImageUploadProgress: number;
     searchQuery: string;
     currentTab: string;
     resultUrl: string | null;
@@ -70,13 +75,18 @@ type ImageProjectPayload = {
 type StudioState = {
     activeContentTab: string;
     selectedModel: string;
+    showModelPicker: boolean;
     selectedAspectRatio: string;
     selectedQuality: 'standard' | 'hd' | '4k';
-    selectedProvider: string;
     prompt: string;
     negativePrompt: string;
     seed: string;
     referenceImageUrl: string;
+    referenceImageError: string | null;
+    isReferenceImageUploading: boolean;
+    referenceImageUploadError: string | null;
+    referenceImageUploadProgress: number;
+    isReferencePickerOpen: boolean;
     searchQuery: string;
     communityListings: GalleryListing[];
     isCommunityLoading: boolean;
@@ -89,13 +99,18 @@ type StudioState = {
 type StudioAction =
     | { type: 'setActiveContentTab'; activeContentTab: string }
     | { type: 'setSelectedModel'; selectedModel: string }
+    | { type: 'setShowModelPicker'; showModelPicker: boolean }
     | { type: 'setSelectedAspectRatio'; selectedAspectRatio: string }
     | { type: 'setSelectedQuality'; selectedQuality: 'standard' | 'hd' | '4k' }
-    | { type: 'setSelectedProvider'; selectedProvider: string }
     | { type: 'setPrompt'; prompt: string }
     | { type: 'setNegativePrompt'; negativePrompt: string }
     | { type: 'setSeed'; seed: string }
     | { type: 'setReferenceImageUrl'; referenceImageUrl: string }
+    | { type: 'setReferenceImageError'; referenceImageError: string | null }
+    | { type: 'setReferenceImageUploading'; isReferenceImageUploading: boolean }
+    | { type: 'setReferenceImageUploadError'; referenceImageUploadError: string | null }
+    | { type: 'setReferenceImageUploadProgress'; referenceImageUploadProgress: number }
+    | { type: 'setReferencePickerOpen'; isReferencePickerOpen: boolean }
     | { type: 'setSearchQuery'; searchQuery: string }
     | { type: 'setCommunityListings'; communityListings: GalleryListing[] }
     | { type: 'setIsCommunityLoading'; isCommunityLoading: boolean }
@@ -104,18 +119,23 @@ type StudioAction =
     | { type: 'setIsProjectSaving'; isProjectSaving: boolean }
     | { type: 'setProjectError'; projectError: string | null }
     | { type: 'applySnapshot'; snapshot: Partial<ImageSnapshot> }
-    | { type: 'resetForm'; selectedProvider: string };
+    | { type: 'resetForm' };
 
 const initialStudioState: StudioState = {
     activeContentTab: CONTENT_TABS[2],
-    selectedModel: 'flux',
+    selectedModel: 'sd_xl_base_1.0.safetensors',
+    showModelPicker: false,
     selectedAspectRatio: '1:1',
     selectedQuality: 'hd',
-    selectedProvider: '',
     prompt: '',
     negativePrompt: '',
     seed: '',
     referenceImageUrl: '',
+    referenceImageError: null,
+    isReferenceImageUploading: false,
+    referenceImageUploadError: null,
+    referenceImageUploadProgress: 0,
+    isReferencePickerOpen: false,
     searchQuery: '',
     communityListings: [],
     isCommunityLoading: false,
@@ -131,12 +151,12 @@ function studioReducer(state: StudioState, action: StudioAction): StudioState {
             return { ...state, activeContentTab: action.activeContentTab };
         case 'setSelectedModel':
             return { ...state, selectedModel: action.selectedModel };
+        case 'setShowModelPicker':
+            return { ...state, showModelPicker: action.showModelPicker };
         case 'setSelectedAspectRatio':
             return { ...state, selectedAspectRatio: action.selectedAspectRatio };
         case 'setSelectedQuality':
             return { ...state, selectedQuality: action.selectedQuality };
-        case 'setSelectedProvider':
-            return { ...state, selectedProvider: action.selectedProvider };
         case 'setPrompt':
             return { ...state, prompt: action.prompt };
         case 'setNegativePrompt':
@@ -144,7 +164,17 @@ function studioReducer(state: StudioState, action: StudioAction): StudioState {
         case 'setSeed':
             return { ...state, seed: action.seed };
         case 'setReferenceImageUrl':
-            return { ...state, referenceImageUrl: action.referenceImageUrl };
+            return { ...state, referenceImageUrl: action.referenceImageUrl, referenceImageError: null };
+        case 'setReferenceImageError':
+            return { ...state, referenceImageError: action.referenceImageError };
+        case 'setReferenceImageUploading':
+            return { ...state, isReferenceImageUploading: action.isReferenceImageUploading };
+        case 'setReferenceImageUploadError':
+            return { ...state, referenceImageUploadError: action.referenceImageUploadError };
+        case 'setReferenceImageUploadProgress':
+            return { ...state, referenceImageUploadProgress: action.referenceImageUploadProgress };
+        case 'setReferencePickerOpen':
+            return { ...state, isReferencePickerOpen: action.isReferencePickerOpen };
         case 'setSearchQuery':
             return { ...state, searchQuery: action.searchQuery };
         case 'setCommunityListings':
@@ -164,20 +194,22 @@ function studioReducer(state: StudioState, action: StudioAction): StudioState {
                 ...state,
                 activeContentTab: action.snapshot.currentTab ?? action.snapshot.activeContentTab ?? state.activeContentTab,
                 selectedModel: action.snapshot.selectedModel ?? state.selectedModel,
+                showModelPicker: false,
                 selectedAspectRatio: action.snapshot.selectedAspectRatio ?? state.selectedAspectRatio,
                 selectedQuality: action.snapshot.selectedQuality ?? state.selectedQuality,
-                selectedProvider: action.snapshot.selectedProvider ?? state.selectedProvider,
                 prompt: action.snapshot.prompt ?? state.prompt,
                 negativePrompt: action.snapshot.negativePrompt ?? state.negativePrompt,
                 seed: action.snapshot.seed ?? state.seed,
                 referenceImageUrl: action.snapshot.referenceImageUrl ?? state.referenceImageUrl,
+                referenceImageError: null,
+                referenceImageUploadError: null,
+                isReferencePickerOpen: false,
                 searchQuery: action.snapshot.searchQuery ?? state.searchQuery,
                 projectError: null,
             };
         case 'resetForm':
             return {
                 ...initialStudioState,
-                selectedProvider: action.selectedProvider,
                 communityListings: state.communityListings,
                 projectId: state.projectId,
             };
@@ -187,13 +219,93 @@ function studioReducer(state: StudioState, action: StudioAction): StudioState {
 }
 
 const IMAGE_MODELS = [
-    { id: 'flux', label: 'Flux' },
-    { id: 'flux-schnell', label: 'Flux Schnell' },
-    { id: 'sdxl', label: 'SDXL' },
-    { id: 'imagen-3', label: 'Imagen 3' },
+    { id: '4o-image', label: '4o Image' },
+    { id: 'flux-kontext', label: 'Flux Kontext' },
+    { id: 'nano-banana', label: 'Nano Banana' },
+    { id: 'seedream-4.5', label: 'Seedream 4.5' },
+    { id: 'sd_xl_base_1.0.safetensors', label: 'SDXL Base 1.0' },
+    { id: 'z_image_turbo_bf16.safetensors', label: 'Z-Image-Turbo' },
 ];
 
 const TEMPLATE_PAGE_SIZE = 12;
+
+const IMAGE_MODEL_ALIASES: Record<string, string> = {
+    flux: IMAGE_MODELS[1].id,
+    'flux-schnell': IMAGE_MODELS[1].id,
+    'flux-kontext': IMAGE_MODELS[1].id,
+    'z-image-turbo': IMAGE_MODELS[5].id,
+    zimage: IMAGE_MODELS[5].id,
+    sdxl: IMAGE_MODELS[4].id,
+    'sd-xl': IMAGE_MODELS[4].id,
+    'sd_xl': IMAGE_MODELS[4].id,
+    '4o': IMAGE_MODELS[0].id,
+    '4o-image': IMAGE_MODELS[0].id,
+    'nano-banana': IMAGE_MODELS[2].id,
+    'seedream-4.5': IMAGE_MODELS[3].id,
+};
+
+type PromptRecipe = {
+    title: string;
+    prompt: string;
+    negativePrompt: string;
+    aspectRatio: '1:1' | '4:3' | '16:9' | '9:16';
+    quality: 'standard' | 'hd' | '4k';
+    model?: string;
+    hint: string;
+};
+
+const IMAGE_PROMPT_RECIPES: PromptRecipe[] = [
+    {
+        title: 'Product hero',
+        prompt: 'Create a premium product hero image of a matte black smart speaker on a stone pedestal, studio lighting, soft shadow, clean background, high contrast',
+        negativePrompt: 'blurry, low detail, text, watermark, extra objects, distorted geometry',
+        aspectRatio: '16:9',
+        quality: 'hd',
+        hint: 'Good for landing pages, ads, and app headers.',
+    },
+    {
+        title: 'Character portrait',
+        prompt: 'Create a cinematic portrait of a confident creative director wearing a white shirt and dark jacket, shallow depth of field, dramatic rim light, realistic skin texture',
+        negativePrompt: 'blurry face, extra fingers, duplicated features, text, watermark, plastic skin',
+        aspectRatio: '1:1',
+        quality: '4k',
+        model: 'z_image_turbo_bf16.safetensors',
+        hint: 'Good for avatars, profiles, and personal branding.',
+    },
+    {
+        title: 'Editorial scene',
+        prompt: 'Create an editorial-style workspace scene with a laptop, notebook, coffee cup, and warm window light, composed for a magazine cover, realistic shadows, refined color grading',
+        negativePrompt: 'messy composition, unreadable text, watermark, low contrast, extra hands',
+        aspectRatio: '4:3',
+        quality: 'hd',
+        hint: 'Good for blog visuals, case studies, and feature cards.',
+    },
+    {
+        title: 'Social story',
+        prompt: 'Create a vertical social story image with a founder standing in a modern studio, bold typography space on top, soft gradient lighting, polished campaign aesthetic',
+        negativePrompt: 'blurry, cropped head, watermark, unreadable text, extra fingers, low contrast',
+        aspectRatio: '9:16',
+        quality: 'standard',
+        hint: 'Good for short-form social posts, stories, and reels covers.',
+    },
+];
+
+const normalizeImageModel = (value: unknown): string => {
+    if (typeof value !== 'string') {
+        return IMAGE_MODELS[0].id;
+    }
+
+    const trimmed = value.trim();
+    if (!trimmed) {
+        return IMAGE_MODELS[0].id;
+    }
+
+    if (IMAGE_MODELS.some((model) => model.id === trimmed)) {
+        return trimmed;
+    }
+
+    return IMAGE_MODEL_ALIASES[trimmed.toLowerCase()] || IMAGE_MODELS[0].id;
+};
 
 const normalizeImageSnapshot = (value: unknown): Partial<ImageSnapshot> => {
     const raw = (value ?? {}) as Record<string, unknown>;
@@ -201,10 +313,9 @@ const normalizeImageSnapshot = (value: unknown): Partial<ImageSnapshot> => {
 
     return {
         activeContentTab: typeof snapshot.activeContentTab === 'string' ? snapshot.activeContentTab : CONTENT_TABS[2],
-        selectedModel: typeof snapshot.selectedModel === 'string' ? snapshot.selectedModel : IMAGE_MODELS[0].id,
+        selectedModel: normalizeImageModel(snapshot.selectedModel),
         selectedAspectRatio: typeof snapshot.selectedAspectRatio === 'string' ? snapshot.selectedAspectRatio : '1:1',
         selectedQuality: snapshot.selectedQuality === 'standard' || snapshot.selectedQuality === 'hd' || snapshot.selectedQuality === '4k' ? snapshot.selectedQuality : 'hd',
-        selectedProvider: typeof snapshot.selectedProvider === 'string' ? snapshot.selectedProvider : '',
         prompt: typeof snapshot.prompt === 'string' ? snapshot.prompt : '',
         negativePrompt: typeof snapshot.negativePrompt === 'string' ? snapshot.negativePrompt : '',
         seed: typeof snapshot.seed === 'string' ? snapshot.seed : '',
@@ -226,15 +337,19 @@ export default function StudioPage() {
 function StudioPageContent() {
     const [state, dispatch] = useReducer(studioReducer, initialStudioState);
     const {
-        activeContentTab,
-        selectedModel,
-        selectedAspectRatio,
-        selectedQuality,
-        selectedProvider,
+    activeContentTab,
+    selectedModel,
+    showModelPicker,
+    selectedAspectRatio,
+    selectedQuality,
         prompt,
         negativePrompt,
         seed,
         referenceImageUrl,
+        referenceImageError,
+        isReferenceImageUploading,
+        referenceImageUploadError,
+        referenceImageUploadProgress,
         searchQuery,
         communityListings,
         isCommunityLoading,
@@ -246,9 +361,11 @@ function StudioPageContent() {
 
     const { startGeneration, reset, isGenerating, currentGeneration, error, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { balance, fetchBalance } = useCreditStore();
-    const { providers: imageProviders, isLoading: isProvidersLoading } = useGenerationProviders('image-generation');
     const contentScrollRef = useRef<HTMLDivElement | null>(null);
+    const promptTextareaRef = useRef<HTMLTextAreaElement | null>(null);
     const referenceImageInputRef = useRef<HTMLInputElement | null>(null);
+    const lastAutoSavedGenerationIdRef = useRef<string | null>(null);
+    const currentModel = IMAGE_MODELS.find((model) => model.id === selectedModel) ?? IMAGE_MODELS[0];
     const { replace } = useRouter();
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
@@ -309,15 +426,6 @@ function StudioPageContent() {
         };
     }, [searchParamsSnapshot]);
 
-    useEffect(() => {
-        if (!imageProviders.length) {
-            return;
-        }
-
-        if (!selectedProvider || !imageProviders.some((provider) => provider.name === selectedProvider)) {
-            dispatch({ type: 'setSelectedProvider', selectedProvider: imageProviders[0].name });
-        }
-    }, [imageProviders, selectedProvider]);
 
     useEffect(() => {
         if (activeContentTab === CONTENT_TABS[0]) { // Personal
@@ -352,19 +460,45 @@ function StudioPageContent() {
 
     const handleGenerate = async () => {
         if (!prompt.trim() || isProjectBusy) return;
+        const parsedSeed = seed.trim() ? Number(seed) : undefined;
+        if (seed.trim() && Number.isNaN(parsedSeed)) {
+            toast.error('Seed must be a number.');
+            return;
+        }
+        const trimmedReferenceImageUrl = referenceImageUrl.trim();
+        if (trimmedReferenceImageUrl) {
+            try {
+                const parsedReferenceUrl = new URL(trimmedReferenceImageUrl);
+                if (!['http:', 'https:'].includes(parsedReferenceUrl.protocol)) {
+                    throw new Error('Invalid protocol');
+                }
+            } catch {
+                toast.error('Reference image URL must be a valid http or https link.');
+                return;
+            }
+        }
         await startGeneration('/generations/image', {
             prompt,
             model: selectedModel,
             aspectRatio: selectedAspectRatio,
             quality: selectedQuality,
             negativePrompt: negativePrompt.trim() || undefined,
-            seed: seed.trim() ? Number(seed) : undefined,
-            referenceImageUrl: referenceImageUrl.trim() || undefined,
-            provider: selectedProvider || undefined,
+            seed: parsedSeed,
+            referenceImageUrl: trimmedReferenceImageUrl || undefined,
         });
         // Refresh balance after generation (approximate timing)
         setTimeout(() => fetchBalance(), 1000);
         setTimeout(() => fetchBalance(), 3000);
+    };
+
+    const handleClearSeed = () => {
+        dispatch({ type: 'setSeed', seed: '' });
+    };
+
+    const handleClearReferenceImage = () => {
+        dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: '' });
+        dispatch({ type: 'setReferenceImageUploadError', referenceImageUploadError: null });
+        dispatch({ type: 'setReferenceImageUploadProgress', referenceImageUploadProgress: 0 });
     };
 
     const handleReferenceImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -379,31 +513,45 @@ function StudioPageContent() {
             return;
         }
 
+        dispatch({ type: 'setReferenceImageUploading', isReferenceImageUploading: true });
+        dispatch({ type: 'setReferenceImageUploadError', referenceImageUploadError: null });
+        dispatch({ type: 'setReferenceImageUploadProgress', referenceImageUploadProgress: 0 });
         try {
-            const uploaded = await mediaApi.uploadMedia(file);
+            const uploaded = await mediaApi.uploadMedia(file, (progress) => {
+                dispatch({ type: 'setReferenceImageUploadProgress', referenceImageUploadProgress: progress });
+            });
             if (uploaded?.url) {
                 dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: uploaded.url });
                 toast.success('Reference image uploaded.');
             } else {
+                dispatch({ type: 'setReferenceImageUploadError', referenceImageUploadError: 'Failed to upload the selected reference image.' });
                 toast.error('Failed to upload reference image.');
             }
         } catch (error) {
             console.error('Reference image upload failed', error);
+            dispatch({ type: 'setReferenceImageUploadError', referenceImageUploadError: 'Failed to upload the selected reference image.' });
             toast.error('Failed to upload reference image.');
+        } finally {
+            event.target.value = '';
+            dispatch({ type: 'setReferenceImageUploading', isReferenceImageUploading: false });
+            dispatch({ type: 'setReferenceImageUploadProgress', referenceImageUploadProgress: 0 });
         }
+    };
 
-        event.target.value = '';
+    const handleReferenceMediaSelect = (media: MediaItem) => {
+        dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: media.url });
+        dispatch({ type: 'setReferencePickerOpen', isReferencePickerOpen: false });
+        toast.success('Reference image selected from uploads.');
     };
 
     const handleResetForm = () => {
         reset();
         dispatch({
             type: 'resetForm',
-            selectedProvider: imageProviders[0]?.name || '',
         });
     };
 
-    const handleSaveProject = () => {
+    const handleSaveProject = useCallback(() => {
         const payload: ImageProjectPayload = {
             version: 1,
             savedAt: new Date().toISOString(),
@@ -412,7 +560,6 @@ function StudioPageContent() {
                 selectedModel,
                 selectedAspectRatio,
                 selectedQuality,
-                selectedProvider,
                 prompt,
                 negativePrompt,
                 seed,
@@ -456,7 +603,33 @@ function StudioPageContent() {
         };
 
         void persistProject();
-    };
+    }, [
+        activeContentTab,
+        currentGeneration?.resultUrl,
+        negativePrompt,
+        prompt,
+        projectId,
+        referenceImageUrl,
+        replace,
+        searchQuery,
+        seed,
+        selectedAspectRatio,
+        selectedModel,
+        selectedQuality,
+    ]);
+
+    useEffect(() => {
+        if (!currentGeneration || currentGeneration.status !== 'completed') {
+            return;
+        }
+
+        if (lastAutoSavedGenerationIdRef.current === currentGeneration.id) {
+            return;
+        }
+
+        lastAutoSavedGenerationIdRef.current = currentGeneration.id;
+        handleSaveProject();
+    }, [currentGeneration, handleSaveProject]);
 
     const normalizedSearch = searchQuery.trim().toLowerCase();
     const filteredGenerations = normalizedSearch
@@ -466,200 +639,315 @@ function StudioPageContent() {
         ? communityListings.filter((listing) => listing.title.toLowerCase().includes(normalizedSearch))
         : communityListings;
 
+    const openPromptRecipes = () => {
+        dispatch({ type: 'setActiveContentTab', activeContentTab: CONTENT_TABS[3] });
+        window.setTimeout(() => {
+            promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            promptTextareaRef.current?.focus();
+        }, 0);
+    };
+
+    const handleReuseGenerationPrompt = (promptValue: string) => {
+        dispatch({ type: 'setPrompt', prompt: promptValue });
+        dispatch({ type: 'setActiveContentTab', activeContentTab: CONTENT_TABS[3] });
+        window.setTimeout(() => {
+            promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            promptTextareaRef.current?.focus();
+        }, 0);
+        toast.success('Prompt sent to recipes');
+    };
+
+    const applyPromptRecipe = (recipe: PromptRecipe) => {
+        dispatch({ type: 'setPrompt', prompt: recipe.prompt });
+        dispatch({ type: 'setNegativePrompt', negativePrompt: recipe.negativePrompt });
+        dispatch({ type: 'setSelectedAspectRatio', selectedAspectRatio: recipe.aspectRatio });
+        dispatch({ type: 'setSelectedQuality', selectedQuality: recipe.quality });
+        if (recipe.model) {
+            dispatch({ type: 'setSelectedModel', selectedModel: recipe.model });
+        }
+        window.setTimeout(() => {
+            promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+            promptTextareaRef.current?.focus();
+        }, 0);
+        toast.success(`Applied ${recipe.title} recipe`);
+    };
+
     return (
         <CreatorWorkspaceShell>
             {/* Left Control Panel */}
             <div className="w-80 h-full min-h-0 shrink-0 border-r border-border bg-background flex flex-col">
                 {/* Tabs */}
                 {/* Header - Aligned height h-14 */}
-                <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0 bg-background/95 backdrop-blur">
+                <div className="h-14 px-6 border-b border-border flex items-center shrink-0 bg-background/95 backdrop-blur">
                     <h2 className="font-semibold text-muted-foreground">Image Generator</h2>
-                    <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2 text-xs font-medium bg-secondary/50 px-3 py-1.5 rounded-full ring-1 ring-border" title="Your Credit Balance">
-                            <Sparkles className="size-3 text-primary" />
-                            <span>{formatCredits(balance)} Credits</span>
-                        </div>
-                        <Button variant="outline" size="sm" onClick={handleSaveProject} disabled={isProjectBusy || isGenerating} className="gap-2">
-                            {isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
-                            Save project
-                        </Button>
-                    </div>
                 </div>
 
                 {/* Control Content */}
-                <div className="min-h-0 flex-1 overflow-y-auto p-4  gap-y-6">
-                    {/* Browse Templates Button */}
-                    <button 
-                        onClick={() => dispatch({ type: 'setActiveContentTab', activeContentTab: CONTENT_TABS[2] })}
-                        className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
+                <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden p-4 pt-6 space-y-6">
+                {/* Browse Templates Button */}
+                    <TemplateExplorerModal
+                        defaultCategory={TemplateTypeEnum.IMAGE_GENERATOR}
+                        title="Image templates"
+                        description="Browse live image templates from the API, search them, and reuse a prompt in one click."
+                        onSelectTemplate={(template) => {
+                            dispatch({ type: 'setPrompt', prompt: template.title });
+                            window.setTimeout(() => {
+                                promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                                promptTextareaRef.current?.focus();
+                            }, 0);
+                            toast.success(`Applied ${template.title}`);
+                        }}
                     >
-                        <div className="flex items-center gap-3">
-                            <div className="size-10 rounded-lg bg-gradient-to-br from-chart-3/20 to-chart-2/20 flex items-center justify-center">
-                                <Grid3X3 className="size-5 text-chart-3" />
+                        <button
+                            type="button"
+                            onClick={() => {
+                                dispatch({ type: 'setActiveContentTab', activeContentTab: CONTENT_TABS[2] });
+                            }}
+                            className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors group"
+                        >
+                            <div className="flex items-center gap-3">
+                                <div className="size-10 rounded-lg bg-gradient-to-br from-chart-3/20 to-chart-2/20 flex items-center justify-center">
+                                    <Grid3X3 className="size-5 text-chart-3" />
+                                </div>
+                                <span className="text-sm font-medium">Browse templates</span>
                             </div>
-                            <span className="text-sm font-medium">Browse templates</span>
-                        </div>
-                        <Bookmark className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-                    </button>
+                            <Bookmark className="size-4 text-muted-foreground group-hover:text-foreground transition-colors" />
+                        </button>
+                    </TemplateExplorerModal>
 
                     {/* MODEL */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Model</h4>
-                        <div className="bg-card rounded-xl border border-border px-4 py-3">
-                            <select
-                                value={selectedModel}
-                                onChange={(event) => dispatch({ type: 'setSelectedModel', selectedModel: event.target.value })}
-                                className="w-full bg-transparent text-sm outline-none"
+                        <h4 className="text-sm font-medium text-muted-foreground">Model</h4>
+                        <div className="relative">
+                            <button
+                                type="button"
+                                onClick={() => dispatch({ type: 'setShowModelPicker', showModelPicker: !showModelPicker })}
+                                className="flex items-center justify-between w-full px-4 py-3 bg-card rounded-xl border border-border hover:border-border/80 transition-colors"
                             >
-                                {IMAGE_MODELS.map((model) => (
-                                    <option key={model.id} value={model.id}>
-                                        {model.label}
-                                    </option>
-                                ))}
-                            </select>
+                                <div className="flex items-center gap-3">
+                                    <Sparkles className="size-5 text-muted-foreground" />
+                                    <div className="text-left">
+                                        <p className="text-sm font-medium">{currentModel.label}</p>
+                                        <p className="text-[10px] text-muted-foreground">
+                                            {currentModel.id === 'auto' ? 'Backend chooses the best match' : 'Selected model for this prompt'}
+                                        </p>
+                                    </div>
+                                </div>
+                                <ChevronDown className={cn("size-4 text-muted-foreground transition-transform", showModelPicker && "rotate-180")} />
+                            </button>
+                            {showModelPicker && (
+                                <div className="absolute top-full left-0 right-0 mt-1 bg-card border border-border rounded-xl shadow-lg z-10 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-150">
+                                    {IMAGE_MODELS.map((model) => (
+                                        <button
+                                            key={model.id}
+                                            type="button"
+                                            onClick={() => {
+                                                dispatch({ type: 'setSelectedModel', selectedModel: model.id });
+                                                dispatch({ type: 'setShowModelPicker', showModelPicker: false });
+                                            }}
+                                            className={cn(
+                                                "w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-accent transition-colors",
+                                                selectedModel === model.id && "bg-accent",
+                                            )}
+                                        >
+                                            <div className="flex-1 min-w-0">
+                                                <p className="text-xs font-medium">{model.label}</p>
+                                                <p className="text-[10px] text-muted-foreground truncate">
+                                                    {model.id === 'auto' ? 'Backend chooses the best match' : `Generate with ${model.label}`}
+                                                </p>
+                                            </div>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                         <p className="text-[10px] leading-4 text-muted-foreground">
-                            Pick the model you want the backend to try first. Keep Flux if you want the current default path.
-                        </p>
-                    </div>
-
-                    <div className="space-y-3">
-                        <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Provider</h4>
-                        <div className="bg-card rounded-xl border border-border px-4 py-3">
-                            <select
-                                value={selectedProvider}
-                                onChange={(event) => dispatch({ type: 'setSelectedProvider', selectedProvider: event.target.value })}
-                                className="w-full bg-transparent text-sm outline-none"
-                                disabled={isProvidersLoading}
-                            >
-                                {imageProviders.length > 0 ? (
-                                    imageProviders.map((provider) => (
-                                        <option key={provider.name} value={provider.name}>
-                                            {provider.name}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="">Use backend default</option>
-                                )}
-                            </select>
-                        </div>
-                        <p className="text-[10px] leading-4 text-muted-foreground">
-                            Prefer a live image provider over the backend default if the default provider is misconfigured.
+                            Choose the model you want. The backend will route it to the right provider automatically.
                         </p>
                     </div>
 
                     {/* PROMPT */}
-                    <div className="gap-y-3 flex-1 flex flex-col">
-                        <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Prompt</h4>
+                    <div className="space-y-3 flex-1 flex flex-col">
+                        <h4 className="text-sm font-medium text-muted-foreground">Prompt</h4>
                         <div className="bg-card rounded-xl border border-border p-2 flex-1">
                             <textarea
+                                ref={promptTextareaRef}
                                 value={prompt}
-                                    onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                                placeholder="Describe what you want to create?"
+                                onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
+                                placeholder="Describe the subject, scene, style, and mood"
                                 className="w-full h-40 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                             <div className="space-y-2">
-                                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Aspect ratio</h4>
-                                <div className="bg-card rounded-xl border border-border px-4 py-3">
-                                    <select
-                                        value={selectedAspectRatio}
-                                        onChange={(event) => dispatch({ type: 'setSelectedAspectRatio', selectedAspectRatio: event.target.value })}
-                                        className="w-full bg-transparent text-sm outline-none"
-                                    >
-                                        <option value="1:1">1:1</option>
-                                        <option value="4:3">4:3</option>
-                                        <option value="16:9">16:9</option>
-                                        <option value="9:16">9:16</option>
-                                    </select>
+                                <h4 className="text-sm font-medium text-muted-foreground">Aspect ratio</h4>
+                                <div className="grid grid-cols-2 gap-1.5">
+                                    {[
+                                        { value: '1:1', label: '1:1' },
+                                        { value: '4:3', label: '4:3' },
+                                        { value: '16:9', label: '16:9' },
+                                        { value: '9:16', label: '9:16' },
+                                    ].map((ratio) => (
+                                        <button
+                                            key={ratio.value}
+                                            type="button"
+                                            onClick={() => dispatch({ type: 'setSelectedAspectRatio', selectedAspectRatio: ratio.value })}
+                                            className={cn(
+                                                "py-2 rounded-lg text-[10px] font-medium transition-all border",
+                                                selectedAspectRatio === ratio.value ? "bg-accent border-primary/20 text-foreground" : "bg-card border-border text-muted-foreground",
+                                            )}
+                                        >
+                                            {ratio.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
 
                             <div className="space-y-2">
-                                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Quality</h4>
-                                <div className="bg-card rounded-xl border border-border px-4 py-3">
-                                    <select
-                                        value={selectedQuality}
-                                        onChange={(event) => dispatch({ type: 'setSelectedQuality', selectedQuality: event.target.value as 'standard' | 'hd' | '4k' })}
-                                        className="w-full bg-transparent text-sm outline-none"
-                                    >
-                                        <option value="standard">Standard</option>
-                                        <option value="hd">HD</option>
-                                        <option value="4k">4K</option>
-                                    </select>
+                                <h4 className="text-sm font-medium text-muted-foreground">Quality</h4>
+                                <div className="grid grid-cols-3 gap-1.5">
+                                    {[
+                                        { value: 'standard', label: 'Standard' },
+                                        { value: 'hd', label: 'HD' },
+                                        { value: '4k', label: '4K' },
+                                    ].map((quality) => (
+                                        <button
+                                            key={quality.value}
+                                            type="button"
+                                            onClick={() => dispatch({ type: 'setSelectedQuality', selectedQuality: quality.value as 'standard' | 'hd' | '4k' })}
+                                            className={cn(
+                                                "py-2 rounded-lg text-[10px] font-medium transition-all border",
+                                                selectedQuality === quality.value ? "bg-accent border-primary/20 text-foreground" : "bg-card border-border text-muted-foreground",
+                                            )}
+                                        >
+                                            {quality.label}
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
                         <div className="space-y-2">
-                            <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Negative prompt</h4>
+                            <h4 className="text-sm font-medium text-muted-foreground">Negative prompt</h4>
                             <div className="bg-card rounded-xl border border-border p-2">
                                 <textarea
                                     value={negativePrompt}
                                     onChange={(event) => dispatch({ type: 'setNegativePrompt', negativePrompt: event.target.value })}
-                                    placeholder="Things to avoid, e.g. blurry, text, watermark?"
+                                    placeholder="Things to avoid, e.g. blurry faces, text, watermark, extra fingers"
                                     className="w-full h-24 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                                 />
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
                             <div className="space-y-2">
-                                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Seed</h4>
-                                <Input
-                                    type="number"
-                                    value={seed}
-                                    onChange={(event) => dispatch({ type: 'setSeed', seed: event.target.value })}
-                                    placeholder="Optional"
-                                    className="h-10"
-                                />
+                                <div className="flex items-center justify-between gap-3">
+                                    <h4 className="text-sm font-medium text-muted-foreground">Seed</h4>
+                                    <span className="text-[10px] text-muted-foreground">Leave blank for random</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <Input
+                                        type="text"
+                                        inputMode="numeric"
+                                        pattern="[0-9]*"
+                                        value={seed}
+                                        onChange={(event) => dispatch({ type: 'setSeed', seed: event.target.value })}
+                                        placeholder="Any whole number"
+                                        className="h-10"
+                                    />
+                                    {seed && (
+                                        <Button type="button" variant="ghost" size="sm" className="h-10 px-3" onClick={handleClearSeed}>
+                                            Clear
+                                        </Button>
+                                    )}
+                                </div>
                             </div>
                             <div className="space-y-2">
-                                <h4 className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">Reference image URL</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Reference image URL</h4>
                                 <div className="space-y-2">
                                     <Input
                                         type="url"
                                         value={referenceImageUrl}
                                         onChange={(event) => dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: event.target.value })}
-                                        placeholder="https://?"
+                                        placeholder="Paste a valid http(s) reference URL"
                                         className="h-10"
                                     />
-                                    <div className="flex items-center gap-2">
+                                    <p className="text-[10px] leading-snug text-muted-foreground">
+                                        Direct image link or upload below. Broken links fall back to a preview card.
+                                    </p>
+                                    <div className="flex flex-wrap items-center gap-2">
                                         <Button
                                             type="button"
                                             variant="secondary"
                                             size="sm"
-                                            className="h-8 px-3"
+                                            className="h-8 px-3 whitespace-nowrap"
+                                            disabled={isReferenceImageUploading}
                                             onClick={() => referenceImageInputRef.current?.click()}
                                         >
-                                            Upload image
+                                            {isReferenceImageUploading
+                                                ? `Uploading${referenceImageUploadProgress > 0 ? ` ${referenceImageUploadProgress}%` : '...' }`
+                                                : 'Upload image'}
+                                        </Button>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            size="sm"
+                                            className="h-8 px-3 whitespace-nowrap"
+                                            disabled={isReferenceImageUploading}
+                                            onClick={() => dispatch({ type: 'setReferencePickerOpen', isReferencePickerOpen: true })}
+                                        >
+                                            Choose from uploads
                                         </Button>
                                         {referenceImageUrl && (
                                             <Button
                                                 type="button"
                                                 variant="ghost"
                                                 size="sm"
-                                                className="h-8 px-3"
-                                                onClick={() => dispatch({ type: 'setReferenceImageUrl', referenceImageUrl: '' })}
+                                                className="h-8 px-3 whitespace-nowrap"
+                                                onClick={handleClearReferenceImage}
                                             >
                                                 Clear
                                             </Button>
                                         )}
                                     </div>
+                                    {referenceImageUploadError && (
+                                        <p className="text-[10px] text-destructive">{referenceImageUploadError}</p>
+                                    )}
+                                    {isReferenceImageUploading && (
+                                        <div className="space-y-1">
+                                            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full bg-primary transition-all"
+                                                    style={{ width: `${Math.max(4, referenceImageUploadProgress)}%` }}
+                                                />
+                                            </div>
+                                            <p className="text-[10px] text-muted-foreground">Uploading reference image...</p>
+                                        </div>
+                                    )}
                                     {referenceImageUrl && (
                                         <div className="relative aspect-[16/9] overflow-hidden rounded-xl border border-border bg-card">
-                                            <Image
-                                                src={referenceImageUrl}
-                                                alt="Reference image preview"
-                                                fill
-                                                className="object-cover"
-                                                sizes="320px"
-                                                unoptimized
-                                            />
+                                            {referenceImageError ? (
+                                                <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-muted/40 px-4 text-center">
+                                                    <div className="size-12 rounded-full bg-background flex items-center justify-center border border-border">
+                                                        <Upload className="size-5 text-muted-foreground" />
+                                                    </div>
+                                                    <p className="text-xs font-medium text-foreground">Preview unavailable</p>
+                                                    <p className="text-[10px] text-muted-foreground max-w-[200px]">{referenceImageError}</p>
+                                                </div>
+                                            ) : (
+                                                <Image
+                                                    src={referenceImageUrl}
+                                                    alt="Reference image preview"
+                                                    fill
+                                                    className="object-cover"
+                                                    sizes="320px"
+                                                    unoptimized
+                                                    onError={() => dispatch({ type: 'setReferenceImageError', referenceImageError: 'Could not load that reference image.' })}
+                                                />
+                                            )}
                                         </div>
                                     )}
                                     <input
@@ -668,6 +956,12 @@ function StudioPageContent() {
                                         accept="image/*"
                                         className="hidden"
                                         onChange={handleReferenceImageUpload}
+                                    />
+                                    <MediaPickerModal
+                                        isOpen={state.isReferencePickerOpen}
+                                        onClose={() => dispatch({ type: 'setReferencePickerOpen', isReferencePickerOpen: false })}
+                                        onSelect={handleReferenceMediaSelect}
+                                        mediaType="image"
                                     />
                                 </div>
                             </div>
@@ -692,7 +986,7 @@ function StudioPageContent() {
                         {isGenerating ? (
                             <>
                                 <Loader2 className="size-4 animate-spin" />
-                                Generating?
+                                Generating image...
                             </>
                         ) : (
                             <>
@@ -711,7 +1005,7 @@ function StudioPageContent() {
             </div>
 
             {/* Main Content Grid */}
-            <div ref={contentScrollRef} className="min-w-0 flex-1 overflow-y-auto bg-background flex flex-col">
+            <div ref={contentScrollRef} className="min-w-0 flex-1 overflow-y-auto overflow-x-hidden bg-background flex flex-col">
                 {/* Generation Result View */}
                 {currentGeneration && (
                     <div className="p-6 pb-0">
@@ -748,7 +1042,7 @@ function StudioPageContent() {
 
                 {/* Content Header */}
                 <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-md px-6 h-14 flex items-center justify-between border-b border-border">
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 pl-1">
                         {CONTENT_TABS.map((tab) => (
                             <button
                                 key={tab}
@@ -796,11 +1090,15 @@ function StudioPageContent() {
                             ) : filteredGenerations.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                                     {filteredGenerations.map((gen) => (
-                                        <GenerationCard key={gen.id} generation={gen} />
+                                        <GenerationCard key={gen.id} generation={gen} onReuse={() => handleReuseGenerationPrompt(gen.prompt)} />
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState message={normalizedSearch ? 'No generations match your search.' : 'No generations yet. Start creating!'} />
+                                <EmptyState
+                                    message={normalizedSearch ? 'No generations match your search.' : 'No generations yet. Start creating!'}
+                                    actionLabel="Open prompt recipes"
+                                    onAction={openPromptRecipes}
+                                />
                             )}
                         </section>
                     )}
@@ -812,52 +1110,125 @@ function StudioPageContent() {
                                 <LoadingGrid />
                             ) : filteredCommunityListings.length > 0 ? (
                                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                                    {filteredCommunityListings.map((listing) => (
-                                        <TemplateCard key={listing.id} template={listing} onClick={() => dispatch({ type: 'setPrompt', prompt: listing.title })} />
+                            {filteredCommunityListings.map((listing) => (
+                                        <TemplateCard
+                                            key={listing.id}
+                                            template={listing}
+                                            onClick={() => {
+                                                dispatch({ type: 'setPrompt', prompt: listing.title });
+                                                window.setTimeout(() => {
+                                                    promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                                                    promptTextareaRef.current?.focus();
+                                                }, 0);
+                                            }}
+                                        />
                                     ))}
                                 </div>
                             ) : (
-                                <EmptyState message={normalizedSearch ? 'No community creations match your search.' : 'Community is quiet today.'} />
+                                <EmptyState
+                                    message={normalizedSearch ? 'No community creations match your search.' : 'Community is quiet today.'}
+                                    actionLabel="Open prompt recipes"
+                                    onAction={openPromptRecipes}
+                                />
                             )}
                         </section>
                     )}
 
                     {activeContentTab === CONTENT_TABS[2] && ( // Templates
-                        <TemplatesTab onSelectPrompt={(value) => dispatch({ type: 'setPrompt', prompt: value })} searchTerm={searchQuery} />
+                        <TemplatesTab
+                            onSelectPrompt={(value) => {
+                                dispatch({ type: 'setPrompt', prompt: value });
+                                window.setTimeout(() => {
+                                    promptTextareaRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                                    promptTextareaRef.current?.focus();
+                                }, 0);
+                            }}
+                            onOpenRecipes={openPromptRecipes}
+                            searchTerm={searchQuery}
+                        />
                     )}
 
                     {activeContentTab === CONTENT_TABS[3] && ( // Tutorials
                         <section className="space-y-6">
-                            <h2 className="text-lg font-semibold">Tutorials & Help</h2>
+                            <div className="space-y-2">
+                                <h2 className="text-lg font-semibold">Prompt recipes</h2>
+                                <p className="text-sm text-muted-foreground">
+                                    Use one of these starting points when you want a prompt that is specific enough to produce consistent results.
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                                {IMAGE_PROMPT_RECIPES.map((recipe) => (
+                                    <button
+                                        key={recipe.title}
+                                        type="button"
+                                        onClick={() => applyPromptRecipe(recipe)}
+                                        className="group rounded-2xl border border-border bg-card p-5 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
+                                    >
+                                        <div className="flex items-start justify-between gap-4">
+                                            <div>
+                                                <h3 className="font-semibold">{recipe.title}</h3>
+                                                <p className="mt-1 text-xs text-muted-foreground">
+                                                    {recipe.aspectRatio} composition
+                                                </p>
+                                            </div>
+                                            <span className="rounded-full border border-border px-2 py-1 text-xs font-medium text-muted-foreground group-hover:text-foreground">
+                                                Use recipe
+                                            </span>
+                                        </div>
+                                        <p className="mt-4 text-sm leading-6 text-muted-foreground">{recipe.hint}</p>
+                                        <div className="mt-4 space-y-3 text-xs text-muted-foreground">
+                                            <div>
+                                                <span className="font-medium text-foreground">Prompt</span>
+                                                <p className="mt-1 line-clamp-3">{recipe.prompt}</p>
+                                            </div>
+                                            <div>
+                                                <span className="font-medium text-foreground">Avoid</span>
+                                                <p className="mt-1 line-clamp-2">{recipe.negativePrompt}</p>
+                                            </div>
+                                            <div className="flex flex-wrap gap-2">
+                                                <span className="rounded-full border border-border px-2 py-1 text-xs font-medium text-muted-foreground">
+                                                    {recipe.quality}
+                                                </span>
+                                                {recipe.model && (
+                                                    <span className="rounded-full border border-border px-2 py-1 text-xs font-medium text-muted-foreground">
+                                                        {recipe.model === 'z_image_turbo_bf16.safetensors' ? 'Z-Image-Turbo' : recipe.model}
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold">Quick start</h3>
-                                        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">3 steps</span>
+                                        <span className="text-xs font-medium text-muted-foreground">3 steps</span>
                                     </div>
                                     <ol className="space-y-3 text-sm text-muted-foreground">
                                         <li className="flex gap-3">
                                             <span className="font-semibold text-foreground">1.</span>
-                                            Pick a template or start from a blank prompt.
+                                            Pick a recipe above or start from a blank prompt.
                                         </li>
                                         <li className="flex gap-3">
                                             <span className="font-semibold text-foreground">2.</span>
-                                            Add style, model, and aspect-ratio details.
+                                            Add the subject, lighting, composition, and quality you want the backend to try first.
                                         </li>
                                         <li className="flex gap-3">
                                             <span className="font-semibold text-foreground">3.</span>
-                                            Generate, review the result, then save it to your library.
+                                            Generate, review the result, then save it for later.
                                         </li>
                                     </ol>
                                 </div>
                                 <div className="rounded-2xl bg-card border border-border p-6 space-y-4">
                                     <div className="flex items-center justify-between">
                                         <h3 className="font-semibold">Production tips</h3>
-                                        <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Best practice</span>
+                                        <span className="text-xs font-medium text-muted-foreground">Best practice</span>
                                     </div>
                                     <ul className="space-y-3 text-sm text-muted-foreground">
                                         <li>Use a specific subject, lighting, and composition to reduce retries.</li>
-                                        <li>Keep the prompt focused and use negative prompts for unwanted artifacts.</li>
+                                        <li>Keep the prompt focused and use negative prompts for unwanted artifacts, extra text, or broken anatomy.</li>
+                                        <li>Match quality and aspect ratio before rerunning, so you only spend credits on the right format.</li>
                                         <li>Review generations in Personal, then promote the best ones to Community or Templates.</li>
                                     </ul>
                                 </div>
@@ -880,7 +1251,15 @@ function LoadingGrid() {
     );
 }
 
-function TemplatesTab({ onSelectPrompt, searchTerm }: { onSelectPrompt: (prompt: string) => void; searchTerm: string }) {
+function TemplatesTab({
+    onSelectPrompt,
+    onOpenRecipes,
+    searchTerm,
+}: {
+    onSelectPrompt: (prompt: string) => void;
+    onOpenRecipes: () => void;
+    searchTerm: string;
+}) {
     const {
         data,
         error,
@@ -920,7 +1299,7 @@ function TemplatesTab({ onSelectPrompt, searchTerm }: { onSelectPrompt: (prompt:
                             Scroll to load more templates progressively.
                         </p>
                     </div>
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground">
                         Infinite scroll
                     </span>
                 </div>
@@ -957,7 +1336,11 @@ function TemplatesTab({ onSelectPrompt, searchTerm }: { onSelectPrompt: (prompt:
                         </div>
                     </>
                 ) : (
-                    <EmptyState message={normalizedSearch ? 'No templates match your search.' : 'No templates available yet.'} />
+                    <EmptyState
+                        message={normalizedSearch ? 'No templates match your search.' : 'No templates available yet.'}
+                        actionLabel="Open prompt recipes"
+                        onAction={onOpenRecipes}
+                    />
                 )}
             </section>
 
@@ -969,7 +1352,7 @@ function TemplatesTab({ onSelectPrompt, searchTerm }: { onSelectPrompt: (prompt:
                             A curated snapshot from the loaded template feed.
                         </p>
                     </div>
-                    <span className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                    <span className="text-xs font-medium text-muted-foreground">
                         {Math.min(6, templates.length)} items
                     </span>
                 </div>
@@ -987,7 +1370,11 @@ function TemplatesTab({ onSelectPrompt, searchTerm }: { onSelectPrompt: (prompt:
                         ))}
                     </div>
                 ) : (
-                    <EmptyState message={normalizedSearch ? 'No featured templates match your search.' : 'Featured templates will appear after the first page loads.'} />
+                    <EmptyState
+                        message={normalizedSearch ? 'No featured templates match your search.' : 'Featured templates will appear after the first page loads.'}
+                        actionLabel="Open prompt recipes"
+                        onAction={onOpenRecipes}
+                    />
                 )}
             </section>
         </div>
@@ -1007,18 +1394,37 @@ function TemplateSkeletonGrid({ count }: { count: number }) {
     );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({
+    message,
+    actionLabel,
+    onAction,
+}: {
+    message: string;
+    actionLabel?: string;
+    onAction?: () => void;
+}) {
     return (
         <div className="flex flex-col items-center justify-center py-20 text-center">
             <div className="size-16 rounded-full bg-muted flex items-center justify-center mb-4">
                 <Sparkles className="size-8 text-muted-foreground/30" />
             </div>
             <p className="text-muted-foreground">{message}</p>
+            {actionLabel && onAction && (
+                <Button type="button" variant="outline" size="sm" className="mt-4" onClick={onAction}>
+                    {actionLabel}
+                </Button>
+            )}
         </div>
     );
 }
 
-function GenerationCard({ generation }: { generation: GeneratedCardData }) {
+function GenerationCard({
+    generation,
+    onReuse,
+}: {
+    generation: GeneratedCardData;
+    onReuse: () => void;
+}) {
     return (
         <div className="group text-left">
             <div className="aspect-[3/4] rounded-xl overflow-hidden bg-card border border-border group-hover:border-border/80 transition-all relative">
@@ -1042,6 +1448,9 @@ function GenerationCard({ generation }: { generation: GeneratedCardData }) {
             <p className="mt-2 text-xs text-muted-foreground group-hover:text-foreground transition-colors line-clamp-1">
                 {generation.prompt}
             </p>
+            <Button type="button" variant="ghost" size="sm" className="mt-2 h-8 px-2 text-xs" onClick={onReuse}>
+                Reuse prompt
+            </Button>
         </div>
     );
 }

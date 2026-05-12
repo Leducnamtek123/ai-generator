@@ -1,0 +1,49 @@
+{
+  "Notifications": {
+    "title": "Notifications",
+    "notificationCenter": "Notification center",
+    "headline": "One inbox for product updates and admin alerts",
+    "description": "Keep billing, workflow, moderation, and platform alerts in one feed. This mirrors the common SaaS pattern: a quick unread badge in the header, plus a dedicated inbox for the full history.",
+    "refresh": "Refresh",
+    "markAllAsRead": "Mark all as read",
+    "unread": "Unread",
+    "success": "Success",
+    "warnings": "Warnings",
+    "info": "Info",
+    "error": "Error",
+    "emptyTitle": "No notifications yet",
+    "emptyBody": "SaaS products usually keep this screen as an inbox: product events, billing updates, moderation changes, and admin alerts all land here in one place.",
+    "openSettings": "Open notification settings",
+    "openAdmin": "Open admin console",
+    "cards": {
+      "activityFeed": "Activity feed",
+      "activityFeedNote": "Issue updates, publish runs, workflow events.",
+      "billingAccount": "Billing & account",
+      "billingAccountNote": "Payments, credits, access changes.",
+      "adminAlerts": "Admin alerts",
+      "adminAlertsNote": "Errors, moderation, import or approval events."
+    },
+    "categories": {
+      "payment": "Payment",
+      "workflow": "Workflow",
+      "social": "Social",
+      "moderation": "Moderation",
+      "system": "System"
+    },
+    "filters": {
+      "all": "All",
+      "unread": "Unread",
+      "success": "Success",
+      "info": "Info",
+      "warning": "Warning",
+      "error": "Error"
+    },
+    "actions": {
+      "markAsRead": "Mark as read"
+    },
+    "time": {
+      "minutesAgo": "{count}m ago",
+      "hoursAgo": "{count}h ago"
+    }
+  }
+}

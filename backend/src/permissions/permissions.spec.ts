@@ -1,12 +1,12 @@
-import { defineAbilityFor, OrgAction } from './permissions';
+import { defineAbilityFor, WorkspaceAction } from './permissions';
 
 describe('defineAbilityFor', () => {
-  it('should allow authenticated users to create organizations', () => {
+  it('should allow authenticated users to create workspaces', () => {
     const ability = defineAbilityFor({
       id: 1,
       role: 'MEMBER',
     });
 
-    expect(ability.can(OrgAction.Create, 'Organization')).toBe(true);
+    expect(ability.can(WorkspaceAction.Create, 'Workspace')).toBe(true);
   });
 });

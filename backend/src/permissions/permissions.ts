@@ -5,7 +5,7 @@ import {
   CreateAbility,
 } from '@casl/ability';
 
-export enum OrgAction {
+export enum WorkspaceAction {
   Manage = 'manage',
   Create = 'create',
   Read = 'read',
@@ -15,21 +15,21 @@ export enum OrgAction {
 }
 
 // Subjects as plain strings with optional attributes
-type OrgSubjects =
-  | 'Organization'
+type WorkspaceSubjects =
+  | 'Workspace'
   | 'Project'
   | 'User'
   | 'Invite'
   | 'Billing'
   | 'all';
 
-export type AppAbility = MongoAbility<[OrgAction, OrgSubjects]>;
+export type AppAbility = MongoAbility<[WorkspaceAction, WorkspaceSubjects]>;
 const createAppAbility = createMongoAbility as CreateAbility<AppAbility>;
 
 export interface PermissionUser {
   id: number;
   role: 'OWNER' | 'ADMIN' | 'MEMBER' | 'BILLING' | 'VIEWER';
-  ownerId?: number; // org owner id for context
+  ownerId?: number; // workspace owner id for context
 }
 
 export function defineAbilityFor(user: PermissionUser): AppAbility {
@@ -37,49 +37,62 @@ export function defineAbilityFor(user: PermissionUser): AppAbility {
     createAppAbility,
   );
 
-  can(OrgAction.Create, 'Organization');
+  can(WorkspaceAction.Create, 'Workspace');
 
   // If the user is the explicit owner, they get everything
   if (user.id === user.ownerId || user.role === 'OWNER') {
-    can(OrgAction.Manage, 'all');
+    can(WorkspaceAction.Manage, 'all');
   }
 
   switch (user.role) {
     case 'OWNER':
       // Handled above, but explicitly adding for clarity
-      can(OrgAction.Manage, 'all');
+      can(WorkspaceAction.Manage, 'all');
       break;
 
     case 'ADMIN':
-      can(OrgAction.Manage, 'all');
-      // Admin cannot delete the organization or transfer ownership
-      cannot([OrgAction.Delete, OrgAction.TransferOwnership], 'Organization');
+      can(WorkspaceAction.Manage, 'all');
+      // Admin cannot delete the workspace or transfer ownership
+      cannot(
+        [WorkspaceAction.Delete, WorkspaceAction.TransferOwnership],
+        'Workspace',
+      );
       break;
 
     case 'MEMBER':
-      can(OrgAction.Read, 'Organization');
-      can(OrgAction.Read, 'User');
+      can(WorkspaceAction.Read, 'Workspace');
+      can(WorkspaceAction.Read, 'User');
       can(
-        [OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete],
+        [
+          WorkspaceAction.Create,
+          WorkspaceAction.Read,
+          WorkspaceAction.Update,
+          WorkspaceAction.Delete,
+        ],
         'Project',
       );
       can(
-        [OrgAction.Create, OrgAction.Read, OrgAction.Update, OrgAction.Delete],
+        [
+          WorkspaceAction.Create,
+          WorkspaceAction.Read,
+          WorkspaceAction.Update,
+          WorkspaceAction.Delete,
+        ],
         'Workflow' as any,
       );
       break;
 
     case 'VIEWER':
-      can(OrgAction.Read, 'Organization');
-      can(OrgAction.Read, 'User');
-      can(OrgAction.Read, 'Project');
-      can(OrgAction.Read, 'Workflow' as any);
+      can(WorkspaceAction.Read, 'Workspace');
+      can(WorkspaceAction.Read, 'User');
+      can(WorkspaceAction.Read, 'Project');
+      can(WorkspaceAction.Read, 'Workflow' as any);
       break;
 
     case 'BILLING':
-      can(OrgAction.Manage, 'Billing');
-      can(OrgAction.Read, 'Organization');
-      can(OrgAction.Read, 'Project');
+      can(WorkspaceAction.Manage, 'Billing');
+      can(WorkspaceAction.Read, 'Workspace');
+      can(WorkspaceAction.Read, 'Project');
       break;
 
     default:

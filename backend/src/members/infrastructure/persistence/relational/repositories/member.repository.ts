@@ -27,19 +27,19 @@ export class MembersRelationalRepository implements MemberRepository {
     return entity ? MemberMapper.toDomain(entity) : null;
   }
 
-  async findByUserAndOrg(
+  async findByUserAndWorkspace(
     userId: number,
-    organizationId: string,
+    workspaceId: string,
   ): Promise<NullableType<Member>> {
     const entity = await this.memberRepo.findOne({
-      where: { userId, organizationId },
+      where: { userId, workspaceId },
     });
     return entity ? MemberMapper.toDomain(entity) : null;
   }
 
-  async findByOrganizationId(organizationId: string): Promise<Member[]> {
+  async findByWorkspaceId(workspaceId: string): Promise<Member[]> {
     const entities = await this.memberRepo.find({
-      where: { organizationId },
+      where: { workspaceId },
     });
     return entities.map((e) => MemberMapper.toDomain(e));
   }

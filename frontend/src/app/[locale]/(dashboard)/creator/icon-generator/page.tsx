@@ -1,12 +1,10 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useState, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useEffect, useReducer, useState } from 'react';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useGenerationProviders } from '@/hooks/useGenerationProviders';
-import { projectApi } from '@/services/projectApi';
 import {
     Shapes,
     Download,
@@ -19,6 +17,7 @@ import {
 import { Button } from '@/ui/button';
 import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
 
@@ -51,6 +50,38 @@ const colorPalettes = [
 
 const sizes = ['16x16', '32x32', '64x64', '128x128', '256x256', '512x512', '1024x1024'];
 
+type IconPromptRecipe = {
+    title: string;
+    prompt: string;
+    style: string;
+    shape: string;
+    palette: string;
+};
+
+const ICON_PROMPT_RECIPES: IconPromptRecipe[] = [
+    {
+        title: 'Startup mark',
+        prompt: 'A clean startup icon of a rocket launching from a laptop, minimal flat design, bold silhouette, modern tech brand',
+        style: 'flat',
+        shape: 'rounded',
+        palette: 'gradient',
+    },
+    {
+        title: 'App glyph',
+        prompt: 'A simple app glyph for productivity software, geometric shapes, clean outline, high contrast, scalable at 32px',
+        style: 'outline',
+        shape: 'square',
+        palette: 'vibrant',
+    },
+    {
+        title: 'Premium badge',
+        prompt: 'A premium subscription badge icon with a crown and shield motif, polished 3D render, soft highlights, luxury tech feel',
+        style: '3d',
+        shape: 'circle',
+        palette: 'dark',
+    },
+];
+
 type IconGeneratorState = {
     prompt: string;
     selectedStyle: string;
@@ -76,40 +107,19 @@ type IconSnapshot = {
     selectedProvider: string;
 };
 
-type IconProjectPayload = {
-    version: number;
-    savedAt: string;
-    snapshot: Partial<IconSnapshot>;
-};
-
 type IconUiState = {
-    projectId: string | null;
-    isProjectLoading: boolean;
-    isProjectSaving: boolean;
     projectError: string | null;
 };
 
 type IconUiAction =
-    | { type: 'set-project-id'; projectId: string | null }
-    | { type: 'set-project-loading'; isLoading: boolean }
-    | { type: 'set-project-saving'; isSaving: boolean }
     | { type: 'set-project-error'; error: string | null };
 
 const initialUiState: IconUiState = {
-    projectId: null,
-    isProjectLoading: false,
-    isProjectSaving: false,
     projectError: null,
 };
 
 function uiReducer(state: IconUiState, action: IconUiAction): IconUiState {
     switch (action.type) {
-        case 'set-project-id':
-            return { ...state, projectId: action.projectId };
-        case 'set-project-loading':
-            return { ...state, isProjectLoading: action.isLoading };
-        case 'set-project-saving':
-            return { ...state, isProjectSaving: action.isSaving };
         case 'set-project-error':
             return { ...state, projectError: action.error };
         default:
@@ -203,25 +213,8 @@ function IconGeneratorPageContent() {
     const { startGeneration, currentGeneration, error, reset } = useGenerationStore();
     const { providers: iconProviders, isLoading: isProvidersLoading } = useGenerationProviders('icon-gen');
     const [selectedProvider, setSelectedProvider] = useState('');
-    const { replace } = useRouter();
-    const searchParams = useSearchParams();
-    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
-    const isProjectBusy = uiState.isProjectLoading || uiState.isProjectSaving;
 
     useEffect(() => {
-        if (!iconProviders.length) {
-            return;
-        }
-
-        if (!selectedProvider || !iconProviders.some((provider) => provider.name === selectedProvider)) {
-            setSelectedProvider(iconProviders[0].name);
-        }
-    }, [selectedProvider, iconProviders]);
-
-    useEffect(() => {
-        const requestedProjectId = searchParamsSnapshot.get('projectId');
-        dispatchUi({ type: 'set-project-id', projectId: requestedProjectId });
-
         const applySnapshot = (snapshot: Partial<IconSnapshot>) => {
             dispatch({ type: 'setPrompt', prompt: snapshot.prompt ?? '' });
             dispatch({ type: 'setSelectedStyle', selectedStyle: snapshot.selectedStyle ?? initialState.selectedStyle });
@@ -248,39 +241,8 @@ function IconGeneratorPageContent() {
             }
         };
 
-        if (!requestedProjectId) {
-            loadDraft();
-            return;
-        }
-
-        let cancelled = false;
-        dispatchUi({ type: 'set-project-loading', isLoading: true });
-
-        void (async () => {
-            try {
-                const project = await projectApi.get(requestedProjectId);
-                if (cancelled) {
-                    return;
-                }
-
-                applySnapshot(normalizeIconSnapshot(project.content));
-            } catch (loadError) {
-                console.error('Failed to load icon project', loadError);
-                if (!cancelled) {
-                    dispatchUi({ type: 'set-project-error', error: 'Loaded local draft because backend project load failed.' });
-                    loadDraft();
-                }
-            } finally {
-                if (!cancelled) {
-                    dispatchUi({ type: 'set-project-loading', isLoading: false });
-                }
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [searchParams]);
+        loadDraft();
+    }, []);
 
     const handleGenerate = async () => {
         if (!state.prompt.trim()) return;
@@ -311,7 +273,7 @@ function IconGeneratorPageContent() {
         dispatchUi({ type: 'set-project-error', error: null });
     };
 
-    const handleSaveProject = async () => {
+    const handleSaveDraft = async () => {
         const content: IconSnapshot = {
             prompt: state.prompt,
             selectedStyle: state.selectedStyle,
@@ -325,31 +287,8 @@ function IconGeneratorPageContent() {
         };
 
         localStorage.setItem('icon-generator:draft:v1', JSON.stringify(content));
-        dispatchUi({ type: 'set-project-saving', isSaving: true });
         dispatchUi({ type: 'set-project-error', error: null });
-
-        try {
-            if (uiState.projectId) {
-                await projectApi.update(uiState.projectId, {
-                    name: state.prompt.trim() ? `Icon: ${state.prompt.trim().slice(0, 48)}` : 'Icon Generator Project',
-                    content: { version: 1, savedAt: new Date().toISOString(), snapshot: content } satisfies IconProjectPayload,
-                });
-            } else {
-                const created = await projectApi.create({
-                    name: state.prompt.trim() ? `Icon: ${state.prompt.trim().slice(0, 48)}` : 'Icon Generator Project',
-                    content: { version: 1, savedAt: new Date().toISOString(), snapshot: content } satisfies IconProjectPayload,
-                });
-                dispatchUi({ type: 'set-project-id', projectId: created.project.id });
-                replace(`${window.location.pathname}?projectId=${created.project.id}`);
-            }
-            toast.success('Icon project saved.');
-        } catch (saveError) {
-            console.error('Failed to save icon project', saveError);
-            dispatchUi({ type: 'set-project-error', error: 'Saved locally, but backend project save failed.' });
-            toast.error('Icon project saved locally, backend save failed.');
-        } finally {
-            dispatchUi({ type: 'set-project-saving', isSaving: false });
-        }
+        toast.success('Icon draft saved locally.');
     };
 
     const handleExportAll = () => {
@@ -387,6 +326,14 @@ function IconGeneratorPageContent() {
         toast.success('Icon URL copied.');
     };
 
+    const applyPromptRecipe = (recipe: IconPromptRecipe) => {
+        dispatch({ type: 'setPrompt', prompt: recipe.prompt });
+        dispatch({ type: 'setSelectedStyle', selectedStyle: recipe.style });
+        dispatch({ type: 'setSelectedShape', selectedShape: recipe.shape });
+        dispatch({ type: 'setSelectedPalette', selectedPalette: recipe.palette });
+        toast.success(`Applied ${recipe.title} recipe`);
+    };
+
     useEffect(() => {
         if (!currentGeneration || !state.isGenerating || currentGeneration.type !== 'image') {
             return;
@@ -412,21 +359,47 @@ function IconGeneratorPageContent() {
                     <h2 className="font-semibold text-muted-foreground">Icon Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Describe your icon</h4>
+                        <div className="flex items-end justify-between gap-4">
+                            <div>
+                                <h4 className="text-sm font-medium text-muted-foreground">Prompt recipes</h4>
+                                <p className="text-xs text-muted-foreground">Use a proven starting point for common icon types.</p>
+                            </div>
+                            <span className="text-xs font-medium text-muted-foreground">Quick start</span>
+                        </div>
+                        <div className="grid grid-cols-1 gap-2">
+                            {ICON_PROMPT_RECIPES.map((recipe) => (
+                                <button
+                                    key={recipe.title}
+                                    type="button"
+                                    onClick={() => applyPromptRecipe(recipe)}
+                                    className="rounded-xl border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary/40 hover:bg-accent/40"
+                                >
+                                    <div className="flex items-center justify-between gap-3">
+                                        <span className="text-sm font-medium">{recipe.title}</span>
+                                        <span className="text-xs font-medium text-muted-foreground">Use recipe</span>
+                                    </div>
+                                    <p className="mt-1 text-xs text-muted-foreground line-clamp-2">{recipe.prompt}</p>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div className="space-y-3">
+                        <h4 className="text-sm font-medium text-muted-foreground">Describe your icon</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
                                 onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })}
-                                placeholder="e.g., A rocket launching from a laptop, tech startup?"
+                                placeholder="Describe the icon subject, style, palette, and shape"
                                 className="w-full h-24 bg-transparent text-sm placeholder:text-muted-foreground resize-none focus:outline-none p-2"
                             />
                         </div>
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Style</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Style</h4>
                         <div className="grid grid-cols-2 gap-2">
                             {iconStyles.map((style) => (
                                 <button
@@ -445,24 +418,26 @@ function IconGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Provider</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Provider</h4>
                         <div className="bg-card rounded-xl border border-border px-4 py-3">
-                            <select
-                                value={selectedProvider}
-                                onChange={(event) => setSelectedProvider(event.target.value)}
-                                className="w-full bg-transparent text-sm outline-none"
+                            <Select
+                                value={selectedProvider || iconProviders[0]?.name || '__default__'}
+                                onValueChange={(value) => setSelectedProvider(value === '__default__' ? '' : value)}
                                 disabled={isProvidersLoading}
                             >
-                                {iconProviders.length > 0 ? (
-                                    iconProviders.map((provider) => (
-                                        <option key={provider.name} value={provider.name}>
-                                            {provider.name}
-                                        </option>
-                                    ))
-                                ) : (
-                                    <option value="">Use backend default</option>
-                                )}
-                            </select>
+                                <SelectTrigger className="w-full bg-transparent text-sm outline-none">
+                                    <SelectValue placeholder="Use backend default" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__default__">Use backend default</SelectItem>
+                                    {iconProviders.length > 0 &&
+                                        iconProviders.map((provider) => (
+                                            <SelectItem key={provider.name} value={provider.name}>
+                                                {provider.name}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
                         </div>
                         <p className="text-[10px] leading-4 text-muted-foreground">
                             Pick a live icon provider before starting the generation.
@@ -470,7 +445,7 @@ function IconGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Shape</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Shape</h4>
                         <div className="grid grid-cols-4 gap-2">
                             {shapes.map((shape) => (
                                 <button
@@ -489,7 +464,7 @@ function IconGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Color Palette</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Color Palette</h4>
                         <div className="space-y-2">
                             {colorPalettes.map((palette) => (
                                 <button
@@ -513,7 +488,7 @@ function IconGeneratorPageContent() {
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Corner Radius</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Corner Radius</Label>
                             <span className="text-[11px] font-mono text-foreground">{state.cornerRadius}%</span>
                         </div>
                         <Slider
@@ -526,7 +501,7 @@ function IconGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Size</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Size</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {sizes.map((size) => (
                                 <button
@@ -545,7 +520,7 @@ function IconGeneratorPageContent() {
 
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Variations</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Variations</Label>
                             <span className="text-[11px] font-mono text-foreground">{state.count}</span>
                         </div>
                         <Slider
@@ -586,8 +561,8 @@ function IconGeneratorPageContent() {
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                     <span className="text-sm font-medium">{state.results.length > 0 ? `${state.results.length} icons generated` : 'Generated Icons'}</span>
                     <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveProject} disabled={isProjectBusy}>
-                            <Folder className="size-4" /> {uiState.isProjectSaving ? 'Saving...' : 'Save Project'}
+                        <Button variant="outline" size="sm" className="gap-2" onClick={handleSaveDraft} disabled={false}>
+                            <Folder className="size-4" /> Save asset
                         </Button>
                         {state.results.length > 0 && (
                             <Button size="sm" className="gap-2" onClick={handleExportAll}>

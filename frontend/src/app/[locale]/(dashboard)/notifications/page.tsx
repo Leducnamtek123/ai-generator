@@ -6,99 +6,49 @@ import {
   Bell,
   CheckCircle2,
   Clock3,
-  Filter,
   Inbox,
   RefreshCw,
   ShieldAlert,
   Sparkles,
   Wrench,
 } from 'lucide-react';
+import { useTranslations } from 'next-intl';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Link } from '@/i18n/navigation';
 import { cn } from '@/lib/utils';
 import { notificationApi, type Notification } from '@/services/notificationApi';
+import { NotificationsSkeleton } from '@/components/common/loading-skeletons';
 
-const tabs = [
-  { id: 'all', label: 'All' },
-  { id: 'unread', label: 'Unread' },
-  { id: 'success', label: 'Success' },
-  { id: 'info', label: 'Info' },
-  { id: 'warning', label: 'Warning' },
-  { id: 'error', label: 'Error' },
-] as const;
+type NotificationsT = (key: string) => string;
 
-type FilterId = (typeof tabs)[number]['id'];
-
-const typeMeta = {
-  success: {
-    icon: Sparkles,
-    accent: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/25',
-    label: 'Success',
-  },
-  info: {
-    icon: Bell,
-    accent: 'bg-primary/15 text-primary border-primary/25',
-    label: 'Info',
-  },
-  warning: {
-    icon: ShieldAlert,
-    accent: 'bg-amber-500/15 text-amber-500 border-amber-500/25',
-    label: 'Warning',
-  },
-  error: {
-    icon: Wrench,
-    accent: 'bg-red-500/15 text-red-500 border-red-500/25',
-    label: 'Error',
-  },
-} satisfies Record<Notification['type'], { icon: React.ElementType; accent: string; label: string }>;
-
-const categoryMeta: Record<Notification['category'], { label: string }> = {
-  payment: { label: 'Payment' },
-  workflow: { label: 'Workflow' },
-  social: { label: 'Social' },
-  moderation: { label: 'Moderation' },
-  system: { label: 'System' },
-};
-
-const relativeTime = (dateString: string) => {
-  const date = new Date(dateString);
-  const diffMs = Date.now() - date.getTime();
-  const diffMinutes = Math.max(1, Math.round(diffMs / 60_000));
-
-  if (diffMinutes < 60) return `${diffMinutes}m ago`;
-  const diffHours = Math.round(diffMinutes / 60);
-  if (diffHours < 24) return `${diffHours}h ago`;
-  return date.toLocaleDateString();
-};
-
-const EmptyState = () => (
+const EmptyState = ({ t }: { t: NotificationsT }) => (
   <Card className="overflow-hidden rounded-3xl border-border">
     <div className="bg-gradient-to-br from-primary/15 via-background to-chart-2/10 px-6 py-10 md:px-10">
       <div className="mx-auto max-w-2xl text-center">
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl border border-border bg-background/80 shadow-sm">
           <Inbox className="size-6 text-primary" />
         </div>
-        <h2 className="mt-5 text-2xl font-semibold">No notifications yet</h2>
+        <h2 className="mt-5 text-2xl font-semibold">{t('emptyTitle')}</h2>
         <p className="mt-3 text-sm leading-6 text-muted-foreground">
-          SaaS products usually keep this screen as an inbox: product events, billing updates, moderation changes, and admin alerts all land here in one place.
+          {t('emptyBody')}
         </p>
         <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
           <Link href="/settings?tab=notifications">
-            <Button variant="default">Open notification settings</Button>
+            <Button variant="default">{t('openSettings')}</Button>
           </Link>
           <Link href="/admin">
-            <Button variant="outline">Open admin console</Button>
+            <Button variant="outline">{t('openAdmin')}</Button>
           </Link>
         </div>
       </div>
     </div>
     <CardContent className="grid gap-3 border-t border-border bg-card/60 px-6 py-5 md:grid-cols-3">
       {[
-        { title: 'Activity feed', note: 'Issue updates, publish runs, workflow events.' },
-        { title: 'Billing & account', note: 'Payments, credits, access changes.' },
-        { title: 'Admin alerts', note: 'Errors, moderation, import or approval events.' },
+        { title: t('cards.activityFeed'), note: t('cards.activityFeedNote') },
+        { title: t('cards.billingAccount'), note: t('cards.billingAccountNote') },
+        { title: t('cards.adminAlerts'), note: t('cards.adminAlertsNote') },
       ].map((item) => (
         <div key={item.title} className="rounded-2xl border border-border bg-background p-4">
           <p className="text-sm font-semibold">{item.title}</p>
@@ -112,12 +62,26 @@ const EmptyState = () => (
 const NotificationRow = ({
   item,
   onMarkRead,
+  t,
 }: {
   item: Notification;
   onMarkRead: (id: string) => void;
+  t: NotificationsT;
 }) => {
-  const meta = typeMeta[item.type];
+  const meta = (() => {
+    switch (item.type) {
+      case 'success':
+        return { icon: Sparkles, accent: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/25', label: t('success') };
+      case 'info':
+        return { icon: Bell, accent: 'bg-primary/15 text-primary border-primary/25', label: t('info') };
+      case 'warning':
+        return { icon: ShieldAlert, accent: 'bg-amber-500/15 text-amber-500 border-amber-500/25', label: t('warnings') };
+      default:
+        return { icon: Wrench, accent: 'bg-red-500/15 text-red-500 border-red-500/25', label: t('error') };
+    }
+  })();
   const Icon = meta.icon;
+  const categoryLabel = t(`categories.${item.category}`);
 
   return (
     <button
@@ -137,15 +101,15 @@ const NotificationRow = ({
           <div className="min-w-0 space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
               <p className="text-sm font-semibold">{item.title}</p>
-              <span className={cn('rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em]', meta.accent)}>
+              <span className={cn('rounded-full border px-2 py-0.5 text-xs font-medium', meta.accent)}>
                 {meta.label}
               </span>
-              <span className="rounded-full border border-border bg-background px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                {categoryMeta[item.category].label}
+              <span className="rounded-full border border-border bg-background px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                {categoryLabel}
               </span>
               {!item.isRead && (
-                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-primary">
-                  New
+                <span className="rounded-full border border-primary/20 bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                  {t('unread')}
                 </span>
               )}
             </div>
@@ -153,7 +117,7 @@ const NotificationRow = ({
             <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
               <span className="inline-flex items-center gap-1">
                 <Clock3 className="size-3.5" />
-                {relativeTime(item.createdAt)}
+                {new Date(item.createdAt).toLocaleString()}
               </span>
               {item.isRead && <span className="inline-flex items-center gap-1"><CheckCircle2 className="size-3.5" /> Read</span>}
             </div>
@@ -161,7 +125,7 @@ const NotificationRow = ({
         </div>
         {!item.isRead ? (
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-border bg-background px-3 py-1 text-xs font-medium text-muted-foreground group-hover:text-foreground">
-            Mark as read
+            {t('actions.markAsRead')}
           </div>
         ) : null}
       </div>
@@ -170,7 +134,8 @@ const NotificationRow = ({
 };
 
 export default function NotificationsPage() {
-  const [activeTab, setActiveTab] = React.useState<FilterId>('all');
+  const t = useTranslations('Notifications');
+  const [activeTab, setActiveTab] = React.useState<'all' | 'unread' | 'success' | 'info' | 'warning' | 'error'>('all');
 
   const query = useQuery({
     queryKey: ['notifications'],
@@ -201,6 +166,10 @@ export default function NotificationsPage() {
     return item.type === activeTab;
   });
 
+  if (query.isLoading && items.length === 0) {
+    return <NotificationsSkeleton />;
+  }
+
   const markAllRead = async () => {
     await notificationApi.markAllAsRead();
     await query.refetch();
@@ -217,24 +186,24 @@ export default function NotificationsPage() {
         <div className="mx-auto max-w-7xl px-6 py-8 md:px-8">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div className="max-w-2xl">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-sm font-medium text-muted-foreground">
                 <Bell className="size-3.5 text-primary" />
-                Notification center
+                {t('notificationCenter')}
               </div>
               <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">
-                One inbox for product updates and admin alerts
+                {t('headline')}
               </h1>
               <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-                Keep billing, workflow, moderation, and platform alerts in one feed. This mirrors the common SaaS pattern: a quick unread badge in the header, plus a dedicated inbox for the full history.
+                {t('description')}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Button variant="outline" onClick={() => void query.refetch()} disabled={query.isFetching}>
                 <RefreshCw className={cn('mr-2 h-4 w-4', query.isFetching && 'animate-spin')} />
-                Refresh
+                {t('refresh')}
               </Button>
               <Button onClick={() => void markAllRead()} disabled={unreadCount === 0 || query.isFetching}>
-                Mark all as read
+                {t('markAllAsRead')}
               </Button>
             </div>
           </div>
@@ -243,85 +212,47 @@ export default function NotificationsPage() {
 
       <div className="mx-auto max-w-7xl px-6 py-8 md:px-8">
         <div className="grid gap-4 md:grid-cols-4">
-          <Card className="rounded-3xl border-border">
-            <CardHeader className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Unread</p>
-              <CardTitle className="text-3xl">{counts.unread}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="rounded-3xl border-border">
-            <CardHeader className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Success</p>
-              <CardTitle className="text-3xl text-emerald-500">{counts.success}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="rounded-3xl border-border">
-            <CardHeader className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Warnings</p>
-              <CardTitle className="text-3xl text-amber-500">{counts.warning}</CardTitle>
-            </CardHeader>
-          </Card>
-          <Card className="rounded-3xl border-border">
-            <CardHeader className="space-y-1">
-              <p className="text-xs uppercase tracking-[0.2em] text-muted-foreground">Errors</p>
-              <CardTitle className="text-3xl text-red-500">{counts.error}</CardTitle>
-            </CardHeader>
-          </Card>
+          {[
+            { title: t('unread'), value: counts.unread },
+            { title: t('success'), value: counts.success, valueClassName: 'text-emerald-500' },
+            { title: t('warnings'), value: counts.warning, valueClassName: 'text-amber-500' },
+            { title: t('error'), value: counts.error, valueClassName: 'text-red-500' },
+          ].map((item) => (
+            <Card key={item.title} className="rounded-3xl border-border">
+              <CardHeader className="space-y-1">
+                <p className="text-sm font-medium text-muted-foreground">{item.title}</p>
+                <CardTitle className={cn('text-3xl', item.valueClassName)}>{item.value}</CardTitle>
+              </CardHeader>
+            </Card>
+          ))}
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-[240px_1fr]">
-          <aside className="rounded-3xl border border-border bg-card p-4">
-            <div className="mb-3 flex items-center gap-2 text-sm font-semibold">
-              <Filter className="size-4 text-muted-foreground" />
-              Filters
-            </div>
-            <div className="space-y-2">
-              {tabs.map((tab) => {
-                const count =
-                  tab.id === 'all'
-                    ? items.length
-                    : tab.id === 'unread'
-                      ? counts.unread
-                      : counts[tab.id];
-                const active = activeTab === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    type="button"
-                    onClick={() => setActiveTab(tab.id)}
-                    className={cn(
-                      'flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left text-sm transition-colors',
-                      active ? 'border-primary bg-primary/10' : 'border-border bg-background hover:bg-muted/50',
-                    )}
-                  >
-                    <span className="font-medium">{tab.label}</span>
-                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-                      {count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4 rounded-2xl border border-border bg-muted/20 p-4 text-xs leading-5 text-muted-foreground">
-              A strong notification center usually keeps the first glance simple, then lets the user drill into unread, type, and admin/system activity without losing the feed.
-            </div>
-          </aside>
+        <div className="mt-8 rounded-3xl border border-border bg-card p-2">
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'unread', 'success', 'info', 'warning', 'error'] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                className={cn(
+                  'rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                  activeTab === tab ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'
+                )}
+              >
+                {tab === 'all' ? t('filters.all') : t(`filters.${tab}`)}
+              </button>
+            ))}
+          </div>
+        </div>
 
-          <main className="space-y-4">
-            {query.isLoading ? (
-              <div className="space-y-3">
-                <Card className="h-28 rounded-3xl border-border" />
-                <Card className="h-28 rounded-3xl border-border" />
-                <Card className="h-28 rounded-3xl border-border" />
-              </div>
-            ) : visibleItems.length === 0 ? (
-              <EmptyState />
-            ) : (
-              visibleItems.map((item) => (
-                <NotificationRow key={item.id} item={item} onMarkRead={markRead} />
-              ))
-            )}
-          </main>
+        <div className="mt-8 space-y-4">
+          {visibleItems.length === 0 ? (
+            <EmptyState t={t} />
+          ) : (
+            visibleItems.map((item) => (
+              <NotificationRow key={item.id} item={item} onMarkRead={markRead} t={t} />
+            ))
+          )}
         </div>
       </div>
     </div>

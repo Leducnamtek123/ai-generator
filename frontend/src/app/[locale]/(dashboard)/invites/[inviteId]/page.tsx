@@ -3,6 +3,7 @@
 import { useReducer, useEffect, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { inviteApi, type InviteDetails } from '@/services/inviteApi';
+import { InviteAcceptSkeleton } from '@/components/common/loading-skeletons';
 import {
     Mail, Loader2, Check, X, Building2, User, Shield
 } from 'lucide-react';
@@ -94,11 +95,7 @@ export default function InviteAcceptPage() {
     };
 
     if (!state.invite && !state.error) {
-        return (
-            <div className="min-h-screen flex items-center justify-center bg-background">
-                <Loader2 className="size-8 animate-spin text-muted-foreground" />
-            </div>
-        );
+        return <InviteAcceptSkeleton />;
     }
 
     if (state.error && !state.invite) {
@@ -133,7 +130,7 @@ export default function InviteAcceptPage() {
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         {state.result === 'accepted'
-                            ? `You are now a member of ${state.invite?.org?.name}. Redirecting...`
+                            ? `You are now a member of ${state.invite?.workspace?.name}. Redirecting...`
                             : 'The invite has been rejected.'}
                     </p>
                 </div>
@@ -158,19 +155,19 @@ export default function InviteAcceptPage() {
                     <div className="pt-12 pb-8 px-8 text-center">
                         <h1 className="text-xl font-semibold text-foreground mb-1">You&apos;re Invited!</h1>
                         <p className="text-sm text-muted-foreground mb-8">
-                            You&apos;ve been invited to join an organization
+                            You&apos;ve been invited to join a workspace
                         </p>
 
-                        {/* Org Info */}
+                        {/* Workspace Info */}
                         <div className="bg-muted/50 rounded-xl p-5 mb-6 space-y-4">
                             <div className="flex items-center gap-3">
                                 <div className="size-10 rounded-lg bg-gradient-to-br from-violet-500 to-violet-600 flex items-center justify-center text-white text-sm font-bold">
-                        {state.invite?.org?.name?.charAt(0)?.toUpperCase()}
+                        {state.invite?.workspace?.name?.charAt(0)?.toUpperCase()}
                     </div>
                     <div className="text-left">
                         <div className="text-sm font-semibold flex items-center gap-1.5">
                             <Building2 className="size-3.5 text-muted-foreground" />
-                            {state.invite?.org?.name}
+                            {state.invite?.workspace?.name}
                         </div>
                     </div>
                 </div>

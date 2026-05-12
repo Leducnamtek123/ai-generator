@@ -1,0 +1,164 @@
+{
+  "Layout": {
+    "workspace": {
+      "personal": "Personal",
+      "creator": "Creator",
+      "visualFlowStudio": "VisualFlow Studio",
+      "project": "Project",
+      "untitledStudio": "Untitled Studio"
+    },
+    "actions": {
+      "share": "Share",
+      "newSpace": "New Space",
+      "duplicateSpace": "Duplicate space",
+      "rename": "Rename",
+      "upgradePlan": "Upgrade plan",
+      "unlockMoreCreditsAndTeamFeatures": "Unlock more credits and team features"
+    },
+    "dialogs": {
+      "renameSpace": "Rename Space",
+      "renameDescription": "Enter a new name for your space.",
+      "cancel": "Cancel"
+    },
+    "badges": {
+      "new": "New"
+    },
+    "brandTagline": "Your paint, your choice",
+    "search": {
+      "tools": "Search tools",
+      "noResults": "No tools match this search."
+    },
+    "toolsMenu": {
+      "title": "All tools",
+      "viewAll": "View all tools in a single list"
+    },
+    "sections": {
+      "socialHub": "Social Hub",
+      "pinned": "Pinned"
+    },
+    "navigation": {
+      "home": "Home",
+      "stock": "Stock",
+      "community": "Community",
+      "communityOverview": "Overview",
+      "communityMarketplace": "Marketplace",
+      "communityPublish": "Publish",
+      "communityListings": "My listings",
+      "communitySpotlight": "Spotlight",
+      "socialHub": "Social Hub",
+      "socialDashboard": "Dashboard",
+      "channels": "Channels",
+      "calendar": "Calendar",
+      "projects": "Projects",
+      "history": "History",
+      "notifications": "Notifications",
+      "admin": "Admin",
+      "settings": "Settings"
+    },
+    "stock": {
+      "title": "Stock",
+      "collections": "My Collections",
+      "downloads": "Downloads",
+      "sections": {
+        "image": "Image",
+        "video": "Video",
+        "audio": "Audio",
+        "design": "Design",
+        "others": "Others"
+      },
+      "items": {
+        "allImages": "All images",
+        "vectors": "Vectors",
+        "photos": "Photos",
+        "illustrations": "Illustrations",
+        "icons": "Icons",
+        "threeD": "3D",
+        "videos": "Videos",
+        "videoTemplates": "Video templates",
+        "motionGraphics": "Motion graphics",
+        "soundEffects": "Sound Effects",
+        "music": "Music",
+        "templates": "Templates",
+        "mockups": "Mockups",
+        "fonts": "Fonts",
+        "psd": "PSD"
+      }
+    },
+    "tabs": {
+      "personal": "Personal",
+      "community": "Community",
+      "templates": "Templates",
+      "tutorials": "Tutorials",
+      "myCreations": "My Creations"
+    },
+    "tools": {
+      "imageGenerator": "Image Generator",
+      "imageEditor": "Image Editor",
+      "imageUpscaler": "Image Upscaler",
+      "imageExtender": "Image Extender",
+      "variations": "Variations",
+      "assistant": "Assistant",
+      "videoGenerator": "Video Generator",
+      "videoEditor": "Video Project Editor",
+      "clipEditor": "Clip Editor",
+      "videoUpscaler": "Video Upscaler",
+      "lipSync": "Lip Sync",
+      "voiceGenerator": "Voice Generator",
+      "sfxGenerator": "Sound Effect Generator",
+      "musicGenerator": "Music Generator",
+      "creativeStudio": "Creative Studio",
+      "visualFlowStudio": "VisualFlow Studio",
+      "workflowEditor": "Workflow Editor",
+      "designEditor": "Design Editor",
+      "mockupGenerator": "Mockup Generator",
+      "iconGenerator": "Icon Generator",
+      "bgRemover": "Background Remover",
+      "skinEnhancer": "Skin Enhancer",
+      "cameraChange": "Change Camera",
+      "sketchToImage": "Sketch to Image"
+    },
+    "highlights": {
+      "findAssets": "Find assets",
+      "workflowEditor": "Workflow Editor",
+      "imageGen": "Image Gen",
+      "videoGen": "Video Gen",
+      "editor": "Editor",
+      "upscaler": "Upscaler",
+      "models": "3D Models",
+      "audio": "Audio"
+    },
+    "theme": {
+      "dark": "Dark",
+      "light": "Light",
+      "system": "System"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "markAllAsRead": "Mark all as read",
+      "emptyTitle": "No notifications yet",
+      "emptyBody": "Activity, billing, moderation, and admin alerts will appear here in a single inbox.",
+      "viewAll": "View all notifications"
+    },
+    "billing": {
+      "personal": "Personal",
+      "workspace": "Workspace",
+      "creditsOnly": "Credits only",
+      "free": "Free",
+      "active": "Active",
+      "trial": "Trial",
+      "pastDue": "Past due",
+      "canceled": "Canceled",
+      "orgCredits": "Workspace credits",
+      "sharedWallet": "Shared wallet",
+      "personalWallet": "Personal wallet",
+      "noActiveSubscription": "No active subscription",
+      "upgradePlan": "Upgrade plan",
+      "manageBilling": "Manage billing",
+      "manageWorkspaceBilling": "Manage workspace billing",
+      "choosePlan": "Choose plan",
+      "creditsRemaining": "{count} credits remaining",
+      "buyCredits": "Buy Credits",
+      "unlockMoreCreditsAndWorkspaceFeatures": "Unlock more credits and workspace features"
+    }
+  }
+}

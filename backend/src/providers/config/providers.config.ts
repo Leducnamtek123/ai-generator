@@ -48,6 +48,7 @@ export interface ProvidersConfigType {
   runway: ProviderConfig;
   elevenlabs: ProviderConfig;
   fal: ProviderConfig;
+  kie: ProviderConfig;
 }
 
 export default registerAs(
@@ -99,6 +100,10 @@ export default registerAs(
     },
     fal: {
       apiKey: process.env.FAL_API_KEY,
+    },
+    kie: {
+      apiKey: process.env.KIE_API_KEY,
+      modelId: process.env.KIE_DEFAULT_MODEL,
     },
   }),
 );

@@ -2,12 +2,16 @@
 
 import Image from 'next/image';
 import { useRouter } from '@/i18n/navigation';
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, use, useMemo } from 'react';
 import {
     ArrowLeft,
     Image as ImageIcon,
     MoreHorizontal,
-    MonitorPlay
+    MonitorPlay,
+    Home,
+    Building2,
+    ChevronDown,
+    Loader2
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,6 +19,17 @@ import { useWorkflowStore, Workflow } from '@/stores/workflow-store';
 import { WorkflowCard } from '@/components/workflow/WorkflowCard';
 import { useProjectStore } from '@/stores/project-store';
 import { CreateWorkflowDialog } from '@/components/projects/create-workflow-dialog';
+import { useWorkspaceStore } from '@/stores/workspace-store';
+import { workspaceApi } from '@/services/workspaceApi';
+import { ProjectDetailsSkeleton } from '@/components/common/loading-skeletons';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from '@/components/ui/dropdown-menu';
 
 export default function ProjectDetailsPage({ params }: { params: Promise<{ projectId: string }> }) {
     const { push } = useRouter();
@@ -22,13 +37,53 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
     const projectId = resolvedParams.projectId;
 
     const { workflows, fetchWorkflowsByProject, createWorkflow, isLoading } = useWorkflowStore();
-    const { currentProject, fetchProject } = useProjectStore();
+    const { currentProject, fetchProject, updateProject } = useProjectStore();
+    const { workspaces, setWorkspaces } = useWorkspaceStore();
     const [activeTab, setActiveTab] = useState('studios');
+    const [moving, setMoving] = useState(false);
+    const currentScopeLabel = useMemo(() => {
+        if (currentProject?.workspaceId) {
+            return workspaces.find((workspace) => workspace.id === currentProject.workspaceId)?.name ?? 'Workspace';
+        }
+        return 'Personal';
+    }, [currentProject?.workspaceId, workspaces]);
 
     useEffect(() => {
         fetchProject(projectId);
         fetchWorkflowsByProject(projectId);
     }, [projectId, fetchProject, fetchWorkflowsByProject]);
+
+    useEffect(() => {
+        if (!workspaces.length) {
+            void workspaceApi.list().then((items) => setWorkspaces(items));
+        }
+    }, [setWorkspaces, workspaces.length]);
+
+    const handleMoveToWorkspace = async (workspaceId: string) => {
+        if (!currentProject) return;
+        setMoving(true);
+        try {
+            await updateProject(currentProject.id, { workspaceId });
+            await fetchProject(projectId);
+        } finally {
+            setMoving(false);
+        }
+    };
+
+    const handleMoveToPersonal = async () => {
+        if (!currentProject) return;
+        setMoving(true);
+        try {
+            await updateProject(currentProject.id, { workspaceId: null });
+            await fetchProject(projectId);
+        } finally {
+            setMoving(false);
+        }
+    };
+
+    if (isLoading && !currentProject) {
+        return <ProjectDetailsSkeleton />;
+    }
 
     return (
         <div className="min-h-screen bg-background text-foreground">
@@ -49,10 +104,59 @@ export default function ProjectDetailsPage({ params }: { params: Promise<{ proje
                             <p className="text-xs text-muted-foreground">
                                 {currentProject?.description || 'Project Workspace'}
                             </p>
+                            <div className="mt-2 inline-flex items-center gap-2 rounded-full border border-border bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                                {currentProject?.workspaceId ? <Building2 className="size-3.5" /> : <Home className="size-3.5" />}
+                                {currentScopeLabel}
+                            </div>
                         </div>
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="outline" className="gap-2" disabled={moving}>
+                                    {moving ? <Loader2 className="size-4 animate-spin" /> : <ChevronDown className="size-4" />}
+                                    Move
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="w-72">
+                                <DropdownMenuLabel>Project scope</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                {currentProject?.workspaceId ? (
+                                    <>
+                                        <DropdownMenuItem onClick={() => void handleMoveToPersonal()} disabled={moving}>
+                                            <Home className="mr-2 size-4" />
+                                            Move to personal
+                                        </DropdownMenuItem>
+                                        <DropdownMenuLabel inset className="mt-1">Move to another workspace</DropdownMenuLabel>
+                                        {workspaces.filter((workspace) => workspace.id !== currentProject.workspaceId).map((workspace) => (
+                                            <DropdownMenuItem
+                                                key={workspace.id}
+                                                onClick={() => void handleMoveToWorkspace(workspace.id)}
+                                                disabled={moving}
+                                            >
+                                                <Building2 className="mr-2 size-4" />
+                                                {workspace.name}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </>
+                                ) : (
+                                    <>
+                                        <DropdownMenuLabel inset className="mt-1">Move to workspace</DropdownMenuLabel>
+                                        {workspaces.map((workspace) => (
+                                            <DropdownMenuItem
+                                                key={workspace.id}
+                                                onClick={() => void handleMoveToWorkspace(workspace.id)}
+                                                disabled={moving}
+                                            >
+                                                <Building2 className="mr-2 size-4" />
+                                                {workspace.name}
+                                            </DropdownMenuItem>
+                                        ))}
+                                    </>
+                                )}
+                            </DropdownMenuContent>
+                        </DropdownMenu>
                         <CreateWorkflowDialog projectId={projectId} onCreate={async (name) => {
                             const newId = await createWorkflow({ name, projectId });
                             if (newId) {

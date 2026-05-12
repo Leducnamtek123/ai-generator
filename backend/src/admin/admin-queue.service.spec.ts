@@ -4,11 +4,13 @@ describe('AdminQueueService', () => {
   const deadLetterQueue = {
     getJobs: jest.fn(),
     getJob: jest.fn(),
+    getJobCounts: jest.fn(),
   };
 
   const makeQueue = () => ({
     getJob: jest.fn(),
     add: jest.fn().mockResolvedValue(undefined),
+    getJobCounts: jest.fn(),
   });
 
   const generationQueue = makeQueue();
@@ -58,6 +60,83 @@ describe('AdminQueueService', () => {
         errorMessage: 'provider offline',
       }),
     ]);
+  });
+
+  it('returns queue snapshots for admin ops monitoring', async () => {
+    generationQueue.getJobCounts.mockResolvedValueOnce({
+      waiting: 1,
+      active: 2,
+      completed: 3,
+      failed: 4,
+      delayed: 5,
+      paused: 6,
+      'waiting-children': 7,
+    });
+    workflowQueue.getJobCounts.mockResolvedValueOnce({
+      waiting: 8,
+      active: 9,
+      completed: 10,
+      failed: 11,
+      delayed: 12,
+      paused: 13,
+      'waiting-children': 14,
+    });
+    socialPostingQueue.getJobCounts.mockResolvedValueOnce({
+      waiting: 15,
+      active: 16,
+      completed: 17,
+      failed: 18,
+      delayed: 19,
+      paused: 20,
+      'waiting-children': 21,
+    });
+    socialAnalyticsQueue.getJobCounts.mockResolvedValueOnce({
+      waiting: 22,
+      active: 23,
+      completed: 24,
+      failed: 25,
+      delayed: 26,
+      paused: 27,
+      'waiting-children': 28,
+    });
+    visualFlowQueue.getJobCounts.mockResolvedValueOnce({
+      waiting: 29,
+      active: 30,
+      completed: 31,
+      failed: 32,
+      delayed: 33,
+      paused: 34,
+      'waiting-children': 35,
+    });
+    deadLetterQueue.getJobCounts.mockResolvedValueOnce({
+      waiting: 36,
+      active: 37,
+      completed: 38,
+      failed: 39,
+      delayed: 40,
+      paused: 41,
+      'waiting-children': 42,
+    });
+
+    await expect(service.getQueueSnapshot()).resolves.toEqual(
+      expect.objectContaining({
+        timestamp: expect.any(String),
+        queues: expect.arrayContaining([
+          expect.objectContaining({
+            queue: 'generation',
+            counts: expect.objectContaining({ waiting: 1, failed: 4 }),
+          }),
+          expect.objectContaining({
+            queue: 'visual-flow',
+            counts: expect.objectContaining({ active: 30, 'waiting-children': 35 }),
+          }),
+          expect.objectContaining({
+            queue: 'dead-letter',
+            counts: expect.objectContaining({ waiting: 36, failed: 39 }),
+          }),
+        ]),
+      }),
+    );
   });
 
   it('requeues a dead-letter job back to its source queue', async () => {

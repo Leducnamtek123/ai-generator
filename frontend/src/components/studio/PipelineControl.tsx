@@ -39,7 +39,7 @@ function ProgressRing({ value, size = 40, stroke = 3, color }: {
         fill="none"
         stroke="currentColor"
         strokeWidth={stroke}
-        className="text-white/[0.06]"
+        className="text-muted-foreground/20"
       />
       <circle
         cx={size / 2}
@@ -83,7 +83,7 @@ function StepCard({ label, icon, done, total, color, gradientFrom, gradientTo, i
       'relative rounded-xl border p-4 transition-all',
       isComplete
         ? 'border-emerald-500/20 bg-emerald-500/[0.03]'
-        : 'border-white/[0.06] bg-white/[0.015] hover:bg-white/[0.03]'
+        : 'border-border bg-card hover:bg-accent/30'
     )}>
       <div className="flex items-start justify-between mb-3">
         <div className="flex items-center gap-2">
@@ -94,20 +94,20 @@ function StepCard({ label, icon, done, total, color, gradientFrom, gradientTo, i
             {icon}
           </div>
           <div>
-            <p className="text-xs font-medium text-white/70">{label}</p>
-            <p className="text-[10px] text-white/25 font-mono">{done}/{total}</p>
+            <p className="text-sm font-medium text-foreground">{label}</p>
+            <p className="font-mono text-[10px] text-muted-foreground">{done}/{total}</p>
           </div>
         </div>
         <div className="relative">
           <ProgressRing value={pct} size={36} stroke={2.5} color={color} />
-          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-white/40">
+          <span className="absolute inset-0 flex items-center justify-center text-[9px] font-bold text-muted-foreground">
             {pct}%
           </span>
         </div>
       </div>
 
       {/* Progress bar */}
-      <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden mb-3">
+      <div className="mb-3 h-1 overflow-hidden rounded-full bg-muted/50">
         <div
           className={cn(
             'h-full rounded-full transition-all duration-700',
@@ -121,11 +121,11 @@ function StepCard({ label, icon, done, total, color, gradientFrom, gradientTo, i
         onClick={onRun}
         disabled={disabled || isRunning}
         size="sm"
-        className={cn(
-          'w-full text-xs h-7',
-          isComplete
-            ? 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/20'
-            : `bg-white/[0.04] hover:bg-white/[0.08] text-white/50 border border-white/[0.08]`
+          className={cn(
+            'h-7 w-full text-xs',
+            isComplete
+              ? 'border border-emerald-500/20 bg-emerald-600/20 text-emerald-300 hover:bg-emerald-600/30'
+              : 'border border-border bg-muted/20 text-muted-foreground hover:bg-accent/40'
         )}
       >
         {isRunning ? (
@@ -166,7 +166,7 @@ export function PipelineControl({
 }: PipelineControlProps) {
   if (!status) {
     return (
-      <div className="rounded-xl border border-white/[0.06] bg-white/[0.015] p-6 text-center text-white/20 text-sm">
+      <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
         Select a video to see pipeline status
       </div>
     );
@@ -178,13 +178,13 @@ export function PipelineControl({
     <div className="space-y-3">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xs font-semibold uppercase tracking-widest text-white/50 flex items-center gap-2">
+        <h3 className="flex items-center gap-2 text-sm font-medium text-foreground">
           <Zap className="size-3.5 text-amber-400" />
           Generation Pipeline
         </h3>
         <button
           onClick={onRefresh}
-          className="p-1.5 hover:bg-white/[0.06] rounded-lg transition text-white/20 hover:text-white/50"
+          className="rounded-lg p-1.5 text-muted-foreground transition hover:bg-accent hover:text-foreground"
         >
           <RefreshCw className="size-3.5" />
         </button>
@@ -236,7 +236,7 @@ export function PipelineControl({
       {(status.characters.failed > 0 ||
         status.scenes.verticalImages.failed > 0 ||
         status.scenes.verticalVideos.failed > 0) && (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-red-500/[0.06] border border-red-500/10 text-red-400/60 text-[11px]">
+        <div className="flex items-center gap-2 rounded-lg border border-red-500/10 bg-red-500/[0.06] px-3 py-2 text-[11px] text-red-400/60">
           <XCircle className="size-3.5 shrink-0" />
           <span>
             Some generations failed ,{' '}

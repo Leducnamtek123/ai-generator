@@ -1,30 +1,41 @@
 'use client';
 
 import { useRouter } from '@/i18n/navigation';
-import { useEffect, useReducer, useCallback, useSyncExternalStore } from 'react';
+import { useEffect, useReducer, useCallback, useSyncExternalStore, useState } from 'react';
 import {
     Plus,
     Search,
-    Users,
     Folder,
     MoreHorizontal,
     LayoutGrid,
-    List
+    List,
+    ChevronDown,
+    Home,
+    Building2
 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { Input } from '@/ui/input';
 import { cn } from '@/lib/utils';
 import { useProjectStore, Project } from '@/stores/project-store';
+import { workspaceApi } from '@/services/workspaceApi';
+import { useWorkspaceStore } from '@/stores/workspace-store';
 import { DataTable } from '@/components/shared/data-table/data-table';
 import { columns } from '@/components/projects/columns';
+import { ProjectGridSkeleton, ProjectListSkeleton } from '@/components/common/loading-skeletons';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuRadioGroup,
+    DropdownMenuRadioItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 
-const tabs = [
-    { id: 'my', label: 'My Projects', icon: Folder },
-    { id: 'shared', label: 'Shared', icon: Users },
-];
+type ProjectScope = 'personal' | 'workspace';
 
 type ProjectsState = {
-    activeTab: 'my' | 'shared';
     viewMode: 'grid' | 'list';
     showCreateModal: boolean;
     projectName: string;
@@ -32,7 +43,6 @@ type ProjectsState = {
 };
 
 type ProjectsAction =
-    | { type: 'setActiveTab'; activeTab: 'my' | 'shared' }
     | { type: 'setViewMode'; viewMode: 'grid' | 'list' }
     | { type: 'openCreateModal' }
     | { type: 'closeCreateModal' }
@@ -61,7 +71,6 @@ function ClientDateText({ value }: { value: string | Date }) {
 const PROJECT_DRAFT_KEY = 'projects:create-modal:draft';
 
 const initialState: ProjectsState = {
-    activeTab: 'my',
     viewMode: 'grid',
     showCreateModal: false,
     projectName: '',
@@ -70,8 +79,6 @@ const initialState: ProjectsState = {
 
 function projectsReducer(state: ProjectsState, action: ProjectsAction): ProjectsState {
     switch (action.type) {
-        case 'setActiveTab':
-            return { ...state, activeTab: action.activeTab };
         case 'setViewMode':
             return { ...state, viewMode: action.viewMode };
         case 'openCreateModal':
@@ -91,14 +98,43 @@ function projectsReducer(state: ProjectsState, action: ProjectsAction): Projects
 
 export default function ProjectsPage() {
     const { push } = useRouter();
-    const { projects, fetchProjects, createProject } = useProjectStore();
+    const { projects, fetchProjects, createProject, isLoading } = useProjectStore();
+    const currentWorkspace = useWorkspaceStore((state) => state.currentWorkspace);
+    const workspaces = useWorkspaceStore((state) => state.workspaces);
+    const setWorkspaces = useWorkspaceStore((state) => state.setWorkspaces);
     const [state, dispatch] = useReducer(projectsReducer, initialState);
+    const [scope, setScope] = useState<ProjectScope>('personal');
+    const [selectedWorkspaceId, setSelectedWorkspaceId] = useState<string | null>(currentWorkspace?.id ?? null);
+    const effectiveWorkspaceId = selectedWorkspaceId ?? currentWorkspace?.id ?? workspaces[0]?.id ?? null;
+    const selectedWorkspace = workspaces.find((workspace) => workspace.id === effectiveWorkspaceId) ?? null;
+    const scopeLabel = scope === 'workspace' ? (selectedWorkspace?.name ?? 'Workspace') : 'Personal';
+    const visibleProjects = projects.filter((project) =>
+        scope === 'workspace'
+            ? Boolean(effectiveWorkspaceId) && project.workspaceId === effectiveWorkspaceId
+            : !project.workspaceId,
+    );
 
     useEffect(() => {
-        if (state.activeTab === 'my') {
-            fetchProjects();
+        if (!workspaces.length) {
+            void workspaceApi.list().then((items) => setWorkspaces(items));
         }
-    }, [state.activeTab, fetchProjects]);
+    }, [setWorkspaces, workspaces.length]);
+
+    useEffect(() => {
+        if (scope === 'workspace') {
+            if (!effectiveWorkspaceId) {
+                return;
+            }
+
+            fetchProjects({
+                limit: 50,
+                filters: { workspaceId: effectiveWorkspaceId },
+            });
+            return;
+        }
+
+        fetchProjects({ limit: 50 });
+    }, [effectiveWorkspaceId, fetchProjects, scope]);
 
     useEffect(() => {
         try {
@@ -138,7 +174,8 @@ export default function ProjectsPage() {
 
         const newId = await createProject({
             name: state.projectName,
-            description: state.projectDesc
+            description: state.projectDesc,
+            workspaceId: scope === 'workspace' ? effectiveWorkspaceId : null,
         });
 
         if (newId) {
@@ -151,41 +188,93 @@ export default function ProjectsPage() {
 
     return (
         <div className="min-h-screen bg-background text-foreground">
-            {/* Hero Section - simplified, no gradient */}
             <div className="px-8 py-12 border-b border-border">
-                <div className="max-w-lg">
-                    <h1 className="text-3xl font-semibold text-foreground mb-2">
-                        My Projects
-                    </h1>
-                    <p className="text-sm text-muted-foreground mb-6">Manage and organize your creative assets</p>
-                    <Button
-                        onClick={() => dispatch({ type: 'openCreateModal' })}
-                        className="gap-2 px-5"
-                    >
-                        <Plus className="size-4" />
-                        New Project
-                    </Button>
+                <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+                    <div className="max-w-lg">
+                        <h1 className="text-3xl font-semibold text-foreground mb-2">
+                            {scopeLabel} projects
+                        </h1>
+                        <p className="text-sm text-muted-foreground">
+                            {scope === 'workspace'
+                                ? 'Projects that belong to the selected workspace.'
+                                : 'Projects that belong to your personal space.'}
+                        </p>
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div className="inline-flex rounded-full border border-border bg-muted p-1">
+                            <button
+                                type="button"
+                                onClick={() => setScope('personal')}
+                                className={cn(
+                                    'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                                    scope === 'personal'
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                )}
+                            >
+                                <Home className="size-4" />
+                                Personal
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setScope('workspace')}
+                                className={cn(
+                                    'inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                                    scope === 'workspace'
+                                        ? 'bg-background text-foreground shadow-sm'
+                                        : 'text-muted-foreground hover:text-foreground'
+                                )}
+                            >
+                                <Building2 className="size-4" />
+                                Workspace
+                            </button>
+                        </div>
+
+                        {scope === 'workspace' ? (
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline" className="justify-between gap-2 min-w-[220px]">
+                                        <span className="truncate">
+                                            {selectedWorkspace?.name ?? 'Select workspace'}
+                                        </span>
+                                        <ChevronDown className="size-4 shrink-0" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-64">
+                                    <DropdownMenuLabel>Workspace scope</DropdownMenuLabel>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuRadioGroup
+                                        value={effectiveWorkspaceId ?? ''}
+                                        onValueChange={(value) => setSelectedWorkspaceId(value)}
+                                    >
+                                        {workspaces.map((workspace) => (
+                                            <DropdownMenuRadioItem key={workspace.id} value={workspace.id}>
+                                                {workspace.name}
+                                            </DropdownMenuRadioItem>
+                                        ))}
+                                    </DropdownMenuRadioGroup>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        ) : null}
+
+                        <Button
+                            onClick={() => dispatch({ type: 'openCreateModal' })}
+                            disabled={scope === 'workspace' && !effectiveWorkspaceId}
+                            className="gap-2 px-5"
+                        >
+                            <Plus className="size-4" />
+                            New Project
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            {/* Tabs & Search */}
+            {/* View controls */}
             <div className="px-8 py-4 flex items-center justify-between border-b border-border">
-                <div className="flex items-center gap-1">
-                    {tabs.map((tab) => (
-                        <button
-                            key={tab.id}
-                            onClick={() => dispatch({ type: 'setActiveTab', activeTab: tab.id as 'my' | 'shared' })}
-                            className={cn(
-                                "flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors",
-                                state.activeTab === tab.id
-                                    ? "bg-accent text-accent-foreground"
-                                    : "text-muted-foreground hover:text-foreground"
-                            )}
-                        >
-                            <tab.icon className="size-4" />
-                            {tab.label}
-                        </button>
-                    ))}
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Folder className="size-4" />
+                    <span>{visibleProjects.length} project{visibleProjects.length !== 1 ? 's' : ''}</span>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -222,32 +311,27 @@ export default function ProjectsPage() {
 
             {/* Content */}
             <div className="px-8 py-6">
-                {state.activeTab === 'my' && (
-                    <>
-                        {projects.length === 0 ? (
-                            <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
-                                <Folder className="size-12 mx-auto mb-4 opacity-20" />
-                                <p>No projects found. Create one to get started!</p>
-                            </div>
-                        ) : (
-                            state.viewMode === 'grid' ? (
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                                    {projects.map((project) => (
-                                        <ProjectCard key={project.id} project={project} />
-                                    ))}
-                                </div>
-                            ) : (
-                                <DataTable columns={columns} data={projects} />
-                            )
-                        )}
-                    </>
-                )}
-
-                {state.activeTab === 'shared' && (
-                    <div className="flex flex-col items-center justify-center py-20 text-center text-muted-foreground">
-                        <Users className="size-12 mb-4 opacity-20" />
-                        <p>No shared projects yet.</p>
+                {isLoading ? (
+                    state.viewMode === 'grid' ? (
+                        <ProjectGridSkeleton count={8} />
+                    ) : (
+                        <ProjectListSkeleton count={6} />
+                    )
+                ) : visibleProjects.length === 0 ? (
+                    <div className="col-span-full text-center py-20 text-muted-foreground border border-dashed border-border rounded-2xl">
+                        <Folder className="size-12 mx-auto mb-4 opacity-20" />
+                        <p>No projects found in this scope. Create one to get started!</p>
                     </div>
+                ) : (
+                    state.viewMode === 'grid' ? (
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                            {visibleProjects.map((project) => (
+                                <ProjectCard key={project.id} project={project} />
+                            ))}
+                        </div>
+                    ) : (
+                        <DataTable columns={columns} data={visibleProjects} />
+                    )
                 )}
             </div>
 
@@ -265,7 +349,7 @@ export default function ProjectsPage() {
 
                         <div className="space-y-4 mb-6">
                             <div>
-                                <label htmlFor="projectName" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                <label htmlFor="projectName" className="block text-sm font-medium text-muted-foreground mb-2">
                                     Project Name
                                 </label>
                                 <Input
@@ -277,7 +361,7 @@ export default function ProjectsPage() {
                                 />
                             </div>
                             <div>
-                                <label htmlFor="projectDesc" className="block text-xs font-medium text-muted-foreground uppercase tracking-wider mb-2">
+                                <label htmlFor="projectDesc" className="block text-sm font-medium text-muted-foreground mb-2">
                                     Description (Optional)
                                 </label>
                                 <textarea
@@ -315,13 +399,26 @@ function ProjectCard({ project }: { project: Project }) {
             onClick={() => push(`/projects/${project.id}`)}
             className="group cursor-pointer bg-card border border-border hover:border-border/80 rounded-xl p-5 hover:bg-accent/50 transition-all"
         >
-            <div className="flex justify-between items-start mb-4">
+            <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="size-10 rounded-lg bg-muted flex items-center justify-center text-muted-foreground">
                     <Folder className="size-5" />
                 </div>
-                <button className="text-muted-foreground/50 hover:text-foreground transition-colors">
-                    <MoreHorizontal className="size-5" />
-                </button>
+                <div className="flex items-center gap-2">
+                    <span className={cn(
+                        'inline-flex items-center rounded-full border px-2.5 py-1 text-xs font-medium',
+                        project.workspaceId
+                            ? 'border-primary/20 bg-primary/10 text-primary'
+                            : 'border-border bg-muted text-muted-foreground'
+                    )}>
+                        {project.workspaceId ? 'Workspace' : 'Personal'}
+                    </span>
+                    <button
+                        className="text-muted-foreground/50 transition-colors hover:text-foreground"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <MoreHorizontal className="size-5" />
+                    </button>
+                </div>
             </div>
 
             <h3 className="text-lg font-medium group-hover:text-foreground transition-colors mb-1 truncate">

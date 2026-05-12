@@ -73,7 +73,24 @@ export default function sitemap(): MetadataRoute.Sitemap {
       changeFrequency: "daily",
       priority: 0.6,
     },
-
+    {
+      url: `${baseUrl}/community/marketplace`,
+      lastModified,
+      changeFrequency: "daily",
+      priority: 0.6,
+    },
+    {
+      url: `${baseUrl}/community/publish`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    },
+    {
+      url: `${baseUrl}/community/my-listings`,
+      lastModified,
+      changeFrequency: "weekly",
+      priority: 0.5,
+    },
     // Auth Pages
     {
       url: `${baseUrl}/sign-in`,

@@ -11,7 +11,7 @@ import {
 } from './permissions.decorator';
 import { defineAbilityFor } from './permissions';
 import { MemberRepository } from '../members/infrastructure/persistence/member.repository';
-import { OrganizationRepository } from '../organizations/infrastructure/persistence/organization.repository';
+import { WorkspaceRepository } from '../workspaces/infrastructure/persistence/workspace.repository';
 import { RoleEnum } from '../roles/roles.enum';
 
 function normalizePlatformRole(
@@ -44,7 +44,7 @@ export class PermissionsGuard implements CanActivate {
   constructor(
     private reflector: Reflector,
     private memberRepository: MemberRepository,
-    private organizationRepository: OrganizationRepository,
+    private workspaceRepository: WorkspaceRepository,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -58,14 +58,14 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-    const orgSlug = request.params?.orgSlug;
+    const workspaceSlug = request.params?.workspaceSlug;
 
     if (!user) {
       throw new ForbiddenException('User not authenticated');
     }
 
-    if (!orgSlug) {
-      // No org context, check basic permissions
+    if (!workspaceSlug) {
+      // No workspace context, check basic permissions
       const ability = defineAbilityFor({
         id: user.id,
         role: normalizePlatformRole(user.role),
@@ -75,28 +75,28 @@ export class PermissionsGuard implements CanActivate {
       );
     }
 
-    // Get org and membership
-    const org = await this.organizationRepository.findBySlug(orgSlug);
-    if (!org) {
-      throw new ForbiddenException('Organization not found');
+    // Get workspace and membership
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) {
+      throw new ForbiddenException('Workspace not found');
     }
 
-    const member = await this.memberRepository.findByUserAndOrg(
+    const member = await this.memberRepository.findByUserAndWorkspace(
       user.id,
-      org.id,
+      workspace.id,
     );
     if (!member) {
-      throw new ForbiddenException('Not a member of this organization');
+      throw new ForbiddenException('Not a member of this workspace');
     }
 
-    // Store org and member on request for controllers
-    request.organization = org;
+    // Store workspace and member on request for controllers
+    request.workspace = workspace;
     request.membership = member;
 
     const ability = defineAbilityFor({
       id: user.id,
       role: member.role as 'ADMIN' | 'MEMBER' | 'BILLING',
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
     const hasPermission = requiredPermissions.every((perm) =>

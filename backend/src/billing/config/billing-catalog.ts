@@ -1,4 +1,4 @@
-export type BillingScopeType = "user" | "organization";
+export type BillingScopeType = "user" | "workspace";
 
 export type BillingPlanType =
   | "trial"
@@ -189,7 +189,7 @@ export const BILLING_PLAN_CATALOG: BillingPlanCatalogItem[] = [
     ],
     toolCoverage: [
       "All creator tools",
-      "Org workflows and governance",
+      "Workspace workflows and governance",
       "Dedicated support onboarding",
     ],
     ctaLabel: "Contact sales",

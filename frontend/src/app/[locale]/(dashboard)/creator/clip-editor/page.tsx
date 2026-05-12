@@ -40,6 +40,44 @@ const sampleClips: Clip[] = [
     { id: '4', name: 'Outro', duration: 3.0, startTime: 22.5, color: 'bg-orange-500/30 border-orange-500/50', trimStart: 0, trimEnd: 100 },
 ];
 
+const timelineStarterPresets: Array<{
+    id: string;
+    label: string;
+    description: string;
+    clips: Clip[];
+}> = [
+    {
+        id: 'podcast-teaser',
+        label: 'Podcast teaser',
+        description: 'Intro, quote cut, and outro for a short social teaser',
+        clips: [
+            { id: 'pt-1', name: 'Hook', duration: 4.0, startTime: 0, color: 'bg-cyan-500/30 border-cyan-500/50', trimStart: 0, trimEnd: 100 },
+            { id: 'pt-2', name: 'Key quote', duration: 8.5, startTime: 4.5, color: 'bg-violet-500/30 border-violet-500/50', trimStart: 0, trimEnd: 100 },
+            { id: 'pt-3', name: 'Call to action', duration: 3.5, startTime: 13.5, color: 'bg-amber-500/30 border-amber-500/50', trimStart: 0, trimEnd: 100 },
+        ],
+    },
+    {
+        id: 'product-cut',
+        label: 'Product cutdown',
+        description: 'Problem, demo, and closing shot for a promo edit',
+        clips: [
+            { id: 'pc-1', name: 'Problem', duration: 5.5, startTime: 0, color: 'bg-pink-500/30 border-pink-500/50', trimStart: 0, trimEnd: 100 },
+            { id: 'pc-2', name: 'Demo', duration: 10.0, startTime: 6.0, color: 'bg-emerald-500/30 border-emerald-500/50', trimStart: 0, trimEnd: 100 },
+            { id: 'pc-3', name: 'Closing shot', duration: 4.0, startTime: 16.5, color: 'bg-orange-500/30 border-orange-500/50', trimStart: 0, trimEnd: 100 },
+        ],
+    },
+    {
+        id: 'story-recap',
+        label: 'Story recap',
+        description: 'A quick recap with hook, highlight, and final card',
+        clips: [
+            { id: 'sr-1', name: 'Opening hook', duration: 3.8, startTime: 0, color: 'bg-sky-500/30 border-sky-500/50', trimStart: 0, trimEnd: 100 },
+            { id: 'sr-2', name: 'Highlight', duration: 7.5, startTime: 4.3, color: 'bg-fuchsia-500/30 border-fuchsia-500/50', trimStart: 0, trimEnd: 100 },
+            { id: 'sr-3', name: 'Final card', duration: 3.0, startTime: 12.3, color: 'bg-lime-500/30 border-lime-500/50', trimStart: 0, trimEnd: 100 },
+        ],
+    },
+] as const;
+
 type ClipEditorState = {
     clips: Clip[];
     selectedClipId: string | null;
@@ -457,6 +495,16 @@ function ClipEditorPageContent() {
         toast.success('Loaded sample timeline.');
     };
 
+    const handleLoadStarterPreset = (presetId: string) => {
+        const preset = timelineStarterPresets.find((item) => item.id === presetId);
+        if (!preset) {
+            return;
+        }
+
+        dispatch({ type: 'hydrateDraft', draft: { clips: preset.clips, selectedClipId: preset.clips[0]?.id ?? null } });
+        toast.success(`Loaded ${preset.label.toLowerCase()}.`);
+    };
+
     const handleReset = () => {
         dispatch({ type: 'resetAll' });
         dispatch({ type: 'setErrorMessage', errorMessage: null });
@@ -494,7 +542,7 @@ function ClipEditorPageContent() {
                     <span className="text-xs text-muted-foreground">
                         {state.clips.length} clips - {totalDuration.toFixed(1)}s
                     </span>
-                    {state.isProjectLoading && <span className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">Loading project</span>}
+                    {state.isProjectLoading && <span className="text-sm font-medium text-muted-foreground">Loading project</span>}
                 </div>
                 <div className="flex items-center gap-2">
                     <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} className="gap-2">
@@ -537,22 +585,36 @@ function ClipEditorPageContent() {
                                         <p className="text-sm text-muted-foreground/80">Timeline ready. Add media to preview the clip sequence.</p>
                                     </div>
                                 )}
-                                <div className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-[10px] tracking-[0.16em] text-white uppercase">
+                                <div className="absolute left-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm font-medium text-white">
                                     {state.isPlaying ? 'Playing' : 'Paused'} - {state.currentTime.toFixed(1)}s
                                 </div>
-                                <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-[10px] tracking-[0.16em] text-white uppercase">
+                                <div className="absolute right-4 top-4 rounded-full bg-black/60 px-3 py-1 text-sm font-medium text-white">
                                     Volume {state.volume}%
                                 </div>
                             </div>
                         </div>
                     ) : (
-                        <div className="text-center space-y-4">
-                            <div className="size-20 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto">
-                                <Scissors className="size-8 text-muted-foreground" />
+                        <div className="w-full max-w-2xl space-y-5 px-6">
+                            <div className="text-center space-y-4">
+                                <div className="size-20 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto">
+                                    <Scissors className="size-8 text-muted-foreground" />
+                                </div>
+                                <div>
+                                    <h3 className="font-semibold text-white">Start with a preset</h3>
+                                    <p className="text-sm text-muted-foreground/80 mt-1">Upload media or pick a starter to begin from a real sequence.</p>
+                                </div>
                             </div>
-                            <div>
-                                <h3 className="font-semibold text-white">Clip Editor</h3>
-                                <p className="text-sm text-muted-foreground/80 mt-1">Add video clips to start editing</p>
+                            <div className="grid gap-3 sm:grid-cols-3">
+                                {timelineStarterPresets.map((preset) => (
+                                    <button
+                                        key={preset.id}
+                                        onClick={() => handleLoadStarterPreset(preset.id)}
+                                        className="rounded-xl border border-border bg-card/80 px-4 py-4 text-left transition-all hover:border-primary/20"
+                                    >
+                                        <p className="text-sm font-medium text-foreground">{preset.label}</p>
+                                        <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                                    </button>
+                                ))}
                             </div>
                         </div>
                     )}
@@ -560,13 +622,13 @@ function ClipEditorPageContent() {
 
                 <div className="w-[280px] border-l border-border flex flex-col shrink-0 bg-background">
                     <div className="p-4 border-b border-border">
-                        <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Clip Properties</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Clip Properties</h4>
                     </div>
                     <div className="flex-1 overflow-y-auto p-4  gap-y-5">
                         {selectedClip ? (
                             <>
                                 <div className="space-y-2">
-                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Name</div>
+                                    <div className="text-sm font-medium text-muted-foreground">Name</div>
                                     <input
                                         value={selectedClip.name}
                                         onChange={(e) => dispatch({ type: 'renameClip', clipId: selectedClip.id, name: e.target.value })}
@@ -575,8 +637,8 @@ function ClipEditorPageContent() {
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Trim Start</div>
-                                        <span className="text-[11px] font-mono">{selectedClip.trimStart}%</span>
+                                        <div className="text-sm font-medium text-muted-foreground">Trim Start</div>
+                                        <span className="text-xs font-mono">{selectedClip.trimStart}%</span>
                                     </div>
                                     <Slider
                                         min={0}
@@ -588,8 +650,8 @@ function ClipEditorPageContent() {
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Trim End</div>
-                                        <span className="text-[11px] font-mono">{selectedClip.trimEnd}%</span>
+                                        <div className="text-sm font-medium text-muted-foreground">Trim End</div>
+                                        <span className="text-xs font-mono">{selectedClip.trimEnd}%</span>
                                     </div>
                                     <Slider
                                         min={1}
@@ -601,13 +663,13 @@ function ClipEditorPageContent() {
                                 </div>
                                 <div className="space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Volume</div>
-                                        <span className="text-[11px] font-mono">{state.volume}%</span>
+                                        <div className="text-sm font-medium text-muted-foreground">Volume</div>
+                                        <span className="text-xs font-mono">{state.volume}%</span>
                                     </div>
                                     <Slider min={0} max={100} step={5} value={[state.volume]} onValueChange={([value]) => dispatch({ type: 'setVolume', volume: value })} />
                                 </div>
                                 <div className="space-y-2">
-                                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Timeline Position</div>
+                                    <div className="text-sm font-medium text-muted-foreground">Timeline Position</div>
                                     <div className="flex items-center gap-2">
                                         <Button variant="outline" size="sm" className="flex-1 gap-1 text-xs" onClick={() => nudgeSelectedClip(-0.5)}>
                                             <ChevronLeft className="size-3" /> Left
@@ -628,21 +690,21 @@ function ClipEditorPageContent() {
                                         <Trash2 className="size-3" />
                                     </Button>
                                 </div>
-                                <div className="rounded-xl border border-border bg-card p-3 text-[11px] text-muted-foreground space-y-1">
+                                <div className="rounded-xl border border-border bg-card p-3 text-xs text-muted-foreground space-y-1">
                                     <div>Start: {selectedClipTimelineStart.toFixed(1)}s</div>
                                     <div>Effective length: {selectedClipDuration.toFixed(1)}s</div>
                                 </div>
                             </>
                         ) : (
                             <div className="rounded-xl border border-dashed border-border bg-card p-4 text-center text-sm text-muted-foreground">
-                                Select a clip to edit trim, position, or duplicate it.
+                                Select a clip to edit its trim, position, or duplicate it.
                             </div>
                         )}
                     </div>
                 </div>
             </div>
 
-            <div className="h-14 border-t border-border flex items-center justify-center gap-4 shrink-0 px-6">
+                <div className="h-14 border-t border-border flex items-center justify-center gap-4 shrink-0 px-6">
                 <Button variant="ghost" size="icon" className="size-8" onClick={() => handleSeek(-5)}>
                     <SkipBack className="size-4" />
                 </Button>
@@ -701,8 +763,9 @@ function ClipEditorPageContent() {
                             );
                         })}
                         {state.clips.length === 0 && (
-                            <div className="absolute inset-2 flex items-center justify-center text-xs text-muted-foreground border border-dashed border-border rounded-lg">
-                                Click &quot;Add Clip&quot; to get started
+                            <div className="absolute inset-2 flex flex-col items-center justify-center gap-2 text-center text-xs text-muted-foreground border border-dashed border-border rounded-lg px-6">
+                                <span>Add a clip or load a preset</span>
+                                <span className="text-xs text-muted-foreground/70">Upload media, then trim and reorder the sequence.</span>
                             </div>
                         )}
                     </div>

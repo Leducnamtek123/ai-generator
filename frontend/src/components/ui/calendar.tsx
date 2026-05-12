@@ -101,7 +101,7 @@ function Calendar({ selected, month, onSelect, onMonthChange, className }: Calen
         </div>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 text-[10px] font-bold tracking-widest text-muted-foreground uppercase">
+      <div className="grid grid-cols-7 gap-1 text-[10px] font-bold tracking-normal text-muted-foreground">
         {WEEKDAYS.map((day) => (
           <div key={day} className="py-1 text-center">
             {day}

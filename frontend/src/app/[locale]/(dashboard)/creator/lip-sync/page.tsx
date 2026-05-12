@@ -447,9 +447,9 @@ function LipSyncPageContent() {
                         )}
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6 text-left">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6 text-left">
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Source Video</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Source Video</h4>
                         <button type="button" onClick={() => videoInputRef.current?.click()} className="group relative aspect-video rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3">
                             {state.videoFile ? (
                                 <video src={state.videoFile} className="w-full h-full object-cover" muted />
@@ -466,7 +466,7 @@ function LipSyncPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Audio Track</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Audio Track</h4>
                         <button type="button" onClick={() => audioInputRef.current?.click()} className={cn("w-full flex items-center gap-3 px-4 py-3 rounded-xl border-2 border-dashed transition-all cursor-pointer", state.audioFile ? "bg-accent border-primary/20" : "bg-muted border-border hover:border-primary/30")}>
                             <div className="size-10 rounded-lg bg-muted flex items-center justify-center shrink-0">
                                 <FileAudio className="size-5 text-muted-foreground" />
@@ -483,7 +483,7 @@ function LipSyncPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Sync Mode</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Sync Mode</h4>
                         <div className="space-y-1.5">
                             {syncModes.map((m) => (
                                 <button key={m.id} onClick={() => dispatch({ type: 'setSyncMode', syncMode: m.id })} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left", state.syncMode === m.id ? "bg-accent border-primary/20" : "bg-card border-border")}>

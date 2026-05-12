@@ -9,7 +9,7 @@ export type CreditTransactionType =
   | 'refund'
   | 'adjustment';
 
-export type CreditTransactionScopeType = 'user' | 'organization';
+export type CreditTransactionScopeType = 'user' | 'workspace';
 
 export class CreditTransaction {
   @ApiProperty({ type: String })
@@ -18,7 +18,7 @@ export class CreditTransaction {
   @ApiProperty({ type: String })
   userId: string;
 
-  @ApiProperty({ type: String, enum: ['user', 'organization'] })
+  @ApiProperty({ type: String, enum: ['user', 'workspace'] })
   scopeType: CreditTransactionScopeType;
 
   @ApiProperty({ type: String, nullable: true })

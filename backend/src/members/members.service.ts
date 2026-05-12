@@ -4,73 +4,76 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { MemberRepository } from './infrastructure/persistence/member.repository';
-import { OrganizationRepository } from '../organizations/infrastructure/persistence/organization.repository';
-import { Member, OrgRole } from './domain/member';
+import { WorkspaceRepository } from '../workspaces/infrastructure/persistence/workspace.repository';
+import { Member, WorkspaceRole } from './domain/member';
 import { UpdateMemberDto } from './dto/member.dto';
-import { defineAbilityFor, OrgAction } from '../permissions/permissions';
+import { defineAbilityFor, WorkspaceAction } from '../permissions/permissions';
 
 @Injectable()
 export class MembersService {
   constructor(
     private readonly memberRepository: MemberRepository,
-    private readonly orgRepository: OrganizationRepository,
+    private readonly workspaceRepository: WorkspaceRepository,
   ) {}
 
-  async findByOrganization(
-    orgSlug: string,
+  async findByWorkspace(
+    workspaceSlug: string,
     userId: number,
   ): Promise<Member[]> {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const member = await this.memberRepository.findByUserAndOrg(userId, org.id);
+    const member = await this.memberRepository.findByUserAndWorkspace(
+      userId,
+      workspace.id,
+    );
     if (!member) throw new ForbiddenException('Not a member');
 
     const ability = defineAbilityFor({
       id: userId,
       role: member.role as any,
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
-    if (!ability.can(OrgAction.Read, 'User')) {
+    if (!ability.can(WorkspaceAction.Read, 'User')) {
       throw new ForbiddenException('Cannot list members');
     }
 
-    return this.memberRepository.findByOrganizationId(org.id);
+    return this.memberRepository.findByWorkspaceId(workspace.id);
   }
 
   async updateRole(
-    orgSlug: string,
+    workspaceSlug: string,
     memberId: string,
     userId: number,
     dto: UpdateMemberDto,
   ): Promise<Member> {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const currentMember = await this.memberRepository.findByUserAndOrg(
+    const currentMember = await this.memberRepository.findByUserAndWorkspace(
       userId,
-      org.id,
+      workspace.id,
     );
     if (!currentMember) throw new ForbiddenException('Not a member');
 
     const ability = defineAbilityFor({
       id: userId,
       role: currentMember.role as any,
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
-    if (!ability.can(OrgAction.Update, 'User')) {
+    if (!ability.can(WorkspaceAction.Update, 'User')) {
       throw new ForbiddenException('Cannot update member role');
     }
 
     const targetMember = await this.memberRepository.findById(memberId);
-    if (!targetMember || targetMember.organizationId !== org.id) {
+    if (!targetMember || targetMember.workspaceId !== workspace.id) {
       throw new NotFoundException('Member not found');
     }
 
     // Cannot change owner's role
-    if (targetMember.userId === org.ownerId) {
+    if (targetMember.userId === workspace.ownerId) {
       throw new ForbiddenException('Cannot change the owner\'s role');
     }
 
@@ -82,37 +85,37 @@ export class MembersService {
   }
 
   async removeMember(
-    orgSlug: string,
+    workspaceSlug: string,
     memberId: string,
     userId: number,
   ): Promise<void> {
-    const org = await this.orgRepository.findBySlug(orgSlug);
-    if (!org) throw new NotFoundException('Organization not found');
+    const workspace = await this.workspaceRepository.findBySlug(workspaceSlug);
+    if (!workspace) throw new NotFoundException('Workspace not found');
 
-    const currentMember = await this.memberRepository.findByUserAndOrg(
+    const currentMember = await this.memberRepository.findByUserAndWorkspace(
       userId,
-      org.id,
+      workspace.id,
     );
     if (!currentMember) throw new ForbiddenException('Not a member');
 
     const ability = defineAbilityFor({
       id: userId,
       role: currentMember.role as any,
-      ownerId: org.ownerId,
+      ownerId: workspace.ownerId,
     });
 
-    if (!ability.can(OrgAction.Delete, 'User')) {
+    if (!ability.can(WorkspaceAction.Delete, 'User')) {
       throw new ForbiddenException('Cannot remove members');
     }
 
     const targetMember = await this.memberRepository.findById(memberId);
-    if (!targetMember || targetMember.organizationId !== org.id) {
+    if (!targetMember || targetMember.workspaceId !== workspace.id) {
       throw new NotFoundException('Member not found');
     }
 
     // Cannot remove the owner
-    if (targetMember.userId === org.ownerId) {
-      throw new ForbiddenException('Cannot remove the organization owner');
+    if (targetMember.userId === workspace.ownerId) {
+      throw new ForbiddenException('Cannot remove the workspace owner');
     }
 
     await this.memberRepository.remove(memberId);

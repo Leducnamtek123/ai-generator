@@ -20,18 +20,18 @@ import { CreateInviteDto } from '../members/dto/member.dto';
 export class InvitesController {
   constructor(private readonly invitesService: InvitesService) {}
 
-  @Post('orgs/:orgSlug/invites')
+  @Post('workspaces/:workspaceSlug/invites')
   create(
     @Request() req,
-    @Param('orgSlug') orgSlug: string,
+    @Param('workspaceSlug') workspaceSlug: string,
     @Body() dto: CreateInviteDto,
   ) {
-    return this.invitesService.create(orgSlug, req.user.id, dto);
+    return this.invitesService.create(workspaceSlug, req.user.id, dto);
   }
 
-  @Get('orgs/:orgSlug/invites')
-  findByOrg(@Request() req, @Param('orgSlug') orgSlug: string) {
-    return this.invitesService.findByOrganization(orgSlug, req.user.id);
+  @Get('workspaces/:workspaceSlug/invites')
+  findByOrg(@Request() req, @Param('workspaceSlug') workspaceSlug: string) {
+    return this.invitesService.findByWorkspace(workspaceSlug, req.user.id);
   }
 
   @Get('invites/pending')
@@ -49,12 +49,12 @@ export class InvitesController {
     return this.invitesService.reject(inviteId, req.user.email);
   }
 
-  @Delete('orgs/:orgSlug/invites/:inviteId')
+  @Delete('workspaces/:workspaceSlug/invites/:inviteId')
   revoke(
     @Request() req,
-    @Param('orgSlug') orgSlug: string,
+    @Param('workspaceSlug') workspaceSlug: string,
     @Param('inviteId') inviteId: string,
   ) {
-    return this.invitesService.revoke(inviteId, orgSlug, req.user.id);
+    return this.invitesService.revoke(inviteId, workspaceSlug, req.user.id);
   }
 }

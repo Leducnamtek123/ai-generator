@@ -1,6 +1,6 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export enum OrgRole {
+export enum WorkspaceRole {
   OWNER = 'OWNER',
   ADMIN = 'ADMIN',
   MEMBER = 'MEMBER',
@@ -16,10 +16,10 @@ export class Member {
   userId: number;
 
   @ApiProperty({ type: String })
-  organizationId: string;
+  workspaceId: string;
 
-  @ApiProperty({ enum: OrgRole })
-  role: OrgRole;
+  @ApiProperty({ enum: WorkspaceRole })
+  role: WorkspaceRole;
 
   @ApiProperty()
   createdAt: Date;

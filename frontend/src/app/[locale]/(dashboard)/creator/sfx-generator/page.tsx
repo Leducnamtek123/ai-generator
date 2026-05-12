@@ -1,7 +1,6 @@
 'use client';
 
-import { Suspense, useReducer, useEffect, useState, useRef, useMemo } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { Suspense, useReducer, useEffect, useState, useRef } from 'react';
 import { useGenerationStore } from '@/stores/generation-store';
 import { useTemplateStore } from '@/stores/template-store';
 import { MediaPickerModal } from '@/components/common/MediaPickerModal';
@@ -17,7 +16,6 @@ import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShel
 import { uploadFileWithToast } from '@/lib/upload';
 import type { MediaItem } from '@/types/media';
 import { getUserFacingErrorMessage } from '@/lib/async-operation';
-import { projectApi } from '@/services/projectApi';
 
 const sfxCategories = [
     { id: 'nature', label: 'Nature', icon: Leaf, examples: ['Rain', 'Thunder', 'Wind', 'Ocean'] },
@@ -87,27 +85,18 @@ const initialState: SfxState = {
 
 type SfxUiState = {
     isAudioPickerOpen: boolean;
-    projectId: string | null;
-    isProjectSaving: boolean;
-    projectError: string | null;
     sampleUrl: string | null;
     sampleName: string;
 };
 
 type SfxUiAction =
     | { type: 'set-audio-picker-open'; isOpen: boolean }
-    | { type: 'set-project-id'; projectId: string | null }
-    | { type: 'set-project-saving'; isSaving: boolean }
-    | { type: 'set-project-error'; error: string | null }
     | { type: 'set-sample-url'; sampleUrl: string | null }
     | { type: 'set-sample-name'; sampleName: string }
-    | { type: 'hydrate'; projectId: string | null; projectError: string | null; sampleUrl: string | null; sampleName: string };
+    | { type: 'hydrate'; sampleUrl: string | null; sampleName: string };
 
 const initialUiState: SfxUiState = {
     isAudioPickerOpen: false,
-    projectId: null,
-    isProjectSaving: false,
-    projectError: null,
     sampleUrl: null,
     sampleName: '',
 };
@@ -116,12 +105,6 @@ function uiReducer(state: SfxUiState, action: SfxUiAction): SfxUiState {
     switch (action.type) {
         case 'set-audio-picker-open':
             return { ...state, isAudioPickerOpen: action.isOpen };
-        case 'set-project-id':
-            return { ...state, projectId: action.projectId };
-        case 'set-project-saving':
-            return { ...state, isProjectSaving: action.isSaving };
-        case 'set-project-error':
-            return { ...state, projectError: action.error };
         case 'set-sample-url':
             return { ...state, sampleUrl: action.sampleUrl };
         case 'set-sample-name':
@@ -129,8 +112,6 @@ function uiReducer(state: SfxUiState, action: SfxUiAction): SfxUiState {
         case 'hydrate':
             return {
                 ...state,
-                projectId: action.projectId,
-                projectError: action.projectError,
                 sampleUrl: action.sampleUrl,
                 sampleName: action.sampleName,
             };
@@ -207,12 +188,8 @@ function SfxGeneratorPageContent() {
     const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const { generateSfx, isGenerating, generations, fetchGenerations, isLoading: isGenerationsLoading } = useGenerationStore();
     const { templates, fetchTemplates, isLoading: isTemplatesLoading } = useTemplateStore();
-    const { replace } = useRouter();
-    const searchParams = useSearchParams();
-    const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const [communityListings, setCommunityListings] = useState<Array<{ id: string; title: string; description?: string }> | null>(null);
     const audioRef = useRef<HTMLAudioElement | null>(null);
-    const isProjectBusy = uiState.isProjectSaving;
 
     useEffect(() => {
         if (state.activeContentTab === CONTENT_TABS[0]) { // Personal
@@ -235,75 +212,29 @@ function SfxGeneratorPageContent() {
     }, [state.activeContentTab, fetchGenerations, fetchTemplates]);
 
     useEffect(() => {
-        const requestedProjectId = searchParamsSnapshot.get('projectId');
         const draftRaw = localStorage.getItem('sfx-generator:draft:v1');
-        const applySnapshot = (snapshot: Partial<SfxSnapshot>, error: string | null = null) => {
+        const applySnapshot = (snapshot: Partial<SfxSnapshot>) => {
             dispatch({ type: 'hydrateSnapshot', snapshot });
             dispatchUi({
                 type: 'hydrate',
-                projectId: requestedProjectId,
-                projectError: error,
                 sampleUrl: snapshot.sampleUrl ?? null,
                 sampleName: snapshot.sampleName ?? '',
             });
         };
 
-        if (!requestedProjectId) {
-            if (!draftRaw) {
-                return;
-            }
-
-            try {
-                applySnapshot(normalizeSfxSnapshot(JSON.parse(draftRaw)));
-            } catch (error) {
-                console.error('Failed to load sfx draft', error);
-            }
+        if (!draftRaw) {
             return;
         }
 
-        let cancelled = false;
-        void (async () => {
-            try {
-                const project = await projectApi.get(requestedProjectId);
-                if (cancelled) return;
-
-                applySnapshot(normalizeSfxSnapshot(project.content));
-            } catch (error) {
-                console.error('Failed to load sfx project', error);
-                if (!cancelled) {
-                    if (draftRaw) {
-                        try {
-                            applySnapshot(normalizeSfxSnapshot(JSON.parse(draftRaw)), 'Loaded local draft because backend project load failed.');
-                        } catch (draftError) {
-                            console.error('Failed to load sfx draft', draftError);
-                            dispatchUi({
-                                type: 'hydrate',
-                                projectId: requestedProjectId,
-                                projectError: 'Loaded local draft because backend project load failed.',
-                                sampleUrl: null,
-                                sampleName: '',
-                            });
-                        }
-                    } else {
-                        dispatchUi({
-                            type: 'hydrate',
-                            projectId: requestedProjectId,
-                            projectError: 'Loaded local draft because backend project load failed.',
-                            sampleUrl: null,
-                            sampleName: '',
-                        });
-                    }
-                }
-            }
-        })();
-
-        return () => {
-            cancelled = true;
-        };
-    }, [searchParams]);
+        try {
+            applySnapshot(normalizeSfxSnapshot(JSON.parse(draftRaw)));
+        } catch (error) {
+            console.error('Failed to load sfx draft', error);
+        }
+    }, []);
 
     const handleGenerate = async () => {
-        if (!state.prompt.trim() || isProjectBusy) return;
+        if (!state.prompt.trim()) return;
         try {
             await generateSfx({
                 prompt: state.prompt,
@@ -333,7 +264,6 @@ function SfxGeneratorPageContent() {
         dispatchUi({ type: 'set-sample-url', sampleUrl: null });
         dispatchUi({ type: 'set-sample-name', sampleName: '' });
         dispatchUi({ type: 'set-audio-picker-open', isOpen: false });
-        dispatchUi({ type: 'set-project-error', error: null });
     };
 
     useEffect(() => {
@@ -406,7 +336,7 @@ function SfxGeneratorPageContent() {
         toast.success(`Downloaded ${generation.prompt} metadata.`);
     };
 
-    const handleSaveProject = () => {
+    const handleSaveDraft = () => {
         const payload: SfxProjectPayload = {
             version: 1,
             savedAt: new Date().toISOString(),
@@ -423,38 +353,7 @@ function SfxGeneratorPageContent() {
         };
 
         localStorage.setItem('sfx-generator:draft:v1', JSON.stringify(payload));
-
-        const persistProject = async () => {
-                    dispatchUi({ type: 'set-project-saving', isSaving: true });
-            try {
-                if (uiState.projectId) {
-                    await projectApi.update(uiState.projectId, {
-                        name: 'SFX Generator Draft',
-                        description: 'SFX generator draft',
-                        content: payload,
-                    });
-                } else {
-                    const created = await projectApi.create({
-                        name: 'SFX Generator Draft',
-                        description: 'SFX generator draft',
-                        content: payload,
-                    });
-                    dispatchUi({ type: 'set-project-id', projectId: created.project.id });
-                    replace(`${window.location.pathname}?projectId=${created.project.id}`);
-                }
-
-                dispatchUi({ type: 'set-project-error', error: null });
-                toast.success('Sound effect saved to your projects.');
-            } catch (error) {
-                console.error('Failed to persist sfx project', error);
-                dispatchUi({ type: 'set-project-error', error: 'Saved locally, but backend project save failed.' });
-                toast.error('Saved locally, but backend project save failed.');
-            } finally {
-                dispatchUi({ type: 'set-project-saving', isSaving: false });
-            }
-        };
-
-        void persistProject();
+        toast.success('Sound effect draft saved locally.');
     };
 
     return (
@@ -464,9 +363,9 @@ function SfxGeneratorPageContent() {
                     <h2 className="font-semibold text-muted-foreground">SFX Generator</h2>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6 text-left">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6 text-left">
                     <div className="space-y-3 text-left">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Describe the Sound</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Describe the Sound</h4>
                         <div className="bg-card rounded-xl border border-border p-2">
                             <textarea
                                 value={state.prompt}
@@ -478,7 +377,7 @@ function SfxGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Category</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Category</h4>
                         <div className="grid grid-cols-4 gap-1.5">
                             {sfxCategories.map((cat) => (
                                 <button
@@ -500,7 +399,7 @@ function SfxGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Duration</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Duration</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {durations.map((d) => (
                                 <button
@@ -518,7 +417,7 @@ function SfxGeneratorPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Reference Sample (Optional)</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Reference Sample (Optional)</h4>
                         <button
                             type="button"
                             onClick={() => dispatchUi({ type: 'set-audio-picker-open', isOpen: true })}
@@ -562,15 +461,15 @@ function SfxGeneratorPageContent() {
 
                 <div className="p-4 border-t border-border space-y-3">
                     <div className="flex gap-2">
-                        <Button variant="outline" onClick={handleReset} disabled={isProjectBusy} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                        <Button variant="outline" onClick={handleReset} className="h-12 flex-1 font-bold rounded-xl gap-2">
                             <Folder className="size-5" />
                             Reset
                         </Button>
-                        <Button variant="outline" onClick={handleSaveProject} disabled={isProjectBusy || isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
-                            {uiState.isProjectSaving ? <Loader2 className="size-5 animate-spin" /> : <Folder className="size-5" />}
-                            Save
+                        <Button variant="outline" onClick={handleSaveDraft} disabled={isGenerating} className="h-12 flex-1 font-bold rounded-xl gap-2">
+                            <Folder className="size-5" />
+                            Save asset
                         </Button>
-                        <Button onClick={handleGenerate} disabled={isGenerating || isProjectBusy || !state.prompt.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
+                        <Button onClick={handleGenerate} disabled={isGenerating || !state.prompt.trim()} className="h-12 flex-[2] font-bold rounded-xl gap-2">
                             {isGenerating ? <Loader2 className="size-5 animate-spin" /> : <Zap className="size-5" />}
                             {isGenerating ? 'Generating...' : 'Generate SFX'}
                         </Button>
@@ -597,20 +496,8 @@ function SfxGeneratorPageContent() {
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                             <Input placeholder="Search" className="w-56 h-9 pl-10 pr-4" />
                         </div>
-                        <Button variant="outline" size="sm" onClick={handleSaveProject} disabled={isProjectBusy || isGenerating} className="gap-2">
-                            {uiState.isProjectSaving ? <Loader2 className="size-4 animate-spin" /> : <Folder className="size-4" />}
-                            Save project
-                        </Button>
                     </div>
                 </div>
-
-                {uiState.projectError && (
-                    <div className="px-6 pt-4">
-                        <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-                            {uiState.projectError}
-                        </div>
-                    </div>
-                )}
 
                 <div className="flex-1 overflow-y-auto p-6">
                     {state.activeContentTab === CONTENT_TABS[0] && ( // Personal

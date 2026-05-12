@@ -26,6 +26,12 @@ export class Project {
     type: String,
     nullable: true,
   })
+  workspaceId?: string | null;
+
+  @ApiProperty({
+    type: String,
+    nullable: true,
+  })
   thumbnail?: string | null;
 
   @ApiProperty({

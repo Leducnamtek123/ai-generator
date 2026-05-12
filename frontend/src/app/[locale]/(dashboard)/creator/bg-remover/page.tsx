@@ -423,7 +423,7 @@ function BgRemoverPageContent() {
                     </span>
                 </div>
 
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     <div
                         onClick={() => fileInputRef.current?.click()}
                         onKeyDown={(event) => {
@@ -449,8 +449,8 @@ function BgRemoverPageContent() {
                                 </div>
                                 <div className="text-center">
                                     <p className="text-sm font-medium text-foreground">Upload Image</p>
-                                    <p className="text-[11px] text-muted-foreground mt-1">Drag & drop or click to browse</p>
-                                    <p className="text-[10px] text-muted-foreground/50 mt-1">PNG, JPG, WebP up to 20MB</p>
+                                    <p className="text-xs text-muted-foreground mt-1">Drag and drop or click to browse</p>
+                                    <p className="text-xs text-muted-foreground/50 mt-1">PNG, JPG, WebP up to 20MB</p>
                                 </div>
                             </>
                         )}
@@ -458,7 +458,7 @@ function BgRemoverPageContent() {
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Processing Mode</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Processing Mode</h4>
                         <div className="space-y-2">
                             {qualityModes.map((mode) => (
                                     <button
@@ -480,7 +480,7 @@ function BgRemoverPageContent() {
                                     </div>
                                     <div>
                                         <p className="text-xs font-medium">{mode.label}</p>
-                                        <p className="text-[10px] text-muted-foreground">{mode.description}</p>
+                                        <p className="text-xs text-muted-foreground">{mode.description}</p>
                                     </div>
                                 </button>
                             ))}
@@ -488,7 +488,7 @@ function BgRemoverPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Options</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Options</h4>
                         <button
                             type="button"
                             onClick={() => dispatch({ type: 'toggleEdgeRefinement' })}
@@ -508,7 +508,7 @@ function BgRemoverPageContent() {
                     </div>
 
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Background</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Background</h4>
                         <div className="grid grid-cols-4 gap-2">
                             {bgOptions.map((bg) => (
                                 <button

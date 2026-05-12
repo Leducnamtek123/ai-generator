@@ -25,14 +25,14 @@ export class InvitesRelationalRepository implements InviteRepository {
   async findById(id: string): Promise<NullableType<Invite>> {
     const entity = await this.inviteRepo.findOne({
       where: { id },
-      relations: ['organization'],
+      relations: ['workspace'],
     });
     return entity ? InviteMapper.toDomain(entity) : null;
   }
 
-  async findByOrganizationId(organizationId: string): Promise<Invite[]> {
+  async findByWorkspaceId(workspaceId: string): Promise<Invite[]> {
     const entities = await this.inviteRepo.find({
-      where: { organizationId },
+      where: { workspaceId },
     });
     return entities.map((e) => InviteMapper.toDomain(e));
   }
@@ -40,17 +40,17 @@ export class InvitesRelationalRepository implements InviteRepository {
   async findByEmail(email: string): Promise<Invite[]> {
     const entities = await this.inviteRepo.find({
       where: { email },
-      relations: ['organization'],
+      relations: ['workspace'],
     });
     return entities.map((e) => InviteMapper.toDomain(e));
   }
 
-  async findByOrgAndEmail(
-    organizationId: string,
+  async findByWorkspaceAndEmail(
+    workspaceId: string,
     email: string,
   ): Promise<NullableType<Invite>> {
     const entity = await this.inviteRepo.findOne({
-      where: { organizationId, email },
+      where: { workspaceId, email },
     });
     return entity ? InviteMapper.toDomain(entity) : null;
   }

@@ -112,7 +112,7 @@
       "approximateUsage": "Approximate usage",
       "freeTrial": "Free trial on sign-up",
       "processing": "Processing...",
-      "workspacePlansNote": "Workspace plans are available here too. Switch to the Workspace tab when you need shared credits or org seats instead of a personal subscription.",
+      "workspacePlansNote": "Workspace plans are available here too. Switch to the Workspace tab when you need shared credits or workspace seats instead of a personal subscription.",
       "topUpCreditsTitle": "Optional top-up credits",
       "credits": "credits",
       "buyTopUp": "Buy top-up",
@@ -132,7 +132,7 @@
         },
         "team": {
           "label": "Workspace",
-          "title": "Team billing",
+          "title": "Workspace billing",
           "description": "Shared credits, included seats, and workspace controls."
         }
       },

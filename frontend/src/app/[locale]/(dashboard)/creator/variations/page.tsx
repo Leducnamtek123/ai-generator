@@ -372,11 +372,11 @@ function VariationsPageContent() {
             <div className="w-[320px] border-r border-border flex flex-col shrink-0 bg-background">
                 <div className="h-14 px-6 border-b border-border flex items-center justify-between shrink-0">
                     <h2 className="font-semibold text-muted-foreground">Variations</h2>
-                    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-[10px] font-bold">
+                    <div className="inline-flex items-center gap-1.5 px-2 py-1 bg-primary/10 border border-primary/20 rounded-full text-primary text-xs font-bold">
                         <Sparkles className="size-2.5" /> New
                     </div>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     {/* Upload */}
                     <button
                         type="button"
@@ -387,21 +387,21 @@ function VariationsPageContent() {
                             <Image src={state.uploadedImage} alt="Source" fill className="object-cover" sizes="(max-width: 768px) 100vw, 320px" />
                         ) : (
                             <><div className="size-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all"><Upload className="size-6 text-muted-foreground" /></div>
-                            <div className="text-center"><p className="text-sm font-medium">Source Image</p><p className="text-[10px] text-muted-foreground mt-1">Upload the image to create variations</p></div></>
+                            <div className="text-center"><p className="text-sm font-medium">Source</p><p className="text-xs text-muted-foreground mt-1">Upload an image to create variations</p></div></>
                         )}
                     </button>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
 
                     {/* Variation Type */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Variation Type</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Variation Type</h4>
                         <div className="space-y-1.5">
                             {variationTypes.map((t) => (
                                 <button key={t.id} onClick={() => dispatch({ type: 'setVariationType', variationType: t.id })} className={cn("w-full flex items-center gap-3 px-3 py-2.5 rounded-xl border transition-all text-left", state.variationType === t.id ? "bg-accent border-primary/20" : "bg-card border-border hover:border-border/80")}>
                                     <div className={cn("size-4 rounded-full border-2 flex items-center justify-center", state.variationType === t.id ? "border-primary" : "border-muted-foreground/30")}>
                                         {state.variationType === t.id && <div className="size-2 rounded-full bg-primary" />}
                                     </div>
-                                    <div><p className="text-xs font-medium">{t.label}</p><p className="text-[9px] text-muted-foreground">{t.description}</p></div>
+                                    <div><p className="text-xs font-medium">{t.label}</p><p className="text-xs text-muted-foreground">{t.description}</p></div>
                                 </button>
                             ))}
                         </div>
@@ -410,22 +410,22 @@ function VariationsPageContent() {
                     {/* Controls */}
                     <div className="space-y-5">
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between"><Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Count</Label><span className="text-[11px] font-mono">{state.count}</span></div>
+                            <div className="flex items-center justify-between"><Label className="text-sm font-medium text-muted-foreground">Count</Label><span className="text-xs font-mono">{state.count}</span></div>
                             <Slider min={2} max={8} step={1} value={[state.count]} onValueChange={([v]) => dispatch({ type: 'setCount', count: v })} />
                         </div>
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between"><Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Variation Strength</Label><span className="text-[11px] font-mono">{state.strength}%</span></div>
+                            <div className="flex items-center justify-between"><Label className="text-sm font-medium text-muted-foreground">Variation Strength</Label><span className="text-xs font-mono">{state.strength}%</span></div>
                             <Slider min={10} max={100} step={5} value={[state.strength]} onValueChange={([v]) => dispatch({ type: 'setStrength', strength: v })} />
                         </div>
                         <div className="space-y-3">
-                            <div className="flex items-center justify-between"><Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Creativity</Label><span className="text-[11px] font-mono">{state.creativity}%</span></div>
+                            <div className="flex items-center justify-between"><Label className="text-sm font-medium text-muted-foreground">Creativity</Label><span className="text-xs font-mono">{state.creativity}%</span></div>
                             <Slider min={0} max={100} step={5} value={[state.creativity]} onValueChange={([v]) => dispatch({ type: 'setCreativity', creativity: v })} />
                         </div>
                     </div>
 
                     {/* Prompt Guidance */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Guidance (Optional)</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Guidance</h4>
                         <textarea value={state.prompt} onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })} placeholder="Guide the variation direction?" className="w-full h-20 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
                     </div>
                 </div>
@@ -464,7 +464,7 @@ function VariationsPageContent() {
                                 <div className="relative aspect-square rounded-2xl border-2 border-primary/30 overflow-hidden shadow-lg">
                                     <Image src={state.uploadedImage!} alt="Source" fill className="object-cover" sizes="(max-width: 768px) 100vw, 400px" />
                                 </div>
-                                <div className="absolute top-3 left-3 px-2 py-1 bg-primary text-primary-foreground rounded-md text-[10px] font-bold">SOURCE</div>
+                                <div className="absolute top-3 left-3 px-2 py-1 bg-primary text-primary-foreground rounded-md text-xs font-bold">Source</div>
                             </div>
                             {state.results.map((url, i) => (
                                 <div
@@ -487,7 +487,7 @@ function VariationsPageContent() {
                                         <Button size="icon" variant="secondary" className="size-9" onClick={() => downloadVariation(url, `variation-${i + 1}.png`)}><Download className="size-4" /></Button>
                                         <Button size="icon" variant="secondary" className="size-9" onClick={() => copyVariationUrl(url)}><Copy className="size-4" /></Button>
                                     </div>
-                                    <div className="absolute top-3 left-3 px-2 py-1 bg-background/80 backdrop-blur-sm rounded-md text-[10px] font-bold">V{i + 1}</div>
+                                    <div className="absolute top-3 left-3 px-2 py-1 bg-background/80 backdrop-blur-sm rounded-md text-xs font-bold">V{i + 1}</div>
                                 </div>
                             ))}
                         </div>

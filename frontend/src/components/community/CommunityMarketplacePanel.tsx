@@ -19,7 +19,6 @@ import {
   Search,
   Sparkles,
   Tag,
-  Upload,
   Video,
   type LucideIcon,
 } from 'lucide-react';
@@ -48,6 +47,7 @@ import {
   type CommunityMarketplaceListing,
   type CreateListingPayload,
 } from '@/services/communityMarketplaceApi';
+import { MarketplaceListingSkeletonGrid, ListingSummarySkeletonList } from '@/components/common/loading-skeletons';
 
 type TemplateTypeOption = {
   value: 'all' | TemplateTypeEnum;
@@ -394,11 +394,11 @@ function MarketplaceListingThumbnail({
       ) : (
         <div className="flex h-full items-end p-4">
           <div className="max-w-[90%] space-y-2">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Sparkles className="size-3.5" />
               Prompt preview
             </div>
-            <p className="line-clamp-3 text-sm leading-relaxed text-white/90">{previewText}</p>
+            <p className="line-clamp-3 text-sm leading-relaxed text-foreground">{previewText}</p>
           </div>
         </div>
       )}
@@ -406,7 +406,7 @@ function MarketplaceListingThumbnail({
       <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
 
       <div className="absolute left-3 top-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-black/70 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+        <span className="rounded-full bg-background/80 px-3 py-1 text-[11px] font-semibold text-foreground backdrop-blur-sm">
           {listing.marketplace.priceCredits} credits
         </span>
         {listing.marketplace.featured ? (
@@ -543,11 +543,11 @@ function DraftPreviewThumbnail({
       ) : (
         <div className="flex h-full items-end p-4">
           <div className="max-w-[92%] space-y-2">
-            <div className="flex items-center gap-2 text-[11px] uppercase tracking-[0.3em] text-white/50">
+            <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
               <Sparkles className="size-3.5" />
               Preview state
             </div>
-            <p className="line-clamp-4 text-sm leading-relaxed text-white/90">{previewText}</p>
+            <p className="line-clamp-4 text-sm leading-relaxed text-foreground">{previewText}</p>
           </div>
         </div>
       )}
@@ -608,7 +608,7 @@ function ListingDraftPreview({
             previewText={previewCopy}
           />
 
-          <div className="absolute left-3 top-3 rounded-full bg-black/70 px-3 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
+          <div className="absolute left-3 top-3 rounded-full bg-background/80 px-3 py-1 text-[11px] font-semibold text-foreground backdrop-blur-sm">
             {priceCredits} credits
           </div>
         </div>
@@ -831,7 +831,7 @@ export function CommunityMarketplacePanel() {
   const draftCreatorCredits = Math.max(0, state.priceCredits - draftFeeCredits);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[1.6fr_0.9fr]">
+    <div className="space-y-6">
       <section className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="border-border/70 bg-card/80">
@@ -926,9 +926,7 @@ export function CommunityMarketplacePanel() {
                 </Button>
               </div>
             ) : listingsQuery.isLoading ? (
-              <div className="flex h-40 items-center justify-center">
-                <Loader2 className="size-8 animate-spin text-muted-foreground" />
-              </div>
+              <MarketplaceListingSkeletonGrid count={6} />
             ) : listings.length === 0 ? (
               <div className="flex h-52 flex-col items-center justify-center gap-3 rounded-2xl border border-dashed border-border/70 bg-muted/20 px-6 text-center">
                 <BookOpen className="size-9 text-muted-foreground" />
@@ -990,293 +988,6 @@ export function CommunityMarketplacePanel() {
         </Card>
       </section>
 
-      <aside className="space-y-6">
-        <Card className="border-border/70 bg-card/95">
-          <CardHeader className="border-b border-border/70 pb-6">
-            <div className="flex items-center gap-2">
-              <Upload className="size-4 text-primary" />
-              <CardTitle className="text-lg">List a template</CardTitle>
-            </div>
-            <CardDescription>
-              Publish a preview, add the prompt body, choose a type, and make the listing easy to
-              buy in credits.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent className="space-y-6 pt-6">
-            <form onSubmit={submitListing} className="space-y-5">
-              <div className="space-y-2">
-                <Label htmlFor="community-title">Title</Label>
-                <Input
-                  id="community-title"
-                  value={state.title}
-                  onChange={(event) => dispatch({ type: 'setTitle', title: event.target.value })}
-                  placeholder="Template title"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Keep the title short and specific so the listing scans well in the grid.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="community-description">Short description</Label>
-                <Textarea
-                  id="community-description"
-                  value={state.description}
-                  onChange={(event) =>
-                    dispatch({ type: 'setDescription', description: event.target.value })
-                  }
-                  placeholder="Describe the outcome, workflow, or style pack"
-                  className="min-h-24"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Explain the value proposition in one or two lines.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="community-thumbnail">Cover image URL</Label>
-                <Input
-                  id="community-thumbnail"
-                  value={state.thumbnail}
-                  onChange={(event) => dispatch({ type: 'setThumbnail', thumbnail: event.target.value })}
-                  placeholder="https://example.com/cover.png"
-                />
-                <p className="text-xs text-muted-foreground">
-                  A strong cover improves conversion. If you skip it, buyers see a deliberate
-                  prompt preview instead of a broken card.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="community-prompt">Prompt / template content</Label>
-                <Textarea
-                  id="community-prompt"
-                  value={state.prompt}
-                  onChange={(event) => dispatch({ type: 'setPrompt', prompt: event.target.value })}
-                  placeholder="Paste the prompt body, workflow notes, or instructions"
-                  className="min-h-32"
-                />
-                <p className="text-xs text-muted-foreground">
-                  This is the real payload buyers receive after purchase.
-                </p>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="community-type">Type</Label>
-                  <Select
-                    value={state.templateType}
-                    onValueChange={(value) =>
-                      dispatch({ type: 'setTemplateType', templateType: value as TemplateTypeEnum })
-                    }
-                  >
-                    <SelectTrigger id="community-type" className="w-full">
-                      <SelectValue placeholder="Choose a template type" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {PUBLISH_TEMPLATE_TYPES.map((option) => {
-                        const Icon = option.icon;
-
-                        return (
-                          <SelectItem key={option.value} value={option.value}>
-                            <span className="flex items-center gap-2">
-                              <Icon className="size-4" />
-                              {option.label}
-                            </span>
-                          </SelectItem>
-                        );
-                      })}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">{selectedTypeDescription}</p>
-                </div>
-
-                <div className="space-y-2">
-                  <Label htmlFor="community-price">Price in credits</Label>
-                  <Input
-                    id="community-price"
-                    type="number"
-                    min={1}
-                    value={state.priceCredits}
-                    onChange={(event) => {
-                      const nextValue = Number(event.target.value);
-                      dispatch({
-                        type: 'setPriceCredits',
-                        priceCredits: Number.isFinite(nextValue) ? Math.max(1, nextValue) : 1,
-                      });
-                    }}
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Creator payout: {draftCreatorCredits} credits. Platform fee: {draftFeeCredits}{' '}
-                    credits.
-                  </p>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="community-platform-fee">Platform fee bps</Label>
-                <Input
-                  id="community-platform-fee"
-                  type="number"
-                  min={0}
-                  value={state.platformFeeBps}
-                  onChange={(event) => {
-                    const nextValue = Number(event.target.value);
-                    dispatch({
-                      type: 'setPlatformFeeBps',
-                      platformFeeBps: Number.isFinite(nextValue) ? Math.max(0, nextValue) : 0,
-                    });
-                  }}
-                />
-                <p className="text-xs text-muted-foreground">
-                  The backend uses basis points. 1500 bps means a 15% platform fee.
-                </p>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="community-tags">Tags</Label>
-                <Input
-                  id="community-tags"
-                  value={state.tags}
-                  onChange={(event) => dispatch({ type: 'setTags', tags: event.target.value })}
-                  placeholder="prompt,community,template"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Use short comma-separated tags. The first few tags show on the card.
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-border/70 bg-muted/20 p-4">
-                <div className="space-y-1">
-                  <Label htmlFor="community-listed">Publish immediately</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Turn this off to save as a draft and keep the listing out of the public grid.
-                  </p>
-                </div>
-                <input
-                  id="community-listed"
-                  type="checkbox"
-                  checked={state.listed}
-                  onChange={(event) => dispatch({ type: 'setListed', listed: event.target.checked })}
-                  className="size-4 rounded border-border text-primary focus:ring-primary"
-                />
-              </div>
-
-              <Button type="submit" className="w-full gap-2" disabled={createListingMutation.isPending}>
-                {createListingMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Sparkles className="size-4" />
-                )}
-                {state.listed ? 'Publish listing' : 'Save draft'}
-              </Button>
-            </form>
-
-            <Separator />
-
-            <ListingDraftPreview
-              title={state.title}
-              description={state.description}
-              prompt={state.prompt}
-              thumbnail={state.thumbnail}
-              templateType={state.templateType}
-              priceCredits={state.priceCredits}
-              platformFeeBps={state.platformFeeBps}
-              tags={state.tags}
-            />
-
-            <div className="rounded-2xl border border-border/70 bg-muted/20 p-4">
-              <div className="mb-4">
-                <p className="text-sm font-semibold text-foreground">Publishing checklist</p>
-                <p className="text-xs text-muted-foreground">
-                  Small habits that make listings easier to buy and reuse.
-                </p>
-              </div>
-              <div className="space-y-3">
-                {PUBLISHING_GUIDE.map((item) => (
-                  <div key={item.title} className="flex items-start gap-3">
-                    <div className="mt-1 rounded-full bg-primary/10 p-1.5 text-primary">
-                      <CheckCircle2 className="size-3.5" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.title}</p>
-                      <p className="text-xs leading-relaxed text-muted-foreground">{item.body}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/95">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">Your listings</CardTitle>
-            <CardDescription>Quick access to items you already published.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {myListingsQuery.isError ? (
-              <div className="space-y-3 rounded-xl border border-dashed border-destructive/40 bg-destructive/5 p-4 text-sm text-muted-foreground">
-                <div>
-                  <p className="font-medium text-foreground">Failed to load your listings</p>
-                  <p className="mt-1">
-                    {getApiErrorMessage(myListingsQuery.error, 'Try again later.')}
-                  </p>
-                </div>
-                <Button variant="outline" size="sm" onClick={() => myListingsQuery.refetch()}>
-                  Retry
-                </Button>
-              </div>
-            ) : myListingsQuery.isLoading ? (
-              <div className="flex h-24 items-center justify-center">
-                <Loader2 className="size-5 animate-spin text-muted-foreground" />
-              </div>
-            ) : myListings.length === 0 ? (
-              <div className="rounded-xl border border-dashed border-border/70 p-4 text-sm text-muted-foreground">
-                No published templates yet.
-              </div>
-            ) : (
-              myListings.map((listing) => (
-                <div
-                  key={listing.id}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-border/70 px-3 py-2"
-                >
-                  <div>
-                    <p className="text-sm font-medium">{listing.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {listing.marketplace.priceCredits} credits
-                    </p>
-                  </div>
-                  <span className="rounded-full bg-muted px-2.5 py-1 text-[11px] text-muted-foreground">
-                    {listing.marketplace.listed ? 'Live' : 'Draft'}
-                  </span>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/70 bg-card/95">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg">How the split works</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm text-muted-foreground">
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 size-4 text-primary" />
-              <p>Creator posts a template with a cover image, prompt body, type, and credit price.</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 size-4 text-primary" />
-              <p>Buyer pays in credits and receives a private copy in their library.</p>
-            </div>
-            <div className="flex items-start gap-2">
-              <CheckCircle2 className="mt-0.5 size-4 text-primary" />
-              <p>Credits split automatically between the creator and the platform fee.</p>
-            </div>
-          </CardContent>
-        </Card>
-      </aside>
     </div>
   );
 }

@@ -41,6 +41,13 @@ const shapes = [
     { id: 'star', icon: Star, label: 'Star' },
 ];
 
+const designPromptRecipes = [
+    'Modern tech startup banner with bold headline and dark gradient background',
+    'Elegant wedding invitation with serif typography and soft neutral colors',
+    'Bold sale announcement with high contrast and large pricing callout',
+    'Minimalist logo concept with geometric shapes and neutral palette',
+] as const;
+
 const CANVAS_WIDTH = 500;
 const MIN_ELEMENT_SIZE = 24;
 const SNAP_THRESHOLD = 6;
@@ -761,7 +768,7 @@ function DesignEditorPageContent() {
                 {/* Panel Tabs */}
                 <div className="px-2 pt-2 flex gap-1 border-b border-border pb-2">
                     {([['templates', 'Templates'], ['elements', 'Elements'], ['text', 'Text'], ['ai', 'AI']] as const).map(([id, label]) => (
-                        <button key={id} onClick={() => dispatch({ type: 'setActivePanel', activePanel: id })} className={cn("flex-1 py-1.5 text-[10px] font-medium rounded-lg transition-colors", state.activePanel === id ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground")}>{label}</button>
+                        <button key={id} onClick={() => dispatch({ type: 'setActivePanel', activePanel: id })} className={cn("flex-1 py-1.5 text-xs font-medium rounded-lg transition-colors", state.activePanel === id ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:text-foreground")}>{label}</button>
                     ))}
                 </div>
 
@@ -770,23 +777,23 @@ function DesignEditorPageContent() {
                         <>
                             {/* Canvas Size */}
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Canvas Size</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Canvas Size</h4>
                                 <div className="space-y-1.5">
                                     {canvasSizes.map((size) => (
                                         <button key={size.id} onClick={() => dispatch({ type: 'setSelectedSize', selectedSize: size.id })} className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg border text-xs transition-all", state.selectedSize === size.id ? "bg-accent border-primary/20" : "bg-card border-border")}>
                                             <span className="font-medium">{size.label}</span>
-                                            <span className="text-muted-foreground text-[10px]">{size.size}</span>
+                                            <span className="text-muted-foreground text-xs">{size.size}</span>
                                         </button>
                                     ))}
                                 </div>
                             </div>
                             {/* Template Grid */}
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Templates</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Templates</h4>
                                 <div className="grid grid-cols-2 gap-2">
                                     {Array.from({ length: 6 }).map((_, i) => (
                                         <div key={i} className="aspect-square rounded-xl bg-gradient-to-br from-muted to-accent border border-border cursor-pointer hover:border-primary/30 transition-all flex items-center justify-center">
-                                            <span className="text-[10px] text-muted-foreground">Template {i + 1}</span>
+                                            <span className="text-xs text-muted-foreground">Template {i + 1}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -800,12 +807,12 @@ function DesignEditorPageContent() {
                                     {elementTools.map((tool) => (
                                     <button key={tool.id} onClick={() => tool.id !== 'ai' ? addElement(tool.id as 'text' | 'shape' | 'image') : dispatch({ type: 'setActivePanel', activePanel: 'ai' })} className="flex flex-col items-center gap-2 p-4 bg-card rounded-xl border border-border hover:border-primary/20 transition-all">
                                         <tool.icon className="size-5" />
-                                        <span className="text-[10px] font-medium">{tool.label}</span>
+                                        <span className="text-xs font-medium">{tool.label}</span>
                                     </button>
                                 ))}
                             </div>
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Shapes</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Shapes</h4>
                                 <div className="grid grid-cols-4 gap-2">
                                     {shapes.map((s) => (
                                         <button key={s.id} onClick={() => addElement('shape')} className="flex flex-col items-center gap-1 p-3 bg-card rounded-xl border border-border hover:border-primary/20 transition-all">
@@ -817,7 +824,7 @@ function DesignEditorPageContent() {
                             </div>
                             {/* Layers */}
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2"><Layers className="size-3" /> Layers</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground flex items-center gap-2"><Layers className="size-3" /> Layers</h4>
                                 <div className="space-y-1">
                                     {state.elements.map((el) => (
                                         <button
@@ -850,10 +857,10 @@ function DesignEditorPageContent() {
                         <div className="space-y-4">
                             <Button onClick={() => addElement('text')} variant="outline" className="w-full gap-2"><Plus className="size-4" /> Add Text</Button>
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Text Styles</h4>
+                                <h4 className="text-sm font-medium text-muted-foreground">Text Styles</h4>
                                 {['Title', 'Subtitle', 'Body', 'Caption'].map((style) => (
                                     <button key={style} onClick={() => addElement('text')} className="w-full text-left px-4 py-3 bg-card rounded-xl border border-border hover:border-primary/20 transition-all">
-                                        <p className={cn("font-medium", style === 'Title' ? 'text-lg' : style === 'Subtitle' ? 'text-sm' : style === 'Body' ? 'text-xs' : 'text-[10px] text-muted-foreground')}>{style}</p>
+                                        <p className={cn("font-medium", style === 'Title' ? 'text-lg' : style === 'Subtitle' ? 'text-sm' : style === 'Body' ? 'text-xs' : 'text-xs text-muted-foreground')}>{style}</p>
                                     </button>
                                 ))}
                             </div>
@@ -872,16 +879,16 @@ function DesignEditorPageContent() {
                     {state.activePanel === 'ai' && (
                         <div className="space-y-4">
                             <div className="space-y-3">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">AI Design Assistant</h4>
-                                <textarea value={state.aiPrompt} onChange={(e) => dispatch({ type: 'setAiPrompt', aiPrompt: e.target.value })} placeholder="Describe the design you want to create?" className="w-full h-32 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
+                                <h4 className="text-sm font-medium text-muted-foreground">AI Design Assistant</h4>
+                                <textarea value={state.aiPrompt} onChange={(e) => dispatch({ type: 'setAiPrompt', aiPrompt: e.target.value })} placeholder="Describe the layout, mood, and brand style you want" className="w-full h-32 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
                             </div>
                             <Button onClick={handleAiGenerate} disabled={state.isGenerating || !state.aiPrompt.trim()} className="w-full h-10 gap-2">
-                                {state.isGenerating ? (<><Loader2 className="size-4 animate-spin" /> Generating?</>) : (<><Sparkles className="size-4" /> Generate Design</>)}
+                                {state.isGenerating ? (<><Loader2 className="size-4 animate-spin" /> Generating design...</>) : (<><Sparkles className="size-4" /> Generate Design</>)}
                             </Button>
                             <div className="space-y-2">
-                                <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Quick Prompts</h4>
-                                {['Modern tech startup banner', 'Elegant wedding invitation', 'Bold sale announcement', 'Minimalist logo design'].map((p) => (
-                                    <button key={p} onClick={() => dispatch({ type: 'setAiPrompt', aiPrompt: p })} className="w-full text-left px-3 py-2 bg-card rounded-lg border border-border text-[10px] hover:bg-accent transition-colors">{p}</button>
+                                <h4 className="text-sm font-medium text-muted-foreground">Starter Prompts</h4>
+                                {designPromptRecipes.map((p) => (
+                                    <button key={p} onClick={() => dispatch({ type: 'setAiPrompt', aiPrompt: p })} className="w-full text-left px-3 py-2 bg-card rounded-lg border border-border text-xs hover:bg-accent transition-colors">{p}</button>
                                 ))}
                             </div>
                         </div>

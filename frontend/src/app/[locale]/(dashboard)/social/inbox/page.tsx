@@ -385,16 +385,16 @@ export default function InboxPage() {
                         </Button>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
-                        <div className="rounded-xl border border-white/10 bg-background/40 p-3">
-                            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Open</p>
+                        <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                            <p className="text-sm font-medium text-muted-foreground">Open</p>
                             <p className="mt-2 text-2xl font-bold">{openCount}</p>
                         </div>
-                        <div className="rounded-xl border border-white/10 bg-background/40 p-3">
-                            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Replyable</p>
+                        <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                            <p className="text-sm font-medium text-muted-foreground">Replyable</p>
                             <p className="mt-2 text-2xl font-bold">{replyableCount}</p>
                         </div>
-                        <div className="rounded-xl border border-white/10 bg-background/40 p-3">
-                            <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground">Follow-up</p>
+                        <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                            <p className="text-sm font-medium text-muted-foreground">Follow-up</p>
                             <p className="mt-2 text-2xl font-bold">{followUpCount}</p>
                         </div>
                     </div>
@@ -423,7 +423,7 @@ export default function InboxPage() {
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
                         <input 
                             className="w-full bg-muted/50 border-none rounded-lg py-2 pl-10 pr-4 text-sm focus:ring-1 focus:ring-primary"
-                            placeholder="Search interactions?"
+                            placeholder="Search interactions"
                             value={state.searchQuery}
                             onChange={(e) => dispatch({ type: 'setSearchQuery', searchQuery: e.target.value })}
                         />
@@ -461,7 +461,7 @@ export default function InboxPage() {
                                                     {item.platform === 'facebook' && <Facebook className="size-3 text-[#1877F2]" />}
                                                     {item.platform === 'twitter' && <Twitter className="size-3 text-foreground" />}
                                                     {item.platform === 'linkedin' && <Linkedin className="size-3 text-[#0A66C2]" />}
-                                                    <span className="text-[10px] uppercase text-muted-foreground font-bold tracking-tighter">{item.type}</span>
+                                                    <span className="text-xs font-medium text-muted-foreground">{item.type}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -471,21 +471,21 @@ export default function InboxPage() {
                                     {item.content}
                                 </p>
                                     {item.followUp && (
-                                        <div className="mt-3 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-400">
+                                        <div className="mt-3 inline-flex rounded-full bg-amber-500/15 px-2 py-0.5 text-xs font-medium text-amber-400">
                                             Follow-up
                                         </div>
                                     )}
                                     {(item.assignedTo || item.labels?.length) && (
                                         <div className="mt-3 flex flex-wrap gap-2">
                                             {item.assignedTo && (
-                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary">
+                                                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                                                     {item.assignedTo}
                                                 </span>
                                             )}
                                             {(item.labels ?? []).slice(0, 2).map((label) => (
                                                 <span
                                                     key={label}
-                                                    className="rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground"
+                                                    className="rounded-full bg-muted/70 px-2 py-0.5 text-xs font-medium text-muted-foreground"
                                                 >
                                                     {label}
                                                 </span>
@@ -516,10 +516,10 @@ export default function InboxPage() {
                             className="flex-1 flex flex-col h-full"
                         >
                             {/* Header */}
-                            <div className="p-6 border-b border-border bg-white/[0.02] flex items-center justify-between">
+                            <div className="p-6 border-b border-border bg-card/60 flex items-center justify-between">
                                 <div className="flex items-center gap-4">
                                     <h3 className="text-lg font-semibold">Conversation with {selectedInteraction.user}</h3>
-                                    <Button variant="outline" size="sm" className="h-7 text-[10px] uppercase font-bold tracking-wider">
+                                    <Button variant="outline" size="sm" className="h-7 text-xs font-medium">
                                         View on {selectedInteraction.platform}
                                         <ArrowUpRight className="size-3 ml-1.5" />
                                     </Button>
@@ -557,7 +557,7 @@ export default function InboxPage() {
                             <div className="flex-1 p-8 overflow-auto  gap-y-6">
                                 <div className="flex gap-4 max-w-2xl">
                                     <div className="size-10 rounded-full bg-muted shrink-0" />
-                                    <GlassCard variant="morphism" className="border border-white/5 bg-white/5 p-6 rounded-2xl rounded-tl-none">
+                                    <GlassCard variant="morphism" className="border border-border/40 bg-muted/50 p-6 rounded-2xl rounded-tl-none">
                                         <div className="flex items-center justify-between mb-2">
                                             <span className="font-bold text-sm">{selectedInteraction.user}</span>
                                             <span className="text-[10px] text-muted-foreground">{selectedInteraction.time}</span>
@@ -567,7 +567,7 @@ export default function InboxPage() {
                                 </div>
 
                                 <div className="max-w-2xl space-y-3">
-                                    <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Saved replies</p>
+                                    <p className="text-sm font-medium text-muted-foreground">Saved replies</p>
                                     <div className="flex flex-wrap gap-2">
                                         {SAVED_REPLIES.map((snippet) => (
                                             <Button
@@ -585,7 +585,7 @@ export default function InboxPage() {
 
                                 <div className="max-w-2xl space-y-3">
                                     <div className="flex items-center justify-between">
-                                        <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Assignment & labels</p>
+                                        <p className="text-sm font-medium text-muted-foreground">Assignment and labels</p>
                                         <span className="text-xs text-muted-foreground">Current assignee: {selectedAssignment}</span>
                                     </div>
                                     <div className="flex flex-wrap gap-2">
@@ -609,7 +609,7 @@ export default function InboxPage() {
                                             selectedLabels.map((label) => (
                                                 <span
                                                     key={label}
-                                                    className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-primary"
+                                                    className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary"
                                                 >
                                                     {label}
                                                 </span>
@@ -633,8 +633,8 @@ export default function InboxPage() {
                             </div>
 
                             {/* Input Area */}
-                            <div className="p-6 border-t border-border bg-white/[0.02]">
-                                <GlassCard variant="morphism" className="p-4 border border-white/10 flex flex-col gap-4">
+                            <div className="p-6 border-t border-border bg-card/60">
+                                <GlassCard variant="morphism" className="p-4 border border-border/60 flex flex-col gap-4">
                                     <textarea 
                                         className="w-full bg-transparent border-none focus:ring-0 text-sm resize-none min-h-[100px]"
                                         placeholder={`Reply to ${selectedInteraction.user}...`}
@@ -677,9 +677,9 @@ export default function InboxPage() {
                                          <Plus className="size-4 text-primary" />
                                      </div>
                                 </div>
-                                <h3 className="text-2xl font-semibold mb-2">Select a Conversation</h3>
+                                <h3 className="mb-2 text-2xl font-semibold">Select a conversation</h3>
                                 <p className="text-muted-foreground max-w-sm text-sm">
-                                    Click on an interaction from the sidebar to view the conversation details and reply across all your social channels.
+                                    Pick a thread from the sidebar to review the full conversation and reply from one place.
                                 </p>
                             </m.div>
                             

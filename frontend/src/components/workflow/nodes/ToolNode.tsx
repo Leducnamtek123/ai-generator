@@ -70,12 +70,12 @@ export function ToolNode({ id, data, selected }: ToolNodeProps) {
                     </div>
 
                     <div className="p-3 space-y-2">
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Input</div>
+                        <div className="text-[10px] text-muted-foreground">Input</div>
                         <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs text-foreground min-h-[56px]">
                             {data.prompt || data.primaryUrl || data.secondaryUrl || 'Configure the node in the properties panel.'}
                         </div>
 
-                        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Output</div>
+                        <div className="text-[10px] text-muted-foreground">Output</div>
                         <div className="rounded-lg border border-border bg-muted/40 p-2 text-xs text-foreground min-h-[56px]">
                             {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
                                 <div className="flex items-center gap-2 text-fuchsia-400">

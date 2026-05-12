@@ -168,12 +168,12 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
             )}
           >
             {data.status === NodeStatus.PROCESSING || data.status === NodeStatus.QUEUED ? (
-              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-zinc-950/40 backdrop-blur-[2px]">
+              <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-background/75 backdrop-blur-[2px]">
                 <div className="relative flex size-12 items-center justify-center">
                   <div className="absolute inset-0 animate-ping rounded-full border-2 border-blue-500/20" />
                   <Loader2 className="relative z-20 size-6 animate-spin text-blue-500" />
                 </div>
-                <span className="mt-3 animate-pulse text-[10px] font-bold tracking-widest text-blue-400 uppercase">
+                <span className="mt-3 animate-pulse text-xs font-medium text-blue-400">
                   {data.status === NodeStatus.QUEUED ? "In Queue" : "Generating..."}
                 </span>
               </div>
@@ -203,13 +203,13 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                 />
               </div>
             ) : (
-              <div className="flex flex-col items-center gap-3 py-6 text-white/5 italic">
+              <div className="flex flex-col items-center gap-3 py-6 italic text-muted-foreground/20">
                 <ImageIcon className={data.isPreview ? "h-6 w-6" : "h-12 w-12"} />
               </div>
             )}
 
             {!data.isPreview && (
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-zinc-950/80 to-transparent p-4">
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-background/90 to-transparent p-4">
                 {data.inputs?.prompt ? (
                   <div className="space-y-1 rounded-lg border border-blue-500/20 bg-blue-500/10 px-3 py-2">
                     <p className="text-sm font-medium text-blue-400">Prompt connected</p>
@@ -226,7 +226,7 @@ export function GeneratorNode({ id, data, selected }: GeneratorNodeProps) {
                   </div>
                 ) : (
                   <textarea
-                    className="nodrag nopan nowheel custom-scrollbar h-16 w-full resize-none rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-sm text-white/80 outline-none placeholder:text-white/35 focus:border-blue-400/70 focus:bg-black/50 focus:ring-2 focus:ring-blue-500/20"
+                    className="nodrag nopan nowheel custom-scrollbar h-16 w-full resize-none rounded-lg border border-border bg-background/80 px-3 py-2 text-sm text-foreground/80 outline-none placeholder:text-muted-foreground focus:border-blue-400/70 focus:bg-background/95 focus:ring-2 focus:ring-blue-500/20"
                     placeholder="Describe the image?"
                     value={localPrompt}
                     onChange={handlePromptChange}

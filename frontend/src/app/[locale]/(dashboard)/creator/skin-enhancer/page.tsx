@@ -389,7 +389,7 @@ function SkinEnhancerPageContent() {
                         {isProjectLoading ? 'Loading project...' : projectError ?? ''}
                     </span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     {/* Upload */}
                     <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative aspect-[3/4] rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3">
                         {state.uploadedImage ? (
@@ -403,7 +403,7 @@ function SkinEnhancerPageContent() {
 
                     {/* Mode */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Enhancement Mode</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Enhancement Mode</h4>
                         <div className="grid grid-cols-2 gap-1.5">
                             {enhancementModes.map((m) => (
                                 <button key={m.id} onClick={() => dispatch({ type: 'setMode', mode: m.id })} className={cn("p-3 rounded-xl border transition-all text-left", state.mode === m.id ? "bg-accent border-primary/20" : "bg-card border-border")}>
@@ -416,7 +416,7 @@ function SkinEnhancerPageContent() {
 
                     {/* Quick Presets */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Quick Presets</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Quick Presets</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {presets.map((p) => (
                                 <button key={p.id} onClick={() => togglePreset(p.id)} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all inline-flex items-center gap-1.5", state.selectedPresets.includes(p.id) ? "bg-accent border border-primary/20 text-foreground" : "bg-card border border-border text-muted-foreground")}>
@@ -437,7 +437,7 @@ function SkinEnhancerPageContent() {
                             { label: 'Eye Enhancement', value: state.eyeEnhance, setValue: (value: number) => dispatch({ type: 'setEyeEnhance', eyeEnhance: value }) },
                         ].map((ctrl) => (
                             <div key={ctrl.label} className="space-y-3">
-                                <div className="flex items-center justify-between"><Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">{ctrl.label}</Label><span className="text-[11px] font-mono">{ctrl.value}%</span></div>
+                                <div className="flex items-center justify-between"><Label className="text-sm font-medium text-muted-foreground">{ctrl.label}</Label><span className="text-[11px] font-mono">{ctrl.value}%</span></div>
                                 <Slider min={0} max={100} step={5} value={[ctrl.value]} onValueChange={([v]) => ctrl.setValue(v)} />
                             </div>
                         ))}

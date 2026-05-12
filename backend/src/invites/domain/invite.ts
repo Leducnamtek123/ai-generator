@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { OrgRole } from '../../members/domain/member';
+import { WorkspaceRole } from '../../members/domain/member';
 
 export class Invite {
   @ApiProperty({ type: String })
@@ -9,13 +9,13 @@ export class Invite {
   authorId?: number | null;
 
   @ApiProperty({ type: String })
-  organizationId: string;
+  workspaceId: string;
 
   @ApiProperty({ type: String })
   email: string;
 
-  @ApiProperty({ enum: OrgRole })
-  role: OrgRole;
+  @ApiProperty({ enum: WorkspaceRole })
+  role: WorkspaceRole;
 
   @ApiProperty()
   createdAt: Date;

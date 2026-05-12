@@ -38,10 +38,10 @@ class CreditReserveDto {
   @IsString()
   userId: string;
 
-  @ApiPropertyOptional({ description: 'Billing scope type', enum: ['user', 'organization'] })
+  @ApiPropertyOptional({ description: 'Billing scope type', enum: ['user', 'workspace'] })
   @IsOptional()
   @IsString()
-  scopeType?: 'user' | 'organization';
+  scopeType?: 'user' | 'workspace';
 
   @ApiPropertyOptional({ description: 'Billing scope identifier' })
   @IsOptional()

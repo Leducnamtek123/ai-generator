@@ -1,0 +1,39 @@
+{
+  "Social": {
+    "title": "Social Hub",
+    "headline": "Social workspace command center",
+    "description": "Track connected pages, scheduling queue, inbox pressure, and live performance from one operational view.",
+    "startWithChannels": "Manage Channels",
+    "openInbox": "Open Inbox",
+    "cards": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "See channel health, queue pressure, inbox load, and performance at a glance.",
+        "action": "Open Dashboard"
+      },
+      "channels": {
+        "title": "Channels",
+        "description": "Connect Facebook Pages first, then extend the workspace to other providers.",
+        "action": "Open Channels"
+      },
+      "inbox": {
+        "title": "Inbox",
+        "description": "Reply to comments and messages from a unified interaction stream.",
+        "action": "Open Inbox"
+      },
+      "calendar": {
+        "title": "Calendar",
+        "description": "Plan month, week, and day views around the scheduling queue.",
+        "action": "Open Calendar"
+      }
+    },
+    "pipeline": {
+      "source": "Connect",
+      "draft": "Draft",
+      "review": "Approve",
+      "publish": "Publish",
+      "monitor": "Respond",
+      "analytics": "Measure"
+    }
+  }
+}

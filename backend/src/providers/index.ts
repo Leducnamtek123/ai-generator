@@ -8,3 +8,4 @@ export * from './adapters/leonardo.adapter';
 export * from './adapters/runway.adapter';
 export * from './adapters/elevenlabs.adapter';
 export * from './adapters/fal.adapter';
+export * from './adapters/kie.adapter';

@@ -1,6 +1,6 @@
 import { api } from "@/lib/api";
 
-type BillingScopeType = "user" | "organization";
+type BillingScopeType = "user" | "workspace";
 export type BillingPlanSegment = "individual" | "team";
 
 export type BillingPlanId = "trial" | "starter" | "pro" | "team" | "enterprise";
@@ -69,7 +69,7 @@ export interface BillingWalletSummary {
 }
 
 export interface BillingDetails {
-  organization: {
+  workspace: {
     id: string;
     name: string;
     slug: string;
@@ -95,8 +95,8 @@ export const billingApi = {
     const res = await api.get("/billing/me");
     return res.data;
   },
-  get: async (orgSlug: string): Promise<BillingDetails> => {
-    const res = await api.get(`/orgs/${orgSlug}/billing`);
+  get: async (workspaceSlug: string): Promise<BillingDetails> => {
+    const res = await api.get(`/workspaces/${workspaceSlug}/billing`);
     return res.data;
   },
 };

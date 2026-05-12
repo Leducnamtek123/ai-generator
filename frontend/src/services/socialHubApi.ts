@@ -87,6 +87,19 @@ export interface SocialAnalytics {
   chartData: Array<{
     name: string;
     engagement: number;
+    likes: number;
+    comments: number;
+    shares: number;
+  }>;
+  recentPosts?: Array<{
+    id: number;
+    content: string;
+    platform?: string;
+    publishedAt: string | null;
+    likes: number;
+    comments: number;
+    shares: number;
+    views: number;
   }>;
   platformBreakdown?: Record<
     string,

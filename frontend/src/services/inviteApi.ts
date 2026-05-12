@@ -4,13 +4,13 @@ export interface Invite {
   id: string;
   email: string;
   role: string;
-  orgId: string;
+  workspaceId: string;
   createdAt: string;
 }
 
 export interface InviteDetails {
   invite: Invite;
-  org?: { name: string; slug: string };
+  workspace?: { name: string; slug: string };
   author?: { userInfo?: { name: string; email: string } };
 }
 
@@ -19,17 +19,17 @@ export interface CreateInviteData {
   role: "ADMIN" | "MEMBER" | "BILLING";
 }
 
-// Matches: InvitesController with mixed routes
+// Matches: InvitesController with workspace routes
 export const inviteApi = {
-  // POST /orgs/:orgSlug/invites
-  create: async (orgSlug: string, data: CreateInviteData): Promise<Invite> => {
-    const res = await api.post(`/orgs/${orgSlug}/invites`, data);
+  // POST /workspaces/:workspaceSlug/invites
+  create: async (workspaceSlug: string, data: CreateInviteData): Promise<Invite> => {
+    const res = await api.post(`/workspaces/${workspaceSlug}/invites`, data);
     return res.data;
   },
 
-  // GET /orgs/:orgSlug/invites
-  list: async (orgSlug: string): Promise<Invite[]> => {
-    const res = await api.get(`/orgs/${orgSlug}/invites`);
+  // GET /workspaces/:workspaceSlug/invites
+  list: async (workspaceSlug: string): Promise<Invite[]> => {
+    const res = await api.get(`/workspaces/${workspaceSlug}/invites`);
     return res.data;
   },
 
@@ -49,9 +49,9 @@ export const inviteApi = {
     await api.post(`/invites/${inviteId}/reject`);
   },
 
-  // DELETE /orgs/:orgSlug/invites/:inviteId
-  delete: async (orgSlug: string, inviteId: string): Promise<void> => {
-    await api.delete(`/orgs/${orgSlug}/invites/${inviteId}`);
+  // DELETE /workspaces/:workspaceSlug/invites/:inviteId
+  delete: async (workspaceSlug: string, inviteId: string): Promise<void> => {
+    await api.delete(`/workspaces/${workspaceSlug}/invites/${inviteId}`);
   },
 
   // For invite acceptance page - get details 

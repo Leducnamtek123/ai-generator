@@ -2,9 +2,9 @@
 
 import React from 'react';
 import { useTemplates } from '@/hooks/useTemplates';
-import { Loader2 } from 'lucide-react';
 import { Button } from '@/ui/button';
 import { TemplateCard } from './TemplateCard';
+import { TemplateCardSkeleton } from '@/components/common/loading-skeletons';
 
 interface TemplateGalleryProps {
     hidePagination?: boolean;
@@ -28,8 +28,10 @@ export function TemplateGallery({ hidePagination = false }: TemplateGalleryProps
 
     if (isLoading) {
         return (
-            <div className="flex justify-center py-12">
-                <Loader2 className="size-8 animate-spin text-muted-foreground" />
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {Array.from({ length: 8 }, (_, index) => (
+                    <TemplateCardSkeleton key={`template-skeleton-${index}`} />
+                ))}
             </div>
         );
     }

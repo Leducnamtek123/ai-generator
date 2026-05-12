@@ -19,5 +19,5 @@ export class CreateProjectDto {
 
   @IsOptional()
   @IsString()
-  organizationId?: string;
+  workspaceId?: string;
 }

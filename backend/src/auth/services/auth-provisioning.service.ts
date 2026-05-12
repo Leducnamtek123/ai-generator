@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { User } from '../../users/domain/user';
 import { UsersService } from '../../users/users.service';
-import { OrganizationsService } from '../../organizations/organizations.service';
+import { WorkspacesService } from '../../workspaces/workspaces.service';
 import { ProjectsService } from '../../projects/projects.service';
 
 @Injectable()
@@ -9,38 +9,38 @@ export class AuthProvisioningService {
   constructor(
     private usersService: UsersService,
     private projectsService: ProjectsService,
-    private organizationsService: OrganizationsService,
+    private workspacesService: WorkspacesService,
   ) {}
 
-  async ensureDefaultOrganization(userId: User['id']): Promise<void> {
+  async ensureDefaultWorkspace(userId: User['id']): Promise<void> {
     const numericId = Number(userId);
     try {
       const user = await this.usersService.findById(userId);
       if (!user) return;
 
-      const orgs = await this.organizationsService.findByUserId(numericId);
+      const workspaces = await this.workspacesService.findByUserId(numericId);
       
-      // If user has a domain, try to find organizations to auto-join
+      // If user has a domain, try to find workspaces to auto-join
       if (user.email && user.email.includes('@')) {
         const domain = user.email.split('@')[1];
-        // Note: You would need a method in OrganizationsService to find by domain and autoAttach
+        // Note: You would need a method in WorkspacesService to find by domain and autoAttach.
         // For now, let's assume we can query them.
-        // This is a placeholder for actual domain-based join logic which should be in OrganizationsService
-        await this.organizationsService.autoJoinByDomain(numericId, domain);
+        // This is a placeholder for actual domain-based join logic which should be in WorkspacesService.
+        await this.workspacesService.autoJoinByDomain(numericId, domain);
       }
 
-      if (orgs.length === 0) {
-        await this.organizationsService.create(
+      if (workspaces.length === 0) {
+        await this.workspacesService.create(
           {
             name: user?.firstName ? `${user.firstName}'s Personal Space` : 'Personal Workspace',
-            description: 'Default personal organization',
+            description: 'Default personal workspace',
             type: 'PERSONAL',
           } as any,
           numericId,
         );
       }
     } catch (error) {
-      console.error('Failed to ensure default organization:', error);
+      console.error('Failed to ensure default workspace:', error);
     }
   }
 
@@ -49,14 +49,15 @@ export class AuthProvisioningService {
     try {
       const projects = await this.projectsService.findAll(numericId);
       if (projects.length === 0) {
-        const orgs = await this.organizationsService.findByUserId(numericId);
-        const orgId = orgs.length > 0 ? orgs[0].id : undefined;
+        const workspaces = await this.workspacesService.findByUserId(numericId);
+        const workspaceId =
+          workspaces.length > 0 ? workspaces[0].id : undefined;
 
         await this.projectsService.create(
           {
             name: 'General',
             description: 'Default personal workspace',
-            organizationId: orgId,
+            workspaceId: workspaceId,
           } as any,
           numericId,
         );
@@ -67,7 +68,7 @@ export class AuthProvisioningService {
   }
 
   async provisionUser(userId: User['id']): Promise<void> {
-    await this.ensureDefaultOrganization(userId);
+    await this.ensureDefaultWorkspace(userId);
     await this.ensureDefaultProject(userId);
   }
 }

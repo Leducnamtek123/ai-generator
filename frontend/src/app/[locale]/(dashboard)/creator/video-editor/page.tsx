@@ -85,6 +85,108 @@ const aiFeatures = [
     { id: 'ai-broll', label: 'AI B-Roll', description: 'Generate relevant B-roll clips', icon: Film },
 ];
 
+const timelineStarterPresets: Array<{
+    id: string;
+    label: string;
+    description: string;
+    tracks: Track[];
+}> = [
+    {
+        id: 'social-teaser',
+        label: 'Social teaser',
+        description: 'A short hook, body, and CTA sequence for social cutdowns',
+        tracks: [
+            {
+                id: 'v1',
+                name: 'Video 1',
+                type: 'video' as const,
+                clips: [
+                    { id: 'teaser-v1', name: 'Hook', start: 0, duration: 4, color: 'bg-cyan-500/30 border-cyan-500/50' },
+                    { id: 'teaser-v2', name: 'Proof', start: 5, duration: 7, color: 'bg-violet-500/30 border-violet-500/50' },
+                ],
+            },
+            {
+                id: 'a1',
+                name: 'Audio 1',
+                type: 'audio' as const,
+                clips: [
+                    { id: 'teaser-a1', name: 'Music bed', start: 0, duration: 12, color: 'bg-emerald-500/30 border-emerald-500/50', mediaType: 'audio' as const },
+                ],
+            },
+            {
+                id: 't1',
+                name: 'Text 1',
+                type: 'text' as const,
+                clips: [
+                    { id: 'teaser-t1', name: 'Title card', start: 0.5, duration: 4.5, color: 'bg-amber-500/30 border-amber-500/50' },
+                ],
+            },
+            { id: 'e1', name: 'Effects', type: 'effect' as const, clips: [] },
+        ],
+    },
+    {
+        id: 'product-launch',
+        label: 'Product launch',
+        description: 'Problem, demo, and ending shot for a promo edit',
+        tracks: [
+            {
+                id: 'v1',
+                name: 'Video 1',
+                type: 'video' as const,
+                clips: [
+                    { id: 'launch-v1', name: 'Problem', start: 0, duration: 5, color: 'bg-pink-500/30 border-pink-500/50' },
+                    { id: 'launch-v2', name: 'Demo', start: 6, duration: 8, color: 'bg-blue-500/30 border-blue-500/50' },
+                    { id: 'launch-v3', name: 'Closing shot', start: 15, duration: 4, color: 'bg-orange-500/30 border-orange-500/50' },
+                ],
+            },
+            { id: 'a1', name: 'Audio 1', type: 'audio' as const, clips: [] },
+            {
+                id: 't1',
+                name: 'Text 1',
+                type: 'text' as const,
+                clips: [
+                    { id: 'launch-t1', name: 'Headline', start: 0.5, duration: 4.5, color: 'bg-fuchsia-500/30 border-fuchsia-500/50' },
+                ],
+            },
+            { id: 'e1', name: 'Effects', type: 'effect' as const, clips: [] },
+        ],
+    },
+    {
+        id: 'training-recap',
+        label: 'Training recap',
+        description: 'Intro, lesson, and recap structure for tutorial edits',
+        tracks: [
+            {
+                id: 'v1',
+                name: 'Video 1',
+                type: 'video' as const,
+                clips: [
+                    { id: 'train-v1', name: 'Intro', start: 0, duration: 3.5, color: 'bg-sky-500/30 border-sky-500/50' },
+                    { id: 'train-v2', name: 'Lesson', start: 4.5, duration: 9, color: 'bg-lime-500/30 border-lime-500/50' },
+                    { id: 'train-v3', name: 'Recap', start: 14, duration: 4, color: 'bg-indigo-500/30 border-indigo-500/50' },
+                ],
+            },
+            {
+                id: 'a1',
+                name: 'Audio 1',
+                type: 'audio' as const,
+                clips: [
+                    { id: 'train-a1', name: 'Narration bed', start: 0, duration: 18, color: 'bg-emerald-500/30 border-emerald-500/50', mediaType: 'audio' as const },
+                ],
+            },
+            {
+                id: 't1',
+                name: 'Text 1',
+                type: 'text' as const,
+                clips: [
+                    { id: 'train-t1', name: 'Section label', start: 4.8, duration: 3, color: 'bg-amber-500/30 border-amber-500/50' },
+                ],
+            },
+            { id: 'e1', name: 'Effects', type: 'effect' as const, clips: [] },
+        ],
+    },
+];
+
 type VideoEditorState = {
     tracks: Track[];
     isPlaying: boolean;
@@ -458,7 +560,7 @@ function VideoEditorPageContent() {
             }
 
             dispatch({ type: 'setMediaItems', mediaItems: [] });
-            dispatch({ type: 'setMediaLoadError', mediaLoadError: 'Unable to load media library right now.' });
+            dispatch({ type: 'setMediaLoadError', mediaLoadError: 'Unable to load media assets right now.' });
             dispatch({ type: 'setMediaLoadState', mediaLoadState: 'error' });
         }
     }, []);
@@ -504,6 +606,31 @@ function VideoEditorPageContent() {
             console.error('Failed to start AI video action', err);
             dispatch({ type: 'setProcessing', isProcessing: false });
         }
+    };
+
+    const handleLoadStarterPreset = (presetId: string) => {
+        const preset = timelineStarterPresets.find((item) => item.id === presetId);
+        if (!preset) {
+            return;
+        }
+
+        dispatch({
+            type: 'hydrateSnapshot',
+            snapshot: {
+                tracks: preset.tracks.map((track) => ({
+                    ...track,
+                    clips: track.clips.map((clip) => ({ ...clip })),
+                })),
+                isPlaying: false,
+                currentTime: 0,
+                selectedClipId: preset.tracks[0]?.clips[0]?.id ?? null,
+                activePanel: 'media',
+                zoom: 100,
+                isProcessing: false,
+                selectedMediaId: null,
+            },
+        });
+        toast.success(`Loaded ${preset.label.toLowerCase()}.`);
     };
 
     const handleUndo = () => {
@@ -789,7 +916,7 @@ function VideoEditorPageContent() {
                                 {state.isProcessing && (
                                     <div className="flex items-center gap-2 px-3 py-2 bg-primary/10 rounded-lg">
                                         <Loader2 className="size-4 animate-spin text-primary" />
-                                        <span className="text-xs text-primary">AI processing?</span>
+                                        <span className="text-xs text-primary">AI processing in progress</span>
                                     </div>
                                 )}
                             </div>
@@ -860,7 +987,10 @@ function VideoEditorPageContent() {
                                 />
                             )
                         ) : (
-                            <p className="text-muted-foreground/50 text-sm">Video Preview</p>
+                            <div className="text-center space-y-2 px-6">
+                                <p className="text-sm font-medium text-muted-foreground">No preview selected</p>
+                                <p className="text-xs text-muted-foreground/70">Import media or load a starter preset to build the first timeline.</p>
+                            </div>
                         )}
                         {previewMedia && (
                             <div className="absolute left-4 top-4 rounded-md bg-black/60 px-3 py-2 text-xs text-white">
@@ -938,11 +1068,25 @@ function VideoEditorPageContent() {
                         );
                     }) : (
                         <div className="flex h-full items-center justify-center px-6 py-8 text-center">
-                            <div className="max-w-md space-y-2">
-                                <p className="text-sm font-medium">Your timeline is empty</p>
-                                <p className="text-xs text-muted-foreground">
-                                    Import media to create the first clip and start building a project.
-                                </p>
+                            <div className="max-w-2xl space-y-4">
+                                <div className="space-y-2">
+                                    <p className="text-sm font-medium">Start with a timeline starter</p>
+                                    <p className="text-xs text-muted-foreground">
+                                        Import media, or load a starter preset to get a real sequence on the canvas before you refine it.
+                                    </p>
+                                </div>
+                                <div className="grid gap-2 sm:grid-cols-3">
+                                    {timelineStarterPresets.map((preset) => (
+                                        <button
+                                            key={preset.id}
+                                            onClick={() => handleLoadStarterPreset(preset.id)}
+                                            className="rounded-xl border border-border bg-card px-3 py-3 text-left transition-all hover:border-primary/20"
+                                        >
+                                            <p className="text-xs font-medium">{preset.label}</p>
+                                            <p className="mt-1 text-[10px] text-muted-foreground">{preset.description}</p>
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
                         </div>
                     )}

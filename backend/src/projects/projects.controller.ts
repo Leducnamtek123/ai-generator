@@ -40,7 +40,7 @@ export class ProjectsController {
     return this.projectsService.create(
       createProjectDto,
       req.user.id,
-      createProjectDto.organizationId,
+      createProjectDto.workspaceId,
     );
   }
 
@@ -62,7 +62,7 @@ export class ProjectsController {
     return infinityPagination(
       await this.projectsService.findManyWithPagination({
         userId: req.user.id,
-        organizationId: query?.filters?.organizationId,
+        workspaceId: query?.filters?.workspaceId,
         filterOptions: query?.filters,
         sortOptions: query?.sort,
         paginationOptions: {

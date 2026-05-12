@@ -29,7 +29,7 @@ function isAdminRoute(pathname: string): boolean {
 }
 
 function isWorkflowEditorAlias(pathname: string): boolean {
-  return pathname === "/workflow-editor" || pathname === "/spaces";
+  return pathname === "/workflow-editor";
 }
 
 function getRedirectUrl(req: NextRequest, pathname: string) {
@@ -109,8 +109,12 @@ export default async function proxy(req: NextRequest) {
           ? communityBase
         : gatewayBase;
 
-    // Remove the local '/api' prefix and append to backend base
-    const targetPath = pathname.replace(/^\/api/, '');
+    // Remove the local API prefix and append to the configured backend base.
+    // Handle both `/api/...` and `/api/v1/...` so proxied file URLs do not get
+    // a duplicated `/v1` segment.
+    const targetPath = pathname.startsWith('/api/v1/')
+      ? pathname.replace(/^\/api\/v1/, '')
+      : pathname.replace(/^\/api/, '');
     const url = new URL(backendBase + targetPath);
     url.search = req.nextUrl.search;
 
@@ -144,6 +148,9 @@ export default async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Matcher ignoring common static files but INCLUDING api routes for proxying
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico)$).*)"],
+  // Matcher ignoring common static files but including API routes for proxying
+  matcher: [
+    "/api/:path*",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|gif|webp|ico)$).*)",
+  ],
 };

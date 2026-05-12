@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { useLocale } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { Link, usePathname } from '@/i18n/navigation';
 import { useAuth } from '@/providers';
 import {
@@ -23,6 +23,7 @@ import {
     type NavigationConfig,
 } from './navigation-data';
 import { useSiteConfig } from '@/hooks/queries/useSiteConfig';
+import { translateLayoutLabel } from './i18n-helpers';
 
 interface MobileNavItem {
     icon: LucideIcon;
@@ -37,6 +38,7 @@ interface NavItemProps {
 }
 
 function NavItem({ item, pathname }: NavItemProps) {
+    const t = useTranslations('Layout');
     return (
     <Link
         href={item.href}
@@ -44,12 +46,9 @@ function NavItem({ item, pathname }: NavItemProps) {
             "flex items-center w-full px-4 py-3 text-base text-muted-foreground rounded-xl transition-all duration-200 hover:text-foreground hover:bg-accent",
             pathname === item.href && "text-foreground bg-accent font-medium"
         )}
-    >
+        >
         <item.icon className="size-5 mr-3 shrink-0" />
-        <span>{item.label}</span>
-        {item.isNew && (
-            <span className="ml-auto px-1.5 py-0.5 text-[10px] font-bold text-primary bg-primary/10 rounded">New</span>
-        )}
+        <span>{translateLayoutLabel(t, item.label)}</span>
     </Link>
     );
 }
@@ -63,6 +62,7 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
     const pathname = usePathname();
     const { user } = useAuth();
     const locale = useLocale();
+    const t = useTranslations('Layout');
     const navigationConfig = useSiteConfig('navigation', locale);
     const navigationData = mergeNavigationData(
         navigationConfig.data?.value as NavigationConfig | undefined,
@@ -101,7 +101,7 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                     <button
                         type="button"
                         aria-label="Close mobile navigation"
-                        className="fixed inset-0 bg-zinc-950/80 z-[99] backdrop-blur-sm"
+                        className="fixed inset-0 z-[99] bg-background/80 backdrop-blur-sm"
                         onClick={() => onOpenChange(false)}
                     >
                         <span className="sr-only">Close mobile navigation</span>
@@ -123,7 +123,7 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                                 </div>
                                 <div className="flex flex-col items-center">
                                     <span className="text-2xl font-bold text-foreground tracking-tight">PaintAI</span>
-                                    <span className="text-xs text-muted-foreground font-medium mt-1">Your paint, your choice</span>
+                                    <span className="text-xs text-muted-foreground font-medium mt-1">{t('brandTagline')}</span>
                                 </div>
                             </div>
                         </div>
@@ -134,9 +134,9 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                             <div>
                                 <button className="flex items-center gap-2 text-sm text-foreground bg-muted px-3 py-2 rounded-lg w-full">
                                     <div className="size-5 rounded bg-destructive flex items-center justify-center text-[10px] font-bold text-destructive-foreground">
-                                        {WORKSPACE_ROOT.label.slice(0, 1)}
+                                        {t('workspace.personal').slice(0, 1)}
                                     </div>
-                                    <span className="flex-1 text-left">{WORKSPACE_ROOT.label}</span>
+                                    <span className="flex-1 text-left">{t('workspace.personal')}</span>
                                     <ChevronDown className="size-4 text-muted-foreground" />
                                 </button>
                             </div>
@@ -150,8 +150,8 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
 
                             {/* Social Hub */}
                             <div className="space-y-1">
-                                <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Social Hub
+                                <div className="px-4 py-2 text-sm font-medium text-muted-foreground">
+                                    {t('sections.socialHub')}
                                 </div>
                                 {navigationData.socialItems.map((item) => (
                                     <NavItem key={item.label} item={item} pathname={pathname} />
@@ -160,8 +160,8 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
 
                             {/* Pinned */}
                             <div className="space-y-1">
-                                <div className="px-4 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                                    Pinned Tools
+                                <div className="px-4 py-2 text-sm font-medium text-muted-foreground">
+                                    {t('sections.pinned')}
                                 </div>
                                 {pinnedTools.map((item) => (
                                     <NavItem key={item.id} item={item} pathname={pathname} />
@@ -179,8 +179,8 @@ export function MobileNav({ isOpen, onOpenChange }: MobileNavProps) {
                         {/* Footer */}
                         <div className="p-4 border-t border-border bg-card">
                             <div className="rounded-xl bg-pricing/10 p-4 border border-pricing/20 mb-4">
-                                <h4 className="text-sm font-semibold text-pricing">Upgrade plan</h4>
-                                <p className="text-xs text-muted-foreground mt-1">Unlock more credits and team features</p>
+                                <h4 className="text-sm font-semibold text-pricing">{t('billing.upgradePlan')}</h4>
+                                <p className="text-xs text-muted-foreground mt-1">{t('billing.unlockMoreCreditsAndWorkspaceFeatures')}</p>
                             </div>
 
                             <div className="flex items-center justify-between text-muted-foreground">

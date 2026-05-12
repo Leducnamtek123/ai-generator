@@ -3,13 +3,13 @@ import { InvitesService } from './invites.service';
 import { InvitesController } from './invites.controller';
 import { InviteRelationalPersistenceModule } from './infrastructure/persistence/relational/relational-persistence.module';
 import { MemberRelationalPersistenceModule } from '../members/infrastructure/persistence/relational/relational-persistence.module';
-import { OrgRelationalPersistenceModule } from '../organizations/infrastructure/persistence/relational/relational-persistence.module';
+import { WorkspaceRelationalPersistenceModule } from '../workspaces/infrastructure/persistence/relational/relational-persistence.module';
 
 @Module({
   imports: [
     InviteRelationalPersistenceModule,
     MemberRelationalPersistenceModule,
-    OrgRelationalPersistenceModule,
+    WorkspaceRelationalPersistenceModule,
   ],
   controllers: [InvitesController],
   providers: [InvitesService],

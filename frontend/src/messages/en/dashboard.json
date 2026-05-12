@@ -1,0 +1,28 @@
+{
+  "Dashboard": {
+    "heroTitle": "What would you like to create today?",
+    "allTools": "All tools",
+    "recentCreations": "Recent creations",
+    "viewAll": "View all",
+    "noRecentCreations": "No recent creations yet",
+    "startFirstSpace": "Start your first space",
+    "inspired": "Get Inspired",
+    "exploreTemplates": "Explore all templates",
+    "availableToolRoutes": "Available tool routes in the workspace",
+    "publishingInboxCalendarDashboard": "Publishing, inbox, calendar, dashboard",
+    "featuredShortcuts": "Featured shortcuts on the dashboard",
+    "openHubOverview": "Open hub overview",
+    "openPage": "Open page",
+    "openTool": "Open tool",
+    "tools": {
+      "findAssets": "Find assets",
+      "workflowEditor": "Workflow Editor",
+      "imageGen": "Image Gen",
+      "videoGen": "Video Gen",
+      "editor": "Editor",
+      "upscaler": "Upscaler",
+      "models": "3D Models",
+      "audio": "Audio"
+    }
+  }
+}

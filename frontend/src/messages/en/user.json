@@ -1,4 +1,31 @@
 {
+    "UserMenu": {
+        "billing": {
+            "personal": "Personal",
+            "workspace": "Workspace",
+            "creditsOnly": "Credits only"
+        },
+        "secondaryAction": {
+            "personal": "Upgrade plan",
+            "workspace": "New Space"
+        },
+        "items": {
+            "settings": "Settings",
+            "profile": "Profile",
+            "collections": "Collections",
+            "language": "Language",
+            "theme": "Theme",
+            "developer": "Developer",
+            "docs": "Docs",
+            "help": "Help",
+            "logout": "Log out"
+        },
+        "theme": {
+            "dark": "Dark",
+            "light": "Light",
+            "system": "System"
+        }
+    },
     "UserList": {
         "title": "User List",
         "description": "A list of users",

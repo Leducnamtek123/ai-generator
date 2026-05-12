@@ -10,16 +10,16 @@ import {
   Unique,
 } from 'typeorm';
 import { EntityRelationalHelper } from '../../../../../utils/relational-entity-helper';
-import { OrganizationEntity } from '../../../../../organizations/infrastructure/persistence/relational/entities/organization.entity';
+import { WorkspaceEntity } from '../../../../../workspaces/infrastructure/persistence/relational/entities/workspace.entity';
 
-export enum OrgRoleEnum {
+export enum WorkspaceRoleEnum {
   ADMIN = 'ADMIN',
   MEMBER = 'MEMBER',
   BILLING = 'BILLING',
 }
 
 @Entity({ name: 'member' })
-@Unique(['userId', 'organizationId'])
+@Unique(['userId', 'workspaceId'])
 export class MemberEntity extends EntityRelationalHelper {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -27,21 +27,21 @@ export class MemberEntity extends EntityRelationalHelper {
   @Column({ name: 'user_id' })
   userId: number;
 
-  @Column({ name: 'organization_id' })
-  organizationId: string;
+  @Column({ name: 'workspace_id' })
+  workspaceId: string;
 
   @Column({
     type: 'enum',
-    enum: OrgRoleEnum,
-    default: OrgRoleEnum.MEMBER,
+    enum: WorkspaceRoleEnum,
+    default: WorkspaceRoleEnum.MEMBER,
   })
-  role: OrgRoleEnum;
+  role: WorkspaceRoleEnum;
 
-  @ManyToOne(() => OrganizationEntity, 'members', {
+  @ManyToOne(() => WorkspaceEntity, 'members', {
     onDelete: 'CASCADE',
   })
-  @JoinColumn({ name: 'organization_id' })
-  organization: OrganizationEntity;
+  @JoinColumn({ name: 'workspace_id' })
+  workspace: WorkspaceEntity;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

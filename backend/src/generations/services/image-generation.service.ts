@@ -15,8 +15,16 @@ export class ImageGenerationService {
     private readonly eventsService: GenerationEventsService,
   ) {}
 
-  private getPreferredProvider(provider?: string, fallback?: string) {
-    return provider?.trim() || fallback || undefined;
+  private getPreferredProvider(provider?: string, model?: string, fallback?: string) {
+    const explicitProvider = provider?.trim();
+    if (explicitProvider) return explicitProvider;
+
+    const normalizedModel = model?.trim().toLowerCase();
+    if (normalizedModel?.startsWith('kie:')) {
+      return 'kie';
+    }
+
+    return fallback || undefined;
   }
 
   async generateImage(
@@ -39,6 +47,7 @@ export class ImageGenerationService {
     }
     const preferredProvider = this.getPreferredProvider(
       dto.provider,
+      dto.model,
       this.providerRegistry.getImageProvider().name,
     );
     const reservation = await this.baseService.reserveCredits(userId, 'image');
@@ -106,8 +115,9 @@ export class ImageGenerationService {
           generation.status = 'processing';
           await this.baseService.save(generation);
 
+          const providerModel = dto.model?.startsWith('kie:') ? dto.model.replace(/^kie:/, '') : dto.model;
           const providerResult = await provider.generateImage(dto.prompt, {
-            model: dto.model,
+            model: providerModel,
             aspectRatio: dto.aspectRatio,
             quality: dto.quality,
             negativePrompt: dto.negativePrompt,

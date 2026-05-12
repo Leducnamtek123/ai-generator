@@ -210,7 +210,7 @@ function CommentNodeComponent({ id, data, selected }: NodeProps) {
                             </DropdownMenuItem>
                             <DropdownMenuSeparator className="bg-border" />
                             <div className="px-2 py-1.5">
-                                <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-1.5">Color</p>
+                                <p className="text-[10px] text-muted-foreground mb-1.5">Color</p>
                                 <div className="flex gap-1">
                                     {(Object.keys(colorStyles) as Array<keyof typeof colorStyles>).map((noteColor) => (
                                         <button

@@ -16,7 +16,7 @@ export function VideoToolButton({ icon: Icon, label, active, onClick }: VideoToo
             onClick={onClick}
             className={cn(
                 "flex flex-col items-center gap-1 px-3 py-2 rounded-xl transition-all group",
-                active ? "bg-white/10 text-white" : "hover:bg-white/5 text-white/40 hover:text-white"
+                active ? "bg-primary/10 text-foreground" : "hover:bg-accent text-muted-foreground hover:text-foreground"
             )}
         >
             <Icon className={cn("size-4 transition-transform group-hover:scale-110", active && "scale-110")} />

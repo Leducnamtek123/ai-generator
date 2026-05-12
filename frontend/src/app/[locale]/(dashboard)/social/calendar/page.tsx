@@ -25,6 +25,7 @@ import {
   type SocialPost,
   type SocialPostStatus
 } from "@/services/socialHubApi";
+import { SocialCalendarSkeleton } from "@/components/common/loading-skeletons";
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const MONTHS = [
@@ -454,19 +455,15 @@ export default function CalendarPage() {
     dispatch({ type: "setCurrentDate", currentDate: new Date() });
   };
 
+  if (state.isLoading && state.posts.length === 0) {
+    return <SocialCalendarSkeleton />;
+  }
+
   return (
     <div className="mx-auto flex min-h-full max-w-7xl flex-col gap-y-8 p-8 pb-8">
       <div className="flex items-center justify-between">
         <div className="flex flex-col gap-1">
-          <h1 className="text-3xl font-semibold tracking-tight">Social Calendar</h1>
-          <p className="text-sm text-muted-foreground">
-            Schedule and manage social posts from one timeline.
-          </p>
-          <div className="pt-2">
-            <Button asChild variant="outline" size="sm" className="w-fit">
-              <Link href="/social">Open Social Hub overview</Link>
-            </Button>
-          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">Calendar</h1>
         </div>
         <div className="flex items-center gap-3">
           <div className="flex rounded-lg border border-border bg-muted p-1">
@@ -493,82 +490,38 @@ export default function CalendarPage() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Connected</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Connected</p>
           <div className="mt-3 text-3xl font-bold">{activeChannels}</div>
           <p className="mt-1 text-sm text-muted-foreground">Channels available to schedule</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Scheduled</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Scheduled</p>
           <div className="mt-3 text-3xl font-bold">{scheduledPosts.length}</div>
           <p className="mt-1 text-sm text-muted-foreground">Queued for delivery</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Published</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Published</p>
           <div className="mt-3 text-3xl font-bold">{publishedPosts.length}</div>
           <p className="mt-1 text-sm text-muted-foreground">Visible in post history</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Drafts</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Drafts</p>
           <div className="mt-3 text-3xl font-bold">{draftPosts.length}</div>
           <p className="mt-1 text-sm text-muted-foreground">Needs review or copy work</p>
         </GlassCard>
-        <GlassCard variant="morphism" className="border border-white/10 p-5">
-          <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Failed</p>
+        <GlassCard variant="morphism" className="border border-border/60 p-5">
+          <p className="text-sm font-medium text-muted-foreground">Failed</p>
           <div className="mt-3 text-3xl font-bold">{failedPosts.length}</div>
           <p className="mt-1 text-sm text-muted-foreground">Needs action before publish</p>
         </GlassCard>
       </div>
 
-      <GlassCard variant="morphism" className="border border-white/10 p-6">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div className="max-w-3xl">
-            <p className="text-xs uppercase tracking-[0.3em] text-muted-foreground">Planner snapshot</p>
-            <h2 className="mt-2 text-2xl font-semibold">Month, week, and day are all backed by live post data</h2>
-            <p className="mt-2 text-sm leading-6 text-muted-foreground">
-              This calendar follows the real social workflow: schedule the content, move it across time, and keep a visible queue of what is next.
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-muted-foreground">
-              {state.view} view
-            </span>
-            <span className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 text-xs text-muted-foreground">
-              {nextScheduledPost ? (
-                <>
-                  Next at <ClientCalendarText value={nextScheduledPost.scheduledAt as string} kind="monthDayTime" />
-                </>
-              ) : (
-                "No future schedule yet"
-              )}
-            </span>
-          </div>
-        </div>
-        <div className="mt-4 grid gap-3 md:grid-cols-3">
-          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Today</p>
-            <p className="mt-2 text-sm font-semibold">
-              {currentDayPosts.length} post{currentDayPosts.length === 1 ? '' : 's'} on the selected day
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Next action</p>
-            <p className="mt-2 text-sm font-semibold">
-              {nextScheduledPost ? nextScheduledPost.content : 'Use New Post to fill the calendar'}
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-background/40 p-4">
-            <p className="text-xs uppercase tracking-[0.25em] text-muted-foreground">Workflow</p>
-            <p className="mt-2 text-sm font-semibold">Open a date, create, reschedule, or delete from the timeline</p>
-          </div>
-        </div>
-      </GlassCard>
-
       <GlassCard
         variant="morphism"
-        className="flex min-h-0 flex-1 flex-col overflow-y-auto border border-white/10 p-0"
+        className="flex min-h-0 flex-1 flex-col overflow-y-auto border border-border/60 p-0"
       >
-        <div className="flex items-center justify-between border-b border-white/10 bg-white/5 p-6">
+        <div className="flex items-center justify-between border-b border-border/60 bg-muted/50 p-6">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-semibold">{visibleMonthLabel}</h2>
             <div className="flex items-center gap-1">
@@ -617,7 +570,7 @@ export default function CalendarPage() {
             {DAYS.map((day) => (
               <div
                 key={day}
-                className="border-r border-b border-white/5 bg-white/5 p-3 text-center text-[10px] font-bold tracking-wider text-muted-foreground uppercase"
+                className="border-r border-b border-border/40 bg-muted/50 p-3 text-center text-sm font-medium text-muted-foreground"
               >
                 {day}
               </div>
@@ -633,8 +586,8 @@ export default function CalendarPage() {
                 <div
                   key={key}
                   className={cn(
-                    "group relative min-h-[140px] border-r border-b border-white/5 p-2 transition-colors",
-                    isCurrentMonth ? "hover:bg-white/[0.02]" : "bg-gray-950/20"
+                    "group relative min-h-[140px] border-r border-b border-border/40 p-2 transition-colors",
+                    isCurrentMonth ? "hover:bg-card/60" : "bg-muted/30"
                   )}
                 >
                   <span
@@ -666,7 +619,7 @@ export default function CalendarPage() {
                         )}
                       >
                         <div className="flex items-center justify-between gap-1">
-                          <span className="truncate font-bold tracking-tighter uppercase">
+                          <span className="truncate font-semibold">
                             {post.socialAccount?.platform || "general"}
                           </span>
                           <span className="opacity-70">
@@ -707,16 +660,16 @@ export default function CalendarPage() {
             })}
           </div>
         ) : state.view === "week" ? (
-          <div className="grid flex-1 grid-cols-1 border-t border-white/5 md:grid-cols-7">
+          <div className="grid flex-1 grid-cols-1 border-t border-border/40 md:grid-cols-7">
             {weekDays.map((day) => {
               const key = toDayKey(day);
               const dayPosts = postsByDay.get(key) ?? [];
               const isToday = todayKey ? key === todayKey : false;
 
               return (
-                <div key={key} className="min-h-[320px] border-r border-white/5 last:border-r-0">
-                  <div className="border-b border-white/5 bg-white/5 p-3">
-                    <div className="text-[10px] tracking-wider text-muted-foreground uppercase">
+                <div key={key} className="min-h-[320px] border-r border-border/40 last:border-r-0">
+                  <div className="border-b border-border/40 bg-muted/50 p-3">
+                    <div className="text-sm font-medium text-muted-foreground">
                       {DAYS[day.getDay() === 0 ? 6 : day.getDay() - 1]}
                     </div>
                     <div className={cn("text-lg font-bold", isToday && "text-primary")}>
@@ -742,7 +695,7 @@ export default function CalendarPage() {
                           )}
                         >
                           <div className="flex items-center justify-between gap-2">
-                            <span className="truncate font-semibold tracking-tight uppercase">
+                            <span className="truncate font-semibold">
                               {post.socialAccount?.platform || "general"}
                             </span>
                             <span className="opacity-70">
@@ -770,12 +723,12 @@ export default function CalendarPage() {
                         </m.div>
                       ))
                     ) : (
-                      <div className="rounded-xl border border-dashed border-white/10 p-3 text-xs text-muted-foreground">
+                      <div className="rounded-xl border border-dashed border-border/60 p-3 text-xs text-muted-foreground">
                         No posts this week.
                       </div>
                     )}
                     <button
-                      className="w-full rounded-lg border border-dashed border-white/10 px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
+                      className="w-full rounded-lg border border-dashed border-border/60 px-3 py-2 text-xs text-muted-foreground transition-colors hover:border-primary/30 hover:text-primary"
                       onClick={() => openComposer(day)}
                     >
                       + Schedule
@@ -787,9 +740,9 @@ export default function CalendarPage() {
           </div>
         ) : (
           <div className="flex-1  gap-y-4 p-6">
-            <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/5 p-4">
+            <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/50 p-4">
               <div>
-                <p className="text-xs tracking-wider text-muted-foreground uppercase">
+                <p className="text-sm font-medium text-muted-foreground">
                   Selected day
                 </p>
                 <h3 className="text-xl font-semibold">
@@ -822,7 +775,7 @@ export default function CalendarPage() {
                   >
                     <div className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="text-xs tracking-wider uppercase opacity-70">
+                        <div className="text-sm font-medium opacity-70">
                           {post.socialAccount?.platform || "general"}
                         </div>
                         <div className="text-sm font-semibold">
@@ -851,7 +804,7 @@ export default function CalendarPage() {
                   </m.div>
                 ))
               ) : (
-                <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-dashed border-border/60 p-6 text-sm text-muted-foreground">
                   No posts scheduled for this day.
                 </div>
               )}
@@ -860,20 +813,16 @@ export default function CalendarPage() {
         )}
       </GlassCard>
 
-      {state.isLoading && (
-        <div className="text-sm text-muted-foreground">Loading calendar data?</div>
-      )}
-
       {state.isComposerOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm">
           <GlassCard
             variant="morphism"
-            className="w-full max-w-xl space-y-4 border border-white/10 p-6"
+            className="w-full max-w-xl space-y-4 border border-border/60 p-6"
           >
             <div className="flex items-center justify-between">
               <h3 className="inline-flex items-center text-lg font-semibold">
                 <CalendarClock className="mr-2 size-4" />
-                Create Scheduled Post
+                New Post
               </h3>
               <Button
                 variant="ghost"
@@ -885,7 +834,7 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs tracking-wider text-muted-foreground uppercase">Channel</div>
+              <div className="text-sm font-medium text-muted-foreground">Channel</div>
               <Select
                 value={state.selectedAccountId ? String(state.selectedAccountId) : ""}
                 onValueChange={(value) =>
@@ -906,18 +855,18 @@ export default function CalendarPage() {
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs tracking-wider text-muted-foreground uppercase">Content</div>
+              <div className="text-sm font-medium text-muted-foreground">Content</div>
               <textarea
                 value={state.content}
                 onChange={(e) => dispatch({ type: "setContent", content: e.target.value })}
                 rows={4}
                 className="w-full resize-none rounded-md border border-border bg-background p-3 text-sm"
-                placeholder="Write your post content?"
+                placeholder="Write your post content"
               />
             </div>
 
             <div className="space-y-2">
-              <div className="text-xs tracking-wider text-muted-foreground uppercase">
+              <div className="text-sm font-medium text-muted-foreground">
                 Schedule Time
               </div>
               <SocialDateTimePicker

@@ -22,15 +22,15 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
 
     return (
         <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-            <DialogContent className="max-w-[800px] h-[600px] p-0 bg-[#0B0C0E] border-white/10 shadow-2xl overflow-hidden flex flex-row gap-0">
+            <DialogContent className="flex h-[600px] max-w-[800px] flex-row gap-0 overflow-hidden border-border bg-background p-0 shadow-2xl">
                 {/* Sidebar */}
-                <div className="w-64 border-r border-white/5 bg-[#151619] p-4 flex flex-col gap-2">
+                <div className="flex w-64 flex-col gap-2 border-r border-border bg-card p-4">
                     <Button
                         variant={activeTab === 'general' ? 'default' : 'ghost'}
                         onClick={() => setActiveTab('general')}
                         className={cn(
                             "justify-start gap-3 px-4 py-6 rounded-lg text-sm font-medium transition-colors",
-                            activeTab === 'general' ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                            activeTab === 'general' ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         )}
                     >
                         <Settings className="size-4" />
@@ -41,7 +41,7 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                         onClick={() => setActiveTab('shortcuts')}
                         className={cn(
                             "justify-start gap-3 px-4 py-6 rounded-lg text-sm font-medium transition-colors",
-                            activeTab === 'shortcuts' ? "bg-white/10 text-white" : "text-white/50 hover:text-white hover:bg-white/5"
+                            activeTab === 'shortcuts' ? "bg-primary/10 text-foreground" : "text-muted-foreground hover:bg-accent hover:text-foreground"
                         )}
                     >
                         <Keyboard className="size-4" />
@@ -50,10 +50,10 @@ export function ShortcutsModal({ isOpen, onClose }: ShortcutsModalProps) {
                 </div>
 
                 {/* Content */}
-                <div className="flex-1 flex flex-col bg-[#0B0C0E]">
+                <div className="flex flex-1 flex-col bg-background">
                     {/* Header */}
-                    <DialogHeader className="h-16 border-b border-white/5 flex flex-row items-center justify-between px-8  gap-y-0">
-                        <DialogTitle className="text-lg font-semibold text-white">
+                    <DialogHeader className="flex h-16 flex-row items-center justify-between border-b border-border px-8 gap-y-0">
+                        <DialogTitle className="text-lg font-semibold text-foreground">
                             {activeTab === 'general' ? 'General' : 'Shortcuts'}
                         </DialogTitle>
                     </DialogHeader>
@@ -95,12 +95,12 @@ function GeneralSettings() {
             <Section title="Navigation">
                 <div className="flex items-center justify-between py-2">
                     <div className="space-y-1">
-                        <div className="text-sm font-medium text-white">Mouse wheel</div>
-                        <div className="text-xs text-white/40 max-w-[300px]">
+                        <div className="text-sm font-medium text-foreground">Mouse wheel</div>
+                        <div className="max-w-[300px] text-xs text-muted-foreground">
                             Pan: Traditional navigation where scrolling moves the canvas. Zoom: CAD-style navigation where scrolling zooms in/out.
                         </div>
                     </div>
-                    <div className="flex bg-white/5 rounded-lg p-1 border border-white/5">
+                    <div className="flex rounded-lg border border-border bg-muted/30 p-1">
                         <ModeButton
                             label="Pan"
                             active={mouseWheelMode === 'pan'}
@@ -153,7 +153,7 @@ function ShortcutsList() {
 function Section({ title, children }: { title: string, children: React.ReactNode }) {
     return (
         <div className="space-y-4">
-            <h3 className="text-sm font-semibold text-white/90">{title}</h3>
+            <h3 className="text-sm font-semibold text-foreground">{title}</h3>
             <div className="space-y-1">
                 {children}
             </div>
@@ -177,8 +177,8 @@ function ToggleItem({
             className="flex w-full items-center justify-between rounded-lg py-2 text-left group"
             aria-pressed={checked}
         >
-            <span className="text-sm text-white/70 group-hover:text-white transition-colors">{label}</span>
-            <div className={cn("w-9 h-5 rounded-full relative transition-colors", checked ? 'bg-blue-600' : 'bg-white/20')}>
+            <span className="text-sm text-muted-foreground transition-colors group-hover:text-foreground">{label}</span>
+            <div className={cn("relative h-5 w-9 rounded-full transition-colors", checked ? 'bg-blue-600' : 'bg-muted')}>
                 <div className={cn("absolute top-1 size-3 rounded-full bg-white transition-transform", checked ? 'left-5' : 'left-1')} />
             </div>
         </button>
@@ -200,7 +200,7 @@ function ModeButton({
             onClick={onClick}
             className={cn(
                 "px-3 py-1 text-xs rounded transition-colors",
-                active ? "bg-blue-600 text-white shadow-sm" : "text-white/50 hover:text-white"
+                active ? "bg-blue-600 text-white shadow-sm" : "text-muted-foreground hover:text-foreground"
             )}
             aria-pressed={active}
         >
@@ -211,13 +211,13 @@ function ModeButton({
 
 function ShortcutItem({ label, keys, separator = '+' }: { label: string, keys: string[], separator?: string }) {
     return (
-        <div className="flex items-center justify-between p-2 group hover:bg-white/5 -mx-2 rounded-lg transition-colors">
-            <span className="text-sm text-white/70 group-hover:text-white transition-colors capitalize">{label}</span>
+        <div className="group -mx-2 flex items-center justify-between rounded-lg p-2 transition-colors hover:bg-accent">
+            <span className="text-sm capitalize text-muted-foreground transition-colors group-hover:text-foreground">{label}</span>
             <div className="flex items-center gap-1.5">
                 {keys.map((k, i) => (
                     <React.Fragment key={k}>
-                        {i > 0 && <span className="text-xs text-white/20 font-medium">{separator}</span>}
-                        <kbd className="min-w-[24px] px-2 py-1 bg-[#1A1B1F] border border-white/10 rounded text-[10px] font-bold text-white/70 shadow-sm">
+        {i > 0 && <span className="text-xs font-medium text-muted-foreground/40">{separator}</span>}
+                        <kbd className="min-w-[24px] rounded border border-border bg-card px-2 py-1 text-[10px] font-bold text-foreground/70 shadow-sm">
                             {k}
                         </kbd>
                     </React.Fragment>

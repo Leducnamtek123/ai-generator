@@ -9,16 +9,16 @@ import { Link, useRouter } from '@/i18n/navigation';
 import { useSearchParams } from 'next/navigation';
 import { Loader2, Lock } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTranslations } from 'next-intl';
 import { signIn } from 'next-auth/react';
 import AuthLayout from '@/components/auth/AuthLayout';
+import { Input } from '@/components/ui/input';
 import { sanitizeAppPath } from '@/lib/auth-redirect';
 
-const loginSchema = z.object({
-    email: z.string().email("Invalid email address"),
-    password: z.string().min(6, "Password must be at least 6 characters"),
-});
-
-type LoginValues = z.infer<typeof loginSchema>;
+type LoginValues = {
+    email: string;
+    password: string;
+};
 
 export default function SignInPage() {
     return (
@@ -30,14 +30,23 @@ export default function SignInPage() {
 
 function SignInPageContent() {
     const { replace } = useRouter();
+    const t = useTranslations('Auth');
+    const tForms = useTranslations('Forms');
     const searchParams = useSearchParams();
     const searchParamsSnapshot = useMemo(() => new URLSearchParams(searchParams), [searchParams]);
     const nextPath = sanitizeAppPath(searchParamsSnapshot.get('next'));
     const emailPrefill = searchParamsSnapshot.get('email') ?? '';
+
+    const loginSchema = z.object({
+        email: z.string().email(tForms('email')),
+        password: z.string().min(6, tForms('passwordMin6')),
+    });
+
     const form = useForm<LoginValues>({
         resolver: zodResolver(loginSchema),
-        defaultValues: { email: emailPrefill, password: "" }
+        defaultValues: { email: emailPrefill, password: '' }
     });
+
     const signUpHref = nextPath === '/dashboard'
         ? '/sign-up'
         : `/sign-up?next=${encodeURIComponent(nextPath)}`;
@@ -46,42 +55,42 @@ function SignInPageContent() {
         const error = searchParamsSnapshot.get('error');
         if (error) {
             if (error === 'OAuthAccountNotLinked') {
-                toast.error("Account exists", {
-                    description: "An account with this email already exists with a different login method."
+                toast.error(t('messages.accountExists'), {
+                    description: t('messages.accountExistsDescription')
                 });
             } else if (error === 'CredentialsSignin') {
-                toast.error("Login Failed", {
-                    description: "Invalid email or password."
+                toast.error(t('messages.loginFailed'), {
+                    description: t('messages.loginFailedDescription')
                 });
             } else {
-                toast.error("Authentication failed", {
-                    description: "Something went wrong during login. Please try again."
+                toast.error(t('messages.authFailed'), {
+                    description: t('messages.authFailedDescription')
                 });
             }
         }
-    }, [searchParamsSnapshot]);
+    }, [searchParamsSnapshot, t]);
 
     const onSubmit = async (data: LoginValues) => {
         try {
-            const result = await signIn("credentials", {
+            const result = await signIn('credentials', {
                 email: data.email,
                 password: data.password,
                 redirect: false,
             });
 
             if (result?.error) {
-                toast.error("Login Failed", {
-                    description: "Invalid email or password",
+                toast.error(t('messages.loginFailed'), {
+                    description: t('messages.loginFailedDescription'),
                 });
             } else {
-                toast.success("Welcome back!", {
-                    description: "You have successfully logged in."
+                toast.success(t('messages.welcomeBack'), {
+                    description: t('messages.welcomeBackDescription')
                 });
                 replace(nextPath);
             }
         } catch {
-            toast.error("Login Failed", {
-                description: "Something went wrong. Please try again."
+            toast.error(t('messages.loginFailed'), {
+                description: t('messages.authFailedDescription')
             });
         }
     };
@@ -89,18 +98,16 @@ function SignInPageContent() {
     return (
         <AuthLayout variant="sign-in">
             <div className="auth-card">
-                {/* Logo */}
                 <div className="auth-card__logo">
                     <div className="auth-card__logo-icon">
                         <Image src="/logo.svg" alt="PaintAI" width={32} height={32} />
                     </div>
                     <div>
                         <h1 className="auth-card__title">PaintAI</h1>
-                        <p className="auth-card__tagline">Your paint, your choice</p>
+                        <p className="auth-card__tagline">{t('brand.tagline')}</p>
                     </div>
                 </div>
 
-                {/* Google OAuth */}
                 <button
                     type="button"
                     onClick={() => signIn('google', { callbackUrl: nextPath })}
@@ -112,24 +119,22 @@ function SignInPageContent() {
                         <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" />
                         <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                     </svg>
-                    Sign in with Google
+                    {t('actions.googleSignIn')}
                 </button>
 
-                {/* Divider */}
                 <div className="auth-divider">
                     <hr className="auth-divider__line" />
-                    <span className="auth-divider__label">or</span>
+                    <span className="auth-divider__label">{t('actions.or')}</span>
                 </div>
 
-                {/* Credentials form */}
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                     <div className="auth-field">
-                        <label className="auth-field__label" htmlFor="signin-email">Email address</label>
-                        <input
+                        <label className="auth-field__label" htmlFor="signin-email">{t('fields.email')}</label>
+                        <Input
                             id="signin-email"
-                            {...form.register("email")}
+                            {...form.register('email')}
                             className="auth-field__input"
-                            placeholder="Enter your email"
+                            placeholder={t('placeholders.email')}
                             autoComplete="email"
                         />
                         {form.formState.errors.email && (
@@ -139,15 +144,15 @@ function SignInPageContent() {
 
                     <div className="auth-field">
                         <div className="auth-field__header">
-                            <label className="auth-field__label" htmlFor="signin-password">Password</label>
-                            <Link href="/forgot-password" className="auth-field__link">Forgot password?</Link>
+                            <label className="auth-field__label" htmlFor="signin-password">{t('fields.password')}</label>
+                            <Link href="/forgot-password" className="auth-field__link">{t('links.forgotPassword')}</Link>
                         </div>
-                        <input
+                        <Input
                             id="signin-password"
-                            {...form.register("password")}
+                            {...form.register('password')}
                             type="password"
                             className="auth-field__input"
-                            placeholder="••••••••"
+                            placeholder={t('placeholders.password')}
                             autoComplete="current-password"
                         />
                         {form.formState.errors.password && (
@@ -156,19 +161,18 @@ function SignInPageContent() {
                     </div>
 
                     <button type="submit" disabled={form.formState.isSubmitting} className="auth-submit">
-                        {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : 'Continue'}
+                        {form.formState.isSubmitting ? <Loader2 className="size-4 animate-spin" /> : t('actions.continue')}
                     </button>
                 </form>
 
-                {/* Footer */}
                 <div className="auth-footer">
                     <p className="auth-footer__text">
-                        Don&apos;t have an account?{' '}
-                        <Link href={signUpHref}>Sign up</Link>
+                        {t('links.dontHaveAccount')}{' '}
+                        <Link href={signUpHref}>{t('actions.signUp')}</Link>
                     </p>
                     <div className="auth-footer__secured">
                         <Lock size={12} aria-hidden="true" />
-                        <span>Secured by PaintAI</span>
+                        <span>{t('brand.securedBy')}</span>
                     </div>
                 </div>
             </div>

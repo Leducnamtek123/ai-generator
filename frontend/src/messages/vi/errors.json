@@ -1,0 +1,10 @@
+{
+  "Errors": {
+    "generic": "Đã xảy ra lỗi. Vui lòng thử lại.",
+    "loadFailed": "Không thể tải dữ liệu",
+    "saveFailed": "Không thể lưu thay đổi",
+    "requestFailed": "Yêu cầu thất bại",
+    "invalidLink": "Liên kết không hợp lệ",
+    "expiredLink": "Liên kết đã hết hạn"
+  }
+}

@@ -1,7 +1,7 @@
 'use client';
 
 import Image from 'next/image';
-import { Suspense, useEffect, useReducer, useRef, useMemo } from 'react';
+import { Suspense, useEffect, useReducer, useRef, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { toast } from 'sonner';
 import { useGenerationStore } from '@/stores/generation-store';
@@ -13,6 +13,8 @@ import { Slider } from '@/ui/slider';
 import { Label } from '@/ui/label';
 import { cn } from '@/lib/utils';
 import { CreatorWorkspaceShell } from '@/components/layouts/CreatorWorkspaceShell';
+import { MediaPickerModal } from '@/components/common/MediaPickerModal';
+import type { MediaItem } from '@/types/media';
 
 const expandDirections = [
     { id: 'all', label: 'All Sides', icon: Maximize },
@@ -168,6 +170,7 @@ function ImageExtenderPageContent() {
     const [state, dispatch] = useReducer(reducer, initialState);
     const [uiState, dispatchUi] = useReducer(uiReducer, initialUiState);
     const fileInputRef = useRef<HTMLInputElement>(null);
+    const [isMediaPickerOpen, setIsMediaPickerOpen] = useState(false);
     const { imageExtend, currentGeneration, reset, isGenerating } = useGenerationStore();
     const { replace } = useRouter();
     const searchParams = useSearchParams();
@@ -262,6 +265,14 @@ function ImageExtenderPageContent() {
             }
             dispatch({ type: 'setUploadedImage', uploadedImage: uploaded.url });
         }
+    };
+
+    const handleMediaSelect = (media: MediaItem) => {
+        reset();
+        dispatchUi({ type: 'setRestoredResultImage', restoredResultImage: null });
+        dispatch({ type: 'setUploadedImage', uploadedImage: media.url });
+        setIsMediaPickerOpen(false);
+        toast.success('Selected image from uploads.');
     };
 
     const handleExtend = async () => {
@@ -379,19 +390,31 @@ function ImageExtenderPageContent() {
                         {uiState.isProjectLoading ? 'Loading project...' : uiState.projectError ?? ''}
                     </span>
                 </div>
-                <div className="flex-1 overflow-y-auto p-6  gap-y-6">
+                <div className="flex-1 overflow-y-auto p-6 pt-6 space-y-6">
                     {/* Upload */}
-                    <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative aspect-[4/3] rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3">
-                        {state.uploadedImage ? (<div className="relative h-full w-full"><Image src={state.uploadedImage} alt="Preview" fill className="object-contain" sizes="320px" /></div>) : (
-                            <><div className="size-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all"><Upload className="size-6 text-muted-foreground" /></div>
-                            <div className="text-center"><p className="text-sm font-medium">Upload Image</p><p className="text-[10px] text-muted-foreground mt-1">Image to extend beyond borders</p></div></>
-                        )}
-                    </button>
+                    <div className="space-y-3">
+                        <button type="button" onClick={() => fileInputRef.current?.click()} className="group relative aspect-[4/3] rounded-2xl bg-muted border-2 border-dashed border-border hover:border-primary/30 transition-all cursor-pointer overflow-hidden flex flex-col items-center justify-center gap-3">
+                            {state.uploadedImage ? (<div className="relative h-full w-full"><Image src={state.uploadedImage} alt="Preview" fill className="object-contain" sizes="320px" /></div>) : (
+                                <><div className="size-14 rounded-xl bg-accent flex items-center justify-center group-hover:scale-110 transition-all"><Upload className="size-6 text-muted-foreground" /></div>
+                                <div className="text-center"><p className="text-sm font-medium">Upload Image</p><p className="text-xs text-muted-foreground mt-1">Extend an image beyond its borders</p></div></>
+                            )}
+                        </button>
+                        <Button type="button" variant="outline" className="w-full gap-2" onClick={() => setIsMediaPickerOpen(true)}>
+                            <Folder className="size-4" />
+                            Choose from uploads
+                        </Button>
+                    </div>
                     <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileUpload} />
+                    <MediaPickerModal
+                        isOpen={isMediaPickerOpen}
+                        onClose={() => setIsMediaPickerOpen(false)}
+                        onSelect={handleMediaSelect}
+                        mediaType="image"
+                    />
 
                     {/* Direction */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Expand Direction</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Expand Direction</h4>
                         <div className="grid grid-cols-5 gap-1.5">
                             {expandDirections.map((d) => (
                                 <button key={d.id} onClick={() => dispatch({ type: 'setDirection', direction: d.id })} className={cn("flex flex-col items-center gap-1 p-2.5 rounded-xl border transition-all", state.direction === d.id ? "bg-accent border-primary/20" : "bg-card border-border")}>
@@ -404,29 +427,29 @@ function ImageExtenderPageContent() {
 
                     {/* Target Ratio */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Target Ratio</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Target Ratio</h4>
                         <div className="flex flex-wrap gap-1.5">
                             {targetRatios.map((r) => (
-                                <button key={r.id} onClick={() => dispatch({ type: 'setTargetRatio', targetRatio: r.id })} className={cn("px-3 py-1.5 rounded-lg text-[10px] font-medium transition-all", state.targetRatio === r.id ? "bg-accent border border-primary/20" : "bg-card border border-border")}>{r.label}</button>
+                                <button key={r.id} onClick={() => dispatch({ type: 'setTargetRatio', targetRatio: r.id })} className={cn("px-3 py-1.5 rounded-lg text-xs font-medium transition-all", state.targetRatio === r.id ? "bg-accent border border-primary/20" : "bg-card border border-border")}>{r.label}</button>
                             ))}
                         </div>
                     </div>
 
                     {/* Expand Amount */}
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between"><Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Expand Amount</Label><span className="text-[11px] font-mono">{state.expandAmount}%</span></div>
+                        <div className="flex items-center justify-between"><Label className="text-sm font-medium text-muted-foreground">Expand Amount</Label><span className="text-xs font-mono">{state.expandAmount}%</span></div>
                         <Slider min={10} max={200} step={10} value={[state.expandAmount]} onValueChange={([v]) => dispatch({ type: 'setExpandAmount', expandAmount: v })} />
                     </div>
 
                     {/* Creativity */}
                     <div className="space-y-3">
-                        <div className="flex items-center justify-between"><Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Creativity</Label><span className="text-[11px] font-mono">{state.creativity}%</span></div>
+                        <div className="flex items-center justify-between"><Label className="text-sm font-medium text-muted-foreground">Creativity</Label><span className="text-xs font-mono">{state.creativity}%</span></div>
                         <Slider min={0} max={100} step={5} value={[state.creativity]} onValueChange={([v]) => dispatch({ type: 'setCreativity', creativity: v })} />
                     </div>
 
                     {/* Prompt */}
                     <div className="space-y-3">
-                        <h4 className="text-[10px] font-semibold text-muted-foreground uppercase tracking-[0.1em]">Context Prompt (Optional)</h4>
+                        <h4 className="text-sm font-medium text-muted-foreground">Context Prompt (Optional)</h4>
                         <textarea value={state.prompt} onChange={(e) => dispatch({ type: 'setPrompt', prompt: e.target.value })} placeholder="Describe what should appear in the extended area?" className="w-full h-20 bg-card border border-border rounded-xl p-3 text-xs resize-none outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground" />
                     </div>
                 </div>

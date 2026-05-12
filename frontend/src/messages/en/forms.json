@@ -1,0 +1,11 @@
+{
+  "Forms": {
+    "required": "This field is required",
+    "email": "Invalid email address",
+    "passwordMin6": "Password must be at least 6 characters",
+    "passwordMin8": "Password must be at least 8 characters",
+    "firstNameMin": "First name is too short",
+    "lastNameMin": "Last name is too short",
+    "passwordsDoNotMatch": "Passwords do not match"
+  }
+}

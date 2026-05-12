@@ -57,7 +57,7 @@ import { VisualFlowModule } from './visual-flow/visual-flow.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 
-import { OrganizationsModule } from './organizations/organizations.module';
+import { WorkspacesModule } from './workspaces/workspaces.module';
 import { MembersModule } from './members/members.module';
 import { InvitesModule } from './invites/invites.module';
 import { BillingModule } from './billing/billing.module';
@@ -145,7 +145,7 @@ const resolveI18nPath = () => {
     QueuesModule,
     TemplatesModule,
     VisualFlowModule,
-    OrganizationsModule,
+    WorkspacesModule,
     MembersModule,
     InvitesModule,
     BillingModule,

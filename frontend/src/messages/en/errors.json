@@ -1,0 +1,10 @@
+{
+  "Errors": {
+    "generic": "Something went wrong. Please try again.",
+    "loadFailed": "Failed to load data",
+    "saveFailed": "Failed to save changes",
+    "requestFailed": "Request failed",
+    "invalidLink": "Invalid link",
+    "expiredLink": "The link has expired"
+  }
+}

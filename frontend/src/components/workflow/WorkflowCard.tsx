@@ -6,6 +6,21 @@ import { Workflow } from '@/stores/workflow-store';
 import { WorkflowMiniPreview } from '@/components/workflow/WorkflowMiniPreview';
 import { cn, getAssetUrl } from '@/lib/utils';
 
+function formatWorkflowDate(value: string | Date | number | null | undefined, mode: 'date' | 'dateTime') {
+    if (value == null) {
+        return '—';
+    }
+
+    const date = value instanceof Date ? value : new Date(value);
+    if (Number.isNaN(date.getTime())) {
+        return '—';
+    }
+
+    return mode === 'date'
+        ? date.toISOString().slice(0, 10)
+        : date.toISOString().slice(0, 16).replace('T', ' ');
+}
+
 interface WorkflowCardProps {
     workflow: Workflow;
     onClick?: () => void;
@@ -46,7 +61,7 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
                     <div className="absolute inset-0 z-50 flex items-center justify-center bg-background/60 backdrop-blur-sm">
                         <div className="flex flex-col items-center gap-2">
                             <Loader2 className="size-6 text-foreground animate-spin" />
-                            <span className="text-xs text-foreground/80 font-medium">Uploading?</span>
+                            <span className="text-xs text-foreground/80 font-medium">Uploading...</span>
                         </div>
                     </div>
                 )}
@@ -95,8 +110,8 @@ export function WorkflowCard({ workflow, onClick, href, isUploading, actions, cl
                     {variant === 'compact' && <span className="size-1.5 rounded-full bg-muted-foreground/50 shrink-0"></span>}
                     <p className="text-xs text-muted-foreground truncate">
                         {variant === 'default'
-                            ? workflow.updatedAt.toISOString().slice(0, 16).replace('T', ' ')
-                            : workflow.createdAt.toISOString().slice(0, 10)}
+                            ? formatWorkflowDate(workflow.updatedAt, 'dateTime')
+                            : formatWorkflowDate(workflow.createdAt, 'date')}
                     </p>
                 </div>
             </div>

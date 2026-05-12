@@ -9,6 +9,8 @@ import {
   Activity,
   Building2,
   CheckCircle2,
+  ChevronDown,
+  ChevronRight,
   Database,
   Download,
   FileText,
@@ -26,7 +28,10 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 import { Skeleton } from '@/ui/skeleton';
 import { useAuth } from '@/providers';
 import { useRouter } from '@/i18n/navigation';
@@ -36,19 +41,21 @@ import { AdminNotificationsPanel } from '@/components/admin/AdminNotificationsPa
 import {
   adminApi,
   type AdminAsset,
+  type AdminDeadLetterJob,
   type AdminAuditLog,
   type AdminCatalogImportResult,
-  type AdminOrganization,
+  type AdminWorkspace,
   type AdminTemplate,
   type AdminUser,
-  type UpdateAdminOrganizationRequest,
+  type UpdateAdminWorkspaceRequest,
 } from '@/services/adminApi';
 
 type AdminSection =
   | 'overview'
+  | 'ops'
   | 'notifications'
   | 'users'
-  | 'organizations'
+  | 'workspaces'
   | 'templates'
   | 'assets'
   | 'audit'
@@ -58,9 +65,10 @@ type AdminSection =
 
 const sections: Array<{ id: AdminSection; label: string }> = [
   { id: 'overview', label: 'Overview' },
+  { id: 'ops', label: 'Ops' },
   { id: 'notifications', label: 'Notifications' },
   { id: 'users', label: 'Users' },
-  { id: 'organizations', label: 'Workspaces' },
+  { id: 'workspaces', label: 'Workspaces' },
   { id: 'templates', label: 'Templates' },
   { id: 'assets', label: 'Assets' },
   { id: 'audit', label: 'Audit Logs' },
@@ -89,40 +97,50 @@ type AdminState = {
   assetSearch: string;
   assetType: string;
   selectedAssetIds: string[];
-  orgPage: number;
-  orgSearch: string;
-  selectedOrgId: string | null;
-  orgName: string;
-  orgSlug: string;
-  orgUrl: string;
-  orgDescription: string;
-  orgDomain: string;
-  orgAttachByDomain: boolean;
-  orgAvatarUrl: string;
-  orgOwnerId: string;
+  workspacePage: number;
+  workspaceSearch: string;
+  selectedWorkspaceId: string | null;
+  workspaceName: string;
+  workspaceSlug: string;
+  workspaceUrl: string;
+  workspaceDescription: string;
+  workspaceDomain: string;
+  workspaceAttachByDomain: boolean;
+  workspaceAvatarUrl: string;
+  workspaceOwnerId: string;
+  workspaceMemberSearch: string;
+  workspaceMemberRoleFilter: string;
+  selectedWorkspaceMemberIds: string[];
   auditPage: number;
   auditSearch: string;
   auditAction: string;
   auditEntityType: string;
+  auditActorId: string;
+  auditFrom: string;
+  auditTo: string;
   siteConfigKey: string;
   siteConfigLocale: string;
   siteConfigDraft: string;
+  catalogSelectedSourceIds: string[];
+  catalogSourcesInitialized: boolean;
+  catalogMaxItems: string;
+  catalogForce: boolean;
 };
 
 type AdminStateAction =
   | { type: 'setField'; key: keyof AdminState; value: AdminState[keyof AdminState] }
   | {
-      type: 'setOrganizationDetail';
+      type: 'setWorkspaceDetail';
       payload: Pick<
         AdminState,
-        | 'orgName'
-        | 'orgSlug'
-        | 'orgUrl'
-        | 'orgDescription'
-        | 'orgDomain'
-        | 'orgAttachByDomain'
-        | 'orgAvatarUrl'
-        | 'orgOwnerId'
+        | 'workspaceName'
+        | 'workspaceSlug'
+        | 'workspaceUrl'
+        | 'workspaceDescription'
+        | 'workspaceDomain'
+        | 'workspaceAttachByDomain'
+        | 'workspaceAvatarUrl'
+        | 'workspaceOwnerId'
       >;
     };
 
@@ -146,31 +164,41 @@ const initialAdminState: AdminState = {
   assetSearch: '',
   assetType: '',
   selectedAssetIds: [],
-  orgPage: 1,
-  orgSearch: '',
-  selectedOrgId: null,
-  orgName: '',
-  orgSlug: '',
-  orgUrl: '',
-  orgDescription: '',
-  orgDomain: '',
-  orgAttachByDomain: false,
-  orgAvatarUrl: '',
-  orgOwnerId: '',
+  workspacePage: 1,
+  workspaceSearch: '',
+  selectedWorkspaceId: null,
+  workspaceName: '',
+  workspaceSlug: '',
+  workspaceUrl: '',
+  workspaceDescription: '',
+  workspaceDomain: '',
+  workspaceAttachByDomain: false,
+  workspaceAvatarUrl: '',
+  workspaceOwnerId: '',
+  workspaceMemberSearch: '',
+  workspaceMemberRoleFilter: '',
+  selectedWorkspaceMemberIds: [],
   auditPage: 1,
   auditSearch: '',
   auditAction: '',
   auditEntityType: '',
+  auditActorId: '',
+  auditFrom: '',
+  auditTo: '',
   siteConfigKey: 'landing',
   siteConfigLocale: 'en',
   siteConfigDraft: '',
+  catalogSelectedSourceIds: [],
+  catalogSourcesInitialized: false,
+  catalogMaxItems: '10',
+  catalogForce: false,
 };
 
 function adminReducer(state: AdminState, action: AdminStateAction): AdminState {
   switch (action.type) {
     case 'setField':
       return { ...state, [action.key]: action.value };
-    case 'setOrganizationDetail':
+    case 'setWorkspaceDetail':
       return { ...state, ...action.payload };
     default:
       return state;
@@ -296,6 +324,7 @@ export default function AdminPage() {
   const { user, isLoading } = useAuth();
   const isAdmin = canAccessAdmin(user);
   const [state, dispatch] = React.useReducer(adminReducer, initialAdminState);
+  const [expandedAuditLogIds, setExpandedAuditLogIds] = React.useState<string[]>([]);
   const {
     activeSection,
     userPage,
@@ -316,24 +345,34 @@ export default function AdminPage() {
     assetSearch,
     assetType,
     selectedAssetIds,
-    orgPage,
-    orgSearch,
-    selectedOrgId,
-    orgName,
-    orgSlug,
-    orgUrl,
-    orgDescription,
-    orgDomain,
-    orgAttachByDomain,
-    orgAvatarUrl,
-    orgOwnerId,
+    workspacePage,
+    workspaceSearch,
+    selectedWorkspaceId,
+    workspaceName,
+    workspaceSlug,
+    workspaceUrl,
+    workspaceDescription,
+    workspaceDomain,
+    workspaceAttachByDomain,
+    workspaceAvatarUrl,
+    workspaceOwnerId,
+    workspaceMemberSearch,
+    workspaceMemberRoleFilter,
+    selectedWorkspaceMemberIds,
     auditPage,
     auditSearch,
     auditAction,
     auditEntityType,
+    auditActorId,
+    auditFrom,
+    auditTo,
     siteConfigKey,
     siteConfigLocale,
     siteConfigDraft,
+    catalogSelectedSourceIds,
+    catalogSourcesInitialized,
+    catalogMaxItems,
+    catalogForce,
   } = state;
 
   type SetStateAction<T> = T | ((prev: T) => T);
@@ -360,24 +399,37 @@ export default function AdminPage() {
   const setAssetSearch = (next: SetStateAction<string>) => setField('assetSearch', next);
   const setAssetType = (next: SetStateAction<string>) => setField('assetType', next);
   const setSelectedAssetIds = (next: SetStateAction<string[]>) => setField('selectedAssetIds', next);
-  const setOrgPage = (next: SetStateAction<number>) => setField('orgPage', next);
-  const setOrgSearch = (next: SetStateAction<string>) => setField('orgSearch', next);
-  const setSelectedOrgId = (next: SetStateAction<string | null>) => setField('selectedOrgId', next);
-  const setOrgName = (next: SetStateAction<string>) => setField('orgName', next);
-  const setOrgSlug = (next: SetStateAction<string>) => setField('orgSlug', next);
-  const setOrgUrl = (next: SetStateAction<string>) => setField('orgUrl', next);
-  const setOrgDescription = (next: SetStateAction<string>) => setField('orgDescription', next);
-  const setOrgDomain = (next: SetStateAction<string>) => setField('orgDomain', next);
-  const setOrgAttachByDomain = (next: SetStateAction<boolean>) => setField('orgAttachByDomain', next);
-  const setOrgAvatarUrl = (next: SetStateAction<string>) => setField('orgAvatarUrl', next);
-  const setOrgOwnerId = (next: SetStateAction<string>) => setField('orgOwnerId', next);
+  const setWorkspacePage = (next: SetStateAction<number>) => setField('workspacePage', next);
+  const setWorkspaceSearch = (next: SetStateAction<string>) => setField('workspaceSearch', next);
+  const setSelectedWorkspaceId = (next: SetStateAction<string | null>) => setField('selectedWorkspaceId', next);
+  const setWorkspaceName = (next: SetStateAction<string>) => setField('workspaceName', next);
+  const setWorkspaceSlug = (next: SetStateAction<string>) => setField('workspaceSlug', next);
+  const setWorkspaceUrl = (next: SetStateAction<string>) => setField('workspaceUrl', next);
+  const setWorkspaceDescription = (next: SetStateAction<string>) => setField('workspaceDescription', next);
+  const setWorkspaceDomain = (next: SetStateAction<string>) => setField('workspaceDomain', next);
+  const setWorkspaceAttachByDomain = (next: SetStateAction<boolean>) => setField('workspaceAttachByDomain', next);
+  const setWorkspaceAvatarUrl = (next: SetStateAction<string>) => setField('workspaceAvatarUrl', next);
+  const setWorkspaceOwnerId = (next: SetStateAction<string>) => setField('workspaceOwnerId', next);
+  const setWorkspaceMemberSearch = (next: SetStateAction<string>) => setField('workspaceMemberSearch', next);
+  const setWorkspaceMemberRoleFilter = (next: SetStateAction<string>) => setField('workspaceMemberRoleFilter', next);
+  const setSelectedWorkspaceMemberIds = (next: SetStateAction<string[]>) =>
+    setField('selectedWorkspaceMemberIds', next);
   const setAuditPage = (next: SetStateAction<number>) => setField('auditPage', next);
   const setAuditSearch = (next: SetStateAction<string>) => setField('auditSearch', next);
   const setAuditAction = (next: SetStateAction<string>) => setField('auditAction', next);
   const setAuditEntityType = (next: SetStateAction<string>) => setField('auditEntityType', next);
+  const setAuditActorId = (next: SetStateAction<string>) => setField('auditActorId', next);
+  const setAuditFrom = (next: SetStateAction<string>) => setField('auditFrom', next);
+  const setAuditTo = (next: SetStateAction<string>) => setField('auditTo', next);
   const setSiteConfigKey = (next: SetStateAction<string>) => setField('siteConfigKey', next);
   const setSiteConfigLocale = (next: SetStateAction<string>) => setField('siteConfigLocale', next);
   const setSiteConfigDraft = (next: SetStateAction<string>) => setField('siteConfigDraft', next);
+  const setCatalogSelectedSourceIds = (next: SetStateAction<string[]>) =>
+    setField('catalogSelectedSourceIds', next);
+  const setCatalogSourcesInitialized = (next: SetStateAction<boolean>) =>
+    setField('catalogSourcesInitialized', next);
+  const setCatalogMaxItems = (next: SetStateAction<string>) => setField('catalogMaxItems', next);
+  const setCatalogForce = (next: SetStateAction<boolean>) => setField('catalogForce', next);
 
   const qc = useQueryClient();
 
@@ -449,26 +501,26 @@ export default function AdminPage() {
     placeholderData: (previousData) => previousData,
   });
 
-  const organizationsQuery = useQuery({
-    queryKey: ['admin', 'organizations', orgPage, orgSearch],
+  const workspacesQuery = useQuery({
+    queryKey: ['admin', 'workspaces', workspacePage, workspaceSearch],
     queryFn: () =>
-      adminApi.getOrganizations({
-        page: orgPage,
+      adminApi.getWorkspaces({
+        page: workspacePage,
         limit: 10,
-        q: orgSearch || undefined,
+        q: workspaceSearch || undefined,
       }),
     enabled: isAdmin,
     placeholderData: (previousData) => previousData,
   });
 
-  const organizationDetailQuery = useQuery({
-    queryKey: ['admin', 'organization', selectedOrgId],
-    queryFn: () => adminApi.getOrganization(selectedOrgId as string),
-    enabled: isAdmin && Boolean(selectedOrgId),
+  const workspaceDetailQuery = useQuery({
+    queryKey: ['admin', 'workspace', selectedWorkspaceId],
+    queryFn: () => adminApi.getWorkspace(selectedWorkspaceId as string),
+    enabled: isAdmin && Boolean(selectedWorkspaceId),
   });
 
   const auditLogsQuery = useQuery({
-    queryKey: ['admin', 'audit-logs', auditPage, auditSearch, auditAction, auditEntityType],
+    queryKey: ['admin', 'audit-logs', auditPage, auditSearch, auditAction, auditEntityType, auditActorId, auditFrom, auditTo],
     queryFn: () =>
       adminApi.getAuditLogs({
         page: auditPage,
@@ -476,36 +528,68 @@ export default function AdminPage() {
         q: auditSearch || undefined,
         action: auditAction || undefined,
         entityType: auditEntityType || undefined,
+        actorId: auditActorIdValue,
+        from: auditFrom || undefined,
+        to: auditTo || undefined,
       }),
     enabled: isAdmin,
     placeholderData: (previousData) => previousData,
   });
 
-  React.useEffect(() => {
-    if (!selectedOrgId && organizationsQuery.data?.data?.length) {
-      setSelectedOrgId(organizationsQuery.data.data[0].id);
-    }
-  }, [organizationsQuery.data, selectedOrgId]);
+  const queueSnapshotQuery = useQuery({
+    queryKey: ['admin', 'queues'],
+    queryFn: adminApi.getQueues,
+    enabled: isAdmin,
+    staleTime: 15_000,
+  });
+
+  const deadLetterJobsQuery = useQuery({
+    queryKey: ['admin', 'dead-letter'],
+    queryFn: adminApi.getDeadLetterJobs,
+    enabled: isAdmin,
+    staleTime: 15_000,
+  });
 
   React.useEffect(() => {
-    if (!organizationDetailQuery.data) return;
+    if (!selectedWorkspaceId && workspacesQuery.data?.data?.length) {
+      setSelectedWorkspaceId(workspacesQuery.data.data[0].id);
+    }
+  }, [workspacesQuery.data, selectedWorkspaceId]);
+
+  React.useEffect(() => {
+    if (!workspaceDetailQuery.data) return;
+    setSelectedWorkspaceMemberIds([]);
+    setWorkspaceMemberSearch('');
+    setWorkspaceMemberRoleFilter('');
     dispatch({
-      type: 'setOrganizationDetail',
+      type: 'setWorkspaceDetail',
       payload: {
-        orgName: organizationDetailQuery.data.name ?? '',
-        orgSlug: organizationDetailQuery.data.slug ?? '',
-        orgUrl: organizationDetailQuery.data.url ?? '',
-        orgDescription: organizationDetailQuery.data.description ?? '',
-        orgDomain: organizationDetailQuery.data.domain ?? '',
-        orgAttachByDomain: Boolean(organizationDetailQuery.data.shouldAttachUsersByDomain),
-        orgAvatarUrl: organizationDetailQuery.data.avatarUrl ?? '',
-        orgOwnerId: String(organizationDetailQuery.data.ownerId ?? ''),
+        workspaceName: workspaceDetailQuery.data.name ?? '',
+        workspaceSlug: workspaceDetailQuery.data.slug ?? '',
+        workspaceUrl: workspaceDetailQuery.data.url ?? '',
+        workspaceDescription: workspaceDetailQuery.data.description ?? '',
+        workspaceDomain: workspaceDetailQuery.data.domain ?? '',
+        workspaceAttachByDomain: Boolean(workspaceDetailQuery.data.shouldAttachUsersByDomain),
+        workspaceAvatarUrl: workspaceDetailQuery.data.avatarUrl ?? '',
+        workspaceOwnerId: String(workspaceDetailQuery.data.ownerId ?? ''),
       },
     });
-  }, [organizationDetailQuery.data]);
+  }, [workspaceDetailQuery.data]);
 
   const handleError = (error: unknown, fallback: string) =>
     toast.error(parseErrorMessage(error, fallback));
+
+  const parsedAuditActorId = Number(auditActorId);
+  const auditActorIdValue = Number.isFinite(parsedAuditActorId) ? parsedAuditActorId : undefined;
+  const isAuditLogExpanded = React.useCallback(
+    (id: string) => expandedAuditLogIds.includes(id),
+    [expandedAuditLogIds],
+  );
+  const toggleAuditLogExpanded = React.useCallback((id: string) => {
+    setExpandedAuditLogIds((current) =>
+      current.includes(id) ? current.filter((item) => item !== id) : [...current, id],
+    );
+  }, []);
 
   const refreshAll = () => {
     void qc.invalidateQueries({ queryKey: ['admin'] });
@@ -532,6 +616,14 @@ export default function AdminPage() {
     enabled: isAdmin,
     staleTime: 5 * 60_000,
   });
+
+  React.useEffect(() => {
+    if (catalogSourcesInitialized) return;
+    const sourceIds = sourcesQuery.data?.map((source) => source.id) ?? [];
+    if (sourceIds.length === 0) return;
+    setCatalogSelectedSourceIds(sourceIds);
+    setCatalogSourcesInitialized(true);
+  }, [catalogSourcesInitialized, sourcesQuery.data]);
 
   const siteConfigsQuery = useQuery({
     queryKey: ['admin', 'site-configs', siteConfigKey, siteConfigLocale],
@@ -651,27 +743,27 @@ export default function AdminPage() {
     onError: (error: unknown) => handleError(error, 'Failed to bulk delete assets'),
   });
 
-  const updateOrgMutation = useMutation({
-    mutationFn: ({ id, payload }: { id: string; payload: UpdateAdminOrganizationRequest }) =>
-      adminApi.updateOrganization(id, payload),
+  const updateWorkspaceMutation = useMutation({
+    mutationFn: ({ id, payload }: { id: string; payload: UpdateAdminWorkspaceRequest }) =>
+      adminApi.updateWorkspace(id, payload),
     onSuccess: async () => {
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ['admin', 'organizations'] }),
-        qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'workspace', selectedWorkspaceId] }),
         qc.invalidateQueries({ queryKey: ['admin', 'overview'] }),
       ]);
-      toast.success('Organization updated');
+      toast.success('Workspace updated');
     },
-    onError: (error: unknown) => handleError(error, 'Failed to update organization'),
+    onError: (error: unknown) => handleError(error, 'Failed to update workspace'),
   });
 
-  const transferOwnerMutation = useMutation({
+  const transferWorkspaceOwnerMutation = useMutation({
     mutationFn: ({ id, memberId }: { id: string; memberId: string }) =>
-      adminApi.transferOrganizationOwner(id, { memberId }),
+      adminApi.transferWorkspaceOwner(id, { memberId }),
     onSuccess: async () => {
       await Promise.all([
-        qc.invalidateQueries({ queryKey: ['admin', 'organizations'] }),
-        qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'workspace', selectedWorkspaceId] }),
         qc.invalidateQueries({ queryKey: ['admin', 'overview'] }),
       ]);
       toast.success('Ownership transferred');
@@ -679,7 +771,7 @@ export default function AdminPage() {
     onError: (error: unknown) => handleError(error, 'Failed to transfer ownership'),
   });
 
-  const updateOrgMemberMutation = useMutation({
+  const updateWorkspaceMemberMutation = useMutation({
     mutationFn: ({
       id,
       memberId,
@@ -688,33 +780,78 @@ export default function AdminPage() {
       id: string;
       memberId: string;
       role?: string;
-    }) => adminApi.updateOrganizationMember(id, memberId, { role }),
+    }) => adminApi.updateWorkspaceMember(id, memberId, { role }),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] });
-      await qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
+      await qc.invalidateQueries({ queryKey: ['admin', 'workspace', selectedWorkspaceId] });
+      await qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] });
       toast.success('Member role updated');
     },
     onError: (error: unknown) => handleError(error, 'Failed to update member'),
   });
 
-  const deleteOrgMemberMutation = useMutation({
+  const deleteWorkspaceMemberMutation = useMutation({
     mutationFn: ({ id, memberId }: { id: string; memberId: string }) =>
-      adminApi.deleteOrganizationMember(id, memberId),
+      adminApi.deleteWorkspaceMember(id, memberId),
     onSuccess: async () => {
-      await qc.invalidateQueries({ queryKey: ['admin', 'organization', selectedOrgId] });
-      await qc.invalidateQueries({ queryKey: ['admin', 'organizations'] });
+      await qc.invalidateQueries({ queryKey: ['admin', 'workspace', selectedWorkspaceId] });
+      await qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] });
       toast.success('Member removed');
     },
     onError: (error: unknown) => handleError(error, 'Failed to remove member'),
   });
 
+  const bulkWorkspaceMembersMutation = useMutation({
+    mutationFn: async ({
+      id,
+      memberIds,
+      role,
+      remove,
+    }: {
+      id: string;
+      memberIds: string[];
+      role?: string;
+      remove?: boolean;
+    }) => {
+      const result = [] as Array<{ memberId: string; action: 'updated' | 'removed' }>;
+
+      for (const memberId of memberIds) {
+        if (remove) {
+          await adminApi.deleteWorkspaceMember(id, memberId);
+          result.push({ memberId, action: 'removed' });
+          continue;
+        }
+
+        await adminApi.updateWorkspaceMember(id, memberId, { role });
+        result.push({ memberId, action: 'updated' });
+      }
+
+      return result;
+    },
+    onSuccess: async (result) => {
+      setSelectedWorkspaceMemberIds([]);
+      await qc.invalidateQueries({ queryKey: ['admin', 'workspace', selectedWorkspaceId] });
+      await qc.invalidateQueries({ queryKey: ['admin', 'workspaces'] });
+      toast.success(`${result.length} workspace member(s) updated`);
+    },
+    onError: (error: unknown) => handleError(error, 'Failed to bulk update workspace members'),
+  });
+
   const importMutation = useMutation({
-    mutationFn: (dryRun: boolean) =>
-      adminApi.importCatalog({
+    mutationFn: (dryRun: boolean) => {
+      if (catalogSelectedSourceIds.length === 0) {
+        throw new Error('Select at least one catalog source');
+      }
+
+      const parsedMaxItems = Number.parseInt(catalogMaxItems, 10);
+      const maxItems = Number.isFinite(parsedMaxItems) && parsedMaxItems > 0 ? parsedMaxItems : 10;
+
+      return adminApi.importCatalog({
         dryRun,
-        sources: adminSources.map((source) => source.id),
-        maxItems: 10,
-      }),
+        force: catalogForce,
+        sources: catalogSelectedSourceIds,
+        maxItems,
+      });
+    },
     onSuccess: async (result: AdminCatalogImportResult) => {
       if (!result.dryRun) {
         await qc.invalidateQueries({ queryKey: ['admin', 'templates'] });
@@ -725,12 +862,84 @@ export default function AdminPage() {
     onError: (error: unknown) => handleError(error, 'Failed to import catalog'),
   });
 
+  const requeueDeadLetterMutation = useMutation({
+    mutationFn: (jobId: string) => adminApi.requeueDeadLetterJob(jobId),
+    onSuccess: async () => {
+      await Promise.all([
+        qc.invalidateQueries({ queryKey: ['admin', 'queues'] }),
+        qc.invalidateQueries({ queryKey: ['admin', 'dead-letter'] }),
+      ]);
+      toast.success('Dead-letter job requeued');
+    },
+    onError: (error: unknown) => handleError(error, 'Failed to requeue dead-letter job'),
+  });
+
   const users = usersQuery.data?.data ?? [];
   const templates = templatesQuery.data?.data ?? [];
   const assets = assetsQuery.data?.data ?? [];
-  const organizations = organizationsQuery.data?.data ?? [];
+  const workspaces = workspacesQuery.data?.data ?? [];
   const auditLogs = auditLogsQuery.data?.data ?? [];
   const adminSources = sourcesQuery.data ?? [];
+  const queueSnapshot = queueSnapshotQuery.data;
+  const deadLetterJobs = deadLetterJobsQuery.data ?? [];
+  const selectedCatalogSourceCount = catalogSourcesInitialized
+    ? catalogSelectedSourceIds.length
+    : adminSources.length;
+  const visibleUserIds = users.map((item) => item.id);
+  const filteredWorkspaceMembers =
+    workspaceDetailQuery.data?.members.filter((member) => {
+      const query = workspaceMemberSearch.trim().toLowerCase();
+      const matchesSearch = !query
+        ? true
+        : [member.user?.email, member.user?.firstName, member.user?.lastName, String(member.userId)]
+            .filter(Boolean)
+            .some((value) => String(value).toLowerCase().includes(query));
+      const matchesRole = !workspaceMemberRoleFilter || member.role === workspaceMemberRoleFilter;
+      return matchesSearch && matchesRole;
+    }) ?? [];
+
+  const toggleCatalogSource = (sourceId: string) => {
+    setCatalogSourcesInitialized(true);
+    setCatalogSelectedSourceIds((current) =>
+      current.includes(sourceId)
+        ? current.filter((item) => item !== sourceId)
+        : [...current, sourceId],
+    );
+  };
+
+  const selectAllCatalogSources = () => {
+    setCatalogSourcesInitialized(true);
+    setCatalogSelectedSourceIds(adminSources.map((source) => source.id));
+  };
+
+  const clearCatalogSources = () => {
+    setCatalogSourcesInitialized(true);
+    setCatalogSelectedSourceIds([]);
+  };
+
+  const selectAllVisibleUsers = () => {
+    setSelectedUserIds(visibleUserIds);
+  };
+
+  const clearSelectedUsers = () => {
+    setSelectedUserIds([]);
+  };
+
+  const toggleWorkspaceMemberSelection = (memberId: string) => {
+    setSelectedWorkspaceMemberIds((current) =>
+      current.includes(memberId)
+        ? current.filter((item) => item !== memberId)
+        : [...current, memberId],
+    );
+  };
+
+  const selectVisibleWorkspaceMembers = () => {
+    setSelectedWorkspaceMemberIds(filteredWorkspaceMembers.map((member) => member.id));
+  };
+
+  const clearWorkspaceMemberSelection = () => {
+    setSelectedWorkspaceMemberIds([]);
+  };
 
   const overview = overviewQuery.data;
   const rolesMatrix = rolesMatrixQuery.data;
@@ -776,7 +985,7 @@ export default function AdminPage() {
   const metrics = [
     { label: 'Users', value: overview?.users ?? 0, hint: 'Total accounts', icon: Users },
     { label: 'Templates', value: overview?.templates ?? 0, hint: 'Inventory records', icon: LayoutGrid },
-    { label: 'Workspaces', value: overview?.organizations ?? 0, hint: 'Organization records', icon: Building2 },
+    { label: 'Workspaces', value: overview?.workspaces ?? 0, hint: 'Workspace records', icon: Building2 },
     { label: 'Assets', value: overview?.assets ?? 0, hint: 'Generated/imported assets', icon: FileText },
     { label: 'Audit logs', value: overview?.auditLogs ?? 0, hint: 'Recorded actions', icon: Activity },
     { label: 'Sources', value: overview?.sources ?? 0, hint: 'External feeds', icon: Database },
@@ -824,8 +1033,6 @@ export default function AdminPage() {
           ))}
         </nav>
 
-        {activeSection === 'notifications' && <AdminNotificationsPanel />}
-
         {(activeSection === 'overview' || activeSection === 'roles') && (
           <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             {metrics.map((metric) => {
@@ -835,7 +1042,7 @@ export default function AdminPage() {
                   <CardContent className="p-4">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                        <div className="text-sm font-medium text-muted-foreground">
                           {metric.label}
                         </div>
                         <div className="mt-2 text-2xl font-semibold">{metric.value}</div>
@@ -860,10 +1067,10 @@ export default function AdminPage() {
               </CardHeader>
               <CardContent className="grid gap-3 p-4 md:grid-cols-2">
                 {[
+                  ['Live queue snapshot', `${queueSnapshot?.queues.length ?? 0} queues tracked`],
+                  ['Dead-letter recovery', `${deadLetterJobs.length} failed jobs ready`],
                   ['Moderate templates', `${templatesQuery.data?.total ?? 0} records available`],
-                  ['Review imported content', `${overview?.communityTemplates ?? 0} community templates`],
-                  ['Workspace directory', `${organizationsQuery.data?.total ?? 0} workspaces`],
-                  ['Inactive users', `${overview?.inactiveUsers ?? 0} accounts`],
+                  ['Workspace directory', `${workspacesQuery.data?.total ?? 0} workspaces`],
                 ].map(([title, hint]) => (
                   <div key={title} className="rounded-lg border border-border bg-background p-4">
                     <div className="text-sm font-medium">{title}</div>
@@ -893,6 +1100,115 @@ export default function AdminPage() {
             </Card>
           </section>
         )}
+
+        {activeSection === 'ops' && (
+          <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
+            <Card className="rounded-lg border-border">
+              <CardHeader className="border-b border-border">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <Activity className="size-4" />
+                      Queue snapshot
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Live counts for worker queues and the dead-letter archive.
+                    </p>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      void qc.invalidateQueries({ queryKey: ['admin', 'queues'] });
+                      void qc.invalidateQueries({ queryKey: ['admin', 'dead-letter'] });
+                    }}
+                  >
+                    <RefreshCw className="mr-2 size-4" />
+                    Refresh
+                  </Button>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Snapshot at {queueSnapshot?.timestamp ? new Date(queueSnapshot.timestamp).toLocaleString() : 'loading'}
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                {queueSnapshotQuery.isLoading && <Skeleton className="h-28 rounded-lg" />}
+                {!queueSnapshotQuery.isLoading && (
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {(queueSnapshot?.queues ?? []).map((queue) => (
+                      <div key={queue.queue} className="rounded-lg border border-border bg-background p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-sm font-medium">{queue.queue}</div>
+                          <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                            {queue.counts.waiting + queue.counts.active + queue.counts.delayed} pending
+                          </span>
+                        </div>
+                        <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                          <span>Waiting: {queue.counts.waiting}</span>
+                          <span>Active: {queue.counts.active}</span>
+                          <span>Failed: {queue.counts.failed}</span>
+                          <span>Delayed: {queue.counts.delayed}</span>
+                          <span>Completed: {queue.counts.completed}</span>
+                          <span>Paused: {queue.counts.paused}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card className="rounded-lg border-border">
+              <CardHeader className="border-b border-border">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <ShieldCheck className="size-4" />
+                  Dead-letter recovery
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  Inspect failed jobs and requeue them back to the original worker queue.
+                </p>
+              </CardHeader>
+              <CardContent className="space-y-3 p-4">
+                {deadLetterJobsQuery.isLoading && <Skeleton className="h-28 rounded-lg" />}
+                {!deadLetterJobsQuery.isLoading && deadLetterJobs.length === 0 && (
+                  <div className="rounded-lg border border-border bg-background p-4 text-sm text-muted-foreground">
+                    No dead-letter jobs found.
+                  </div>
+                )}
+                {!deadLetterJobsQuery.isLoading &&
+                  deadLetterJobs.map((job: AdminDeadLetterJob) => (
+                    <div key={String(job.id)} className="rounded-lg border border-border bg-background p-4">
+                      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                        <div className="space-y-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium">{job.jobName}</span>
+                            <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                              {job.sourceQueue}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            Job {job.jobId ?? 'n/a'} / failed {job.attemptsMade} time(s)
+                          </div>
+                          <div className="text-xs text-muted-foreground">{job.errorMessage}</div>
+                          <div className="text-xs text-muted-foreground">Failed at {job.failedAt}</div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={requeueDeadLetterMutation.isPending}
+                          onClick={() => requeueDeadLetterMutation.mutate(String(job.id))}
+                        >
+                          Requeue
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {activeSection === 'notifications' && <AdminNotificationsPanel />}
 
         {activeSection === 'users' && (
           <Card className="rounded-lg border-border">
@@ -934,30 +1250,38 @@ export default function AdminPage() {
                     className="pl-10"
                   />
                 </div>
-                <select
-                  value={userRole}
-                  onChange={(event) => {
-                    setUserRole(event.target.value);
+                <Select
+                  value={userRole || 'all'}
+                  onValueChange={(value) => {
+                    setUserRole(value === 'all' ? '' : value);
                     setUserPage(1);
                   }}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">All roles</option>
-                  <option value="1">Admin</option>
-                  <option value="2">User</option>
-                </select>
-                <select
-                  value={userStatus}
-                  onChange={(event) => {
-                    setUserStatus(event.target.value);
+                  <SelectTrigger>
+                    <SelectValue placeholder="All roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All roles</SelectItem>
+                    <SelectItem value="1">Admin</SelectItem>
+                    <SelectItem value="2">User</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={userStatus || 'all'}
+                  onValueChange={(value) => {
+                    setUserStatus(value === 'all' ? '' : value);
                     setUserPage(1);
                   }}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">All statuses</option>
-                  <option value="1">Active</option>
-                  <option value="2">Inactive</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="1">Active</SelectItem>
+                    <SelectItem value="2">Inactive</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
@@ -965,6 +1289,12 @@ export default function AdminPage() {
                 count={selectedUserIds.length}
                 actions={
                   <>
+                    <Button size="sm" variant="outline" onClick={selectAllVisibleUsers}>
+                      Select visible
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={clearSelectedUsers}>
+                      Clear
+                    </Button>
                     <Button
                       size="sm"
                       variant="outline"
@@ -1009,42 +1339,65 @@ export default function AdminPage() {
                 {usersQuery.isLoading && <Skeleton className="m-4 h-24 rounded-lg" />}
                 {!usersQuery.isLoading &&
                   users.map((item: AdminUser) => (
-                    <div key={item.id} className="grid gap-3 p-4 lg:grid-cols-[28px_1fr_160px_160px_160px] lg:items-center">
-                      <input
-                        type="checkbox"
+                    <div key={item.id} className="grid gap-3 p-4 lg:grid-cols-[28px_1fr_160px_160px_160px_140px] lg:items-center">
+                      <Checkbox
                         checked={selectedUserIds.includes(item.id)}
-                        onChange={() => toggleId(selectedUserIds, item.id, setSelectedUserIds)}
+                        onCheckedChange={() => toggleId(selectedUserIds, item.id, setSelectedUserIds)}
                       />
                       <div>
                         <div className="text-sm font-medium">{formatPerson(item)}</div>
                         <div className="text-xs text-muted-foreground">{item.email ?? 'No email'}</div>
+                        <div className="mt-2 flex flex-wrap gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-8 px-2 text-xs"
+                            onClick={() => {
+                              setAuditSearch(item.email ?? formatPerson(item));
+                              setAuditActorId(String(item.id));
+                              setAuditEntityType('');
+                              setAuditPage(1);
+                              setActiveSection('audit');
+                            }}
+                          >
+                            View audit
+                          </Button>
+                        </div>
                       </div>
-                      <select
+                      <Select
                         value={String(item.role?.id ?? 2)}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           updateUserMutation.mutate({
                             id: item.id,
-                            payload: { roleId: Number(event.target.value) as 1 | 2 },
+                            payload: { roleId: Number(value) as 1 | 2 },
                           })
                         }
-                        className="h-9 rounded-md border border-input bg-background px-2 text-xs"
                       >
-                        <option value="1">Admin</option>
-                        <option value="2">User</option>
-                      </select>
-                      <select
+                        <SelectTrigger className="h-9 w-[120px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Admin</SelectItem>
+                          <SelectItem value="2">User</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Select
                         value={String(item.status?.id ?? 1)}
-                        onChange={(event) =>
+                        onValueChange={(value) =>
                           updateUserMutation.mutate({
                             id: item.id,
-                            payload: { statusId: Number(event.target.value) as 1 | 2 },
+                            payload: { statusId: Number(value) as 1 | 2 },
                           })
                         }
-                        className="h-9 rounded-md border border-input bg-background px-2 text-xs"
                       >
-                        <option value="1">Active</option>
-                        <option value="2">Inactive</option>
-                      </select>
+                        <SelectTrigger className="h-9 w-[120px] text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="1">Active</SelectItem>
+                          <SelectItem value="2">Inactive</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <span
                         className={cn(
                           'w-fit rounded-md px-2 py-1 text-xs font-medium',
@@ -1055,6 +1408,22 @@ export default function AdminPage() {
                       >
                         {item.role?.name ?? 'User'}
                       </span>
+                      <div className="flex justify-start lg:justify-end">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          className="h-8 px-2 text-xs"
+                          onClick={() => {
+                            setAuditSearch(item.email ?? formatPerson(item));
+                            setAuditActorId(String(item.id));
+                            setAuditEntityType('');
+                            setAuditPage(1);
+                            setActiveSection('audit');
+                          }}
+                        >
+                          Open audit
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 {!usersQuery.isLoading && !users.length && (
@@ -1114,43 +1483,55 @@ export default function AdminPage() {
                     className="pl-10"
                   />
                 </div>
-                <select
-                  value={templateVisibility}
-                  onChange={(event) => {
-                    setTemplateVisibility(event.target.value);
+                <Select
+                  value={templateVisibility || 'all'}
+                  onValueChange={(value) => {
+                    setTemplateVisibility(value === 'all' ? '' : value);
                     setTemplatePage(1);
                   }}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">All visibility</option>
-                  <option value="public">public</option>
-                  <option value="community">community</option>
-                  <option value="private">private</option>
-                </select>
-                <select
-                  value={templateListed}
-                  onChange={(event) => {
-                    setTemplateListed(event.target.value);
+                  <SelectTrigger>
+                    <SelectValue placeholder="All visibility" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All visibility</SelectItem>
+                    <SelectItem value="public">public</SelectItem>
+                    <SelectItem value="community">community</SelectItem>
+                    <SelectItem value="private">private</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={templateListed || 'all'}
+                  onValueChange={(value) => {
+                    setTemplateListed(value === 'all' ? '' : value);
                     setTemplatePage(1);
                   }}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">Any listed</option>
-                  <option value="true">listed</option>
-                  <option value="false">unlisted</option>
-                </select>
-                <select
-                  value={templateFeatured}
-                  onChange={(event) => {
-                    setTemplateFeatured(event.target.value);
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any listed" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any listed</SelectItem>
+                    <SelectItem value="true">listed</SelectItem>
+                    <SelectItem value="false">unlisted</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={templateFeatured || 'all'}
+                  onValueChange={(value) => {
+                    setTemplateFeatured(value === 'all' ? '' : value);
                     setTemplatePage(1);
                   }}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">Any featured</option>
-                  <option value="true">featured</option>
-                  <option value="false">not featured</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Any featured" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any featured</SelectItem>
+                    <SelectItem value="true">featured</SelectItem>
+                    <SelectItem value="false">not featured</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-3 md:grid-cols-2">
                 <Input
@@ -1224,10 +1605,9 @@ export default function AdminPage() {
                     const marketplace = template.content?.marketplace ?? {};
                     return (
                       <div key={template.id} className="grid gap-4 p-4 xl:grid-cols-[28px_1fr_360px] xl:items-center">
-                        <input
-                          type="checkbox"
+                        <Checkbox
                           checked={selectedTemplateIds.includes(template.id)}
-                          onChange={() => toggleId(selectedTemplateIds, template.id, setSelectedTemplateIds)}
+                          onCheckedChange={() => toggleId(selectedTemplateIds, template.id, setSelectedTemplateIds)}
                         />
                         <div>
                           <div className="flex flex-wrap items-center gap-2">
@@ -1255,21 +1635,25 @@ export default function AdminPage() {
                         </div>
 
                         <div className="flex flex-wrap gap-2 xl:justify-end">
-                          <select
+                          <Select
                             value={template.visibility}
-                            onChange={(event) =>
+                            onValueChange={(value) =>
                               updateTemplateMutation.mutate({
                                 id: template.id,
-                                payload: { visibility: event.target.value },
+                                payload: { visibility: value },
                               })
                             }
-                            className="h-9 rounded-md border border-input bg-background px-2 text-xs"
                           >
-                            <option value="public">public</option>
-                            <option value="community">community</option>
-                            <option value="private">private</option>
-                          </select>
-                          <input
+                            <SelectTrigger className="h-9 w-[140px] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="public">public</SelectItem>
+                              <SelectItem value="community">community</SelectItem>
+                              <SelectItem value="private">private</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Input
                             type="number"
                             min={0}
                             value={marketplace.priceCredits ?? 0}
@@ -1279,7 +1663,7 @@ export default function AdminPage() {
                                 payload: { priceCredits: Number.parseInt(event.target.value, 10) || 0 },
                               })
                             }
-                            className="h-9 w-20 rounded-md border border-input bg-background px-2 text-xs"
+                            className="h-9 w-20 text-xs"
                           />
                           <Button
                             size="sm"
@@ -1369,19 +1753,23 @@ export default function AdminPage() {
                     className="pl-10"
                   />
                 </div>
-                <select
-                  value={assetType}
-                  onChange={(event) => {
-                    setAssetType(event.target.value);
+                <Select
+                  value={assetType || 'all'}
+                  onValueChange={(value) => {
+                    setAssetType(value === 'all' ? '' : value);
                     setAssetPage(1);
                   }}
-                  className="h-10 rounded-md border border-input bg-background px-3 text-sm"
                 >
-                  <option value="">All types</option>
-                  <option value="image">image</option>
-                  <option value="video">video</option>
-                  <option value="audio">audio</option>
-                </select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All types" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All types</SelectItem>
+                    <SelectItem value="image">image</SelectItem>
+                    <SelectItem value="video">video</SelectItem>
+                    <SelectItem value="audio">audio</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
@@ -1427,10 +1815,9 @@ export default function AdminPage() {
                               {String(asset.metadata?.prompt ?? asset.url)}
                             </div>
                           </div>
-                          <input
-                            type="checkbox"
+                          <Checkbox
                             checked={selectedAssetIds.includes(asset.id)}
-                            onChange={() => toggleId(selectedAssetIds, asset.id, setSelectedAssetIds)}
+                            onCheckedChange={() => toggleId(selectedAssetIds, asset.id, setSelectedAssetIds)}
                           />
                         </div>
                         <div className="flex items-center justify-between gap-2">
@@ -1462,7 +1849,7 @@ export default function AdminPage() {
           </Card>
         )}
 
-        {activeSection === 'organizations' && (
+        {activeSection === 'workspaces' && (
           <section className="grid gap-4 xl:grid-cols-[1fr_1.1fr]">
             <Card className="rounded-lg border-border">
               <CardHeader className="border-b border-border">
@@ -1479,59 +1866,83 @@ export default function AdminPage() {
                   <CsvButton
                     label="Export CSV"
                     onClick={async () => {
-                      const response = await adminApi.exportOrganizations({ q: orgSearch || undefined });
-                      downloadCsv('organizations.csv', response.data);
+                      const response = await adminApi.exportWorkspaces({ q: workspaceSearch || undefined });
+                      downloadCsv('workspaces.csv', response.data);
                     }}
                   />
                 </div>
                 <div className="relative">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
-                    value={orgSearch}
+                    value={workspaceSearch}
                     onChange={(event) => {
-                      setOrgSearch(event.target.value);
-                      setOrgPage(1);
+                      setWorkspaceSearch(event.target.value);
+                      setWorkspacePage(1);
                     }}
-                    placeholder="Search org name, slug, domain"
+                    placeholder="Search workspace name, slug, domain"
                     className="pl-10"
                   />
                 </div>
               </CardHeader>
               <CardContent className="space-y-3 p-0">
                 <div className="divide-y divide-border">
-                  {organizationsQuery.isLoading && <Skeleton className="m-4 h-24 rounded-lg" />}
-                  {!organizationsQuery.isLoading &&
-                    organizations.map((org: AdminOrganization) => (
-                      <button
-                        key={org.id}
-                        type="button"
-                        onClick={() => setSelectedOrgId(org.id)}
+                  {workspacesQuery.isLoading && <Skeleton className="m-4 h-24 rounded-lg" />}
+                  {!workspacesQuery.isLoading &&
+                    workspaces.map((workspace: AdminWorkspace) => (
+                      <div
+                        key={workspace.id}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => setSelectedWorkspaceId(workspace.id)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            setSelectedWorkspaceId(workspace.id);
+                          }
+                        }}
                         className={cn(
-                          'grid w-full gap-3 p-4 text-left transition-colors hover:bg-muted/40 md:grid-cols-[1fr_140px_140px] md:items-center',
-                          selectedOrgId === org.id && 'bg-muted/50',
+                          'grid w-full gap-3 p-4 text-left transition-colors hover:bg-muted/40 md:grid-cols-[1fr_140px_140px_140px] md:items-center',
+                          selectedWorkspaceId === workspace.id && 'bg-muted/50',
                         )}
                       >
                         <div>
-                          <div className="text-sm font-medium">{org.name}</div>
+                          <div className="text-sm font-medium">{workspace.name}</div>
                           <div className="text-xs text-muted-foreground">
-                            /orgs/{org.slug} {org.domain ? `/ ${org.domain}` : ''}
+                            /workspaces/{workspace.slug} {workspace.domain ? `/ ${workspace.domain}` : ''}
                           </div>
                         </div>
-                        <span className="text-xs text-muted-foreground">{org.memberCount} members</span>
-                        <span className="text-xs text-muted-foreground">Owner #{org.ownerId}</span>
-                      </button>
+                        <span className="text-xs text-muted-foreground">{workspace.memberCount} members</span>
+                        <span className="text-xs text-muted-foreground">Owner #{workspace.ownerId}</span>
+                        <div className="flex flex-wrap gap-2 md:justify-end">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            className="h-8 px-2 text-xs"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              setAuditSearch(workspace.name || workspace.slug);
+                              setAuditEntityType('workspace');
+                              setAuditActorId('');
+                              setAuditPage(1);
+                              setActiveSection('audit');
+                          }}
+                          >
+                            View audit
+                          </Button>
+                        </div>
+                      </div>
                     ))}
-                  {!organizationsQuery.isLoading && !organizations.length && (
+                  {!workspacesQuery.isLoading && !workspaces.length && (
                     <div className="p-4 text-sm text-muted-foreground">No workspaces loaded.</div>
                   )}
                 </div>
 
                 <div className="p-4">
                   <PaginationControls
-                    page={orgPage}
-                    hasNextPage={organizationsQuery.data?.hasNextPage ?? false}
-                    onPrev={() => setOrgPage((page) => Math.max(1, page - 1))}
-                    onNext={() => setOrgPage((page) => page + 1)}
+                    page={workspacePage}
+                    hasNextPage={workspacesQuery.data?.hasNextPage ?? false}
+                    onPrev={() => setWorkspacePage((page) => Math.max(1, page - 1))}
+                    onNext={() => setWorkspacePage((page) => page + 1)}
                   />
                 </div>
               </CardContent>
@@ -1539,103 +1950,244 @@ export default function AdminPage() {
 
             <Card className="rounded-lg border-border">
               <CardHeader className="border-b border-border">
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <KeyRound className="size-4" />
-                  Organization detail
-                </CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Update workspace metadata, transfer ownership, and manage members.
-                </p>
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <KeyRound className="size-4" />
+                      Workspace detail
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Update workspace metadata, transfer ownership, and manage members.
+                    </p>
+                  </div>
+                  {workspaceDetailQuery.data && (
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => push(`/workspaces/${workspaceDetailQuery.data.slug}/members`)}
+                      >
+                        Members page
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => push(`/workspaces/${workspaceDetailQuery.data.slug}/settings`)}
+                      >
+                        Settings page
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => push(`/workspaces/${workspaceDetailQuery.data.slug}/projects`)}
+                      >
+                        Projects page
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => push(`/workspaces/${workspaceDetailQuery.data.slug}/billing`)}
+                      >
+                        Billing page
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </CardHeader>
               <CardContent className="space-y-4 p-4">
-                {!organizationDetailQuery.data && <div className="text-sm text-muted-foreground">Select a workspace.</div>}
-                {organizationDetailQuery.data && (
+                {!workspaceDetailQuery.data && <div className="text-sm text-muted-foreground">Select a workspace.</div>}
+                {workspaceDetailQuery.data && (
                   <>
                     <div className="grid gap-3 md:grid-cols-2">
-                      <Input value={orgName} onChange={(event) => setOrgName(event.target.value)} placeholder="Name" />
-                      <Input value={orgSlug} onChange={(event) => setOrgSlug(event.target.value)} placeholder="Slug" />
-                      <Input value={orgUrl} onChange={(event) => setOrgUrl(event.target.value)} placeholder="URL" />
-                      <Input value={orgDomain} onChange={(event) => setOrgDomain(event.target.value)} placeholder="Domain" />
+                      <Input value={workspaceName} onChange={(event) => setWorkspaceName(event.target.value)} placeholder="Name" />
+                      <Input value={workspaceSlug} onChange={(event) => setWorkspaceSlug(event.target.value)} placeholder="Slug" />
+                      <Input value={workspaceUrl} onChange={(event) => setWorkspaceUrl(event.target.value)} placeholder="URL" />
+                      <Input value={workspaceDomain} onChange={(event) => setWorkspaceDomain(event.target.value)} placeholder="Domain" />
                     </div>
                     <Input
-                      value={orgAvatarUrl}
-                      onChange={(event) => setOrgAvatarUrl(event.target.value)}
+                      value={workspaceAvatarUrl}
+                      onChange={(event) => setWorkspaceAvatarUrl(event.target.value)}
                       placeholder="Avatar URL"
                     />
                     <Input
-                      value={orgDescription}
-                      onChange={(event) => setOrgDescription(event.target.value)}
+                      value={workspaceDescription}
+                      onChange={(event) => setWorkspaceDescription(event.target.value)}
                       placeholder="Description"
                     />
                     <div className="flex items-center gap-3">
                       <input
                         type="checkbox"
-                        checked={orgAttachByDomain}
-                        onChange={(event) => setOrgAttachByDomain(event.target.checked)}
+                        checked={workspaceAttachByDomain}
+                        onChange={(event) => setWorkspaceAttachByDomain(event.target.checked)}
                       />
                       <span className="text-sm">Attach users by domain</span>
                     </div>
                     <div className="grid gap-3 md:grid-cols-[1fr_180px]">
                       <Input
-                        value={orgOwnerId}
-                        onChange={(event) => setOrgOwnerId(event.target.value)}
+                        value={workspaceOwnerId}
+                        onChange={(event) => setWorkspaceOwnerId(event.target.value)}
                         placeholder="Owner user id"
                       />
                       <Button
                         variant="outline"
                         onClick={() =>
-                          updateOrgMutation.mutate({
-                            id: organizationDetailQuery.data.id,
+                          updateWorkspaceMutation.mutate({
+                            id: workspaceDetailQuery.data.id,
                             payload: {
-                              name: orgName,
-                              slug: orgSlug,
-                              url: orgUrl,
-                              description: orgDescription,
-                              domain: orgDomain || null,
-                              shouldAttachUsersByDomain: orgAttachByDomain,
-                              avatarUrl: orgAvatarUrl,
-                              ownerId: orgOwnerId ? Number(orgOwnerId) : undefined,
+                              name: workspaceName,
+                              slug: workspaceSlug,
+                              url: workspaceUrl,
+                              description: workspaceDescription,
+                              domain: workspaceDomain || null,
+                              shouldAttachUsersByDomain: workspaceAttachByDomain,
+                              avatarUrl: workspaceAvatarUrl,
+                              ownerId: workspaceOwnerId ? Number(workspaceOwnerId) : undefined,
                             },
                           })
                         }
                       >
-                        Save org
+                        Save workspace
                       </Button>
                     </div>
 
                     <div className="rounded-lg border border-border bg-background p-3">
-                      <div className="mb-3 text-sm font-medium">Members</div>
+                      <div className="mb-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                        <div className="text-sm font-medium">Members</div>
+                        <div className="flex flex-wrap gap-2 text-xs">
+                          {['', 'ADMIN', 'MEMBER', 'BILLING'].map((role) => (
+                            <button
+                              key={role || 'all'}
+                              type="button"
+                              onClick={() => setWorkspaceMemberRoleFilter(role)}
+                              className={cn(
+                                'rounded-full border px-3 py-1.5 font-medium transition-colors',
+                                workspaceMemberRoleFilter === role
+                                  ? 'border-primary bg-primary/10 text-primary'
+                                  : 'border-border bg-background text-muted-foreground',
+                              )}
+                            >
+                              {role || 'All roles'}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="relative mb-3">
+                        <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+                        <Input
+                          value={workspaceMemberSearch}
+                          onChange={(event) => setWorkspaceMemberSearch(event.target.value)}
+                          placeholder="Search member name or email"
+                          className="pl-10"
+                        />
+                      </div>
+                      <BulkBar
+                        count={selectedWorkspaceMemberIds.length}
+                        actions={
+                          <>
+                            <Button size="sm" variant="outline" onClick={selectVisibleWorkspaceMembers}>
+                              Select visible
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={clearWorkspaceMemberSelection}>
+                              Clear
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={selectedWorkspaceMemberIds.length === 0}
+                              onClick={() =>
+                                bulkWorkspaceMembersMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
+                                  memberIds: selectedWorkspaceMemberIds,
+                                  role: 'ADMIN',
+                                })
+                              }
+                            >
+                              Make admin
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={selectedWorkspaceMemberIds.length === 0}
+                              onClick={() =>
+                                bulkWorkspaceMembersMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
+                                  memberIds: selectedWorkspaceMemberIds,
+                                  role: 'MEMBER',
+                                })
+                              }
+                            >
+                              Make member
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={selectedWorkspaceMemberIds.length === 0}
+                              onClick={() =>
+                                bulkWorkspaceMembersMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
+                                  memberIds: selectedWorkspaceMemberIds,
+                                  role: 'BILLING',
+                                })
+                              }
+                            >
+                              Make billing
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              disabled={selectedWorkspaceMemberIds.length === 0}
+                              onClick={() =>
+                                bulkWorkspaceMembersMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
+                                  memberIds: selectedWorkspaceMemberIds,
+                                  remove: true,
+                                })
+                              }
+                            >
+                              Remove selected
+                            </Button>
+                          </>
+                        }
+                      />
                       <div className="space-y-2">
-                        {organizationDetailQuery.data.members.map((member) => (
+                        {filteredWorkspaceMembers.map((member) => (
                           <div
                             key={member.id}
-                            className="grid gap-2 rounded-md border border-border px-3 py-2 md:grid-cols-[1fr_120px_110px_110px]"
+                            className="grid gap-2 rounded-md border border-border px-3 py-2 md:grid-cols-[28px_1fr_120px_110px_110px]"
                           >
+                            <Checkbox
+                              checked={selectedWorkspaceMemberIds.includes(member.id)}
+                              onCheckedChange={() => toggleWorkspaceMemberSelection(member.id)}
+                            />
                             <div>
                               <div className="text-sm font-medium">{formatPerson(member.user)}</div>
                               <div className="text-xs text-muted-foreground">#{member.userId}</div>
                             </div>
-                            <select
+                            <Select
                               value={member.role}
-                              onChange={(event) =>
-                                updateOrgMemberMutation.mutate({
-                                  id: organizationDetailQuery.data.id,
+                              onValueChange={(value) =>
+                                updateWorkspaceMemberMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
                                   memberId: member.id,
-                                  role: event.target.value,
+                                  role: value,
                                 })
                               }
-                              className="h-9 rounded-md border border-input bg-background px-2 text-xs"
                             >
-                              <option value="ADMIN">ADMIN</option>
-                              <option value="MEMBER">MEMBER</option>
-                              <option value="BILLING">BILLING</option>
-                            </select>
+                              <SelectTrigger className="h-9 text-xs">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="ADMIN">ADMIN</SelectItem>
+                                <SelectItem value="MEMBER">MEMBER</SelectItem>
+                                <SelectItem value="BILLING">BILLING</SelectItem>
+                              </SelectContent>
+                            </Select>
                             <Button
                               size="sm"
                               variant="outline"
                               onClick={() =>
-                                transferOwnerMutation.mutate({
-                                  id: organizationDetailQuery.data.id,
+                                transferWorkspaceOwnerMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
                                   memberId: member.id,
                                 })
                               }
@@ -1646,8 +2198,8 @@ export default function AdminPage() {
                               size="sm"
                               variant="destructive"
                               onClick={() =>
-                                deleteOrgMemberMutation.mutate({
-                                  id: organizationDetailQuery.data.id,
+                                deleteWorkspaceMemberMutation.mutate({
+                                  id: workspaceDetailQuery.data.id,
                                   memberId: member.id,
                                 })
                               }
@@ -1657,6 +2209,9 @@ export default function AdminPage() {
                           </div>
                         ))}
                       </div>
+                      {filteredWorkspaceMembers.length === 0 && (
+                        <div className="mt-3 text-sm text-muted-foreground">No members match this filter.</div>
+                      )}
                     </div>
                   </>
                 )}
@@ -1685,12 +2240,30 @@ export default function AdminPage() {
                       q: auditSearch || undefined,
                       action: auditAction || undefined,
                       entityType: auditEntityType || undefined,
+                      actorId: auditActorIdValue,
+                      from: auditFrom || undefined,
+                      to: auditTo || undefined,
                     });
                     downloadCsv('audit-logs.csv', response.data);
                   }}
                 />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setAuditSearch('');
+                    setAuditAction('');
+                    setAuditEntityType('');
+                    setAuditActorId('');
+                    setAuditFrom('');
+                    setAuditTo('');
+                    setAuditPage(1);
+                  }}
+                >
+                  Clear filters
+                </Button>
               </div>
-              <div className="grid gap-3 md:grid-cols-4">
+              <div className="grid gap-3 md:grid-cols-4 xl:grid-cols-6">
                 <div className="relative md:col-span-2">
                   <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
                   <Input
@@ -1719,6 +2292,59 @@ export default function AdminPage() {
                   }}
                   placeholder="Entity type filter"
                 />
+                <Input
+                  value={auditActorId}
+                  onChange={(event) => {
+                    setAuditActorId(event.target.value);
+                    setAuditPage(1);
+                  }}
+                  placeholder="Actor ID"
+                  inputMode="numeric"
+                />
+                <Input
+                  type="date"
+                  value={auditFrom}
+                  onChange={(event) => {
+                    setAuditFrom(event.target.value);
+                    setAuditPage(1);
+                  }}
+                  placeholder="From"
+                />
+                <Input
+                  type="date"
+                  value={auditTo}
+                  onChange={(event) => {
+                    setAuditTo(event.target.value);
+                    setAuditPage(1);
+                  }}
+                  placeholder="To"
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setAuditAction('');
+                    setAuditEntityType('');
+                    setAuditActorId('');
+                    setAuditFrom('');
+                    setAuditTo('');
+                    setAuditPage(1);
+                  }}
+                >
+                  Keep search only
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setAuditSearch('');
+                    setAuditPage(1);
+                  }}
+                >
+                  Clear search
+                </Button>
               </div>
             </CardHeader>
             <CardContent className="space-y-3 p-4">
@@ -1726,31 +2352,107 @@ export default function AdminPage() {
                 {auditLogsQuery.isLoading && <Skeleton className="m-4 h-24 rounded-lg" />}
                 {!auditLogsQuery.isLoading &&
                   auditLogs.map((entry: AdminAuditLog) => (
-                    <div key={entry.id} className="grid gap-3 p-4 md:grid-cols-[1fr_220px] md:items-start">
-                      <div>
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-sm font-medium">{entry.action}</span>
-                          <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
-                            {entry.entityType}
-                          </span>
-                          {!entry.success && (
-                            <span className="rounded-md bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
-                              failed
+                    <div key={entry.id} className="p-4">
+                      <div className="grid gap-3 md:grid-cols-[1fr_220px] md:items-start">
+                        <div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-sm font-medium">{entry.action}</span>
+                            <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                              {entry.entityType}
                             </span>
-                          )}
+                            {!entry.success && (
+                              <span className="rounded-md bg-destructive/10 px-2 py-1 text-[11px] text-destructive">
+                                failed
+                              </span>
+                            )}
+                          </div>
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Actor {entry.actorEmail ?? `#${entry.actorId}`} {entry.entityName ? `- ${entry.entityName}` : ''}
+                          </div>
+                          <div className="mt-2 text-xs text-muted-foreground">
+                            {entry.meta ? JSON.stringify(entry.meta) : 'No metadata'}
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => {
+                                setAuditActorId(String(entry.actorId));
+                                setAuditPage(1);
+                              }}
+                            >
+                              Filter actor
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => {
+                                setAuditAction(entry.action);
+                                setAuditPage(1);
+                              }}
+                            >
+                              Filter action
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="h-8 px-2 text-xs"
+                              onClick={() => {
+                                setAuditEntityType(entry.entityType);
+                                setAuditPage(1);
+                              }}
+                            >
+                              Filter entity
+                            </Button>
+                          </div>
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
-                          Actor {entry.actorEmail ?? `#${entry.actorId}`} {entry.entityName ? `- ${entry.entityName}` : ''}
-                        </div>
-                        <div className="mt-2 text-xs text-muted-foreground">
-                          {entry.meta ? JSON.stringify(entry.meta) : 'No metadata'}
+                        <div className="flex flex-col gap-2 text-xs text-muted-foreground md:items-end">
+                          <ClientDateTime value={entry.createdAt} />
+                          {entry.entityId && <div>Entity ID: {entry.entityId}</div>}
+                          {entry.error && <div className="text-destructive">{entry.error}</div>}
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 px-2 text-xs"
+                            onClick={() => toggleAuditLogExpanded(entry.id)}
+                          >
+                            {isAuditLogExpanded(entry.id) ? (
+                              <ChevronDown className="mr-2 size-3.5" />
+                            ) : (
+                              <ChevronRight className="mr-2 size-3.5" />
+                            )}
+                            {isAuditLogExpanded(entry.id) ? 'Hide details' : 'Show details'}
+                          </Button>
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
-                        <ClientDateTime value={entry.createdAt} />
-                        {entry.entityId && <div>Entity ID: {entry.entityId}</div>}
-                        {entry.error && <div className="text-destructive">{entry.error}</div>}
-                      </div>
+                      {isAuditLogExpanded(entry.id) && (
+                        <div className="mt-4 grid gap-3 rounded-2xl border border-border bg-muted/20 p-4 md:grid-cols-3">
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">Before</div>
+                            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-xs leading-5">
+                              {entry.before ? JSON.stringify(entry.before, null, 2) : 'No before snapshot'}
+                            </pre>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">After</div>
+                            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-xs leading-5">
+                              {entry.after ? JSON.stringify(entry.after, null, 2) : 'No after snapshot'}
+                            </pre>
+                          </div>
+                          <div>
+                            <div className="text-sm font-medium text-muted-foreground">Meta</div>
+                            <pre className="mt-2 max-h-64 overflow-auto whitespace-pre-wrap break-words rounded-lg bg-background p-3 text-xs leading-5">
+                              {entry.meta ? JSON.stringify(entry.meta, null, 2) : 'No metadata'}
+                            </pre>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 {!auditLogsQuery.isLoading && !auditLogs.length && (
@@ -1778,24 +2480,96 @@ export default function AdminPage() {
                     External catalog import
                   </CardTitle>
                   <p className="text-sm text-muted-foreground">
-                    Dry run validates source parsing. Import inserts new records and skips duplicates.
+                    Select one or more sources, set the batch size, and choose whether to force overwrite duplicates.
                   </p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button variant="outline" onClick={selectAllCatalogSources}>
+                    Select all
+                  </Button>
+                  <Button variant="outline" onClick={clearCatalogSources}>
+                    Clear
+                  </Button>
                   <Button variant="outline" onClick={() => importMutation.mutate(true)}>
                     Dry run
                   </Button>
                   <Button onClick={() => importMutation.mutate(false)}>Import</Button>
                 </div>
               </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                <Input value={''} readOnly placeholder="Sources are imported from the configured catalog list" />
-                <Input value={'10'} readOnly placeholder="Max items per source" />
+              <div className="grid gap-3 md:grid-cols-3">
+                <Input
+                  value={`${selectedCatalogSourceCount} source(s) selected`}
+                  readOnly
+                  placeholder="Selected sources"
+                />
+                <Input
+                  type="number"
+                  min={1}
+                  max={50}
+                  value={catalogMaxItems}
+                  onChange={(event) => setCatalogMaxItems(event.target.value)}
+                  placeholder="Max items per source"
+                />
+                <label className="flex items-center gap-3 rounded-lg border border-border bg-background px-3 py-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={catalogForce}
+                    onChange={(event) => setCatalogForce(event.target.checked)}
+                  />
+                  Force import
+                </label>
               </div>
             </CardHeader>
             <CardContent className="space-y-4 p-4">
               <div className="rounded-lg border border-border bg-background p-3 text-sm text-muted-foreground">
                 Sources are managed in the backend seed catalog and imported through the same admin route.
+              </div>
+              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                {adminSources.map((source) => {
+                  const selected = catalogSelectedSourceIds.includes(source.id);
+                  return (
+                    <button
+                      key={source.id}
+                      type="button"
+                      onClick={() => toggleCatalogSource(source.id)}
+                      className={cn(
+                        'rounded-xl border p-4 text-left transition-colors',
+                        selected
+                          ? 'border-primary bg-primary/5'
+                          : 'border-border bg-background hover:bg-muted/40',
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <div className="text-sm font-medium">{source.name}</div>
+                          <div className="text-xs text-muted-foreground">{source.id}</div>
+                        </div>
+                        <span className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+                          {selected ? 'selected' : 'off'}
+                        </span>
+                      </div>
+                      <div className="mt-3 grid gap-1 text-xs text-muted-foreground">
+                        <span>Kind: {source.kind}</span>
+                        <span>Visibility: {source.visibility}</span>
+                        <span>Default type: {source.defaultType ?? 'n/a'}</span>
+                        <span>Max items: {source.maxItems}</span>
+                        <span>Featured: {source.featuredCount}</span>
+                        <span>Price: {source.defaultPriceCredits} credits</span>
+                        {source.sourceLicense && <span>License: {source.sourceLicense}</span>}
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        {source.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            className="rounded-md bg-muted px-2 py-1 text-[11px] text-muted-foreground"
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
               {importMutation.data && (
                 <div className="space-y-2">
@@ -1851,28 +2625,28 @@ export default function AdminPage() {
               <div className="grid gap-3 md:grid-cols-2">
                 <div>
                   <label htmlFor="site-config-key" className="mb-2 block text-xs font-medium text-muted-foreground">Config key</label>
-                  <select
-                    id="site-config-key"
-                    value={siteConfigKey}
-                    onChange={(event) => setSiteConfigKey(event.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="landing">landing</option>
-                    <option value="navigation">navigation</option>
-                    <option value="stock">stock</option>
-                  </select>
+                  <Select value={siteConfigKey} onValueChange={(value) => setSiteConfigKey(value)}>
+                    <SelectTrigger id="site-config-key" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="landing">landing</SelectItem>
+                      <SelectItem value="navigation">navigation</SelectItem>
+                      <SelectItem value="stock">stock</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div>
                   <label htmlFor="site-config-locale" className="mb-2 block text-xs font-medium text-muted-foreground">Locale</label>
-                  <select
-                    id="site-config-locale"
-                    value={siteConfigLocale}
-                    onChange={(event) => setSiteConfigLocale(event.target.value)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="en">en</option>
-                    <option value="vi">vi</option>
-                  </select>
+                  <Select value={siteConfigLocale} onValueChange={(value) => setSiteConfigLocale(value)}>
+                    <SelectTrigger id="site-config-locale" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="en">en</SelectItem>
+                      <SelectItem value="vi">vi</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </CardHeader>
@@ -1882,10 +2656,10 @@ export default function AdminPage() {
                   ? `Loaded ${siteConfigsQuery.data.length} record(s) for this filter.`
                   : 'No saved config yet. The FE will use bundled defaults until you save one.'}
               </div>
-              <textarea
+              <Textarea
                 value={siteConfigDraft}
                 onChange={(event) => setSiteConfigDraft(event.target.value)}
-                className="min-h-[320px] w-full rounded-lg border border-border bg-background p-4 font-mono text-xs leading-6"
+                className="min-h-[320px] w-full font-mono text-xs leading-6"
                 spellCheck={false}
               />
               <div className="flex items-center justify-between gap-3 text-xs text-muted-foreground">
@@ -1919,7 +2693,7 @@ export default function AdminPage() {
                       <span>Manage users: {role.canManageUsers ? 'Yes' : 'No'}</span>
                       <span>Manage templates: {role.canManageTemplates ? 'Yes' : 'No'}</span>
                       <span>Manage assets: {role.canManageAssets ? 'Yes' : 'No'}</span>
-                      <span>Manage workspaces: {role.canManageOrganizations ? 'Yes' : 'No'}</span>
+                      <span>Manage workspaces: {role.canManageWorkspaces ? 'Yes' : 'No'}</span>
                       <span>View audit logs: {role.canViewAuditLogs ? 'Yes' : 'No'}</span>
                     </div>
                   </div>
@@ -1935,7 +2709,7 @@ export default function AdminPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-3 p-4">
-                {rolesMatrix?.organizationRoles.map((role) => (
+                {rolesMatrix?.workspaceRoles.map((role) => (
                   <div key={role.id} className="rounded-lg border border-border bg-background p-3">
                     <div className="flex items-center justify-between">
                       <div className="text-sm font-medium">{role.name}</div>

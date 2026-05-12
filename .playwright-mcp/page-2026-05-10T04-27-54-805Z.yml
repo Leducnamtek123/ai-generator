@@ -1,0 +1,247 @@
+- generic [active] [ref=e1]:
+  - generic [ref=e2]:
+    - complementary [ref=e4]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img "Logo" [ref=e9]
+          - generic [ref=e10]:
+            - generic [ref=e11]: PaintAI
+            - generic [ref=e12]: Your paint, your choice
+        - button [ref=e13] [cursor=pointer]:
+          - img
+      - button "S Super's Org" [ref=e16] [cursor=pointer]:
+        - generic [ref=e17]: S
+        - generic [ref=e19]: Super's Org
+        - img [ref=e20]
+      - generic [ref=e22]:
+        - generic [ref=e23]:
+          - link "Home" [ref=e24] [cursor=pointer]:
+            - /url: /dashboard
+            - generic [ref=e25]:
+              - img [ref=e26]
+              - generic [ref=e29]: Home
+          - link "Stock" [ref=e30] [cursor=pointer]:
+            - /url: /stock
+            - generic [ref=e31]:
+              - img [ref=e32]
+              - generic [ref=e35]: Stock
+          - link "Community" [ref=e36] [cursor=pointer]:
+            - /url: /community
+            - generic [ref=e37]:
+              - img [ref=e38]
+              - generic [ref=e41]: Community
+        - heading "Social Hub" [level=3] [ref=e43]
+        - generic [ref=e44]:
+          - link "Social Hub" [ref=e45] [cursor=pointer]:
+            - /url: /social
+            - generic [ref=e46]:
+              - img [ref=e47]
+              - generic [ref=e52]: Social Hub
+          - link "Social Dashboard" [ref=e53] [cursor=pointer]:
+            - /url: /social/dashboard
+            - generic [ref=e54]:
+              - img [ref=e55]
+              - generic [ref=e60]: Social Dashboard
+          - link "Channels" [ref=e61] [cursor=pointer]:
+            - /url: /social/channels
+            - generic [ref=e62]:
+              - img [ref=e63]
+              - generic [ref=e69]: Channels
+          - link "Calendar" [ref=e70] [cursor=pointer]:
+            - /url: /social/calendar
+            - generic [ref=e71]:
+              - img [ref=e72]
+              - generic [ref=e75]: Calendar
+          - link "Publish" [ref=e76] [cursor=pointer]:
+            - /url: /social/publish
+            - generic [ref=e77]:
+              - img [ref=e78]
+              - generic [ref=e81]: Publish
+          - link "Interaction Inbox New" [ref=e82] [cursor=pointer]:
+            - /url: /social/inbox
+            - generic [ref=e83]:
+              - img [ref=e84]
+              - generic [ref=e86]: Interaction Inbox
+            - generic [ref=e88]: New
+        - heading "Pinned" [level=3] [ref=e90]
+        - generic [ref=e91]:
+          - link "Image Generator" [ref=e92] [cursor=pointer]:
+            - /url: /creator/image-generator
+            - generic [ref=e93]:
+              - img [ref=e94]
+              - generic [ref=e98]: Image Generator
+          - link "Assistant" [ref=e99] [cursor=pointer]:
+            - /url: /creator/ai-assistant
+            - generic [ref=e100]:
+              - img [ref=e101]
+              - generic [ref=e104]: Assistant
+          - link "Video Generator" [ref=e105] [cursor=pointer]:
+            - /url: /creator/video-generator
+            - generic [ref=e106]:
+              - img [ref=e107]
+              - generic [ref=e110]: Video Generator
+          - link "Creative Studio New" [ref=e111] [cursor=pointer]:
+            - /url: /creative-studio
+            - generic [ref=e112]:
+              - img [ref=e113]
+              - generic [ref=e118]: Creative Studio
+            - generic [ref=e120]: New
+          - link "VisualFlow Studio New" [ref=e121] [cursor=pointer]:
+            - /url: /visual-flow
+            - generic [ref=e122]:
+              - img [ref=e123]
+              - generic [ref=e128]: VisualFlow Studio
+            - generic [ref=e130]: New
+          - button "All tools" [ref=e131] [cursor=pointer]:
+            - generic [ref=e132]:
+              - img [ref=e133]
+              - generic [ref=e135]: All tools
+        - generic [ref=e137]:
+          - link "Projects" [ref=e138] [cursor=pointer]:
+            - /url: /projects
+            - generic [ref=e139]:
+              - img [ref=e140]
+              - generic [ref=e143]: Projects
+          - link "History" [ref=e144] [cursor=pointer]:
+            - /url: /history
+            - generic [ref=e145]:
+              - img [ref=e146]
+              - generic [ref=e149]: History
+          - link "Notifications" [ref=e150] [cursor=pointer]:
+            - /url: /notifications
+            - generic [ref=e151]:
+              - img [ref=e152]
+              - generic [ref=e155]: Notifications
+          - link "Admin" [ref=e156] [cursor=pointer]:
+            - /url: /admin
+            - generic [ref=e157]:
+              - img [ref=e158]
+              - generic [ref=e161]: Admin
+          - link "Settings" [ref=e162] [cursor=pointer]:
+            - /url: /settings
+            - generic [ref=e163]:
+              - img [ref=e164]
+              - generic [ref=e169]: Settings
+      - generic [ref=e170]:
+        - generic [ref=e172]:
+          - img [ref=e173]
+          - img [ref=e178]
+        - generic [ref=e180]:
+          - heading "Upgrade plan" [level=4] [ref=e183]
+          - paragraph [ref=e184]: Unlock more credits and workspace features
+          - link "Upgrade plan" [ref=e185] [cursor=pointer]:
+            - /url: /settings?tab=billing
+    - main [ref=e186]:
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - generic [ref=e191]:
+            - link "Personal" [ref=e192] [cursor=pointer]:
+              - /url: /dashboard
+            - generic [ref=e193]: /
+            - link "Creator" [ref=e194] [cursor=pointer]:
+              - /url: /creator
+            - generic [ref=e195]: /
+            - generic [ref=e196]: Image Generator
+          - generic [ref=e197]:
+            - button "Share" [ref=e198] [cursor=pointer]:
+              - img
+              - text: Share
+            - button [ref=e200] [cursor=pointer]:
+              - img
+            - button [ref=e202] [cursor=pointer]:
+              - img [ref=e204]
+        - generic [ref=e206]:
+          - generic [ref=e207]:
+            - generic [ref=e208]:
+              - heading "Image Generator" [level=2] [ref=e209]
+              - generic [ref=e210]:
+                - generic "Your Credit Balance" [ref=e211]:
+                  - img [ref=e212]
+                  - generic [ref=e215]: "--- Credits"
+                - button "Save project" [ref=e216] [cursor=pointer]:
+                  - img
+                  - text: Save project
+            - generic [ref=e217]:
+              - button "Browse templates" [ref=e218] [cursor=pointer]:
+                - generic [ref=e219]:
+                  - img [ref=e221]
+                  - generic [ref=e223]: Browse templates
+                - img [ref=e224]
+              - generic [ref=e226]:
+                - heading "Model" [level=4] [ref=e227]
+                - combobox [ref=e229]:
+                  - option "SDXL Base 1.0" [selected]
+                  - option "Z-Image-Turbo"
+                - paragraph [ref=e230]: Pick the model you want the backend to try first. Keep SDXL if you want the current stable local path.
+              - generic [ref=e231]:
+                - heading "Provider" [level=4] [ref=e232]
+                - combobox [disabled] [ref=e234]:
+                  - option "Use backend default" [selected]
+                - paragraph [ref=e235]: Prefer a live image provider over the backend default if the default provider is misconfigured.
+              - generic [ref=e236]:
+                - heading "Prompt" [level=4] [ref=e237]
+                - textbox "Describe the subject, scene, style, and mood" [ref=e239]
+              - generic [ref=e240]:
+                - generic [ref=e241]:
+                  - generic [ref=e242]:
+                    - heading "Aspect ratio" [level=4] [ref=e243]
+                    - combobox [ref=e245]:
+                      - option "1:1" [selected]
+                      - option "4:3"
+                      - option "16:9"
+                      - option "9:16"
+                  - generic [ref=e246]:
+                    - heading "Quality" [level=4] [ref=e247]
+                    - combobox [ref=e249]:
+                      - option "Standard"
+                      - option "HD" [selected]
+                      - option "4K"
+                - generic [ref=e250]:
+                  - heading "Negative prompt" [level=4] [ref=e251]
+                  - textbox "Things to avoid, e.g. blurry faces, text, watermark, extra fingers" [ref=e253]
+                - generic [ref=e254]:
+                  - generic [ref=e255]:
+                    - heading "Seed" [level=4] [ref=e256]
+                    - spinbutton [ref=e257]
+                  - generic [ref=e258]:
+                    - heading "Reference image URL" [level=4] [ref=e259]
+                    - generic [ref=e260]:
+                      - textbox "Paste a reference image URL" [ref=e261]
+                      - button "Upload image" [ref=e263] [cursor=pointer]
+            - generic [ref=e264]:
+              - button "Reset form" [ref=e265] [cursor=pointer]
+              - generic [ref=e266]:
+                - generic [ref=e267]: "Cost:"
+                - generic [ref=e268]: 1 Credit
+              - button "Generate" [disabled]:
+                - text: Generate
+                - img
+          - generic [ref=e269]:
+            - generic [ref=e270]:
+              - generic [ref=e271]:
+                - button "Personal" [ref=e272] [cursor=pointer]
+                - button "Community" [ref=e273] [cursor=pointer]
+                - button "Templates" [ref=e274] [cursor=pointer]
+                - button "Tutorials" [ref=e275] [cursor=pointer]
+              - generic [ref=e277]:
+                - img [ref=e278]
+                - textbox "Search templates" [ref=e281]
+            - generic [ref=e283]:
+              - generic [ref=e285]:
+                - generic [ref=e286]:
+                  - heading "New Templates" [level=2] [ref=e287]
+                  - paragraph [ref=e288]: Scroll to load more templates progressively.
+                - generic [ref=e289]: Infinite scroll
+              - generic [ref=e322]:
+                - generic [ref=e323]:
+                  - heading "Featured" [level=2] [ref=e324]
+                  - paragraph [ref=e325]: A curated snapshot from the loaded template feed.
+                - generic [ref=e326]: 0 items
+  - region "Notifications alt+T"
+  - button "Open Next.js Dev Tools" [ref=e351] [cursor=pointer]:
+    - img [ref=e352]
+  - alert [ref=e355]
+  - generic [ref=e356]:
+    - img [ref=e358]
+    - button "Open Tanstack query devtools" [ref=e406] [cursor=pointer]:
+      - img [ref=e407]

@@ -50,6 +50,21 @@ type DeadLetterSummary = {
   failedAt: string;
 };
 
+type QueueCounts = {
+  waiting: number;
+  active: number;
+  completed: number;
+  failed: number;
+  delayed: number;
+  paused: number;
+  'waiting-children': number;
+};
+
+type QueueSnapshot = {
+  queue: string;
+  counts: QueueCounts;
+};
+
 @Injectable()
 export class AdminQueueService {
   private readonly sourceQueues: Record<SourceQueueName, Queue>;
@@ -74,6 +89,23 @@ export class AdminQueueService {
       [SOCIAL_POSTING_QUEUE]: socialPostingQueue,
       [SOCIAL_ANALYTICS_QUEUE]: socialAnalyticsQueue,
       [VISUAL_FLOW_QUEUE]: visualFlowQueue,
+    };
+  }
+
+  async getQueueSnapshot(): Promise<{
+    timestamp: string;
+    queues: QueueSnapshot[];
+  }> {
+    return {
+      timestamp: new Date().toISOString(),
+      queues: await Promise.all([
+        this.readQueueSnapshot(this.sourceQueues[GENERATION_QUEUE], GENERATION_QUEUE),
+        this.readQueueSnapshot(this.sourceQueues[WORKFLOW_QUEUE], WORKFLOW_QUEUE),
+        this.readQueueSnapshot(this.sourceQueues[SOCIAL_POSTING_QUEUE], SOCIAL_POSTING_QUEUE),
+        this.readQueueSnapshot(this.sourceQueues[SOCIAL_ANALYTICS_QUEUE], SOCIAL_ANALYTICS_QUEUE),
+        this.readQueueSnapshot(this.sourceQueues[VISUAL_FLOW_QUEUE], VISUAL_FLOW_QUEUE),
+        this.readQueueSnapshot(this.deadLetterQueue, 'dead-letter'),
+      ]),
     };
   }
 
@@ -144,6 +176,23 @@ export class AdminQueueService {
         (job.timestamp
           ? new Date(job.timestamp).toISOString()
           : new Date().toISOString()),
+    };
+  }
+
+  private async readQueueSnapshot(queue: Queue, queueName: string): Promise<QueueSnapshot> {
+    const counts = await queue.getJobCounts(
+      'waiting',
+      'active',
+      'completed',
+      'failed',
+      'delayed',
+      'paused',
+      'waiting-children',
+    );
+
+    return {
+      queue: queueName,
+      counts: counts as QueueCounts,
     };
   }
 }

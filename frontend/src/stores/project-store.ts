@@ -6,6 +6,7 @@ export interface Project {
     name: string;
     description?: string;
     userId: string;
+    workspaceId?: string | null;
 
     thumbnail?: string;
     content?: unknown;
@@ -24,8 +25,8 @@ interface ProjectState {
 
     fetchProjects: (params?: { page?: number; limit?: number; filters?: ProjectFilters; sort?: ProjectSort }) => Promise<void>;
     fetchProject: (id: string) => Promise<void>;
-    createProject: (payload: { name: string; description?: string }) => Promise<string | null>;
-    updateProject: (id: string, payload: { name?: string; description?: string }) => Promise<void>;
+    createProject: (payload: { name: string; description?: string; workspaceId?: string | null }) => Promise<string | null>;
+    updateProject: (id: string, payload: { name?: string; description?: string; workspaceId?: string | null }) => Promise<void>;
     deleteProject: (id: string) => Promise<void>;
 }
 

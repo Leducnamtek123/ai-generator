@@ -129,7 +129,7 @@ export function SocialDateTimePicker({
             onMonthChange={handleMonthChange}
           />
           <div className="grid gap-2 border-t border-border pt-3">
-            <div className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">
+            <div className="text-sm font-medium text-muted-foreground">
               Time
             </div>
             <Select value={timeValue} onValueChange={handleSelectTime}>

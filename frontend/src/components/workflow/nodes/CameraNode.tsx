@@ -83,10 +83,10 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                         data.isPreview ? "w-full h-[80px] border-r-0 border-b" : "w-[200px] h-[240px]"
                     )}>
                         {isProcessing && (
-                            <div className="absolute inset-0 z-20 bg-zinc-950/60 backdrop-blur-sm flex flex-col items-center justify-center">
-                                <Loader2 className="size-6 text-white animate-spin mb-2" />
-                                <span className="text-[10px] text-white/60 uppercase tracking-widest">Adjusting?</span>
-                            </div>
+                        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm">
+                            <Loader2 className="mb-2 size-6 animate-spin text-foreground" />
+                            <span className="text-[10px] text-muted-foreground">Adjusting?</span>
+                        </div>
                         )}
 
                         {data.previewUrl ? (
@@ -114,12 +114,12 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                         ) : (
                             <div className="flex flex-col items-center gap-2 text-muted-foreground/30">
                                 <Camera className="size-8" />
-                                <span className="text-[10px]">No Image</span>
+                                <span className="text-[10px]">No image</span>
                             </div>
                         )}
 
                         {/* Angle Overlay Indicator */}
-                        <div className="absolute top-2 right-2 px-2 py-1 bg-zinc-950/60 backdrop-blur-md rounded text-[9px] text-white/80 font-mono">
+                        <div className="absolute top-2 right-2 rounded bg-background/80 px-2 py-1 font-mono text-[9px] text-foreground backdrop-blur-md">
                             {ANGLES.find(a => a.id === angle)?.name}
                         </div>
                     </div>
@@ -128,7 +128,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                     {!data.isPreview && (
                         <div className="flex-1 p-4 flex flex-col gap-4">
                             <div className="space-y-2">
-                                <p className="text-[10px] text-white/40 font-bold uppercase tracking-wider">Presets</p>
+                                <p className="text-[10px] font-medium text-muted-foreground">Presets</p>
                                 <div className="grid grid-cols-2 gap-2">
                                     {ANGLES.map((a) => {
                                         const Icon = a.icon;
@@ -154,7 +154,7 @@ export function CameraNode({ id, data, selected }: CameraNodeProps) {
                                 <button
                                     onClick={() => data.onRun?.(id, ExecutionMode.LOCAL)}
                                     disabled={isProcessing || !data.inputImageUrl}
-                                    className="w-full py-2 bg-white/10 hover:bg-white/20 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg text-xs text-white font-medium transition-colors flex items-center justify-center gap-2"
+                                    className="flex w-full items-center justify-center gap-2 rounded-lg bg-muted/30 py-2 text-xs font-medium text-foreground transition-colors hover:bg-accent disabled:cursor-not-allowed disabled:opacity-50"
                                 >
                                     {isProcessing ? <Loader2 className="size-3.5 animate-spin" /> : <RefreshCw className="size-3.5" />}
                                     Update View

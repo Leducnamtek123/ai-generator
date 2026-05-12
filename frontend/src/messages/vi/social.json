@@ -1,0 +1,39 @@
+{
+  "Social": {
+    "title": "Social Hub",
+    "headline": "Trung tâm điều phối mạng xã hội",
+    "description": "Theo dõi page đã kết nối, hàng đợi lên lịch, áp lực inbox và hiệu suất trực tiếp trong một màn hình vận hành.",
+    "startWithChannels": "Quản lý kênh",
+    "openInbox": "Mở inbox",
+    "cards": {
+      "dashboard": {
+        "title": "Dashboard",
+        "description": "Xem tình trạng kênh, hàng đợi, inbox và hiệu suất ngay lập tức.",
+        "action": "Mở Dashboard"
+      },
+      "channels": {
+        "title": "Kênh",
+        "description": "Kết nối Facebook Page trước, rồi mở rộng workspace sang các nhà cung cấp khác.",
+        "action": "Mở Kênh"
+      },
+      "inbox": {
+        "title": "Inbox",
+        "description": "Trả lời bình luận và tin nhắn trong một luồng tương tác thống nhất.",
+        "action": "Mở Inbox"
+      },
+      "calendar": {
+        "title": "Lịch",
+        "description": "Lập kế hoạch theo tháng, tuần và ngày quanh hàng đợi lên lịch.",
+        "action": "Mở Lịch"
+      }
+    },
+    "pipeline": {
+      "source": "Kết nối",
+      "draft": "Bản nháp",
+      "review": "Phê duyệt",
+      "publish": "Đăng",
+      "monitor": "Phản hồi",
+      "analytics": "Đo lường"
+    }
+  }
+}

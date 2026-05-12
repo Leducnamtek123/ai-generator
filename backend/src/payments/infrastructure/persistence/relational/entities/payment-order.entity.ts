@@ -11,7 +11,7 @@ import { PaymentProvider } from '../../../../config/payments-config.type';
 
 export type PaymentOrderStatus = 'pending' | 'paid' | 'failed' | 'cancelled';
 export type PaymentPurchaseType = 'subscription' | 'topup';
-export type PaymentScopeType = 'user' | 'organization';
+export type PaymentScopeType = 'user' | 'workspace';
 
 @Entity({ name: 'payment_order' })
 export class PaymentOrderEntity extends EntityRelationalHelper {

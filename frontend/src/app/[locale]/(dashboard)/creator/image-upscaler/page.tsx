@@ -440,7 +440,7 @@ function ImageUpscalerPageContent() {
                         <button
                             onClick={() => updateParam('mode', UpscaleMode.CREATIVE)}
                             className={cn(
-                                "py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                                "py-2 text-[11px] font-medium rounded-lg transition-all",
                                 params.mode === UpscaleMode.CREATIVE
                                     ? "bg-background text-foreground shadow-lg border border-border"
                                     : "text-muted-foreground hover:text-foreground"
@@ -451,7 +451,7 @@ function ImageUpscalerPageContent() {
                         <button
                             onClick={() => updateParam('mode', UpscaleMode.PRECISION)}
                             className={cn(
-                                "py-2 text-[11px] font-bold uppercase tracking-wider rounded-lg transition-all",
+                                "py-2 text-[11px] font-medium rounded-lg transition-all",
                                 params.mode === UpscaleMode.PRECISION
                                     ? "bg-background text-foreground shadow-lg border border-border"
                                     : "text-muted-foreground hover:text-foreground"
@@ -519,7 +519,7 @@ function ImageUpscalerPageContent() {
                         {/* Model & Preset Row */}
                         <div className="space-y-4">
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em] flex items-center gap-2">
+                                <Label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                                     <Sparkles className="size-3" />
                                     Model
                                 </Label>
@@ -541,7 +541,7 @@ function ImageUpscalerPageContent() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Presets</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Presets</Label>
                                 <Select defaultValue="subtle">
                                     <SelectTrigger className="w-full h-11 bg-muted border-border rounded-xl px-4 text-xs font-medium">
                                         <SelectValue placeholder="Select preset" />
@@ -560,7 +560,7 @@ function ImageUpscalerPageContent() {
                         {/* Scale & Optimized For Row */}
                         <div className="grid grid-cols-2 gap-3">
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Scale Factor</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Scale Factor</Label>
                                 <Select
                                     value={params.scale.toString()}
                                     onValueChange={(val) => updateParam('scale', Number(val) as UpscaleScale)}
@@ -577,7 +577,7 @@ function ImageUpscalerPageContent() {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Optimized For</Label>
+                                <Label className="text-sm font-medium text-muted-foreground">Optimized For</Label>
                                 <Select
                                     value={params.optimization}
                                     onValueChange={(val) => updateParam('optimization', val as UpscaleOptimization)}
@@ -602,7 +602,7 @@ function ImageUpscalerPageContent() {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Creativity</span>
+                                        <span className="text-xs font-medium text-muted-foreground">Creativity</span>
                                         <Info className="size-3 text-muted-foreground" />
                                     </div>
                                     <span className="text-[11px] font-mono text-foreground">{params.creativity}</span>
@@ -618,7 +618,7 @@ function ImageUpscalerPageContent() {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">HDR</span>
+                                        <span className="text-xs font-medium text-muted-foreground">HDR</span>
                                         <Info className="size-3 text-muted-foreground" />
                                     </div>
                                     <span className="text-[11px] font-mono text-foreground">{params.hdr}</span>
@@ -634,7 +634,7 @@ function ImageUpscalerPageContent() {
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest">Resemblance</span>
+                                        <span className="text-xs font-medium text-muted-foreground">Resemblance</span>
                                         <Info className="size-3 text-muted-foreground" />
                                     </div>
                                     <span className="text-[11px] font-mono text-foreground">{params.resemblance}</span>
@@ -649,7 +649,7 @@ function ImageUpscalerPageContent() {
 
                         {/* Engine Selection */}
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Engine</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Engine</Label>
                             <Select
                                 value={params.engine}
                                 onValueChange={(val) => updateParam('engine', val as UpscaleEngine)}
@@ -667,7 +667,7 @@ function ImageUpscalerPageContent() {
 
                         {/* Prompt Guidance */}
                         <div className="space-y-2">
-                            <Label className="text-[10px] font-bold text-muted-foreground uppercase tracking-[0.1em]">Prompt Guidance</Label>
+                            <Label className="text-sm font-medium text-muted-foreground">Prompt Guidance</Label>
                             <textarea
                                 placeholder="Describe details to enhance?"
                                 value={params.prompt}

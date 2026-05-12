@@ -160,7 +160,8 @@ export type ProviderType =
   | 'leonardo'
   | 'runway'
   | 'elevenlabs'
-  | 'fal';
+  | 'fal'
+  | 'kie';
 
 /**
  * Abstract base class providing default implementations

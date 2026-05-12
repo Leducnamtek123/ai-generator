@@ -1,0 +1,164 @@
+{
+  "Layout": {
+    "workspace": {
+      "personal": "Cá nhân",
+      "creator": "Creator",
+      "visualFlowStudio": "VisualFlow Studio",
+      "project": "Dự án",
+      "untitledStudio": "Chưa đặt tên"
+    },
+    "actions": {
+      "share": "Chia sẻ",
+      "newSpace": "Không gian mới",
+      "duplicateSpace": "Nhân bản không gian",
+      "rename": "Đổi tên",
+      "upgradePlan": "Nâng cấp gói",
+      "unlockMoreCreditsAndTeamFeatures": "Mở khóa thêm credits và tính năng nhóm"
+    },
+    "dialogs": {
+      "renameSpace": "Đổi tên không gian",
+      "renameDescription": "Nhập tên mới cho không gian của bạn.",
+      "cancel": "Hủy"
+    },
+    "badges": {
+      "new": "Mới"
+    },
+    "brandTagline": "Màu của bạn, lựa chọn của bạn",
+    "search": {
+      "tools": "Tìm công cụ",
+      "noResults": "Không có công cụ nào khớp với tìm kiếm này."
+    },
+    "toolsMenu": {
+      "title": "Tất cả công cụ",
+      "viewAll": "Xem toàn bộ công cụ trong một danh sách"
+    },
+    "sections": {
+      "socialHub": "Social Hub",
+      "pinned": "Đã ghim"
+    },
+    "navigation": {
+      "home": "Trang chủ",
+      "stock": "Kho",
+      "community": "Cộng đồng",
+      "communityOverview": "Tổng quan",
+      "communityMarketplace": "Chợ mẫu",
+      "communityPublish": "Đăng bài",
+      "communityListings": "Danh sách của tôi",
+      "communitySpotlight": "Tiêu điểm",
+      "socialHub": "Social Hub",
+      "socialDashboard": "Dashboard",
+      "channels": "Kênh",
+      "calendar": "Lịch",
+      "projects": "Dự án",
+      "history": "Lịch sử",
+      "notifications": "Thông báo",
+      "admin": "Quản trị",
+      "settings": "Cài đặt"
+    },
+    "stock": {
+      "title": "Kho",
+      "collections": "Bộ sưu tập của tôi",
+      "downloads": "Tải xuống",
+      "sections": {
+        "image": "Ảnh",
+        "video": "Video",
+        "audio": "Âm thanh",
+        "design": "Thiết kế",
+        "others": "Khác"
+      },
+      "items": {
+        "allImages": "Tất cả ảnh",
+        "vectors": "Vector",
+        "photos": "Ảnh chụp",
+        "illustrations": "Minh họa",
+        "icons": "Biểu tượng",
+        "threeD": "3D",
+        "videos": "Video",
+        "videoTemplates": "Mẫu video",
+        "motionGraphics": "Đồ họa chuyển động",
+        "soundEffects": "Hiệu ứng âm thanh",
+        "music": "Nhạc",
+        "templates": "Mẫu",
+        "mockups": "Mockup",
+        "fonts": "Phông chữ",
+        "psd": "PSD"
+      }
+    },
+    "tabs": {
+      "personal": "Cá nhân",
+      "community": "Cộng đồng",
+      "templates": "Mẫu",
+      "tutorials": "Hướng dẫn",
+      "myCreations": "Sáng tạo của tôi"
+    },
+    "tools": {
+      "imageGenerator": "Trình tạo ảnh",
+      "imageEditor": "Trình chỉnh sửa ảnh",
+      "imageUpscaler": "Phóng to ảnh",
+      "imageExtender": "Mở rộng ảnh",
+      "variations": "Biến thể",
+      "assistant": "Trợ lý",
+      "videoGenerator": "Trình tạo video",
+      "videoEditor": "Trình chỉnh sửa video",
+      "clipEditor": "Trình chỉnh sửa clip",
+      "videoUpscaler": "Phóng to video",
+      "lipSync": "Khớp khẩu hình",
+      "voiceGenerator": "Trình tạo giọng nói",
+      "sfxGenerator": "Trình tạo hiệu ứng âm thanh",
+      "musicGenerator": "Trình tạo nhạc",
+      "creativeStudio": "Creative Studio",
+      "visualFlowStudio": "VisualFlow Studio",
+      "workflowEditor": "Workflow Editor",
+      "designEditor": "Trình chỉnh sửa thiết kế",
+      "mockupGenerator": "Trình tạo mockup",
+      "iconGenerator": "Trình tạo biểu tượng",
+      "bgRemover": "Xóa nền",
+      "skinEnhancer": "Làm đẹp da",
+      "cameraChange": "Đổi góc máy",
+      "sketchToImage": "Phác thảo thành ảnh"
+    },
+    "highlights": {
+      "findAssets": "Tìm tài nguyên",
+      "workflowEditor": "Workflow Editor",
+      "imageGen": "Tạo ảnh",
+      "videoGen": "Tạo video",
+      "editor": "Trình chỉnh sửa",
+      "upscaler": "Phóng to",
+      "models": "Mẫu 3D",
+      "audio": "Âm thanh"
+    },
+    "theme": {
+      "dark": "Tối",
+      "light": "Sáng",
+      "system": "Hệ thống"
+    },
+    "notifications": {
+      "title": "Thông báo",
+      "markAllAsRead": "Đánh dấu tất cả đã đọc",
+      "emptyTitle": "Chưa có thông báo",
+      "emptyBody": "Hoạt động, thanh toán, kiểm duyệt và cảnh báo quản trị sẽ xuất hiện tại đây trong cùng một hộp thư.",
+      "viewAll": "Xem tất cả thông báo"
+    },
+    "billing": {
+      "personal": "Cá nhân",
+      "workspace": "Workspace",
+      "creditsOnly": "Chỉ credits",
+      "free": "Miễn phí",
+      "active": "Đang hoạt động",
+      "trial": "Dùng thử",
+      "pastDue": "Quá hạn",
+      "canceled": "Đã hủy",
+      "orgCredits": "Credits workspace",
+      "sharedWallet": "Ví dùng chung",
+      "personalWallet": "Ví cá nhân",
+      "noActiveSubscription": "Chưa có gói đang hoạt động",
+      "upgradePlan": "Nâng cấp gói",
+      "manageBilling": "Quản lý thanh toán",
+      "manageWorkspaceBilling": "Quản lý thanh toán workspace",
+      "choosePlan": "Chọn gói",
+      "creditsRemaining": "Còn {count} credits",
+      "buyCredits": "Mua Credits",
+      "unlockMoreCreditsAndWorkspaceFeatures": "Mở khóa thêm credits và tính năng workspace"
+    }
+  }
+}
